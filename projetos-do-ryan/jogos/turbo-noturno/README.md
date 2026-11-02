@@ -20,7 +20,13 @@ Abra o arquivo `index.html` no navegador (Chrome, Edge ou Firefox). É preciso e
 | M | Ligar ou desligar o som |
 | P / Esc | Pausa |
 
-Também funciona com controle de videogame e com botões na tela do celular (jogue com o aparelho deitado).
+Também funciona com controle de videogame. No celular, jogue com o aparelho deitado: arraste o botão redondo da esquerda para virar e use os botões da direita para acelerar, frear, nitro e freio de mão.
+
+## Opções
+
+- **Direção:** Arcade (padrão, mais aderência e mais fácil) ou Simulação (física completa).
+- **Gráficos:** Baixo, Médio ou Alto. A resolução também se ajusta sozinha durante o jogo para não travar.
+- **Ajudas de pilotagem** e **som** ligados ou desligados.
 
 ## Cidade Livre (mundo aberto)
 
