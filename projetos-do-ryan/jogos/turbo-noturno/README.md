@@ -33,7 +33,7 @@ Também funciona com controle de videogame. No celular, jogue com o aparelho dei
 
 ## Opções
 
-- **Direção:** Arcade (padrão, mais aderência e mais fácil) ou Simulação (física completa).
+- **Direção:** Grudado (padrão: o carro não escorrega nas curvas), Drift (a traseira solta, para quem gosta de derrapar) ou Simulação (física completa). Em todos, o freio de mão faz o carro derrapar.
 - **Gráficos:** Baixo, Médio, Alto ou Ultra. A resolução também se ajusta sozinha durante o jogo para não travar.
 - **Computador fraco:** diminui bastante os gráficos (resolução, sombras, reflexos, árvores, prédios, trânsito e pedestres) para rodar em máquinas fracas. Se o jogo ficar muito lento, ele mesmo sugere ligar essa opção.
 - **Ajudas de pilotagem** e **som** ligados ou desligados.

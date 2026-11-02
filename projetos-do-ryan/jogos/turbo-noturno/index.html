@@ -402,7 +402,7 @@
 <div id="options" class="screen hidden">
   <div class="card">
     <h2>OPÇÕES</h2>
-    <div class="opt"><span class="label">Direção</span><div class="choices" id="steering"></div><div class="hint">Arcade: mais aderência e mais fácil. Simulação: física completa, exige mais cuidado.</div></div>
+    <div class="opt"><span class="label">Direção</span><div class="choices" id="steering"></div><div class="hint">Grudado: o carro não escorrega, ideal para correr. Drift: a traseira solta nas curvas. Simulação: física completa. Em qualquer modo, o freio de mão (barra de espaço) faz o carro derrapar.</div></div>
     <div class="opt"><span class="label">Ajudas</span><div class="choices" id="assists"></div><div class="hint">Controle de tração, estabilidade e freio ABS.</div></div>
     <div class="opt"><span class="label">Gráficos</span><div class="choices" id="gfx"></div><div class="hint">Ultra é o mais bonito, para computador forte. A resolução também se ajusta sozinha.</div></div>
     <div class="opt"><span class="label">Computador fraco</span><div class="choices" id="weak"></div><div class="hint">Diminui bastante os gráficos (resolução, sombras, reflexos, árvores, trânsito) para rodar em computador ou celular fraco. Vale por completo a partir da próxima corrida.</div></div>
@@ -2116,6 +2116,7 @@ function updatePlayer(dt) {
   const assists = arcade || settings.assists === 1;
   let throttle = canDrive ? input.gas : 0, brakeIn = canDrive ? input.brake : 0;
   const hb = canDrive && input.hb;
+  const grippy = settings.steer === 'arcade';
   let steerTarget = canDrive ? (padSteer || ((input.left ? 1 : 0) - (input.right ? 1 : 0))) : 0;
   if (auto) {
     const j = mod(player.idx + 16);
@@ -2127,7 +2128,7 @@ function updatePlayer(dt) {
   const steerRate = padSteer ? 9 : arcade ? (Math.abs(steerTarget) > Math.abs(player.steerInput) ? 3.8 : 7) : (Math.abs(steerTarget) > Math.abs(player.steerInput) ? 2.6 : 4.5);
   player.steerInput += clamp(steerTarget - player.steerInput, -steerRate * dt, steerRate * dt);
   const delta = arcade ? player.steerInput * 0.6 / (1 + speed / 24) : player.steerInput * 0.58 / (1 + speed / 16);
-  const latGrip = CAR.armor ? 2.4 : arcade ? 1.35 : 1; // blindado: antiderrapante
+  const latGrip = CAR.armor ? 2.4 : grippy ? (CAR.classico ? 1.7 : 1.95) : arcade ? 1.35 : 1; // blindado: antiderrapante
 
   const wantReverse = brakeIn > 0.5 && player.vF < 1 && throttle === 0 && canDrive;
   if (wantReverse && player.gear !== -1 && player.vF < 0.5) player.gear = -1;
@@ -2141,7 +2142,7 @@ function updatePlayer(dt) {
 
   player.tcs = player.esc = player.abs = false;
   const SUB = 8, h = dt / SUB;
-  const grip = weatherCfg.grip;
+  const grip = grippy ? 0.75 + 0.25 * weatherCfg.grip : weatherCfg.grip;
   let spinAcc = 0, lockAcc = 0, slipRAcc = 0;
   for (let k = 0; k < SUB; k++) {
     const { m, Iz, a, b, hcg, Cf, Cr } = CAR;
@@ -2204,10 +2205,11 @@ function updatePlayer(dt) {
       player.vL *= 1 - Math.min(1, bl * 8 * h);
     }
     if (assists && v > 8) {
-      const rMax = (mu * latGrip * G * (arcade ? 1.1 : 1.25)) / v;
-      if (Math.abs(player.r) > rMax) { player.r -= (player.r - Math.sign(player.r) * rMax) * Math.min(1, 6 * h); player.esc = true; }
+      const rMax = (mu * (grippy ? 1.8 : latGrip * (arcade ? 1.1 : 1.25)) * G) / v;
+      if (Math.abs(player.r) > rMax) { player.r -= (player.r - Math.sign(player.r) * rMax) * (grippy ? 1 : Math.min(1, 6 * h)); player.esc = true; }
     }
     if (CAR.armor) { player.vL *= 1 - Math.min(1, 12 * h); const rMax2 = (G * 3) / Math.max(v, 4); if (Math.abs(player.r) > rMax2) player.r = Math.sign(player.r) * rMax2; }
+    if (grippy && !hb) { player.vL *= 1 - Math.min(1, (CAR.classico ? 3.5 : 6) * h); }
     if (arcade && !hb && Math.abs(player.steerInput) < 0.05) { player.r *= 1 - Math.min(1, 2.5 * h); player.vL *= 1 - Math.min(1, 1.5 * h); }
     player.h += player.r * h;
     const sh = Math.sin(player.h), ch = Math.cos(player.h);
@@ -4745,7 +4747,7 @@ function buildChoices(id, items, key, render) {
     el.appendChild(b);
   });
 }
-buildChoices('steering', [{ value: 'arcade', t: 'Arcade' }, { value: 'sim', t: 'Simulação' }], 'steer', (b, a) => b.textContent = a.t);
+buildChoices('steering', [{ value: 'arcade', t: 'Grudado' }, { value: 'drift', t: 'Drift' }, { value: 'sim', t: 'Simulação' }], 'steer', (b, a) => b.textContent = a.t);
 buildChoices('assists', [{ value: 1, t: 'Ligadas' }, { value: 0, t: 'Desligadas' }], 'assists', (b, a) => b.textContent = a.t);
 buildChoices('gfx', [{ value: 0, t: 'Baixo' }, { value: 1, t: 'Médio' }, { value: 2, t: 'Alto' }, { value: 3, t: 'Ultra' }], 'gfx', (b, a) => b.textContent = a.t);
 buildChoices('weak', [{ value: false, t: 'Desligado' }, { value: true, t: 'Ligado' }], 'weak', (b, a) => b.textContent = a.t);
@@ -4851,7 +4853,7 @@ function frame() {
 frame();
 
 // gancho para testes automatizados
-window.__tn = { ACH, ach, addXP, note, RADIO, setRadio, ramps: () => ramps, MP, mpCreate, mpJoin, city: () => city, startCity, cityAction, player, rivals: () => rivals, state: () => state, track: { P, T, S, N }, profile: () => profile, save: () => save, PHASES, buildWorld, setupRace, startRace, CAR };
+window.__tn = { ACH, ach, addXP, note, updatePlayer, input, settings, applyParts, RADIO, setRadio, ramps: () => ramps, MP, mpCreate, mpJoin, city: () => city, startCity, cityAction, player, rivals: () => rivals, state: () => state, track: { P, T, S, N }, profile: () => profile, save: () => save, PHASES, buildWorld, setupRace, startRace, CAR };
 })();
 </script>
 </body>
