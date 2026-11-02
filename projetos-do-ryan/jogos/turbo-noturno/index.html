@@ -742,7 +742,7 @@ function applyTime(tc, wc) {
   disc.position.copy(SUN_DIR).multiplyScalar(2000);
   halo.position.copy(disc.position); halo.scale.setScalar(tc.discSize * 9); halo.visible = disc.visible; halo.material.color.setRGB(...tc.disc).multiplyScalar(0.35);
   renderer.toneMappingExposure = tc.exposure;
-  if (bloomPass) { bloomPass.strength = 0.2 + 0.55 * tc.dark; bloomPass.threshold = 0.78 + 0.15 * (1 - tc.dark); }
+  if (bloomPass) { bloomPass.strength = (0.2 + 0.55 * tc.dark) * (settings.gfx >= 3 ? 1.3 : 1); bloomPass.threshold = 0.78 + 0.15 * (1 - tc.dark); }
   if (glowMesh) { scene.remove(glowMesh); glowMesh.geometry.dispose(); glowMesh.material.map.dispose(); glowMesh.material.dispose(); }
   const glowTex = canvasTex(4, 128, (g, w, h) => {
     const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, tc.glow);
@@ -844,7 +844,7 @@ const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), v3 = new THREE.Vecto
 const tint = new THREE.Color();
 
 const lampConeGeo = new THREE.ConeGeometry(4.4, 8.6, 24, 1, true).translate(0, -4.3, 0);
-const lampConeTex = (() => { const c = document.createElement('canvas'); c.width = 4; c.height = 128; const g = c.getContext('2d'); const gr = g.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 4, 128); return new THREE.CanvasTexture(c); })();
+const lampConeTex = (() => { const c = document.createElement('canvas'); c.width = 4; c.height = 128; const g = c.getContext('2d'); const gr = g.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.55, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 4, 128); return new THREE.CanvasTexture(c); })();
 const lampConeMat = (col, op) => new THREE.MeshBasicMaterial({ map: lampConeTex, color: new THREE.Color(...col), transparent: true, opacity: op, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
 function clearWorld() {
   world.traverse(o => {
@@ -896,7 +896,7 @@ function instanced(geo, mat, list, setup, shadow = true) {
   if (!list.length) return null;
   const inst = new THREE.InstancedMesh(geo, mat, list.length);
   list.forEach((it, k) => { setup(it, k); inst.setMatrixAt(k, m4); });
-  inst.castShadow = shadow; inst.receiveShadow = true;
+  inst.castShadow = shadow; inst.receiveShadow = true; inst.frustumCulled = false;
   world.add(inst); return inst;
 }
 
@@ -967,8 +967,8 @@ function buildWorld(ph) {
     }
   }, false);
   [asphaltTex, roughTex].forEach(t => t.wrapS = t.wrapT = THREE.RepeatWrapping);
-  const roadMat = new THREE.MeshStandardMaterial({ map: asphaltTex, roughnessMap: roughTex, roughness: wc.wet ? 0.55 : 0.82, metalness: wc.wet ? 0.15 : 0,
-    envMapIntensity: wc.wet ? 1.1 : 0.35, color: wc.wet ? 0x9a9aa0 : 0xffffff, side: THREE.DoubleSide });
+  const roadMat = new THREE.MeshStandardMaterial({ map: asphaltTex, roughnessMap: roughTex, roughness: wc.wet ? 0.55 : settings.gfx >= 3 ? 0.6 : 0.82, metalness: wc.wet ? 0.15 : 0,
+    envMapIntensity: wc.wet ? 1.1 : settings.gfx >= 3 ? 0.75 : 0.35, color: wc.wet ? 0x9a9aa0 : 0xffffff, side: THREE.DoubleSide });
   addMesh(ribbon(-HALF - 0.3, HALF + 0.3, 0.02), roadMat);
   const shoulderCol = { cidade: 0x3a3a38, praia: 0xb9a070, deserto: 0xa86c3a, floresta: 0x3a3428, neve: 0xdfe6ee, porto: 0x4a4a48 }[theme];
   const shoulderMat = new THREE.MeshStandardMaterial({ color: shoulderCol, roughness: 1, side: THREE.DoubleSide });
@@ -1050,9 +1050,9 @@ function buildWorld(ph) {
     });
     instanced(new THREE.PlaneGeometry(18, 18).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: tc.dark }),
       lamps, l => { const pp = P[l.i].clone().addScaledVector(S[l.i], l.side * (WALL - 3.2)); m4.compose(v3.set(pp.x, 0.13, pp.z), q.identity(), sc.set(1, 1, 1)); }, false);
-    if (settings.gfx >= 2 && !settings.weak) {
+    if (settings.gfx >= 1 && !settings.weak) {
       const off = new THREE.Vector3();
-      instanced(lampConeGeo, lampConeMat(lampCol, 0.08 * tc.dark), lamps, l => {
+      instanced(lampConeGeo, lampConeMat(lampCol, (settings.gfx >= 3 ? 0.42 : 0.3) * tc.dark), lamps, l => {
         const p = P[l.i].clone().addScaledVector(S[l.i], l.side * (WALL + 0.7));
         q.setFromAxisAngle(yAxis, angleAt(l.i) + (l.side > 0 ? 0 : Math.PI)); off.set(-3.2, 8.8, 0).applyQuaternion(q);
         m4.compose(v3.copy(p).add(off), q.identity(), sc.set(1, 1, 1));
@@ -2653,9 +2653,9 @@ function buildCity() {
   });
   instanced(new THREE.PlaneGeometry(22, 22).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }),
     lamps, l => m4.compose(v3.set(l.x - 2.3, 0.25, l.z - 2.3), q.identity(), sc.set(1, 1, 1)), false);
-  if (settings.gfx >= 2 && !settings.weak) {
+  if (settings.gfx >= 1 && !settings.weak) {
     const off = new THREE.Vector3();
-    instanced(lampConeGeo, lampConeMat([1, 0.8, 0.5], 0.08), lamps, l => { q.setFromAxisAngle(yAxis, Math.PI + Math.PI / 4); off.set(0, 8.8, -3.2).applyQuaternion(q); m4.compose(v3.set(l.x, 0.18, l.z).add(off), q.identity(), sc.set(1, 1, 1)); }, false);
+    instanced(lampConeGeo, lampConeMat([1, 0.8, 0.5], settings.gfx >= 3 ? 0.42 : 0.3), lamps, l => { q.setFromAxisAngle(yAxis, Math.PI + Math.PI / 4); off.set(0, 8.8, -3.2).applyQuaternion(q); m4.compose(v3.set(l.x, 0.18, l.z).add(off), q.identity(), sc.set(1, 1, 1)); }, false);
   }
 
   // muro na borda e prédios distantes (horizonte)
