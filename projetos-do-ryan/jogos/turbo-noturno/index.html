@@ -2809,6 +2809,8 @@ function buildCity() {
     const r = rnd();
     if (i === 2 && j === 2) type = 'oficina';
     else if (i === 4 && j === 8) type = 'cinema';
+    else if (i === 7 && j === 4) type = 'posto';
+    else if (i === 9 && j === 6) type = 'heliporto';
     else if ((i === 5 || i === 6) && (j === 5 || j === 6)) type = 'parque';
     else if (r < 0.09) type = 'parque';
     else if (r < 0.16) type = 'estacionamento';
@@ -3390,7 +3392,11 @@ const MISSIONS = [
   { type: 'entrega', icon: '📦', name: 'Entrega frágil', color: 0x29c6ff, lot: [9, 9], side: 0, reward: 2000 },
   { type: 'fuga', icon: '🚨', name: 'Fuga da polícia', color: 0xff3b5c, lot: [7, 1], side: 1, reward: 2500 },
   { type: 'oficina', icon: '🔧', name: 'Oficina', color: 0x7dffb8, lot: [2, 2], side: 0, reward: 0 },
-  { type: 'cinema', icon: '🎬', name: 'Cinema', color: 0xff3bd4, lot: [4, 8], side: 0, reward: 0 }
+  { type: 'cinema', icon: '🎬', name: 'Cinema', color: 0xff3bd4, lot: [4, 8], side: 0, reward: 0 },
+  { type: 'posto', icon: '⛽', name: 'Posto e lava-jato', color: 0x3bd16f, lot: [7, 4], side: 0, reward: 0 },
+  { type: 'heli', icon: '🚁', name: 'Helicóptero', color: 0x9fb4ff, lot: [9, 6], side: 0, reward: 0 },
+  { type: 'taxi', icon: '🚕', name: 'Táxi', color: 0xffd400, lot: [6, 9], side: 2, reward: 1600 },
+  { type: 'pizza', icon: '🍕', name: 'Entrega de pizza', color: 0xff7a29, lot: [10, 3], side: 1, reward: 1800 }
 ];
 function startMission(mk) {
   const m = mk.def;
@@ -3398,6 +3404,9 @@ function startMission(mk) {
   const here = { x: mk.x, z: mk.z };
   if (m.type === 'oficina') { openGarage('parts', true); return; }
   if (m.type === 'cinema') { player.vF = 0; player.vL = 0; openCinema(); return; }
+  if (m.type === 'posto') { startPosto(); return; }
+  if (m.type === 'heli') { boardHeli(); return; }
+  if (m.type === 'taxi' || m.type === 'pizza') { startRota(m, here); beep(660, 0.2); refreshMissionMarkers(); return; }
   if (m.type === 'corrida') {
     let ni = Math.round(here.x / B), nj = Math.round(here.z / B);
     const cps = [];
@@ -3439,6 +3448,7 @@ function completeMission() {
   city.mission = null; refreshMissionMarkers();
 }
 function failMission(why) {
+  if (city.mission && city.mission.ped) scene.remove(city.mission.ped.g);
   city.mission = null; refreshMissionMarkers();
   setTimeout(() => showMessage('MISSÃO FALHOU', 2, why), 50);
 }
@@ -3448,12 +3458,14 @@ function refreshMissionMarkers() {
   const m = city.mission;
   if (m && m.type === 'corrida') city.objMarker = makeMarker(m.cps[m.idx].x, m.cps[m.idx].z, 0xffcc00, m.idx === m.cps.length - 1 ? '🏁' : null, 6, 9);
   if (m && m.type === 'entrega') city.objMarker = makeMarker(m.dest.x, m.dest.z, 0x29c6ff, '📦', 4, 7);
+  if (m && m.type === 'rota') { const st = m.stops[m.idx]; city.objMarker = makeMarker(st.x, st.z, st.kind === 'pick' ? 0xffd400 : st.kind === 'pizza' ? 0xff7a29 : 0x29ff8a, st.kind === 'pick' ? '🙋' : st.kind === 'pizza' ? '🍕' : '📍', 5, 8); }
 }
 function missionTarget() {
   const m = city.mission;
   if (!m) return null;
   if (m.type === 'corrida') return m.cps[m.idx];
   if (m.type === 'entrega') return m.dest;
+  if (m.type === 'rota') return m.stops[m.idx];
   return null;
 }
 function updateMissions(dt) {
@@ -3465,7 +3477,7 @@ function updateMissions(dt) {
     for (const mk of city.markers) {
       mk.g.userData.icon.position.y = 6.8 + Math.sin(performance.now() / 400) * 0.3;
       if (Math.hypot(mk.x - fx, mk.z - fz) < 4.5) {
-        if (!city.driving && mk.def.type !== 'oficina' && mk.def.type !== 'cinema') city.prompt = 'Entre num carro para começar: ' + mk.def.name;
+        if (!city.driving && !ONFOOT_OK.includes(mk.def.type)) city.prompt = 'Entre num carro para começar: ' + mk.def.name;
         else { city.prompt = `Aperte E para: ${mk.def.icon} ${mk.def.name}` + (mk.def.reward ? ` (prêmio ${brl(mk.def.reward)})` : ''); city.nearMarker = mk; }
       }
     }
@@ -3481,6 +3493,7 @@ function updateMissions(dt) {
       refreshMissionMarkers();
     }
   }
+  if (m.type === 'rota') updateRota(dt, fx, fz, speed);
   if (m.type === 'entrega' && Math.hypot(m.dest.x - fx, m.dest.z - fz) < 6 && player.pos.y < 3) {
     if (speed < 4) completeMission(); else city.prompt = 'Pare no ponto azul para entregar';
   }
@@ -3567,7 +3580,7 @@ function enterCar() {
 }
 function cityAction() {
   if (!city || state !== 'city') return;
-  if (city.nearMarker && !city.mission && (city.driving ? Math.abs(player.vF) < 12 : (city.nearMarker.def.type === 'oficina' || city.nearMarker.def.type === 'cinema'))) { const mk = city.nearMarker; city.nearMarker = null; startMission(mk); return; }
+  if (city.nearMarker && !city.mission && (city.driving ? Math.abs(player.vF) < 12 : ONFOOT_OK.includes(city.nearMarker.def.type))) { const mk = city.nearMarker; city.nearMarker = null; startMission(mk); return; }
   if (city.driving) { if (city.flying || player.pos.y > 0.3) { toast('Pouse antes de sair (tecla V)'); return; } if (Math.abs(player.vF) > 6) { toast('Pare o carro para sair'); return; } exitCar(); }
   else enterCar();
 }
@@ -3636,7 +3649,7 @@ function drawCityMap() {
   cmm.save(); cmm.beginPath(); cmm.arc(180, 180, 176, 0, 7); cmm.clip();
   cmm.fillStyle = '#0d1018'; cmm.fillRect(0, 0, 360, 360);
   lots.forEach(L => {
-    cmm.fillStyle = L.type === 'parque' ? '#1f4d26' : L.type === 'estacionamento' ? '#2a2d36' : L.type === 'oficina' ? '#1d6b52' : '#3a4152';
+    cmm.fillStyle = L.type === 'posto' ? '#1fa04a' : L.type === 'heliporto' ? '#5a6478' : L.type === 'parque' ? '#1f4d26' : L.type === 'estacionamento' ? '#2a2d36' : L.type === 'oficina' ? '#1d6b52' : '#3a4152';
     cmm.fillRect(X(L.x1), Y(L.z1), (L.x1 - L.x0) * sc2, (L.z1 - L.z0) * sc2);
   });
   const dot = (x, z, col, r, stroke) => { cmm.fillStyle = col; cmm.beginPath(); cmm.arc(clamp(X(x), 8, 352), clamp(Y(z), 8, 352), r, 0, 7); cmm.fill(); if (stroke) { cmm.strokeStyle = stroke; cmm.lineWidth = 2; cmm.stroke(); } };
@@ -3678,8 +3691,9 @@ function updateCityHUD(dt) {
     const dist = tgt ? Math.round(Math.hypot(tgt.x - focusX(), tgt.z - focusZ())) : 0;
     if (m.type === 'corrida') mt = `<b>🏁 ${m.def.name}</b><div>Ponto ${m.idx + 1} de ${m.cps.length} · ${dist} m</div><div class="big">${fmt(Math.max(0, m.time))}</div>`;
     if (m.type === 'entrega') mt = `<b>📦 ${m.def.name}</b><div>Destino a ${dist} m · batidas: ${m.damage}</div><div class="big">${fmt(Math.max(0, m.time))}</div>`;
+    if (m.type === 'rota') { const st = m.stops[m.idx]; mt = `<b>${m.def.icon} ${m.def.name}</b><div>${st.kind === 'pick' ? '🙋 Busque o passageiro' : st.kind === 'pizza' ? '🍕 Entregue a pizza' : '📍 Leve ao destino'} · ${m.idx + 1}/${m.stops.length} · ${dist} m</div><div class="big">${fmt(Math.max(0, m.time))}</div>`; }
     if (m.type === 'fuga') mt = `<b>🚨 ${m.def.name}</b><div>Fique longe das viaturas até despistar</div>`;
-  } else mt = '<b>🌆 Cidade Livre</b><div>Vá até um marcador colorido para começar uma missão</div>';
+  } else mt = `<b>🌆 Cidade Livre · ${DAY_CYCLE[city.dayIdx || 0][2]}${city.raining ? ' · ☔' : ''}</b><div>Vá até um marcador colorido para começar uma missão</div>`;
   $('mission').innerHTML = mt;
   let pr = city.prompt;
   if (!pr && !city.driving) pr = 'Aperte E perto de um carro para entrar';
@@ -3691,7 +3705,7 @@ function updateCityHUD(dt) {
 }
 
 // ---------- ciclo da cidade ----------
-const isRocket = () => !!(city && city.curLook && (city.curLook.model === 'foguete' || city.curLook.model === 'blindado'));
+const isRocket = () => !!(city && ((player.car && player.car.heli) || (city.curLook && (city.curLook.model === 'foguete' || city.curLook.model === 'blindado'))));
 function toggleFlight() {
   if (!city || state !== 'city' || !city.driving) return;
   if (!isRocket()) { toast('Só o Roadster Foguete e o Blindado X voam. Pegue em Visual > Carro.'); return; }
@@ -3749,6 +3763,7 @@ function cityUpdate(dt) {
   cityVehicleCollisions();
   updateCoins(dt);
   updateMissions(dt);
+  cityExtras(dt);
   updateCars(dt);
   if (city.air && city.trick && player.car) { player.car.body.rotation.z = city.trick.roll; player.car.body.rotation.x = clamp(-(player.vy || 0) * 0.03, -0.5, 0.5); }
   updateSmoke(dt);
@@ -3764,6 +3779,194 @@ function cityUpdate(dt) {
   }
   city.saveT += dt; if (city.saveT > 5) { city.saveT = 0; persist(); }
   updateCityHUD(dt);
+}
+
+// =====================================================================
+// CIDADE VIVA: posto e lava-jato, heliporto, dia e noite, chuva, táxi e pizza
+// =====================================================================
+const ONFOOT_OK = ['oficina', 'cinema', 'heli'];
+const DAY_CYCLE = [['noite', 120, '🌙 Noite'], ['amanhecer', 35, '🌅 Amanhecer'], ['dia', 150, '☀️ Dia'], ['entardecer', 35, '🌇 Entardecer']];
+function buildCityExtras() {
+  const pump = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, roughness: 0.5 });
+  const red = new THREE.MeshStandardMaterial({ color: 0xd32f2f, roughness: 0.45 });
+  const green = new THREE.MeshStandardMaterial({ color: 0x1fa04a, roughness: 0.5 });
+  const glowW = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.2, 2.0) });
+  const glowG = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.3, 2.2, 0.6) });
+  const add = (geo, mat, x, y, z, ry = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.y = ry; m.castShadow = m.receiveShadow = true; world.add(m); return m; };
+  const P = lots.find(L => L.type === 'posto');
+  if (P) {
+    const cx = (P.x0 + P.x1) / 2, cz = (P.z0 + P.z1) / 2;
+    add(new THREE.BoxGeometry(26, 0.9, 15), pump, cx, 6.2, cz - 6);
+    add(new THREE.BoxGeometry(26.2, 0.35, 15.2), green, cx, 5.7, cz - 6);
+    add(new THREE.BoxGeometry(24, 0.08, 13), glowW, cx, 5.48, cz - 6);
+    for (const sx of [-11, 11]) for (const sz of [-12, 0]) add(new THREE.BoxGeometry(0.6, 6, 0.6), pump, cx + sx, 3, cz + sz);
+    for (const sx of [-6, 0, 6]) { add(new THREE.BoxGeometry(1.1, 1.9, 0.7), red, cx + sx, 1.15, cz - 6); add(new THREE.BoxGeometry(0.8, 0.5, 0.05), glowG, cx + sx, 1.6, cz - 5.63); }
+    // lava-jato: túnel com escovas azuis
+    add(new THREE.BoxGeometry(9, 5, 0.6), pump, cx + 6, 2.5, cz + 12);
+    add(new THREE.BoxGeometry(9, 5, 0.6), pump, cx + 6, 2.5, cz + 4);
+    add(new THREE.BoxGeometry(9, 0.6, 8.6), new THREE.MeshStandardMaterial({ color: 0x1a8cff, roughness: 0.4 }), cx + 6, 5.3, cz + 8);
+    for (const sz of [6, 10]) add(new THREE.CylinderGeometry(0.7, 0.7, 4, 10), new THREE.MeshStandardMaterial({ color: 0x29c6ff, roughness: 0.9 }), cx + 2.5, 2.4, cz + sz);
+    const sign = iconSprite('⛽', 6); sign.position.set(cx - 14, 10, cz + 10); world.add(sign);
+    add(new THREE.BoxGeometry(0.5, 8, 0.5), pump, cx - 14, 4, cz + 10);
+  }
+  const H = lots.find(L => L.type === 'heliporto');
+  if (H) {
+    const cx = (H.x0 + H.x1) / 2, cz = (H.z0 + H.z1) / 2;
+    const padTex = canvasTex(256, 256, (g, w, h) => {
+      g.fillStyle = '#2a2d33'; g.fillRect(0, 0, w, h);
+      g.strokeStyle = '#ffcc00'; g.lineWidth = 12; g.beginPath(); g.arc(w / 2, h / 2, w * 0.4, 0, Math.PI * 2); g.stroke();
+      g.fillStyle = '#ffffff'; g.font = 'bold 150px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('H', w / 2, h / 2 + 8);
+    });
+    const pad = new THREE.Mesh(new THREE.CylinderGeometry(15, 15, 0.5, 40), [new THREE.MeshStandardMaterial({ color: 0x3a3d44 }), new THREE.MeshStandardMaterial({ map: padTex, roughness: 0.8 }), new THREE.MeshStandardMaterial({ color: 0x3a3d44 })]);
+    pad.position.set(cx, 0.25, cz); pad.receiveShadow = true; world.add(pad);
+    for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; add(new THREE.SphereGeometry(0.3, 8, 6), glowG, cx + Math.cos(a) * 14.5, 0.6, cz + Math.sin(a) * 14.5); }
+    city.heliPad = { x: cx, z: cz };
+    const heli = makeHeli();
+    heli.group.position.set(cx, 0.5, cz); heli.group.rotation.y = 0;
+    city.parked.push({ car: heli, x: cx, z: cz, h: 0, own: false, look: Object.assign({}, save.look, { model: 'heli' }), heli: true });
+  }
+}
+function makeHeli() {
+  const car = makeCar(Object.assign({}, save.look, { model: 'esportivo', spoiler: 'none', neon: 'none' }), { lite: true });
+  car.body.children.forEach(c => c.visible = false);
+  car.wheels.forEach(w => w.visible = false);
+  if (car.pivots) car.pivots.forEach(p => p.visible = false);
+  car.pool.visible = false;
+  const g = new THREE.Group(); car.body.add(g);
+  const paint = new THREE.MeshStandardMaterial({ color: 0xd32f2f, metalness: 0.4, roughness: 0.35 });
+  const white = new THREE.MeshStandardMaterial({ color: 0xf2f2f2, metalness: 0.2, roughness: 0.4 });
+  const glass = new THREE.MeshStandardMaterial({ color: 0x223344, metalness: 0.9, roughness: 0.1, transparent: true, opacity: 0.75 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x222428, roughness: 0.6 });
+  const m = (geo, mat, x, y, z) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
+  const body = m(new THREE.SphereGeometry(1.5, 20, 14), paint, 0, 1.9, 0.2); body.scale.set(1, 0.95, 1.6);
+  const cab = m(new THREE.SphereGeometry(1.25, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), glass, 0, 2.0, 1.2); cab.scale.set(1, 0.9, 1.3); cab.rotation.x = -0.25;
+  const stripe = m(new THREE.BoxGeometry(3.02, 0.25, 3.2), white, 0, 1.75, 0.1);
+  const boom = m(new THREE.CylinderGeometry(0.22, 0.38, 5.2, 10), paint, 0, 2.3, -3.6); boom.rotation.x = Math.PI / 2 - 0.08;
+  m(new THREE.BoxGeometry(0.15, 1.4, 0.9), paint, 0, 2.9, -6.0);
+  for (const s of [-1, 1]) {
+    m(new THREE.CylinderGeometry(0.09, 0.09, 4.4, 8), dark, s * 1.1, 0.25, 0.1).rotation.x = Math.PI / 2;
+    m(new THREE.BoxGeometry(0.08, 0.9, 0.08), dark, s * 1.0, 0.7, 1.0); m(new THREE.BoxGeometry(0.08, 0.9, 0.08), dark, s * 1.0, 0.7, -0.8);
+  }
+  m(new THREE.CylinderGeometry(0.18, 0.18, 0.7, 8), dark, 0, 3.55, 0.2);
+  const rotor = new THREE.Group(); rotor.position.set(0, 3.95, 0.2); g.add(rotor);
+  const blade = new THREE.BoxGeometry(11, 0.06, 0.38);
+  for (let k = 0; k < 2; k++) { const b = new THREE.Mesh(blade, dark); b.rotation.y = k * Math.PI / 2; rotor.add(b); }
+  const tail = new THREE.Group(); tail.position.set(0.18, 2.75, -6.05); g.add(tail);
+  for (let k = 0; k < 2; k++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.6, 0.18), dark); b.rotation.x = k * Math.PI / 2; tail.add(b); }
+  const beacon = m(new THREE.SphereGeometry(0.12, 8, 6), new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 0.2, 0.2) }), 0, 3.45, -0.9);
+  g.position.y = -0.6;
+  car.heli = { rotor, tail, beacon, spin: 0 };
+  return car;
+}
+const inHeli = () => !!(city && city.driving && player.car && player.car.heli);
+function boardHeli() {
+  if (inHeli()) { if (city.flying || player.pos.y > 0.3) toast('Pouse antes de sair (tecla V)'); else exitCar(); return; }
+  const hp = city.parked.find(p => p.heli);
+  if (!hp) { if (!city.driving) enterCar(); else toast('O helicóptero está onde você deixou'); return; }
+  if (city.driving) city.parked.push({ car: player.car, x: player.pos.x, z: player.pos.z, h: player.h, own: city.own, look: city.curLook });
+  city.parked.splice(city.parked.indexOf(hp), 1);
+  player.car = hp.car; city.own = false; city.curLook = hp.look;
+  setPlayerCarState(hp.x, hp.z, hp.h);
+  applyParts(ZERO_PARTS, 'esportivo');
+  city.walker.hm.g.visible = false; city.driving = true; document.body.classList.remove('on-foot');
+  city.flying = true; city.landing = false; player.vy = 6; player.gear = 1;
+  showMessage('🚁 HELICÓPTERO', 2.5, 'Acelera para frente · Espaço sobe · Q desce · V pousa');
+}
+
+// ---------- dia e noite, chuva ----------
+function applyCityTime(first) {
+  const [key, , label] = DAY_CYCLE[city.dayIdx];
+  timeCfg = TIMES[key];
+  weatherCfg = city.raining ? WEATHER.chuva : WEATHER.limpo;
+  applyTime(timeCfg, weatherCfg);
+  rain.visible = !!weatherCfg.rain;
+  const dark = timeCfg.dark;
+  world.traverse(o => {
+    if (!o.material) return;
+    [].concat(o.material).forEach(mt => {
+      if (mt.map === lampConeTex) { if (mt.userData.op0 === undefined) mt.userData.op0 = mt.opacity; mt.opacity = mt.userData.op0 * dark; }
+      else if (mt.emissiveMap && mt.emissive) { if (mt.userData.ei0 === undefined) mt.userData.ei0 = mt.emissiveIntensity; mt.emissiveIntensity = mt.userData.ei0 * (0.7 + 0.3 * dark); }
+    });
+  });
+  if (!first) showMessage(label + (city.raining ? ' · ☔ chuva' : ''), 2);
+}
+function cityExtras(dt) {
+  // relógio do dia
+  city.dayT = (city.dayT || 0) + dt;
+  if (city.dayT > DAY_CYCLE[city.dayIdx][1]) {
+    city.dayT = 0; city.dayIdx = (city.dayIdx + 1) % DAY_CYCLE.length;
+    city.raining = Math.random() < 0.3;
+    applyCityTime(false);
+  }
+  // helicóptero: hélices girando e sem rodar no chão
+  const all = [player.car].concat(city.parked.map(p => p.car));
+  all.forEach(c => { if (c && c.heli) { const on = c === player.car && city.driving; c.heli.spin += ((on ? 1 : 0) - c.heli.spin) * Math.min(1, dt * 1.5); c.heli.rotor.rotation.y += c.heli.spin * 30 * dt; c.heli.tail.rotation.x += c.heli.spin * 40 * dt; c.heli.beacon.visible = Math.floor(performance.now() / 500) % 2 === 0; } });
+  if (inHeli()) {
+    if (!city.flying) { player.vF *= Math.max(0, 1 - 3 * dt); player.vL *= Math.max(0, 1 - 3 * dt); }
+    if (player.car.body.rotation) player.car.body.rotation.z *= 0.5;
+  }
+  // lava-jato
+  if (city.wash > 0) {
+    city.wash -= dt;
+    player.vF = 0; player.vL = 0;
+    for (let k = 0; k < 3; k++) emitSmoke(player.pos.x + (Math.random() - 0.5) * 4, player.pos.z + (Math.random() - 0.5) * 5, 0, 0, 0.5);
+    if (city.wash <= 0) { player.nitro = 1; if (city.mission && city.mission.damage) city.mission.damage = 0; showMessage('✨ CARRO LIMPO!', 2, 'Tanque e nitro cheios'); cash(); }
+  }
+  // passageiro esperando acena
+  const m = city.mission;
+  if (m && m.type === 'rota' && m.ped) { m.ped.g.rotation.y += dt; m.ped.armR.rotation.x = -2.6 + Math.sin(performance.now() / 150) * 0.4; }
+}
+function startPosto() {
+  if (!city.driving) { toast('Venha de carro para abastecer'); return; }
+  if (inHeli()) { toast('O helicóptero abastece no heliporto'); return; }
+  const cost = 100;
+  if (save.money < cost) { toast('Custa R$ 100. Junte moedas na cidade!'); return; }
+  save.money -= cost; persist();
+  city.wash = 3.2;
+  showMessage('🧽 LAVANDO...', 3, 'Abastecendo e lavando o carro (R$ 100)');
+}
+function startRota(m, here) {
+  const far = (from, min) => { let d; for (let k = 0; k < 60; k++) { d = randomRoadSpot(); if (Math.hypot(d.x - from.x, d.z - from.z) > min) break; } return d; };
+  const stops = [];
+  let from = here;
+  if (m.type === 'taxi') {
+    for (let k = 0; k < 2; k++) { const p = far(from, 150); stops.push(Object.assign(p, { kind: 'pick' })); const d = far(p, 300); stops.push(Object.assign(d, { kind: 'drop' })); from = d; }
+  } else {
+    for (let k = 0; k < 3; k++) { const d = far(from, 220); stops.push(Object.assign(d, { kind: 'pizza' })); from = d; }
+  }
+  let dist = 0, px = here.x, pz = here.z;
+  stops.forEach(s => { dist += Math.abs(s.x - px) + Math.abs(s.z - pz); px = s.x; pz = s.z; });
+  city.mission = { type: 'rota', sub: m.type, def: m, stops, idx: 0, time: dist / 16 + 15 * stops.length, reward: m.reward, ped: null, earned: 0 };
+  showMessage(m.type === 'taxi' ? '🚕 TÁXI!' : '🍕 PIZZA!', 2, m.type === 'taxi' ? 'Busque o passageiro e leve até o destino' : 'Entregue as 3 pizzas antes de esfriar');
+  spawnStopPed();
+}
+function spawnStopPed() {
+  const m = city.mission; if (!m || m.type !== 'rota') return;
+  if (m.ped) { scene.remove(m.ped.g); m.ped = null; }
+  const s = m.stops[m.idx];
+  if (s && s.kind === 'pick') {
+    m.ped = makeHuman(SHIRTS[Math.floor(Math.random() * SHIRTS.length)], PANTS[0], SKINS[Math.floor(Math.random() * SKINS.length)], HAIRS[0], null);
+    m.ped.g.position.set(s.x + 3, 0.2, s.z + 3);
+  }
+}
+function updateRota(dt, fx, fz, speed) {
+  const m = city.mission, s = m.stops[m.idx];
+  if (Math.hypot(s.x - fx, s.z - fz) < 7 && player.pos.y < 3) {
+    if (!city.driving) { city.prompt = 'Volte para o carro'; return; }
+    if (speed > 4) { city.prompt = s.kind === 'pick' ? 'Pare para o passageiro entrar' : 'Pare para entregar'; return; }
+    m.idx++;
+    if (s.kind === 'pick') { showMessage('Passageiro a bordo!', 1.5, 'Leve até o destino'); m.time += 6; }
+    else { const pay = Math.round((m.reward / (m.sub === 'taxi' ? 2 : 3) + Math.max(0, m.time) * 4) / 10) * 10; m.earned += pay; save.money += pay; cash(); showMessage(s.kind === 'pizza' ? '🍕 ENTREGUE!' : '🚕 CORRIDA PAGA!', 1.6, '+ ' + brl(pay)); }
+    beep(990, 0.12);
+    if (m.idx >= m.stops.length) {
+      if (m.ped) scene.remove(m.ped.g);
+      addXP(180); save.stats.deliveries++; if (save.stats.deliveries >= 3) ach('entregas'); persist();
+      if (m.sub === 'pizza') ach('pizza'); else ach('taxi');
+      setTimeout(() => showMessage('MISSÃO CUMPRIDA!', 2.5, 'Total + ' + brl(m.earned)), 1700);
+      city.mission = null; refreshMissionMarkers(); return;
+    }
+    spawnStopPed(); refreshMissionMarkers();
+  }
 }
 
 function startCity() {
@@ -3805,6 +4008,7 @@ function startCityNow() {
     const p = roadSpot(def.lot[0], def.lot[1], def.side);
     city.markers.push({ def, x: p.x, z: p.z, g: makeMarker(p.x, p.z, def.color, def.icon) });
   });
+  buildCityExtras(); city.dayIdx = 0; city.dayT = 0; city.raining = false; city.wash = 0;
   skidPos.fill(0); skidAlpha.fill(0); skidGeo.attributes.position.needsUpdate = true; skidGeo.attributes.alpha.needsUpdate = true; lastSkid[0] = lastSkid[1] = null;
   camPos.set(player.pos.x - Math.sin(player.h) * 8, 3, player.pos.z - Math.cos(player.h) * 8);
   document.body.classList.add('city-mode'); document.body.classList.remove('on-foot');
@@ -4267,6 +4471,7 @@ const ACH = [
   ['colecao', '🚗', 'Colecionador', 'Libere todos os veículos especiais'], ['avancado', '🔧', 'Mecânico', 'Compre uma peça Avançada'],
   ['amigo', '🤝', 'Jogando junto', 'Jogue uma partida no multiplayer'], ['radio', '📻', 'DJ', 'Ligue o rádio do carro'],
   ['fantasma', '👻', 'Mais rápido que o fantasma', 'Bata o seu fantasma no contra o relógio'], ['fuga', '🚓', 'Fugitivo', 'Escape da polícia'],
+  ['taxi', '🚕', 'Taxista', 'Complete uma missão de táxi'], ['pizza', '🍕', 'Pizza quentinha', 'Entregue todas as pizzas'],
   ['arrancada', '🚦', 'Largada perfeita', 'Ganhe uma arrancada'], ['drift', '💨', 'Rei do drift', 'Faça ouro no desafio de drift'], ['copa', '🏆', 'Campeão de copa', 'Ganhe um campeonato']
 ].map(([id, icon, name, d]) => ({ id, icon, name, d }));
 const xpNeed = lv => 400 + lv * 200;

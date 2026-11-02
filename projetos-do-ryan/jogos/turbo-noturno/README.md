@@ -31,6 +31,15 @@ Também funciona com controle de videogame. No celular, jogue com o aparelho dei
 - Tela **Carros**: os 8 veículos com descrição e barras; os bloqueados liberam com o anúncio de cada um.
 - Conquistas e subida de nível aparecem como cartões animados com som; a tela de carregamento mostra dicas.
 
+## Cidade viva
+
+- **Dia e noite:** o tempo passa sozinho na Cidade Livre (noite, amanhecer, dia, entardecer) e às vezes **chove** (a pista fica mais escorregadia).
+- **⛽ Posto e lava-jato:** pare no marcador verde e aperte E. Por R$ 100 o carro é lavado e o nitro enche.
+- **🚁 Heliporto:** um helicóptero de verdade no heliporto. Aperte E no marcador (pode ser a pé) para decolar. Acelera para frente, Espaço sobe, Q desce, V pousa e E sai.
+- **🚕 Táxi:** busque 2 passageiros (eles acenam no ponto amarelo) e leve cada um ao destino. Quanto mais rápido, mais gorjeta.
+- **🍕 Pizza:** entregue 3 pizzas antes de esfriarem.
+- Conquistas novas: Taxista e Pizza quentinha.
+
 ## Modos de corrida
 
 No menu, **Modos de corrida** abre a escolha da pista (qualquer fase já liberada) e os modos:
