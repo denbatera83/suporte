@@ -22,6 +22,15 @@ Abra o arquivo `index.html` no navegador (Chrome, Edge ou Firefox). É preciso e
 
 Também funciona com controle de videogame. No celular, jogue com o aparelho deitado: arraste o botão redondo da esquerda para virar e use os botões da direita para acelerar, frear, nitro e freio de mão.
 
+## Menu principal
+
+- Três botões grandes para jogar: **Carreira**, **Cidade Livre** e **Multiplayer**.
+- Grade de ícones: **Carros**, **Oficina**, **Visual**, **Conquistas**, **Fases** e **Opções**.
+- No alto, o perfil do piloto com nível, barra de experiência e dinheiro.
+- No canto, a vitrine do carro em uso com velocidade, aceleração e controle (botão *Trocar carro*).
+- Tela **Carros**: os 8 veículos com descrição e barras; os bloqueados liberam com o anúncio de cada um.
+- Conquistas e subida de nível aparecem como cartões animados com som; a tela de carregamento mostra dicas.
+
 ## Opções
 
 - **Direção:** Arcade (padrão, mais aderência e mais fácil) ou Simulação (física completa).

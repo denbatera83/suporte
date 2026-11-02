@@ -137,10 +137,46 @@
   .mitem.primary { background: linear-gradient(100deg, rgba(255,106,31,.95), rgba(255,178,31,.9)); color: #170800; }
   .mitem.primary .d, .mitem.primary .k { color: rgba(23, 8, 0, .75); }
   .mitem.primary:hover { filter: brightness(1.08); }
-  .menu-list { grid-template-columns: 1fr 1fr; }
-  .mitem.primary, #btn-city { grid-column: 1 / -1; }
-  .menu-list .mitem:not(.primary):not(#btn-city) .d { display: none; }
-  .menu-list .mitem:not(.primary):not(#btn-city) .t { font-size: 22px; }
+  .menu-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .tile2 { cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 6px 10px; background: var(--panel); border: 1px solid var(--line); color: var(--text); font: italic 800 17px/1 var(--display); letter-spacing: .04em; text-transform: uppercase; transition: background .15s, border-color .15s, transform .15s; }
+  .tile2 b { font-size: 24px; font-style: normal; line-height: 1; }
+  .tile2:hover, .tile2:focus-visible { background: rgba(255,106,31,.16); border-color: var(--accent); transform: translateY(-2px); outline: none; }
+  .profile { position: fixed; top: max(16px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right)); display: flex; align-items: center; gap: 12px; background: rgba(6,8,14,.72); border: 1px solid var(--line); padding: 8px 10px 8px 8px; backdrop-filter: blur(6px); }
+  .profile .lvl { width: 42px; height: 42px; display: grid; place-items: center; font: italic 900 22px var(--display); color: #170800; background: linear-gradient(135deg, var(--accent), var(--accent-2)); clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
+  .pf-name { font: 700 11px var(--body); letter-spacing: .14em; color: var(--muted); text-transform: uppercase; }
+  .xpbar { width: 130px; height: 6px; margin-top: 6px; background: rgba(255,255,255,.1); }
+  .xpbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .6s; }
+  .profile .money { font-size: 20px; padding: 6px 10px; }
+  .showcase { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); width: 290px; background: rgba(6,8,14,.72); border: 1px solid var(--line); border-top: 3px solid var(--accent); padding: 14px 16px; backdrop-filter: blur(6px); }
+  .sc-kicker { font: 700 11px var(--body); letter-spacing: .2em; color: var(--accent); text-transform: uppercase; }
+  .sc-name { font: italic 900 30px/1 var(--display); margin: 4px 0 8px; }
+  .showcase .stat { grid-template-columns: 86px 1fr; }
+  .showcase .btn { width: 100%; margin-top: 10px; font-size: 17px; padding: 9px; }
+  .carcard { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 14px; margin-bottom: 8px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid transparent; cursor: pointer; transition: background .15s, border-color .15s; }
+  .carcard:hover { background: rgba(255,255,255,.07); }
+  .carcard.sel { border-left-color: var(--accent); background: rgba(255,106,31,.12); }
+  .carcard .cn { font: italic 900 24px/1 var(--display); }
+  .carcard .cd { grid-column: 1 / -1; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+  .carcard .tag { align-self: start; font: 800 11px var(--body); letter-spacing: .1em; text-transform: uppercase; padding: 4px 8px; background: var(--panel-2); color: var(--muted); }
+  .carcard.sel .tag { background: var(--accent); color: #170800; }
+  .carcard .tag.ad { background: #ffcf33; color: #170800; }
+  .carcard .mini { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
+  .carcard .mini div { font: 700 10px var(--body); letter-spacing: .08em; color: var(--muted); text-transform: uppercase; }
+  .carcard .mini .bar { margin-top: 3px; height: 6px; }
+  #notes { position: fixed; top: max(80px, calc(env(safe-area-inset-top) + 70px)); right: max(16px, env(safe-area-inset-right)); z-index: 35; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+  .note { display: flex; align-items: center; gap: 12px; min-width: 250px; max-width: 320px; padding: 10px 14px; background: rgba(10,12,20,.94); border: 1px solid var(--line); border-left: 4px solid #ffcf33; box-shadow: 0 10px 30px rgba(0,0,0,.4); animation: noteIn .45s cubic-bezier(.2,1.4,.4,1) both; }
+  .note.out { animation: noteOut .35s ease-in both; }
+  .note b { font-size: 30px; line-height: 1; }
+  .note .nt { font: 700 11px var(--body); letter-spacing: .16em; color: #ffcf33; text-transform: uppercase; }
+  .note .ns { font: italic 800 20px/1.05 var(--display); }
+  @keyframes noteIn { from { transform: translateX(120%); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes noteOut { to { transform: translateX(120%); opacity: 0; } }
+  .screen:not(.hidden) > *, .side:not(.hidden) { animation: scrIn .32s ease-out both; }
+  @keyframes scrIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  #loading .tip { max-width: 420px; margin: 22px auto 0; padding: 0 16px; font-size: 14px; color: var(--text); opacity: .8; line-height: 1.5; }
+  #loading .tip::before { content: 'DICA'; display: block; font: 700 11px var(--body); letter-spacing: .2em; color: var(--accent); margin-bottom: 4px; }
+  @media (max-width: 1000px) { .showcase { display: none; } }
+  @media (max-width: 760px), (max-height: 520px) { .profile { padding: 6px; gap: 8px; } .profile .pf-mid { display: none; } .profile .lvl { width: 34px; height: 34px; font-size: 18px; } .profile .money { font-size: 17px; white-space: nowrap; } .tile2 { padding: 8px 4px; font-size: 14px; } .tile2 b { font-size: 19px; } #notes { top: max(12px, env(safe-area-inset-top)); } }
   .menu-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .menu-foot .hint { font-size: 12px; }
 
@@ -279,7 +315,7 @@
 <body>
 <canvas id="game"></canvas>
 
-<div id="loading"><div><div class="t">TURBO <em>NOTURNO</em></div><div class="s" id="loading-text">Carregando</div><div class="bar2"><i></i></div></div></div>
+<div id="loading"><div><div class="t">TURBO <em>NOTURNO</em></div><div class="s" id="loading-text">Carregando</div><div class="bar2"><i></i></div><div class="tip" id="loading-tip"></div></div></div>
 <div id="rotate"><div><div class="ic">📱</div><h2 style="margin-top:14px">Gire o celular</h2><p class="hint" style="margin-top:8px">O jogo funciona com o celular deitado.</p></div></div>
 
 <div id="hud" class="hidden">
@@ -336,15 +372,29 @@
     </div>
     <div class="menu-list">
       <button class="mitem primary" id="btn-play"><span class="t">CARREIRA</span><span class="d" id="menu-phase">Fase 1</span><span class="k">▶</span></button>
-      <button class="mitem" id="btn-city"><span class="t">CIDADE LIVRE</span><span class="d">Dirija, saia do carro, fuja da polícia</span><span class="k">▶</span></button>
-      <button class="mitem" id="btn-phases"><span class="t">FASES</span><span class="d">Escolha entre as 20 pistas</span><span class="k">20</span></button>
-      <button class="mitem" id="btn-parts"><span class="t">OFICINA</span><span class="d">Motor, turbo, pneus e mais</span><span class="k">9</span></button>
-      <button class="mitem" id="btn-style"><span class="t">VISUAL</span><span class="d">Pintura, rodas, neon e acessórios</span><span class="k">▶</span></button>
-      <button class="mitem" id="btn-multi"><span class="t">MULTIPLAYER</span><span class="d">Crie uma sala e jogue junto com um amigo</span><span class="k">2P</span></button>
-      <button class="mitem" id="btn-achs"><span class="t">CONQUISTAS</span><span class="d" id="menu-level">Nível 1 · medalhas e prêmios</span><span class="k">🏅</span></button>
-      <button class="mitem" id="btn-options"><span class="t">OPÇÕES</span><span class="d">Direção, gráficos, som e controles</span><span class="k">⚙</span></button>
+      <button class="mitem" id="btn-city"><span class="t">CIDADE LIVRE</span><span class="d">Dirija, saia do carro, missões e cinema</span><span class="k">▶</span></button>
+      <button class="mitem" id="btn-multi"><span class="t">MULTIPLAYER</span><span class="d">Jogue com um amigo · sala com senha</span><span class="k">2P</span></button>
     </div>
-    <div class="menu-foot"><div class="money num" id="menu-money">R$ 0</div><div class="hint">Seu progresso fica salvo neste navegador.</div></div>
+    <div class="menu-tiles">
+      <button class="tile2" id="btn-cars"><b>🚗</b><span>Carros</span></button>
+      <button class="tile2" id="btn-parts"><b>🔧</b><span>Oficina</span></button>
+      <button class="tile2" id="btn-style"><b>🎨</b><span>Visual</span></button>
+      <button class="tile2" id="btn-achs"><b>🏅</b><span>Conquistas</span></button>
+      <button class="tile2" id="btn-phases"><b>🏁</b><span>Fases</span></button>
+      <button class="tile2" id="btn-options"><b>⚙️</b><span>Opções</span></button>
+    </div>
+    <div class="menu-foot"><div class="hint">Seu progresso fica salvo neste navegador.</div></div>
+  </div>
+  <div class="profile">
+    <div class="lvl num" id="pf-level">1</div>
+    <div class="pf-mid"><div class="pf-name">PILOTO · <span id="menu-level">Nível 1</span></div><div class="xpbar"><i id="pf-xp"></i></div></div>
+    <div class="money num" id="menu-money">R$ 0</div>
+  </div>
+  <div class="showcase" id="showcase">
+    <div class="sc-kicker">Seu carro</div>
+    <div class="sc-name" id="sc-name">Esportivo GT</div>
+    <div class="sc-stats" id="sc-stats"></div>
+    <button class="btn sec" id="sc-change">Trocar carro</button>
   </div>
 </div>
 
@@ -469,6 +519,7 @@
     <button class="btn sec" id="achs-back">← Voltar</button>
   </div>
 </div>
+<div id="notes"></div>
 <div id="toast" class="hidden"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -2420,6 +2471,13 @@ function showMessage(text, time, sub) {
   $('message').innerHTML = text + (sub ? `<div style="font-size:24px;color:#ffcf33">${sub}</div>` : '');
   msgTimer = time;
 }
+function note(icon, title, sub) {
+  const n = document.createElement('div'); n.className = 'note';
+  n.innerHTML = `<b>${icon}</b><div><div class="nt">${title}</div><div class="ns">${sub}</div></div>`;
+  $('notes').appendChild(n);
+  while ($('notes').children.length > 3) $('notes').firstChild.remove();
+  setTimeout(() => { n.classList.add('out'); setTimeout(() => n.remove(), 400); }, 3600);
+}
 let toastT = null;
 function toast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.remove('hidden');
@@ -4179,13 +4237,14 @@ function ach(id) {
   if (!save.ach || save.ach[id]) return;
   const a = ACH.find(x => x.id === id); if (!a) return;
   save.ach[id] = true; save.money += 500; persist();
-  toast(`🏅 Conquista: ${a.icon} ${a.name} · + R$ 500`); cash();
+  note(a.icon, 'Conquista · + R$ 500', a.name); try { beepNote(); } catch (e) {} cash();
   addXP(100);
 }
 function addXP(n) {
   save.xp += Math.max(0, Math.round(n));
-  while (save.xp >= xpNeed(save.level)) { save.xp -= xpNeed(save.level); save.level++; setTimeout(() => toast(`⭐ Subiu para o nível ${save.level}! + R$ 1.000`), 1900); save.money += 1000; }
+  while (save.xp >= xpNeed(save.level)) { save.xp -= xpNeed(save.level); save.level++; const lv = save.level; setTimeout(() => note('⭐', 'Subiu de nível · + R$ 1.000', 'Nível ' + lv), 900); save.money += 1000; }
   persist();
+  if (view === 'menu') refreshMenu();
 }
 function renderAchs() {
   $('ach-level').textContent = `Nível ${save.level}`;
@@ -4270,6 +4329,11 @@ function renderRadioChoices() {
   RADIO.names.forEach((n, i) => { const b = document.createElement('button'); b.className = 'choice' + (RADIO.st === i ? ' sel' : ''); b.textContent = n.split(' · ')[0]; b.onclick = () => setRadio(i); el.appendChild(b); });
 }
 let hornT = 0;
+function beepNote() {
+  if (!audio || !soundOn) return;
+  const ctx = audio.ctx, t = ctx.currentTime;
+  [784, 1047, 1319].forEach((f, i) => { const g = ctx.createGain(), o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = f; g.gain.setValueAtTime(0, t + i * 0.09); g.gain.linearRampToValueAtTime(0.08, t + i * 0.09 + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.09 + 0.5); o.connect(g); g.connect(audio.master); o.start(t + i * 0.09); o.stop(t + i * 0.09 + 0.55); });
+}
 function horn() {
   initAudio(); if (!audio || !soundOn || performance.now() - hornT < 400) return;
   hornT = performance.now();
@@ -4295,6 +4359,7 @@ function showScreen(name) {
 }
 function withLoading(text, fn) {
   $('loading-text').textContent = text;
+  $('loading-tip').textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
   $('loading').classList.remove('hidden');
   setTimeout(() => {
     fn();
@@ -4302,11 +4367,67 @@ function withLoading(text, fn) {
     requestAnimationFrame(() => requestAnimationFrame(() => $('loading').classList.add('hidden')));
   }, 40);
 }
+const TIPS = [
+  'Solte o acelerador antes da curva e acelere na saída: você ganha mais velocidade.',
+  'O nitro (Shift ou botão N) rende mais nas retas longas.',
+  'Na Cidade Livre, aperte E perto de um carro para entrar ou sair.',
+  'Com o Roadster Foguete ou o Blindado X, aperte V na Cidade Livre para voar.',
+  'Pule nas rampas da cidade e gire no ar para ganhar pontos de manobra.',
+  'Peças avançadas na Oficina deixam o carro muito mais rápido.',
+  'O Blindado X não derrapa e consegue subir pelas paredes dos prédios.',
+  'Aperte O para trocar a estação do rádio e H para buzinar.',
+  'No cinema da Cidade Livre você assiste aos anúncios e libera carros novos.',
+  'Cada conquista dá R$ 500 e experiência para subir de nível.',
+  'No Multiplayer, um cria a sala e o outro digita a senha de 4 números.',
+  'Se o jogo estiver lento, ligue o modo Computador fraco em Opções.'
+];
 const phaseIcons = ph => THEME_INFO[ph.theme].icon + ' ' + TIME_ICON[ph.time] + ' ' + WEATHER_ICON[ph.weather];
 const MEDAL = ['🥇', '🥈', '🥉'];
 
+const CAR_DESC = {
+  esportivo: 'O carro de partida. Equilibrado, fácil de controlar e bom em tudo.',
+  foguete: 'Elétrico e silencioso. Abre as asas e voa na Cidade Livre (tecla V).',
+  blindado: 'Picape de aço. Passa de 350 km/h, não derrapa, voa e sobe pelas paredes.',
+  touro: 'Motor V12. O mais rápido do jogo, chega perto de 400 km/h.',
+  moto: 'Leve e ágil. Deita nas curvas e acelera muito rápido.',
+  kart: 'Pequenininho e muito esperto nas curvas. Ótimo para iniciantes.',
+  monstro: 'Rodas gigantes e suspensão alta. Passa por cima de tudo.',
+  classico: 'Motor V8 dos anos 70. A traseira escorrega: bom para derrapar.'
+};
+function modelStats(m) {
+  applyParts(save.parts, m);
+  const st = carStats();
+  applyParts();
+  const g = n => st.find(x => x[0] === n)[1];
+  return [['Velocidade', g('Vel. máxima')], ['Aceleração', g('Aceleração')], ['Controle', (g('Aderência') + g('Frenagem')) / 2]];
+}
+const modelOpts = () => STYLE.find(c => c.key === 'model').opts;
+const modelOwned = o => !o.ad || !!save.owned['model:' + o.id];
+const statBars = st => st.map(([n, v]) => `<div class="stat"><span>${n}</span><div class="bar"><i style="width:${Math.round(8 + v * 92)}%"></i></div></div>`).join('');
+function chooseModel(o, after) {
+  if (!modelOwned(o)) { playAd(() => { save.owned['model:' + o.id] = true; save.look.model = o.id; persist(); applyParts(); rebuildPlayerCar(); note('🔓', 'Carro liberado', o.name.replace(/^[^A-Za-zÀ-ÿ]+/, '')); checkCollection(); after(); }, o.id, o.name.replace(/^[^A-Za-zÀ-ÿ]+/, '')); return; }
+  save.look.model = o.id; persist(); applyParts(); rebuildPlayerCar(); after();
+}
+function renderCars() {
+  let html = '<p class="hint" style="margin:0 0 10px">Escolha o seu veículo. Os bloqueados liberam assistindo ao anúncio do jogo, uma vez só.</p>';
+  modelOpts().forEach(o => {
+    const sel = save.look.model === o.id, own = modelOwned(o);
+    const st = modelStats(o.id);
+    html += `<div class="carcard ${sel ? 'sel' : ''}" data-model="${o.id}" role="button" tabindex="0"><div class="cn">${o.name}</div><div class="tag ${own ? '' : 'ad'}">${sel ? 'Usando' : own ? 'Usar' : '▶ Anúncio'}</div><div class="cd">${CAR_DESC[o.id] || ''}</div><div class="mini">${st.map(([n, v]) => `<div>${n}<div class="bar"><i style="width:${Math.round(8 + v * 92)}%"></i></div></div>`).join('')}</div></div>`;
+  });
+  $('garage-body').innerHTML = html;
+  $('garage-body').querySelectorAll('[data-model]').forEach(c => {
+    const go = () => chooseModel(modelOpts().find(x => x.id === c.dataset.model), () => renderGarage());
+    c.onclick = go; c.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
+  });
+}
 function refreshMenu() {
   $('menu-money').textContent = brl(save.money);
+  $('pf-level').textContent = save.level;
+  $('pf-xp').style.width = Math.round(100 * save.xp / xpNeed(save.level)) + '%';
+  const mo = modelOpts().find(x => x.id === save.look.model) || modelOpts()[0];
+  $('sc-name').textContent = mo.name.replace(/^[^A-Za-zÀ-ÿ]+/, '');
+  $('sc-stats').innerHTML = statBars(modelStats(mo.id));
   $('menu-level').textContent = `Nível ${save.level} · ${ACH.filter(a => save.ach[a.id]).length} de ${ACH.length} medalhas`;
   const ph = PHASES[save.current];
   $('menu-phase').textContent = `Fase ${ph.n}: ${ph.name} · ${ph.laps} voltas · até ${brl(ph.prize)}`;
@@ -4478,8 +4599,9 @@ function openGarage(gm, fromCity = false) {
   renderGarage(); showScreen('garage');
 }
 function renderGarage() {
-  $('garage-title').textContent = garageMode === 'parts' ? '🔧 OFICINA' : '🎨 VISUAL';
+  $('garage-title').textContent = garageMode === 'parts' ? '🔧 OFICINA' : garageMode === 'cars' ? '🚗 CARROS' : '🎨 VISUAL';
   $('garage-money').textContent = brl(save.money);
+  if (garageMode === 'cars') return renderCars();
   const body = $('garage-body');
   if (garageMode === 'parts') {
     applyParts();
@@ -4509,6 +4631,7 @@ function renderGarage() {
     PAINTS.forEach(c => html += `<button class="choice swatch ${save.look.color === c ? 'sel' : ''}" data-color="${c}" style="background:${c}"></button>`);
     html += `<label class="choice" style="display:flex;align-items:center;gap:6px">Outra cor <input type="color" id="pick-color" value="${save.look.color}"></label></div>`;
     STYLE.forEach(cat => {
+      if (cat.key === 'model') return;
       html += `<h3>${cat.title}</h3>${cat.hint ? `<p class="hint" style="margin:-4px 0 8px">${cat.hint}</p>` : ''}<div class="choices" style="justify-content:flex-start">`;
       if (cat.color) {
         ['#ffffff', '#111111', '#ffcc00', '#ff2a2a', '#1a8cff', '#7dffb8'].forEach(c => html += `<button class="choice swatch ${save.look[cat.key] === c ? 'sel' : ''}" data-key="${cat.key}" data-val="${c}" style="background:${c}"></button>`);
@@ -4533,7 +4656,7 @@ function renderGarage() {
       const cat = STYLE.find(c => c.key === key);
       if (!cat.color) {
         const o = cat.opts.find(x => x.id === val);
-        if (o.ad && !save.owned[key + ':' + val]) { playAd(() => { save.owned[key + ':' + val] = true; save.look[key] = val; persist(); if (key === 'model') applyParts(); rebuildPlayerCar(); toast(`${o.name} liberado!`); checkCollection(); }, val, o.name.replace(/^\S+\s/, '')); return; }
+        if (o.ad && !save.owned[key + ':' + val]) { playAd(() => { save.owned[key + ':' + val] = true; save.look[key] = val; persist(); if (key === 'model') applyParts(); rebuildPlayerCar(); toast(`${o.name} liberado!`); checkCollection(); }, val, o.name.replace(/^[^A-Za-zÀ-ÿ]+/, '')); return; }
         if (o.price > 0 && !save.owned[key + ':' + val]) {
           if (save.money < o.price) { toast('Dinheiro insuficiente. Corra mais para ganhar!'); return; }
           save.money -= o.price; save.owned[key + ':' + val] = true; cash(); toast(`${o.name} comprado!`);
@@ -4645,6 +4768,8 @@ $('btn-phases').onclick = () => { renderPhases(); showScreen('phases'); };
 $('phases-back').onclick = () => showScreen('menu');
 $('btn-parts').onclick = () => openGarage('parts');
 $('btn-style').onclick = () => openGarage('style');
+$('btn-cars').onclick = () => openGarage('cars');
+$('sc-change').onclick = () => openGarage('cars');
 $('garage-back').onclick = () => {
   if (garageFromCity && city) { garageFromCity = false; applyParts(city.own ? save.parts : ZERO_PARTS, city.curLook.model); state = 'city'; showScreen(null); return; }
   refreshMenu(); showScreen('menu');
@@ -4726,7 +4851,7 @@ function frame() {
 frame();
 
 // gancho para testes automatizados
-window.__tn = { ACH, RADIO, setRadio, ramps: () => ramps, MP, mpCreate, mpJoin, city: () => city, startCity, cityAction, player, rivals: () => rivals, state: () => state, track: { P, T, S, N }, profile: () => profile, save: () => save, PHASES, buildWorld, setupRace, startRace, CAR };
+window.__tn = { ACH, ach, addXP, note, RADIO, setRadio, ramps: () => ramps, MP, mpCreate, mpJoin, city: () => city, startCity, cityAction, player, rivals: () => rivals, state: () => state, track: { P, T, S, N }, profile: () => profile, save: () => save, PHASES, buildWorld, setupRace, startRace, CAR };
 })();
 </script>
 </body>
