@@ -94,6 +94,13 @@ Como funciona a conexão:
 - **Pelo link do Claude:** a sala usa a sala ao vivo do próprio Claude. A outra pessoa precisa conseguir abrir o link logada no Claude (compartilhe o jogo com ela pelo botão Compartilhar).
 - **Pelo arquivo `index.html`:** os dois aparelhos se conectam direto pela internet (PeerJS). Os dois precisam estar com internet. Em algumas redes (por exemplo, certas redes de empresa), a conexão direta pode ser bloqueada.
 
+
+**Até 4 jogadores:** a sala aceita até 4 pessoas (quem criou a sala repassa a posição de todo mundo). No grid, cada um larga num lugar diferente.
+
+**Pega-pega:** escolha *Pega-pega* na sala. Quem criou a sala começa como pegador (🎯 em cima do carro). Encoste em alguém para passar o pegador (depois de passar, há 3 segundos de proteção). Em 3 minutos, ganha quem foi pegador por menos tempo.
+
+**Chat rápido:** aperte 1 a 6 (ou o botão 💬) para mandar frases prontas: "Bora!", "Boa corrida!", "Me espera!", "Vem me pegar!", "Haha!", "GG!". Não dá para escrever texto livre, só as frases do jogo.
+
 ## Modo carreira: 20 fases
 
 Cada fase tem uma pista diferente, um cenário, uma hora do dia e um clima. Chegar em 1º, 2º ou 3º libera a próxima fase, e toda corrida paga um prêmio em dinheiro. Os rivais ficam mais rápidos a cada fase.

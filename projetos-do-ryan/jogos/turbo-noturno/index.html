@@ -183,6 +183,10 @@
   .note b { font-size: 30px; line-height: 1; }
   .note .nt { font: 700 11px var(--body); letter-spacing: .16em; color: #ffcf33; text-transform: uppercase; }
   .note .ns { font: italic 800 20px/1.05 var(--display); }
+  body.playing #notes { right: auto; left: max(16px, env(safe-area-inset-left)); top: calc(max(16px, env(safe-area-inset-top)) + 236px); }
+  body.playing .note { animation-name: noteInL; } body.playing .note.out { animation-name: noteOutL; }
+  @keyframes noteInL { from { transform: translateX(-120%); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes noteOutL { to { transform: translateX(-120%); opacity: 0; } }
   @keyframes noteIn { from { transform: translateX(120%); opacity: 0; } to { transform: none; opacity: 1; } }
   @keyframes noteOut { to { transform: translateX(120%); opacity: 0; } }
   .screen:not(.hidden) > *, .side:not(.hidden) { animation: scrIn .32s ease-out both; }
@@ -239,6 +243,15 @@
   .mp-player span { color: var(--muted); font-size: 13px; }
   #mp-tag { position: absolute; top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); margin-top: 52px; font: 700 12px var(--body); letter-spacing: .12em; color: var(--accent-2); text-shadow: 0 1px 4px #000; white-space: nowrap; }
   body.city-mode #mp-tag { margin-top: 84px; }
+  #tag-hud { position: absolute; top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); margin-top: 110px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 18px; background: rgba(6,8,14,.78); border: 1px solid var(--line); border-top: 3px solid #29c6ff; white-space: nowrap; }
+  #tag-hud.it { border-top-color: #ff2a2a; }
+  #tag-hud b { font: italic 900 22px var(--display); }
+  #tag-hud span { font: 700 12px var(--body); letter-spacing: .1em; color: var(--muted); }
+  #chat-btn { position: absolute; pointer-events: auto; right: max(14px, env(safe-area-inset-right)); top: calc(max(16px, env(safe-area-inset-top)) + 120px); width: 48px; height: 48px; font-size: 24px; background: var(--panel); border: 1px solid var(--line); cursor: pointer; }
+  #chat-panel { position: absolute; pointer-events: auto; right: max(14px, env(safe-area-inset-right)); top: calc(max(16px, env(safe-area-inset-top)) + 174px); display: grid; gap: 4px; background: rgba(6,8,14,.9); border: 1px solid var(--line); padding: 6px; }
+  #chat-panel button { text-align: left; cursor: pointer; padding: 8px 12px; background: var(--panel-2); border: 0; color: var(--text); font: 700 14px var(--body); }
+  #chat-panel button:hover { background: rgba(255,106,31,.2); }
+  #chat-panel kbd { display: inline-block; width: 18px; margin-right: 8px; color: var(--accent); font: 800 12px var(--body); }
   input[type=color] { width: 44px; height: 34px; border: 1px solid var(--line); background: none; cursor: pointer; vertical-align: middle; padding: 2px; }
 
   table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 16px; }
@@ -341,6 +354,9 @@
   <div id="phase-tag"></div>
   <div id="mode-hud" class="hidden"></div>
   <div id="mp-tag" class="hidden"></div>
+  <div id="tag-hud" class="hidden"></div>
+  <button id="chat-btn" class="hidden" aria-label="Chat rápido">💬</button>
+  <div id="chat-panel" class="hidden"><button data-chat="0"><kbd>1</kbd>Bora! 🏁</button><button data-chat="1"><kbd>2</kbd>Boa corrida! 👏</button><button data-chat="2"><kbd>3</kbd>Me espera! ⏳</button><button data-chat="3"><kbd>4</kbd>Vem me pegar! 😜</button><button data-chat="4"><kbd>5</kbd>Haha! 😂</button><button data-chat="5"><kbd>6</kbd>GG! 🏆</button></div>
   <div id="hud-right" class="hud-box">
     <div><div class="label">Tempo</div><div class="big" id="time">0:00.00</div></div>
     <div class="label num" style="margin-top:4px;text-transform:none;letter-spacing:.04em" id="best">--</div>
@@ -389,7 +405,7 @@
       <button class="mitem primary" id="btn-play"><span class="t">CARREIRA</span><span class="d" id="menu-phase">Fase 1</span><span class="k">▶</span></button>
       <button class="mitem" id="btn-city"><span class="t">CIDADE LIVRE</span><span class="d">Dirija, saia do carro, missões e cinema</span><span class="k">▶</span></button>
       <button class="mitem" id="btn-modes"><span class="t">MODOS DE CORRIDA</span><span class="d">Relógio, polícia, arrancada, drift e campeonato</span><span class="k">5</span></button>
-      <button class="mitem" id="btn-multi"><span class="t">MULTIPLAYER</span><span class="d">Jogue com um amigo · sala com senha</span><span class="k">2P</span></button>
+      <button class="mitem" id="btn-multi"><span class="t">MULTIPLAYER</span><span class="d">Até 4 amigos · corrida, cidade e pega-pega</span><span class="k">4P</span></button>
     </div>
     <div class="menu-tiles">
       <button class="tile2" id="btn-cars"><b>🚗</b><span>Carros</span></button>
@@ -495,7 +511,7 @@
 <div id="multi" class="screen hidden">
   <div class="card">
     <h2>MULTIPLAYER</h2>
-    <p class="hint" style="margin-top:6px">Jogue junto com outra pessoa. Uma cria a sala e passa a senha; a outra entra com a senha no celular ou computador dela.</p>
+    <p class="hint" style="margin-top:6px">Jogue com até 4 pessoas. Uma cria a sala e passa a senha; as outras entram com a senha no celular ou computador delas. Durante o jogo, aperte 1 a 6 (ou 💬) para mandar frases rápidas.</p>
     <div id="mp-setup">
       <div class="opt"><span class="label">Seu nome</span><input id="mp-name" class="field" maxlength="12" placeholder="Jogador" autocomplete="off"></div>
       <div class="opt"><span class="label">Criar</span><div><button class="btn" id="mp-create">CRIAR SALA</button></div></div>
@@ -3988,7 +4004,7 @@ function startCityNow() {
   // seu carro, na frente da oficina
   const start = roadSpot(2, 2, 0);
   player.car = makeCar(save.look);
-  setPlayerCarState(start.x + 10, start.z, Math.PI / 2);
+  setPlayerCarState(start.x + 10 + (MP.active ? (5 - mpSlot()) * 9 : 0), start.z, Math.PI / 2);
   city.walker = { hm: makeHuman(new THREE.Color(save.look.color).getHex(), 0x1a237e, 0xe0ac69, 0x1b1b1b, 0x111111), x: 0, z: 0, h: 0, y: 0, vy: 0, speed: 0 };
   city.walker.hm.g.visible = false;
   city.walker.hm.g.traverse(o => { o.castShadow = true; });
@@ -4077,14 +4093,24 @@ function transportPeer(code, host) { // arquivo aberto no navegador: conexão di
     let peer;
     try { peer = host ? new window.Peer(hostId) : new window.Peer(); } catch (e) { resolve({ error: 'Conexão indisponível neste navegador.' }); return; }
     const conns = new Map(); let fn = null, done = false;
-    const push = () => fn && fn([...conns.values()].filter(c => c.s).map(c => ({ id: c.c.peer, s: c.s, at: c.at })));
+    const push = () => {
+      if (!fn) return;
+      const out = [];
+      conns.forEach(c => { if (c.s) out.push({ id: c.c.peer, s: c.s, at: c.at }); if (c.o) c.o.forEach(x => out.push({ id: 'r-' + x.id, s: x.s, at: c.at })); });
+      fn(out);
+    };
     const attach = c => {
       conns.set(c.peer, { c, s: null, at: 0 });
-      c.on('data', d => { const e = conns.get(c.peer); if (e && d && d.s) { e.s = d.s; e.at = Date.now(); push(); } });
+      c.on('data', d => {
+        const e = conns.get(c.peer); if (!e || !d) return;
+        if (d.s) { e.s = d.s; e.at = Date.now(); }
+        if (!host && Array.isArray(d.o)) e.o = d.o.filter(x => x && typeof x.id === 'string' && x.id.length < 80 && x.s && typeof x.s === 'object').slice(0, 3);
+        push();
+      });
       c.on('close', () => { conns.delete(c.peer); push(); });
       c.on('error', () => {});
     };
-    const T = { kind: 'p2p', send: s => conns.forEach(e => { if (e.c.open) try { e.c.send({ s }); } catch (er) {} }), onStates: f => { fn = f; }, leave: () => { try { peer.destroy(); } catch (e) {} } };
+    const T = { kind: 'p2p', send: s => conns.forEach(e => { if (e.c.open) try { e.c.send(host ? { s, o: [...conns.values()].filter(x => x !== e && x.s).map(x => ({ id: x.c.peer, s: x.s })) } : { s }); } catch (er) {} }), onStates: f => { fn = f; }, leave: () => { try { peer.destroy(); } catch (e) {} } };
     peer.on('open', () => {
       if (!host) { const c = peer.connect(hostId, { reliable: true }); attach(c); c.on('open', () => { if (!done) { done = true; resolve(T); } }); setTimeout(() => { if (!done) { done = true; peer.destroy(); resolve({ error: 'Sala não encontrada. Confira a senha.' }); } }, 12000); }
       else { done = true; resolve(T); }
@@ -4134,6 +4160,7 @@ function mpSaveName() { const n = $('mp-name').value.trim(); MP.name = n ? clean
 function mpLeave() {
   if (MP.t) MP.t.leave();
   MP.remotes.forEach(mpRemoveRemote); MP.remotes.clear();
+  tagStop();
   Object.assign(MP, { active: false, host: false, code: '', t: null, game: null, inRace: false });
   renderLobby(); mpTag();
 }
@@ -4143,7 +4170,8 @@ function myMode() { return state === 'city' || (state === 'paused' && mode === '
 function mpMyState() {
   const look = city ? city.curLook : save.look;
   const st = { n: MP.name, H: MP.host ? 1 : 0, l: look, m: myMode(), ph: phase.n, x: r2(player.pos.x), z: r2(player.pos.z), y: r2(player.pos.y), a: r2(player.h), v: r2(player.vF),
-    p: Math.round(player.progress), fi: player.finished ? r2(player.finishTime) : 0 };
+    p: Math.round(player.progress), fi: player.finished ? r2(player.finishTime) : 0, st: MP.seat, ch: MP.chat };
+  if (MP.tag) { st.tg = [MP.tag.ver, MP.tag.it]; st.ti = Math.round(MP.tag.myTime); }
   if (city && !city.driving) st.f = [r2(city.walker.x), r2(city.walker.z), r2(city.walker.h), r2(city.walker.y)];
   if (MP.host && MP.game) st.g = MP.game;
   return st;
@@ -4156,11 +4184,12 @@ function mpOnStates(list) {
     let r = MP.remotes.get(id);
     if (!r) { r = { id, pos: new THREE.Vector3(num(s.x), num(s.y), num(s.z)), h: num(s.a), car: null, hm: null, key: '' }; MP.remotes.set(id, r); }
     r.s = s; r.at = performance.now();
+    mpOnChat(r, s); tagOnState(s);
     // quem criou a sala começou uma partida: entra junto
     const g = s.g;
-    if (!MP.host && s.H && g && typeof g === 'object' && g.id !== MP.lastGameId && (g.mode === 'race' || g.mode === 'city')) {
+    if (!MP.host && s.H && g && typeof g === 'object' && g.id !== MP.lastGameId && (g.mode === 'race' || g.mode === 'city' || g.mode === 'tag')) {
       MP.lastGameId = g.id;
-      mpStartGame({ id: g.id, mode: g.mode, phase: clamp(Math.floor(num(g.phase)), 0, 19) });
+      mpStartGame({ id: g.id, mode: g.mode, phase: clamp(Math.floor(num(g.phase)), 0, 19), it: num(g.it) });
     }
   });
   for (const [id, r] of MP.remotes) if (!seen.has(id)) { mpRemoveRemote(r); MP.remotes.delete(id); }
@@ -4188,14 +4217,16 @@ function mpRemoteRacers() {
 }
 function mpGrid() { // sem rivais do computador: só os jogadores, cada um num lugar do grid
   rivals.forEach(r => disposeCar(r.car)); rivals = [];
-  const k = MP.host ? 5 : 4, idx = N - 6 - k * 4, lat = k % 2 ? -3 : 3;
+  const k = mpSlot(), idx = N - 6 - k * 4, lat = k % 2 ? -3 : 3;
   const tmp = {}; placeOnTrack(tmp, idx, lat);
   player.pos.set(tmp.x, 0, tmp.z); player.h = angleAt(idx); player.idx = idx; player.progress = idx - N;
   camPos.set(player.pos.x - Math.sin(player.h) * 8, 3, player.pos.z - Math.cos(player.h) * 8);
   updateCars(0);
 }
 function mpTick(dt) {
+  $('chat-btn').classList.toggle('hidden', !(MP.active && ['race', 'city', 'countdown', 'finished'].includes(state)));
   if (!MP.active) return;
+  tagTick(dt);
   MP.sendT -= dt;
   if (MP.sendT <= 0 && MP.t) { MP.sendT = 1 / 15; try { MP.t.send(mpMyState()); } catch (e) {} }
   const mine = myMode();
@@ -4253,8 +4284,83 @@ function mpTag() {
 function mpStartGame(g) {
   MP.inRace = g.mode === 'race';
   ach('amigo');
-  if (g.mode === 'race') startRace(g.phase, true); else startCity();
+  tagStop();
+  if (g.mode === 'race') startRace(g.phase, true); else { startCity(); if (g.mode === 'tag') tagStart(g); }
 }
+
+// ---- até 4 jogadores: chat rápido e pega-pega ----
+const CHAT = ['Bora! 🏁', 'Boa corrida! 👏', 'Me espera! ⏳', 'Vem me pegar! 😜', 'Haha! 😂', 'GG! 🏆'];
+MP.seat = Math.random();
+MP.chat = [0, 0];
+function mpChat(i) {
+  if (!MP.active || i < 0 || i >= CHAT.length) return;
+  MP.chat = [i, (MP.chat[1] + 1) % 1000];
+  note('💬', 'Você', CHAT[i]);
+  $('chat-panel').classList.add('hidden');
+}
+function mpOnChat(r, s) {
+  const ch = s.ch;
+  if (!Array.isArray(ch)) return;
+  const i = Math.floor(num(ch[0])), k = num(ch[1]);
+  if (r.lastChat === undefined) { r.lastChat = k; return; }
+  if (k === r.lastChat) return;
+  r.lastChat = k;
+  if (i >= 0 && i < CHAT.length) note('💬', cleanName(s.n), CHAT[i]);
+}
+function mpSlot() { // lugar no grid: quem criou a sala na frente, os outros em ordem
+  const all = [{ me: true, H: MP.host ? 1 : 0, st: MP.seat }];
+  MP.remotes.forEach(r => { if (r.s) all.push({ H: r.s.H ? 1 : 0, st: num(r.s.st) }); });
+  all.sort((a, b) => b.H - a.H || a.st - b.st);
+  return 5 - all.findIndex(e => e.me);
+}
+function tagFocus() { return { x: focusX(), z: focusZ() }; }
+function tagStart(g) {
+  MP.tag = { ver: 1, it: num(g.it), t: 0, dur: 180, myTime: 0, cool: 3, mark: null };
+  showMessage('PEGA-PEGA!', 3, MP.tag.it === MP.seat ? 'Você é o pegador! Encoste em alguém' : 'Fuja do pegador 🎯');
+}
+function tagRemoteBySeat(seat) { for (const r of MP.remotes.values()) if (r.s && num(r.s.st) === seat) return r; return null; }
+function tagTick(dt) {
+  const T = MP.tag;
+  if (!T || state !== 'city' || !city) { if (T && T.mark) T.mark.visible = false; return; }
+  T.t += dt; T.cool -= dt;
+  const meIt = T.it === MP.seat;
+  if (meIt) T.myTime += dt;
+  const itR = meIt ? null : tagRemoteBySeat(T.it);
+  if (!T.mark) { T.mark = iconSprite('🎯', 3); scene.add(T.mark); }
+  T.mark.visible = !meIt && !!itR;
+  if (itR) {
+    const p = itR.hm && itR.hm.g.visible ? itR.hm.g.position : itR.pos;
+    T.mark.position.set(p.x, p.y + 4.2 + Math.sin(T.t * 4) * 0.3, p.z);
+    const f = tagFocus();
+    if (T.cool <= 0 && Math.hypot(p.x - f.x, p.z - f.z) < 4.2) { T.ver++; T.it = MP.seat; T.cool = 3; showMessage('PEGO!', 2, 'Agora você é o pegador 🎯'); playHit(0.4); }
+  }
+  const left = Math.max(0, T.dur - T.t);
+  $('tag-hud').classList.remove('hidden');
+  $('tag-hud').innerHTML = meIt ? `<b>🎯 VOCÊ É O PEGADOR</b><span>encoste em alguém · ${fmt(left).slice(0, -3)}</span>` : `<b>🏃 FUJA!</b><span>pegador: ${itR ? escHtml(cleanName(itR.s.n)) : '...'} · ${fmt(left).slice(0, -3)}</span>`;
+  $('tag-hud').classList.toggle('it', meIt);
+  if (T.t >= T.dur) {
+    const list = [{ n: 'Você', t: T.myTime }];
+    MP.remotes.forEach(r => { if (r.s) list.push({ n: cleanName(r.s.n), t: num(r.s.ti) }); });
+    list.sort((a, b) => a.t - b.t);
+    showMessage(list[0].n === 'Você' ? '🏆 VOCÊ VENCEU!' : '🏆 ' + escHtml(list[0].n) + ' VENCEU', 6, list.map((e, k) => `${k + 1}º ${escHtml(e.n)} · ${Math.round(e.t)} s de pegador`).join(' &nbsp; '));
+    if (list[0].n === 'Você') { save.money += 1500; ach('pegapega'); cash(); persist(); }
+    tagStop();
+  }
+}
+function tagStop() { if (MP.tag && MP.tag.mark) scene.remove(MP.tag.mark); MP.tag = null; $('tag-hud').classList.add('hidden'); }
+function tagOnState(s) {
+  const T = MP.tag; if (!T || !Array.isArray(s.tg)) return;
+  const v = num(s.tg[0]), it = num(s.tg[1]);
+  if (v > T.ver || (v === T.ver && it !== T.it && it > T.it)) {
+    T.ver = v; T.cool = 3;
+    if (it !== T.it) { T.it = it; const who = tagRemoteBySeat(it); if (it === MP.seat) showMessage('PEGO!', 2, 'Agora você é o pegador 🎯'); else showMessage('Novo pegador: ' + (who ? escHtml(cleanName(who.s.n)) : '?'), 1.5); }
+  }
+}
+window.addEventListener('keydown', e => {
+  if (!MP.active || (e.target && e.target.tagName === 'INPUT')) return;
+  const d = /^Digit([1-6])$/.exec(e.code);
+  if (d && (state === 'race' || state === 'city' || state === 'countdown' || state === 'finished')) mpChat(+d[1] - 1);
+});
 
 // ---- tela da sala ----
 function renderLobby() {
@@ -4266,12 +4372,12 @@ function renderLobby() {
   const add = (name, tag) => { const d = document.createElement('div'); d.className = 'mp-player'; const b = document.createElement('b'); b.textContent = name; const sp = document.createElement('span'); sp.textContent = tag; d.append(b, sp); list.appendChild(d); };
   add(MP.name + ' (você)', MP.host ? 'criou a sala' : 'conectado');
   MP.remotes.forEach(r => add(cleanName(r.s && r.s.n), r.s && r.s.H ? 'criou a sala' : 'conectado'));
-  if (!MP.remotes.size) add('Esperando o amigo…', `senha ${MP.code}`);
+  if (MP.remotes.size < 3) add(MP.remotes.size ? 'Cabe mais gente…' : 'Esperando os amigos…', `até 4 · senha ${MP.code}`);
   $('mp-host-ctrl').classList.toggle('hidden', !MP.host);
   $('mp-wait').classList.toggle('hidden', MP.host);
   if (MP.host) {
     const mm = $('mp-mode'); mm.innerHTML = '';
-    [['race', 'Corrida'], ['city', 'Cidade Livre']].forEach(([v, t]) => { const b = document.createElement('button'); b.className = 'choice' + (MP.mode === v ? ' sel' : ''); b.textContent = t; b.onclick = () => { MP.mode = v; renderLobby(); }; mm.appendChild(b); });
+    [['race', 'Corrida'], ['city', 'Cidade Livre'], ['tag', 'Pega-pega']].forEach(([v, t]) => { const b = document.createElement('button'); b.className = 'choice' + (MP.mode === v ? ' sel' : ''); b.textContent = t; b.onclick = () => { MP.mode = v; renderLobby(); }; mm.appendChild(b); });
     $('mp-phase-row').classList.toggle('hidden', MP.mode !== 'race');
     const sel = $('mp-phase');
     if (!sel.options.length) PHASES.forEach((ph, i) => { const o = document.createElement('option'); o.value = i; o.textContent = `Fase ${ph.n}: ${ph.name}`; sel.appendChild(o); });
@@ -4286,7 +4392,9 @@ $('mp-create').onclick = mpCreate;
 $('mp-join').onclick = mpJoin;
 $('mp-leave').onclick = mpLeave;
 $('mp-phase').onchange = e => { MP.phase = +e.target.value; };
-$('mp-start').onclick = () => { MP.game = { id: Date.now(), mode: MP.mode, phase: MP.phase }; MP.lastGameId = MP.game.id; mpStartGame(MP.game); };
+$('chat-btn').onclick = () => $('chat-panel').classList.toggle('hidden');
+document.querySelectorAll('[data-chat]').forEach(b => b.onclick = () => mpChat(+b.dataset.chat));
+$('mp-start').onclick = () => { MP.game = { id: Date.now(), mode: MP.mode, phase: MP.phase, it: MP.seat }; MP.lastGameId = MP.game.id; mpStartGame(MP.game); };
 $('mp-code').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); });
 
 // =====================================================================
@@ -4469,7 +4577,7 @@ const ACH = [
   ['fuga', '🚨', 'Fugitivo', 'Despiste a polícia com 3 estrelas ou mais'], ['entregas', '📦', 'Entregador', 'Complete 3 entregas'],
   ['moedas', '🪙', 'Cofrinho', 'Pegue 50 moedas na cidade'], ['cinema', '🎬', 'Cinéfilo', 'Assista a um vídeo inteiro no cinema'],
   ['colecao', '🚗', 'Colecionador', 'Libere todos os veículos especiais'], ['avancado', '🔧', 'Mecânico', 'Compre uma peça Avançada'],
-  ['amigo', '🤝', 'Jogando junto', 'Jogue uma partida no multiplayer'], ['radio', '📻', 'DJ', 'Ligue o rádio do carro'],
+  ['amigo', '🤝', 'Jogando junto', 'Jogue uma partida no multiplayer'], ['pegapega', '🎯', 'Ninguém me pega', 'Ganhe uma partida de pega-pega'], ['radio', '📻', 'DJ', 'Ligue o rádio do carro'],
   ['fantasma', '👻', 'Mais rápido que o fantasma', 'Bata o seu fantasma no contra o relógio'], ['fuga', '🚓', 'Fugitivo', 'Escape da polícia'],
   ['taxi', '🚕', 'Taxista', 'Complete uma missão de táxi'], ['pizza', '🍕', 'Pizza quentinha', 'Entregue todas as pizzas'],
   ['arrancada', '🚦', 'Largada perfeita', 'Ganhe uma arrancada'], ['drift', '💨', 'Rei do drift', 'Faça ouro no desafio de drift'], ['copa', '🏆', 'Campeão de copa', 'Ganhe um campeonato']
