@@ -193,6 +193,25 @@
   tr.me td { color: var(--accent-2); font-weight: 800; }
   .record { color: var(--accent-2); font-weight: 700; margin-top: 6px; font-size: 14px; }
   .prize { font: italic 900 34px var(--display); color: var(--good); margin-top: 8px; }
+  /* anúncio do próprio jogo */
+  #ad { position: fixed; inset: 0; z-index: 45; pointer-events: auto; background: radial-gradient(120% 90% at 50% 60%, rgba(6,8,14,0) 30%, rgba(6,8,14,.75)); overflow: hidden; }
+  #ad .ad-top { position: absolute; top: max(14px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right)); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  #ad .ad-badge { background: var(--accent-2); color: #170800; font: 800 12px var(--body); letter-spacing: .14em; padding: 5px 10px; }
+  #ad .ad-time { background: rgba(6,8,14,.75); border: 1px solid var(--line); padding: 6px 12px; font: 700 13px var(--body); font-variant-numeric: tabular-nums; }
+  #ad .ad-scene { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; padding: 0 max(16px, env(safe-area-inset-left)); }
+  #ad .ad-k { font: 800 14px var(--body); letter-spacing: .3em; color: var(--accent); text-transform: uppercase; text-shadow: 0 2px 10px #000; }
+  #ad .ad-t { font: italic 900 clamp(46px, 10vw, 120px)/.9 var(--display); text-shadow: 0 6px 30px rgba(0,0,0,.7); margin-top: 6px; text-wrap: balance; }
+  #ad .ad-t em { color: var(--accent); font-style: italic; }
+  #ad .ad-d { font: 600 clamp(15px, 2.4vw, 22px) var(--body); color: #e6ebf2; margin-top: 12px; text-shadow: 0 2px 8px #000; }
+  #ad .ad-scene.in .ad-t { animation: adIn .7s cubic-bezier(.2,.9,.2,1) both; }
+  #ad .ad-scene.in .ad-k, #ad .ad-scene.in .ad-d { animation: adFade .9s .25s both; }
+  @keyframes adIn { from { transform: translateX(-60px) skewX(-12deg); opacity: 0; letter-spacing: .2em; } to { transform: none; opacity: 1; } }
+  @keyframes adFade { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  #ad .ad-bottom { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 max(16px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  #ad .ad-bar { width: 100%; height: 4px; background: rgba(255,255,255,.15); }
+  #ad .ad-bar i { display: block; height: 100%; width: 0; background: var(--accent-2); }
+  #ad .ad-reward { font: 700 14px var(--body); color: var(--muted); text-shadow: 0 1px 6px #000; }
+  #ad .ad-reward b { color: var(--text); }
   #toast { position: fixed; bottom: max(24px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 30; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--accent); padding: 11px 18px; font-weight: 700; pointer-events: none; max-width: calc(100vw - 32px); }
 
   /* carregamento e aviso de girar o celular */
@@ -412,6 +431,15 @@
     <div class="btn-row" style="justify-content:flex-start"><button class="btn sec" id="mp-back">← Voltar</button></div>
   </div>
 </div>
+<div id="ad" class="hidden" role="dialog" aria-label="Anúncio">
+  <div class="ad-top"><span class="ad-badge">ANÚNCIO</span><span class="ad-time" id="ad-time">15</span></div>
+  <div class="ad-scene" id="ad-scene"></div>
+  <div class="ad-bottom">
+    <div class="ad-reward" id="ad-reward">Assista até o fim para ganhar o <b>Roadster Foguete</b></div>
+    <button class="btn hidden" id="ad-claim">PEGAR O FOGUETE 🚀</button>
+    <div class="ad-bar"><i id="ad-bar"></i></div>
+  </div>
+</div>
 <div id="toast" class="hidden"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -502,7 +530,7 @@ function carStats() {
 const PAINTS = ['#0b4fd6', '#1a8cff', '#00b3a4', '#0f8f4a', '#7ac70c', '#f2b200', '#ff7a00', '#d43a00', '#b00a14', '#e0115f', '#8a2be2', '#3b1d6e', '#e8e8e8', '#9aa0a8', '#3a3d42', '#0c0c0e'];
 const STYLE = [
   { key: 'model', title: 'Carro', hint: 'O Roadster Foguete é elétrico (arrancada instantânea) e VOA na Cidade Livre: aperte V.', opts: [
-    { id: 'esportivo', name: 'Esportivo GT', price: 0 }, { id: 'foguete', name: '🚀 Roadster Foguete', price: 0 }] },
+    { id: 'esportivo', name: 'Esportivo GT', price: 0 }, { id: 'foguete', name: '🚀 Roadster Foguete', price: 0, ad: true }] },
   { key: 'finish', title: 'Acabamento da pintura', opts: [
     { id: 'metal', name: 'Metálico', price: 0 }, { id: 'fosco', name: 'Fosco', price: 800 },
     { id: 'perola', name: 'Perolado', price: 1500 }, { id: 'cromo', name: 'Cromado', price: 5000 }] },
@@ -554,6 +582,7 @@ function persist() { try { localStorage.setItem('tn3-save', JSON.stringify(save)
 const settings = save.settings;
 if (settings.v !== 3) { settings.gfx = settings.gfx === 1 ? 2 : 0; if (!isTouch && settings.gfx === 0) settings.gfx = 1; settings.steer = settings.steer || 'arcade'; settings.v = 3; }
 if (settings.weak === undefined) settings.weak = false;
+if (save.look.model === 'foguete') save.owned['model:foguete'] = true;
 applyParts();
 
 // =====================================================================
@@ -2146,7 +2175,7 @@ function updateCars(dt) {
   const wheelSpinR = (player.vF * (1 + player.spin * 0.8)) * dt / CAR.rw;
   pc.wheels.forEach((w, k) => w.rotation.x += k < 2 ? player.vF * dt / CAR.rw : wheelSpinR);
   pc.steer.forEach(s => s.rotation.y = player.steer);
-  const flying = !!(city && city.flying && city.driving);
+  const flying = !!(city && city.flying && city.driving) || adFly;
   if (pc.rocket) { // rodas viram propulsores ao voar
     pc.fold += ((flying ? 1 : 0) - pc.fold) * Math.min(1, 4 * dt);
     pc.pivots.forEach(pv => { pv.rotation.z = -Math.sign(pv.position.x) * Math.PI / 2 * pc.fold; if (pc.fold > 0.05) pv.rotation.y = 0; });
@@ -3838,6 +3867,45 @@ function renderPhases() {
   });
 }
 
+// ---------- anúncio do próprio jogo (15 s) ----------
+const AD_SCENES = [
+  { k: 'Novo jogo de corrida', t: 'TURBO <em>NOTURNO</em>', d: 'Corridas de rua de noite, com física de carro de verdade.' },
+  { k: '20 fases', t: 'CIDADE, PRAIA, DESERTO E NEVE', d: 'Chuva, neblina e nevasca. Cada pista é diferente.' },
+  { k: 'Mundo aberto', t: 'CIDADE <em>LIVRE</em>', d: 'Saia do carro, pegue outros, fuja da polícia e faça missões.' },
+  { k: 'Exclusivo', t: 'ROADSTER <em>FOGUETE</em>', d: 'O carro elétrico que voa. Aperte V e decole por cima dos prédios.', fly: true },
+  { k: 'Multiplayer', t: 'JOGUE COM UM <em>AMIGO</em>', d: 'Crie uma sala, passe a senha e corram juntos. Turbo Noturno: jogue agora!' }
+];
+let adFly = false, adTimer = null, adBackupLook = null;
+function playAd(onReward) {
+  initAudio();
+  const total = 15, per = total / AD_SCENES.length;
+  let t = 0, shown = -1;
+  const t0 = performance.now();
+  adBackupLook = JSON.parse(JSON.stringify(save.look));
+  disposeCar(player.car); player.car = makeCar(Object.assign({}, save.look, { model: 'foguete' })); updateCars(0);
+  $('ad').classList.remove('hidden'); $('ad-claim').classList.add('hidden'); $('ad-reward').classList.remove('hidden');
+  showScreen('ad');
+  const tick = () => {
+    t = (performance.now() - t0) / 1000;
+    const i = Math.min(AD_SCENES.length - 1, Math.floor(t / per));
+    if (i !== shown) {
+      shown = i; const sc = AD_SCENES[i], el = $('ad-scene');
+      el.classList.remove('in'); el.innerHTML = `<div class="ad-k">${sc.k}</div><div class="ad-t">${sc.t}</div><div class="ad-d">${sc.d}</div>`;
+      void el.offsetWidth; el.classList.add('in');
+      adFly = !!sc.fly; beep(i === AD_SCENES.length - 1 ? 1046 : 660 + i * 80, 0.15);
+    }
+    $('ad-time').textContent = t < total ? `Recompensa em ${Math.ceil(total - t)} s` : 'Pronto!';
+    $('ad-bar').style.width = Math.min(100, t / total * 100) + '%';
+    if (t >= total) { clearInterval(adTimer); adTimer = null; adFly = false; $('ad-reward').classList.add('hidden'); $('ad-claim').classList.remove('hidden'); cash(); }
+  };
+  adTimer = setInterval(tick, 100); tick();
+  $('ad-claim').onclick = () => {
+    $('ad').classList.add('hidden');
+    disposeCar(player.car); player.car = makeCar(adBackupLook); updateCars(0);
+    onReward();
+    renderGarage(); showScreen('garage');
+  };
+}
 let garageMode = 'parts';
 let garageFromCity = false;
 function openGarage(gm, fromCity = false) {
@@ -3885,9 +3953,9 @@ function renderGarage() {
         ['#ffffff', '#111111', '#ffcc00', '#ff2a2a', '#1a8cff', '#7dffb8'].forEach(c => html += `<button class="choice swatch ${save.look[cat.key] === c ? 'sel' : ''}" data-key="${cat.key}" data-val="${c}" style="background:${c}"></button>`);
         html += `<input type="color" data-colorkey="${cat.key}" value="${save.look[cat.key]}">`;
       } else cat.opts.forEach(o => {
-        const owned = o.price === 0 || save.owned[cat.key + ':' + o.id];
+        const owned = (o.price === 0 && !o.ad) || save.owned[cat.key + ':' + o.id];
         const eq = save.look[cat.key] === o.id;
-        html += `<button class="choice ${eq ? 'sel' : ''} ${owned ? '' : 'locked'}" data-key="${cat.key}" data-val="${o.id}">${o.name}<small>${eq ? 'Usando' : owned ? 'Usar' : brl(o.price)}</small></button>`;
+        html += `<button class="choice ${eq ? 'sel' : ''} ${owned ? '' : 'locked'}" data-key="${cat.key}" data-val="${o.id}">${o.name}<small>${eq ? 'Usando' : owned ? 'Usar' : o.ad ? '▶ Ver anúncio' : brl(o.price)}</small></button>`;
       });
       html += '</div>';
     });
@@ -3904,6 +3972,7 @@ function renderGarage() {
       const cat = STYLE.find(c => c.key === key);
       if (!cat.color) {
         const o = cat.opts.find(x => x.id === val);
+        if (o.ad && !save.owned[key + ':' + val]) { playAd(() => { save.owned[key + ':' + val] = true; save.look[key] = val; persist(); if (key === 'model') applyParts(); rebuildPlayerCar(); toast(`${o.name} liberado!`); }); return; }
         if (o.price > 0 && !save.owned[key + ':' + val]) {
           if (save.money < o.price) { toast('Dinheiro insuficiente. Corra mais para ganhar!'); return; }
           save.money -= o.price; save.owned[key + ':' + val] = true; cash(); toast(`${o.name} comprado!`);
@@ -4041,7 +4110,7 @@ function frame() {
   if (state === 'loading') { renderer.render(scene, camera); return; }
   readInput();
   if (state === 'menu') {
-    menuAngle += dt * 0.2;
+    menuAngle += dt * (view === 'ad' ? 0.55 : 0.2);
     const cp = player.car.group.position;
     const inGarage = view === 'garage';
     const W = window.innerWidth, H = window.innerHeight, portrait = W <= 700;
@@ -4056,7 +4125,8 @@ function frame() {
     else if (view === 'menu') camera.setViewOffset(W, H, 0, H * 0.3, W, H);
     else camera.clearViewOffset();
     camera.fov = 45; camera.updateProjectionMatrix();
-    updateCars(0);
+    updateCars(view === 'ad' ? dt : 0);
+    if (view === 'ad') { const g = player.car.group; g.position.y = adFly ? 2.2 + Math.sin(performance.now() / 400) * 0.25 : 0; }
   } else if (state === 'city') {
     if (camera.view && camera.view.enabled) camera.clearViewOffset();
     cityUpdate(dt);
