@@ -2278,8 +2278,12 @@ function updatePlayer(dt) {
     const alphaR = Math.atan2(vLr, vAbs);
     const ratio = player.gear === -1 ? CAR.rev : CAR.gears[player.gear - 1];
     const rpm = Math.max(CAR.idle, Math.abs(vF) / CAR.rw * ratio * CAR.final * RPM_K);
+    // embreagem de arrancada: parado e acelerando, o motor sobe de giro e a embreagem patina
+    const rpmEng = (!CAR.electric && player.gear === 1 && driveIn > 0 && rpm < 2600) ? Math.max(rpm, CAR.idle + (2600 - CAR.idle) * driveIn) : rpm;
     let drive = 0;
-    if (player.shiftT <= 0 && rpm < CAR.red) drive = (CAR.electric ? (rpm < 6500 || CAR.armor ? 600 : Math.max(250, 600 - (rpm - 6500) * 0.25)) : torqueAt(rpm)) * CAR.tq * ratio * CAR.final / CAR.rw * 0.88 * driveIn;
+    if (player.shiftT <= 0 && rpmEng < CAR.red) drive = (CAR.electric ? (rpm < 6500 || CAR.armor ? 600 : Math.max(250, 600 - (rpm - 6500) * 0.25)) : torqueAt(rpmEng)) * CAR.tq * ratio * CAR.final / CAR.rw * 0.88 * driveIn;
+    // freio-motor: sem acelerar, o motor segura o carro (mais forte em marcha baixa e giro alto)
+    if (!CAR.electric && driveIn === 0 && player.gear > 0 && Math.abs(vF) > 2 && player.shiftT <= 0) drive -= Math.sign(vF) * torqueAt(rpm) * 0.07 * (rpm / CAR.red) * ratio * CAR.final / CAR.rw;
     if (player.nitroOn) drive += CAR.nitroF;
     if (player.gear === -1) drive = -Math.min(drive, 6000);
     const brakeTotal = CAR.brake * m * G * brakeCmd;
@@ -2289,8 +2293,14 @@ function updatePlayer(dt) {
     if (Math.abs(vF) <= 0.3 && brakeCmd > 0 && driveIn === 0) player.vF *= 0.5;
     let muR = mu;
     if (hb && Math.abs(vF) > 1 && !CAR.armor) { FxR -= Math.sign(vF) * mu * Nr * 0.9; muR = mu * 0.55; }
-    let FyF = -Cf * latGrip * alphaF, FyR = -Cr * latGrip * alphaR;
     const maxF = mu * Nf * latGrip, maxR = muR * Nr * latGrip;
+    let FyF, FyR;
+    if (grippy) { FyF = -Cf * latGrip * alphaF; FyR = -Cr * latGrip * alphaR; }
+    else { // Magic Formula: mesma rigidez no começo (B·C·D = rigidez), pico e queda depois do limite
+      const C = 1.35, E = -0.6;
+      const mf = (al, Cs, Fmax) => { const B = Cs / Math.max(1, Fmax * C), Bx = B * al; return Fmax * Math.sin(C * Math.atan(Bx - E * (Bx - Math.atan(Bx)))); };
+      FyF = -mf(alphaF, Cf * latGrip, maxF); FyR = -mf(alphaR, Cr * latGrip, maxR);
+    }
     if (assists && Math.abs(FxF) > maxF * 0.85) { FxF = Math.sign(FxF) * maxF * 0.85; player.abs = true; }
     if (assists && Math.abs(FxR) > maxR * 0.92 && drive !== 0) {
       const lim = Math.sqrt(Math.max(0, (maxR * 0.92) ** 2 - Math.min(FyR * FyR, (maxR * 0.6) ** 2)));
@@ -2326,7 +2336,7 @@ function updatePlayer(dt) {
     const sh = Math.sin(player.h), ch = Math.cos(player.h);
     player.pos.x += (sh * player.vF + ch * player.vL) * h;
     player.pos.z += (ch * player.vF - sh * player.vL) * h;
-    player.rpm = rpm + spin * 2500;
+    player.rpm = rpmEng + spin * 2500;
   }
   player.spin = spinAcc / SUB; player.lock = lockAcc / SUB; player.slipR = slipRAcc / SUB;
   player.steer = delta;
@@ -2478,8 +2488,14 @@ function updateCars(dt) {
   pc.group.position.copy(player.pos);
   pc.group.rotation.y = player.h;
   const latAcc = player.vF * player.r;
-  pc.body.rotation.z += (clamp(latAcc * 0.006 * CAR.susp, -0.06, 0.06) - pc.body.rotation.z) * Math.min(1, 8 * dt);
-  pc.body.rotation.x += (clamp(player.ax * 0.0045 * CAR.susp, -0.04, 0.035) - pc.body.rotation.x) * Math.min(1, 8 * dt);
+  // carroceria sobre molas: transferência de peso visível (mergulha na freada, agacha na arrancada, inclina na curva)
+  if (dt > 0) {
+    const kS = 110 + (1 - CAR.susp) * 120, cS = 13;
+    const tz = clamp(latAcc * 0.006 * CAR.susp, -0.07, 0.07), tx = clamp(player.ax * 0.0048 * CAR.susp, -0.055, 0.04);
+    pc.rollV = (pc.rollV || 0) + ((tz - pc.body.rotation.z) * kS - (pc.rollV || 0) * cS) * dt;
+    pc.pitchV = (pc.pitchV || 0) + ((tx - pc.body.rotation.x) * kS - (pc.pitchV || 0) * cS) * dt;
+    pc.body.rotation.z += pc.rollV * dt; pc.body.rotation.x += pc.pitchV * dt;
+  }
   pc.body.position.y = -0.05 * (1 - CAR.susp);
   if (pc.moto) { pc.body.position.y = 0; pc.body.rotation.z += (clamp(-latAcc * 0.05, -0.8, 0.8) - pc.body.rotation.z) * Math.min(1, 6 * dt); pc.body.rotation.x = 0; }
   const wheelSpinR = (player.vF * (1 + player.spin * 0.8)) * dt / CAR.rw;
@@ -2682,6 +2698,99 @@ function noiseBuffer(ctx, sec) {
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   return b;
 }
+// ---------- motor V8 sintetizado (segue o guia "guia-som-motor-v8.md") ----------
+// Cada "loop" é um ciclo do motor (2 voltas = 8 explosões) gerado num RPM de referência.
+// O giro muda a velocidade de reprodução (pitch); loops vizinhos se misturam com crossfade
+// de potência constante; há uma camada acelerando (on-load) e outra sem acelerar (off-load).
+const V8_REFS = [900, 2000, 3500, 5200, 7000];
+const V8_GAP = [0, 0.06, -0.04, 0.03, -0.05, 0.05, -0.03, 0.02];     // batida irregular do virabrequim cross-plane
+const V8_AMP = [1, 0.8, 0.95, 0.76, 1, 0.84, 0.9, 0.78];
+function v8Cycle(ctx, ref, load) {
+  const sr = ctx.sampleRate, len = Math.round(sr * 120 / ref), buf = ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
+  const T = len / sr, fire = ref / 15, res = 90 + fire * 2.2, decay = fire * (load ? 3.2 : 4.5); // cada explosão some antes da próxima
+  let seed = ref * 7 + (load ? 1 : 2);
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (let k = 0; k < 8; k++) {
+    const t0 = (k + V8_GAP[k]) / 8 * T, amp = V8_AMP[k] * (load ? 1 : 0.42);
+    for (let i = 0; i < len; i++) {
+      let t = i / sr - t0; if (t < 0) t += T;               // envolve no fim do ciclo (loop sem emenda)
+      const env = Math.exp(-t * decay);
+      if (env < 0.002) continue;
+      const crack = load ? Math.exp(-t * 900) * (rnd() * 2 - 1) * 0.5 : 0;   // estalo do início da explosão
+      d[i] += amp * env * (Math.sin(2 * Math.PI * res * t) + 0.45 * Math.sin(2 * Math.PI * res * 2.03 * t) + (load ? 0.25 : 0.08) * Math.sin(2 * Math.PI * res * 3.1 * t)) + crack;
+    }
+  }
+  for (let i = 0; i < len; i++) d[i] += (rnd() * 2 - 1) * (load ? 0.05 : 0.09);    // ar do escape
+  let mx = 0; for (let i = 0; i < len; i++) mx = Math.max(mx, Math.abs(d[i]));
+  for (let i = 0; i < len; i++) d[i] /= mx || 1;
+  return buf;
+}
+function initV8(ctx, master) {
+  const out = ctx.createGain(); out.gain.value = 0;
+  const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.12;
+  const sat = ctx.createWaveShaper(); const cv = new Float32Array(512); for (let i = 0; i < 512; i++) cv[i] = Math.tanh((i / 256 - 1) * 1.8); sat.curve = cv;
+  const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.Q.value = 0.7;
+  const chest = ctx.createBiquadFilter(); chest.type = 'peaking'; chest.frequency.value = 100; chest.Q.value = 0.9; chest.gain.value = 4;   // "peito" do V8
+  const box = ctx.createBiquadFilter(); box.type = 'peaking'; box.frequency.value = 320; box.Q.value = 1; box.gain.value = -3;          // tira som de caixa
+  const rasp = ctx.createBiquadFilter(); rasp.type = 'peaking'; rasp.frequency.value = 2400; rasp.Q.value = 1; rasp.gain.value = 2;     // aspereza do escape
+  const bus = ctx.createGain();
+  bus.connect(chest); chest.connect(box); box.connect(rasp); rasp.connect(lp); lp.connect(sat); sat.connect(comp); comp.connect(out); out.connect(master);
+  const mk = load => V8_REFS.map(ref => {
+    const src = ctx.createBufferSource(); src.buffer = v8Cycle(ctx, ref, load); src.loop = true;
+    const g = ctx.createGain(); g.gain.value = 0; src.connect(g); g.connect(bus); src.start();
+    return { src, g, ref };
+  });
+  // sub-grave na frequência de explosão (sente mais do que ouve)
+  const sub = ctx.createOscillator(); sub.type = 'sine'; const subLp = ctx.createBiquadFilter(); subLp.type = 'lowpass'; subLp.frequency.value = 150;
+  const subG = ctx.createGain(); subG.gain.value = 0; sub.connect(subLp); subLp.connect(subG); subG.connect(out); sub.start();
+  return { out, lp, sat, on: mk(true), off: mk(false), sub, subG, load: 0, rpmS: 900, lastGasT: -9, popT: 0, dipUntil: 0, prevGas: 0 };
+}
+function v8Pop(ctx, dest, when, big) { // estalo do escape ao tirar o pé
+  const len = 0.09, buf = ctx.createBuffer(1, Math.round(ctx.sampleRate * len), ctx.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) { const t = i / ctx.sampleRate; d[i] = (Math.random() * 2 - 1) * Math.exp(-t * (big ? 45 : 70)) + Math.sin(2 * Math.PI * 90 * t) * Math.exp(-t * 30) * 0.8; }
+  const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  src.buffer = buf; src.playbackRate.value = 0.85 + Math.random() * 0.35; f.type = 'lowpass'; f.frequency.value = big ? 1400 : 900; g.gain.value = big ? 0.35 : 0.2;
+  src.connect(f); f.connect(g); g.connect(dest); src.start(when);
+}
+function updateV8(on, rpmIn, gas) {
+  const V = audio.v8; if (!V) return;
+  const ctx = audio.ctx, t = ctx.currentTime;
+  const dt = clamp(t - (V.lastT || t), 0, 0.1); V.lastT = t;
+  // multiplicador de "cilindros": V12 mais agudo, moto e kart bem mais rápidos, Monstro e Clássico mais graves
+  const mult = CAR.touro ? 1.5 : CAR.moto ? 1.9 : CAR.kart ? 2.4 : CAR.monster ? 0.75 : CAR.classico ? 0.85 : 1;
+  V.rpmS += (rpmIn - V.rpmS) * (1 - Math.exp(-dt * 20));
+  V.load += ((gas > 0.05 ? 1 : 0) - V.load) * (1 - Math.exp(-dt * 8));
+  const rpm = Math.max(500, V.rpmS);
+  // crossfade de potência constante entre os dois loops vizinhos
+  let a = 0; while (a < V8_REFS.length - 2 && rpm > V8_REFS[a + 1]) a++;
+  const fr = clamp((rpm - V8_REFS[a]) / (V8_REFS[a + 1] - V8_REFS[a]), 0, 1);
+  const gOn = Math.sin(V.load * Math.PI / 2), gOff = Math.cos(V.load * Math.PI / 2);
+  [V.on, V.off].forEach((bank, bi) => bank.forEach((l, k) => {
+    let w = k === a ? Math.cos(fr * Math.PI / 2) : k === a + 1 ? Math.sin(fr * Math.PI / 2) : 0;
+    w *= bi === 0 ? gOn : gOff;
+    l.g.gain.setTargetAtTime(w, t, 0.03);
+    l.src.playbackRate.setTargetAtTime(rpm / l.ref * mult, t, 0.02);
+  }));
+  // limitador (corte intermitente) e queda na troca de marcha
+  const limiter = gas > 0.5 && player.rpm >= CAR.red - 120;
+  const cut = limiter ? (Math.floor(t * 15) % 2 ? 0.35 : 1) : 1;
+  const dip = t < V.dipUntil ? 0.55 : 1;
+  const vol = (0.55 + 0.45 * clamp((rpm - 800) / 6400, 0, 1)) * (0.75 + 0.25 * V.load);
+  V.out.gain.setTargetAtTime(on ? 0.16 * vol * cut * dip : 0, t, limiter ? 0.004 : 0.04);
+  V.lp.frequency.setTargetAtTime(700 + rpm * 0.55 + V.load * 1600, t, 0.04);
+  V.sub.frequency.setTargetAtTime(rpm / 15 * mult, t, 0.03);
+  V.subG.gain.setTargetAtTime(on ? 0.12 * V.load : 0, t, 0.06);
+  // estalos: tirou o pé de repente em giro alto
+  if (gas > 0.7) V.lastGasT = t;
+  if (on && V.prevGas > 0.5 && gas < 0.1 && t - V.lastGasT < 0.3 && rpm > 3500 && Math.random() < 0.5 && !CAR.kart && !CAR.moto) {
+    const n = 2 + Math.floor(Math.random() * 4); let w = t + 0.03;
+    for (let k = 0; k < n; k++) { v8Pop(ctx, audio.master, w, k === 0); w += 0.06 + Math.random() * 0.12; }
+  }
+  // estalinhos soltos desacelerando com giro alto
+  if (on && gas < 0.1 && rpm > 4200 && Math.abs(player.vF) > 10 && Math.random() < dt * 1.2 && !CAR.kart) v8Pop(ctx, audio.master, t, false);
+  V.prevGas = gas;
+}
+
 function initAudio() {
   if (audio) { if (audio.ctx.state === 'suspended') audio.ctx.resume(); return; }
   try {
@@ -2708,6 +2817,7 @@ function initAudio() {
     const turbo = ctx.createOscillator(); turbo.type = 'sine'; const tg = ctx.createGain(); tg.gain.value = 0; turbo.connect(tg); tg.connect(master); turbo.start();
     const siren = ctx.createOscillator(); siren.type = 'triangle'; const sg = ctx.createGain(); sg.gain.value = 0; siren.connect(sg); sg.connect(master); siren.start();
     audio = { ctx, master, oscs, eFilt, eGain, intake, sq, wind, rainN, turbo, tg, siren, sg };
+    try { audio.v8 = initV8(ctx, master); } catch (e) { audio.v8 = null; }
   } catch (e) { audio = null; }
 }
 function toggleSound() { soundOn = !soundOn; try { localStorage.setItem('tn-sound', soundOn ? '1' : '0'); } catch (e) {} }
@@ -2721,7 +2831,11 @@ function updateSound() {
   const f = CAR.electric && !onFoot ? 70 + Math.abs(player.vF) * 6.5 : rpm / 60 * 2 * (onFoot ? 1 : CAR.touro ? 1.5 : CAR.moto ? 1.9 : CAR.kart ? 2.4 : CAR.monster ? 0.7 : CAR.classico ? 0.8 : 1);
   audio.oscs.forEach(({ o, mult }) => o.frequency.setTargetAtTime(f * mult, t, 0.03));
   audio.eFilt.frequency.setTargetAtTime(300 + rpm * 0.28 + thr * 900, t, 0.04);
-  audio.eGain.gain.setTargetAtTime(on ? (0.05 + thr * 0.07) * (onFoot ? 0.3 : 1) * (CAR.electric ? 0.45 : 1) : 0, t, 0.06);
+  // motor a combustão usa o V8 sintetizado; o zumbido antigo fica só para elétricos e para quem está a pé
+  const useV8 = !!audio.v8 && !CAR.electric && !onFoot;
+  audio.eGain.gain.setTargetAtTime(on && !useV8 ? (0.05 + thr * 0.07) * (onFoot ? 0.3 : 1) * (CAR.electric ? 0.45 : 1) : 0, t, 0.06);
+  const gasNow = state === 'finished' || (player.finished && state === 'race') ? 0.5 : (input.gas || 0);
+  if (audio.v8) updateV8(on && useV8 && !(city && city.flying), rpm, gasNow);
   const sirenOn = on && mode === 'city' && city && city.heat > 0 && city.police.length;
   audio.siren.frequency.setTargetAtTime(900 + 380 * Math.sin(performance.now() / 1000 * Math.PI * 1.4), t, 0.02);
   audio.sg.gain.setTargetAtTime(sirenOn ? 0.05 * clamp(1 - (city.nearestCop || 999) / 220, 0, 1) : 0, t, 0.1);
@@ -2752,6 +2866,7 @@ function shiftSound() {
   for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
   const src = ctx.createBufferSource(), g = ctx.createGain(), f = ctx.createBiquadFilter();
   f.type = 'bandpass'; f.frequency.value = CAR.turbo ? 3500 : 2500; g.gain.value = CAR.turbo ? 0.12 : 0.15; // "psssh" da válvula do turbo
+  if (audio.v8) audio.v8.dipUntil = ctx.currentTime + 0.11; // o giro cai um instante na troca
   src.buffer = buf; src.connect(f); f.connect(g); g.connect(audio.master); src.start();
 }
 function beep(freq, dur) {

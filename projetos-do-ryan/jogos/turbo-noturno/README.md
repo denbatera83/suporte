@@ -31,6 +31,16 @@ Também funciona com controle de videogame. No celular, jogue com o aparelho dei
 - Tela **Carros**: os 8 veículos com descrição e barras; os bloqueados liberam com o anúncio de cada um.
 - Conquistas e subida de nível aparecem como cartões animados com som; a tela de carregamento mostra dicas.
 
+## Física e som de simulador
+
+Trazidos do script de Unity e do guia de som (pasta `../recursos`):
+
+- **Som de V8 de verdade:** cada ciclo do motor tem 8 explosões com a batida irregular do V8 americano, gerado em 5 faixas de giro e misturado com crossfade conforme o RPM. Há uma camada acelerando e outra sem acelerar (som mais oco), sub-grave na frequência das explosões, estalos do escape quando você tira o pé em giro alto, corte intermitente no limitador e queda de giro na troca de marcha. O V12 do Touro soa mais agudo; o Monstro e o Clássico, mais graves.
+- **Embreagem de arrancada:** parado e acelerando, o motor sobe de giro e a embreagem patina.
+- **Freio-motor:** sem acelerar, o motor segura o carro, mais forte em marcha baixa.
+- **Pneu com curva de simulador** nos modos Drift e Simulação: depois do limite a aderência cai, e o carro escorrega e volta como um carro real. O modo Grudado continua igual.
+- **Suspensão com mola:** a carroceria mergulha na freada, agacha na arrancada e balança um pouco antes de assentar.
+
 ## Visual realista
 
 - **Garagem-estúdio:** no menu, na oficina e na coleção, o carro fica numa garagem escura com painéis de luz em "V" no teto, pilares com LED vermelho e piso de concreto polido. A pintura com verniz reflete as faixas de luz.
