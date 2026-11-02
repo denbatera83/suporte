@@ -95,7 +95,7 @@ Cada peça tem 3 níveis: **Básico** (de fábrica), **Intermediário** e **Avan
 
 ## Roadster Foguete (o carro que voa)
 
-Na garagem (**Visual → Carro**) dá para comprar o **Roadster Foguete** por R$ 15.000: um esportivo elétrico, inspirado no carro-foguete do Elon Musk, com arrancada instantânea e som elétrico.
+Na garagem (**Visual → Carro**) dá para escolher de graça o **Roadster Foguete**: um esportivo elétrico, inspirado no carro-foguete do Elon Musk, com arrancada instantânea e som elétrico.
 
 Na **Cidade Livre** ele voa: aperte **V** e as rodas viram propulsores com jatos azuis. **Espaço** sobe, **Q** desce, as setas pilotam, **Shift** dá nitro e **V** de novo pousa. Dá para passar por cima dos prédios e fugir da polícia pelo céu. No celular aparecem os botões VOAR, SUBIR e DESCER. Nas corridas ele anda no chão.
 
