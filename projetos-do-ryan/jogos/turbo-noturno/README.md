@@ -25,7 +25,8 @@ Também funciona com controle de videogame. No celular, jogue com o aparelho dei
 ## Opções
 
 - **Direção:** Arcade (padrão, mais aderência e mais fácil) ou Simulação (física completa).
-- **Gráficos:** Baixo, Médio ou Alto. A resolução também se ajusta sozinha durante o jogo para não travar.
+- **Gráficos:** Baixo, Médio, Alto ou Ultra. A resolução também se ajusta sozinha durante o jogo para não travar.
+- **Computador fraco:** diminui bastante os gráficos (resolução, sombras, reflexos, árvores, prédios, trânsito e pedestres) para rodar em máquinas fracas. Se o jogo ficar muito lento, ele mesmo sugere ligar essa opção.
 - **Ajudas de pilotagem** e **som** ligados ou desligados.
 
 ## Cidade Livre (mundo aberto)
@@ -91,6 +92,12 @@ Cada peça tem 3 níveis: **Básico** (de fábrica), **Intermediário** e **Avan
 | Aerodinâmica | Mais pressão para baixo e menos arrasto |
 | Nitro | Nitro mais forte e que dura mais |
 | Redução de peso | Carro mais leve: acelera, freia e vira melhor |
+
+## Roadster Foguete (o carro que voa)
+
+Na garagem (**Visual → Carro**) dá para comprar o **Roadster Foguete** por R$ 15.000: um esportivo elétrico, inspirado no carro-foguete do Elon Musk, com arrancada instantânea e som elétrico.
+
+Na **Cidade Livre** ele voa: aperte **V** e as rodas viram propulsores com jatos azuis. **Espaço** sobe, **Q** desce, as setas pilotam, **Shift** dá nitro e **V** de novo pousa. Dá para passar por cima dos prédios e fugir da polícia pelo céu. No celular aparecem os botões VOAR, SUBIR e DESCER. Nas corridas ele anda no chão.
 
 ## Visual: pintura e acessórios
 
