@@ -31,6 +31,13 @@ Também funciona com controle de videogame. No celular, jogue com o aparelho dei
 - Tela **Carros**: os 8 veículos com descrição e barras; os bloqueados liberam com o anúncio de cada um.
 - Conquistas e subida de nível aparecem como cartões animados com som; a tela de carregamento mostra dicas.
 
+## Replay, pódio, número e coleção
+
+- **🏆 Pódio:** terminando a corrida entre os 3 primeiros (carreira e campeonato), os carros sobem no pódio com medalhas e chuva de confete.
+- **▶ Replay:** na tela de resultado, veja a corrida de novo com câmeras de TV que trocam a cada 4 segundos (perseguição, câmera da pista, helicóptero e para-choque).
+- **Adesivo com número:** em Visual, escolha um número (1, 7, 10, 11, 23, 33, 77 ou 99) que aparece nas duas portas. É grátis.
+- **🏛️ Garagem de coleção:** em Carros, "Ver a coleção em 3D" mostra todos os veículos estacionados em fila. Use ◀ ▶ (ou as setas do teclado) para passear; os que faltam aparecem escuros.
+
 ## Cidade viva
 
 - **Dia e noite:** o tempo passa sozinho na Cidade Livre (noite, amanhecer, dia, entardecer) e às vezes **chove** (a pista fica mais escorregadia).

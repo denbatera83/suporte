@@ -151,6 +151,21 @@
   #mode-hud .heat { width: 160px; height: 10px; background: rgba(255,255,255,.1); }
   #mode-hud .heat i { display: block; height: 100%; background: linear-gradient(90deg, #2a6bff, #ff2a2a); }
   body.city-mode #mode-hud { display: none; }
+  #colecao { align-items: flex-end; background: linear-gradient(0deg, rgba(6,8,14,.92) 0%, rgba(6,8,14,.5) 30%, rgba(6,8,14,0) 55%); }
+  .col-panel { width: min(720px, 100%); }
+  .col-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .col-row { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+  .col-arrow { font-size: 26px; padding: 14px 18px; }
+  .col-stats .stat { grid-template-columns: 86px 1fr; }
+  .col-stats { max-width: 360px; margin-top: 6px; }
+  #col-use:disabled { filter: grayscale(.6); cursor: default; }
+  #replay-ui { position: fixed; inset: 0; z-index: 12; pointer-events: none; }
+  #replay-ui .rp-top { position: absolute; top: max(16px, env(safe-area-inset-top)); left: max(16px, env(safe-area-inset-left)); display: flex; gap: 16px; align-items: center; padding: 8px 14px; background: rgba(6,8,14,.75); font: 700 12px var(--body); letter-spacing: .14em; color: var(--muted); }
+  #replay-ui .rp-top b { color: #ff3040; font: italic 900 22px var(--display); letter-spacing: .04em; animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .35; } }
+  #replay-ui .rp-bar { position: absolute; left: 0; right: 0; bottom: 0; height: 5px; background: rgba(255,255,255,.12); }
+  #replay-ui .rp-bar i { display: block; height: 100%; width: 0; background: #ff3040; }
+  #replay-ui .btn { position: absolute; pointer-events: auto; right: max(16px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); }
   .menu-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
   .tile2 { cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 6px 10px; background: var(--panel); border: 1px solid var(--line); color: var(--text); font: italic 800 17px/1 var(--display); letter-spacing: .04em; text-transform: uppercase; transition: background .15s, border-color .15s, transform .15s; }
   .tile2 b { font-size: 24px; font-style: normal; line-height: 1; }
@@ -467,6 +482,22 @@
     <button class="btn sec" id="modes-back" style="margin-top:14px">← Voltar</button>
   </div>
 </div>
+<div id="colecao" class="screen hidden">
+  <div class="col-panel">
+    <div class="col-top"><span class="sc-kicker">🏛️ Garagem de coleção</span><span class="hint" id="col-count"></span></div>
+    <div class="col-row">
+      <button class="btn sec col-arrow" id="col-prev" aria-label="Anterior">◀</button>
+      <div class="col-info"><div class="sc-name" id="col-name"></div><div class="hint" id="col-desc"></div><div id="col-stats" class="col-stats"></div></div>
+      <button class="btn sec col-arrow" id="col-next" aria-label="Próximo">▶</button>
+    </div>
+    <div class="btn-row"><button class="btn" id="col-use">Usar este</button><button class="btn sec" id="col-back">← Voltar</button></div>
+  </div>
+</div>
+<div id="replay-ui" class="hidden">
+  <div class="rp-top"><b>● REPLAY</b><span id="replay-cam"></span><span id="replay-time" class="num"></span></div>
+  <div class="rp-bar"><i id="replay-bar"></i></div>
+  <button class="btn sec" id="replay-exit">Sair do replay</button>
+</div>
 <div id="phases" class="screen hidden">
   <div class="card" style="max-width: 980px">
     <h2>ESCOLHA A FASE</h2>
@@ -504,7 +535,7 @@
     <div id="res-record" class="record"></div>
     <table id="res-table" class="num"></table>
     <button class="btn" id="res-next">PRÓXIMA FASE →</button>
-    <div class="btn-row"><button class="btn sec hidden" id="res-room">Voltar para a sala</button><button class="btn sec" id="again">Correr de novo</button><button class="btn sec" id="res-garage">Oficina</button><button class="btn sec" id="res-menu">Menu</button></div>
+    <div class="btn-row"><button class="btn sec" id="res-replay">▶ Replay</button><button class="btn sec hidden" id="res-room">Voltar para a sala</button><button class="btn sec" id="again">Correr de novo</button><button class="btn sec" id="res-garage">Oficina</button><button class="btn sec" id="res-menu">Menu</button></div>
   </div>
 </div>
 <!-- MULTIPLAYER -->
@@ -687,7 +718,8 @@ const STYLE = [
   { key: 'head', title: 'Cor dos faróis', opts: [
     { id: 'branco', name: 'Branco', price: 0 }, { id: 'xenon', name: 'Xenon azulado', price: 700 }, { id: 'amarelo', name: 'Amarelo', price: 500 }] },
   { key: 'exhaust', title: 'Escapamento', opts: [
-    { id: 'duplo', name: 'Duplo', price: 0 }, { id: 'quadruplo', name: 'Quádruplo', price: 900 }, { id: 'central', name: 'Central esportivo', price: 1100 }] }
+    { id: 'duplo', name: 'Duplo', price: 0 }, { id: 'quadruplo', name: 'Quádruplo', price: 900 }, { id: 'central', name: 'Central esportivo', price: 1100 }] },
+  { key: 'number', title: 'Adesivo com número (grátis)', opts: [{ id: 'none', name: 'Sem número', price: 0 }].concat(['1', '7', '10', '11', '23', '33', '77', '99'].map(n => ({ id: n, name: 'Nº ' + n, price: 0 }))) }
 ];
 const NEON = { azul: [0.1, 0.5, 1], rosa: [1, 0.15, 0.7], verde: [0.15, 1, 0.35], roxo: [0.6, 0.2, 1], laranja: [1, 0.45, 0.05] };
 const RIM = { prata: [0xb8bcc4, 1, 0.22], preto: [0x1b1c20, 0.9, 0.35], bronze: [0x8a5a2b, 1, 0.3], dourado: [0xc9a24a, 1, 0.22], vermelho: [0xa0101a, 0.6, 0.3] };
@@ -699,7 +731,7 @@ const DEFAULT_SAVE = {
   parts: { motor: 0, turbo: 0, cambio: 0, pneus: 0, freios: 0, suspensao: 0, aero: 0, nitro: 0, peso: 0 },
   ownedParts: { motor: 0, turbo: 0, cambio: 0, pneus: 0, freios: 0, suspensao: 0, aero: 0, nitro: 0, peso: 0 },
   owned: {},
-  look: { model: 'esportivo', color: '#0b4fd6', finish: 'metal', rimStyle: '5', rimColor: 'prata', spoiler: 'lip', stripes: 'none', stripeColor: '#ffffff', neon: 'none', tint: 'normal', head: 'branco', exhaust: 'duplo' },
+  look: { model: 'esportivo', color: '#0b4fd6', finish: 'metal', rimStyle: '5', rimColor: 'prata', spoiler: 'lip', stripes: 'none', stripeColor: '#ffffff', neon: 'none', tint: 'normal', head: 'branco', exhaust: 'duplo', number: 'none' },
   settings: { assists: 1, gfx: isTouch ? 0 : 1, steer: 'arcade', v: 3 }
 };
 const save = JSON.parse(JSON.stringify(DEFAULT_SAVE));
@@ -708,6 +740,7 @@ try {
   if (s) {
     for (const k of ['parts', 'ownedParts', 'look', 'settings', 'owned', 'best', 'ach', 'stats']) Object.assign(save[k], s[k] || {});
     for (const k of ['money', 'unlocked', 'current', 'xp', 'level']) if (typeof s[k] === 'number') save[k] = s[k];
+    if (s.cups && typeof s.cups === 'object') save.cups = s.cups;
   }
 } catch (e) {}
 function persist() { try { localStorage.setItem('tn3-save', JSON.stringify(save)); } catch (e) {} }
@@ -1746,6 +1779,11 @@ function makeBike(look, opts = {}) { // moto com piloto, que deita nas curvas
   return { group: g, body, wheels, steer, flames: [], paint, tail, pool, headColor: hc, rocket: false, armor: false, moto: true, pivots, jets: [], mainJet: null, fold: 0 };
 }
 function makeCar(look, opts = {}) {
+  const c = makeCarBase(look, opts);
+  if (look.number && look.number !== 'none' && !opts.lite) try { addNumber(c, look.number); } catch (e) {}
+  return c;
+}
+function makeCarBase(look, opts = {}) {
   if (look.model === 'moto') return makeBike(look, opts);
   if (look.model === 'kart') return makeKart(look, opts);
   if (look.model === 'monstro') return makeMonster(look, opts);
@@ -4057,7 +4095,7 @@ const escHtml = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&
 const r2 = v => Math.round(v * 100) / 100;
 const LOOK_KEYS = { model: Object.keys(MODELS), finish: ['metal', 'fosco', 'perola', 'cromo'], rimStyle: ['5', '10', 'multi', 'disco'], rimColor: Object.keys(RIM),
   spoiler: ['none', 'lip', 'duck', 'gt'], stripes: ['none', 'duplas', 'central', 'lateral'], neon: ['none', ...Object.keys(NEON)], tint: ['normal', 'escuro', 'espelhado'],
-  head: Object.keys(HEAD), exhaust: ['duplo', 'quadruplo', 'central'] };
+  head: Object.keys(HEAD), exhaust: ['duplo', 'quadruplo', 'central'], number: ['none', '1', '7', '10', '11', '23', '33', '77', '99'] };
 function cleanLook(l) { // tudo que chega do outro aparelho é conferido antes de usar
   const out = JSON.parse(JSON.stringify(DEFAULT_SAVE.look));
   if (!l || typeof l !== 'object') return out;
@@ -4730,6 +4768,7 @@ function makeGhost() {
 }
 
 function modeSetup() {
+  replayReset();
   Object.assign(RM, { score: 0, combo: 0, comboT: 0, heat: 0, cur: [], recT: 0, busted: false, wallHit: false, start: player.progress, rivalT: 0 });
   if (ghostCar) { disposeCar(ghostCar); ghostCar = null; }
   ghostData = null;
@@ -4936,7 +4975,183 @@ function renderModes() {
   });
 }
 
-const SCREENS = ['menu', 'phases', 'garage', 'pause', 'results', 'options', 'multi', 'cinema', 'achs', 'modes'];
+// =====================================================================
+// REPLAY COM CÂMERAS DE TV, PÓDIO, ADESIVO COM NÚMERO E GARAGEM DE COLEÇÃO
+// =====================================================================
+// ---------- adesivo com número ----------
+const numTexCache = {};
+function numberTex(n) {
+  if (numTexCache[n]) return numTexCache[n];
+  const t = canvasTex(128, 128, (g, w, h) => {
+    g.fillStyle = '#ffffff'; g.beginPath(); g.arc(w / 2, h / 2, w * 0.47, 0, Math.PI * 2); g.fill();
+    g.lineWidth = 7; g.strokeStyle = '#111'; g.beginPath(); g.arc(w / 2, h / 2, w * 0.41, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = '#111'; g.font = `italic 900 ${n.length > 1 ? 62 : 78}px "Saira Condensed", Arial`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(n, w / 2, h / 2 + 4);
+  });
+  numTexCache[n] = t; return t;
+}
+function addNumber(c, n) {
+  const box = new THREE.Box3().setFromObject(c.body);
+  if (!isFinite(box.max.x)) return;
+  const mat = new THREE.MeshBasicMaterial({ map: numberTex(n), transparent: true, polygonOffset: true, polygonOffsetFactor: -4, toneMapped: false });
+  const size = clamp((box.max.y - box.min.y) * 0.42, 0.28, 0.6);
+  const y = box.min.y + (box.max.y - box.min.y) * 0.45, z = (box.min.z + box.max.z) / 2;
+  for (const s of [1, -1]) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size), mat);
+    m.position.set(s * (s > 0 ? box.max.x : -box.min.x) + s * 0.012, y, z); m.rotation.y = s * Math.PI / 2;
+    c.body.add(m);
+  }
+}
+
+// ---------- replay ----------
+const REPLAY = { frames: [], rec: 0, t: 0, cam: 0, camT: 0, fixed: new THREE.Vector3() };
+function replayReset() { REPLAY.frames = []; REPLAY.rec = 0; }
+function replayRecord(dt) {
+  if ((state !== 'race' && state !== 'finished') || view === 'results' || REPLAY.frames.length > 20 * 60 * 8) return;
+  REPLAY.rec -= dt; if (REPLAY.rec > 0) return; REPLAY.rec += 0.05;
+  const f = [player.pos.x, player.pos.y, player.pos.z, player.h, player.vF, player.steer];
+  rivals.forEach(r => f.push(r.pos.x, r.pos.z, r.h, r.speed));
+  REPLAY.frames.push(f);
+}
+function startReplay() {
+  if (REPLAY.frames.length < 20) { toast('Sem replay desta corrida'); return; }
+  REPLAY.t = 0; REPLAY.cam = 0; REPLAY.camT = 0;
+  state = 'replay'; showScreen(null);
+  $('hud').classList.add('hidden'); $('touch').classList.add('hidden'); $('pause-btn').classList.add('hidden');
+  $('replay-ui').classList.remove('hidden');
+}
+function stopReplay() {
+  $('replay-ui').classList.add('hidden');
+  state = 'finished'; showScreen('results');
+}
+const CAM_NAMES = ['CÂMERA DE PERSEGUIÇÃO', 'CÂMERA DA PISTA', 'HELICÓPTERO', 'CÂMERA DO PARA-CHOQUE'];
+function replayUpdate(dt) {
+  const F = REPLAY.frames;
+  REPLAY.t += dt;
+  let fi = REPLAY.t * 20;
+  if (fi >= F.length - 1) { REPLAY.t = 0; fi = 0; }
+  const i = Math.floor(fi), f = fi - i, a = F[i], b = F[i + 1];
+  const L = (k) => a[k] + (b[k] - a[k]) * f;
+  player.pos.set(L(0), L(1), L(2)); player.h = a[3] + wrapAngle(b[3] - a[3]) * f; player.vF = L(4); player.steer = L(5);
+  player.rpm = player.rpmVis = 1500 + Math.abs(player.vF) * 60;
+  rivals.forEach((r, k) => { const o = 6 + k * 4; if (a.length > o + 3) { r.pos.set(L(o), 0, L(o + 1)); r.h = a[o + 2] + wrapAngle(b[o + 2] - a[o + 2]) * f; r.speed = L(o + 3); } });
+  updateCars(dt);
+  // troca de câmera a cada 4 segundos, como na TV
+  REPLAY.camT -= dt;
+  const fw = new THREE.Vector3(Math.sin(player.h), 0, Math.cos(player.h)), sd = new THREE.Vector3(fw.z, 0, -fw.x);
+  if (REPLAY.camT <= 0) {
+    REPLAY.camT = 4; REPLAY.cam = (REPLAY.cam + 1) % 4;
+    if (REPLAY.cam === 1) REPLAY.fixed.copy(player.pos).addScaledVector(fw, 10 + Math.abs(player.vF) * 1.6).addScaledVector(sd, 11).setY(2.2);
+    $('replay-cam').textContent = CAM_NAMES[REPLAY.cam];
+  }
+  const p = player.pos;
+  if (REPLAY.cam === 0) { camera.position.lerp(new THREE.Vector3().copy(p).addScaledVector(fw, -7).setY(p.y + 2.6), Math.min(1, 6 * dt)); camera.lookAt(p.x, p.y + 0.9, p.z); camera.fov = 58; }
+  if (REPLAY.cam === 1) { camera.position.copy(REPLAY.fixed); camera.lookAt(p.x, p.y + 0.7, p.z); camera.fov = clamp(22 + camera.position.distanceTo(p) * 0.5, 22, 60); }
+  if (REPLAY.cam === 2) { camera.position.lerp(new THREE.Vector3().copy(p).addScaledVector(fw, -18).addScaledVector(sd, 8).setY(p.y + 22), Math.min(1, 3 * dt)); camera.lookAt(p.x, p.y, p.z); camera.fov = 50; }
+  if (REPLAY.cam === 3) { camera.position.copy(p).addScaledVector(fw, 3.4).setY(p.y + 0.55); camera.lookAt(p.x - fw.x * 4, p.y + 0.6, p.z - fw.z * 4); camera.fov = 70; }
+  camera.updateProjectionMatrix();
+  $('replay-time').textContent = fmt(REPLAY.t);
+  $('replay-bar').style.width = (100 * fi / (F.length - 1)) + '%';
+}
+
+// ---------- pódio ----------
+const PODIUM = { g: null, t: 0, next: null, confetti: null, cars: [] };
+function podiumOK() {
+  if (MP.inRace || !(RM.id === 'carreira' || RM.id === 'campeonato')) return false;
+  return standings().findIndex(e => e.me) < 3;
+}
+function showPodium(next) {
+  const st = standings().slice(0, 3);
+  const cars = st.map(e => e.me ? player.car : (rivals.find(r => r.name === e.name) || {}).car).filter(Boolean);
+  const ci = 12, c = P[ci], t = T[ci], s = S[ci];
+  const g = new THREE.Group(); world.add(g);
+  const mat = [new THREE.MeshStandardMaterial({ color: 0x9a7a1c, metalness: 0.4, roughness: 0.6 }), new THREE.MeshStandardMaterial({ color: 0x7a7e86, metalness: 0.4, roughness: 0.6 }), new THREE.MeshStandardMaterial({ color: 0x7a4418, metalness: 0.4, roughness: 0.6 })];
+  const hts = [1.6, 1.0, 0.6], lat = [0, -5.2, 5.2];
+  PODIUM.cars = [];
+  cars.forEach((car, k) => {
+    const x = c.x + s.x * lat[k], z = c.z + s.z * lat[k];
+    const blk = new THREE.Mesh(new THREE.BoxGeometry(4.6, hts[k], 5.6), mat[k]); blk.position.set(x, hts[k] / 2, z); blk.rotation.y = Math.atan2(t.x, t.z); blk.castShadow = blk.receiveShadow = true; g.add(blk);
+    const lab = iconSprite(['🥇', '🥈', '🥉'][k], 2.2); lab.position.set(x, hts[k] + 3.4, z); g.add(lab);
+    PODIUM.cars.push({ car, x, z, y: hts[k], old: car.group.position.clone(), oldR: car.group.rotation.y });
+  });
+  // confete
+  const NCF = 500, pos = new Float32Array(NCF * 3), col = new Float32Array(NCF * 3), cols = [[1, 0.3, 0.1], [1, 0.85, 0.2], [0.2, 0.6, 1], [0.3, 1, 0.5], [1, 0.3, 0.8]];
+  for (let k = 0; k < NCF; k++) { pos[k * 3] = c.x + (Math.random() - 0.5) * 22; pos[k * 3 + 1] = Math.random() * 16; pos[k * 3 + 2] = c.z + (Math.random() - 0.5) * 22; const cc = cols[k % 5]; col.set(cc, k * 3); }
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  PODIUM.confetti = new THREE.Points(geo, new THREE.PointsMaterial({ size: 0.28, vertexColors: true })); PODIUM.confetti.frustumCulled = false; g.add(PODIUM.confetti);
+  PODIUM.g = g; PODIUM.t = 0; PODIUM.next = next; PODIUM.center = new THREE.Vector3(c.x, 1.5, c.z); PODIUM.dir = Math.atan2(t.x, t.z);
+  rivals.forEach(r => { if (!cars.includes(r.car)) r.car.group.visible = false; });
+  if (!cars.includes(player.car)) player.car.group.visible = false;
+  state = 'podium';
+  $('hud').classList.add('hidden'); $('touch').classList.add('hidden');
+  $('message').innerHTML = ''; msgTimer = 0;
+  showMessage('🏆 PÓDIO', 5, st.map((e, k) => `${k + 1}º ${escHtml(e.name)}`).join(' &nbsp;·&nbsp; '));
+  cash(); setTimeout(() => { try { beepNote(); } catch (e) {} }, 300);
+}
+function podiumUpdate(dt) {
+  PODIUM.t += dt;
+  PODIUM.cars.forEach(pc => { pc.car.group.position.set(pc.x, pc.y, pc.z); pc.car.group.rotation.y = PODIUM.dir + Math.PI; pc.car.group.visible = true; });
+  const a = PODIUM.dir + Math.PI + Math.sin(PODIUM.t * 0.35) * 0.7, ctr = PODIUM.center;
+  camera.position.set(ctr.x + Math.sin(a) * 17, 4.5 + Math.sin(PODIUM.t * 0.5), ctr.z + Math.cos(a) * 17);
+  camera.lookAt(ctr.x, 1.6, ctr.z); camera.fov = 50; camera.updateProjectionMatrix();
+  const p = PODIUM.confetti.geometry.attributes.position.array;
+  for (let k = 0; k < p.length; k += 3) { p[k + 1] -= (2 + (k % 7) * 0.3) * dt; p[k] += Math.sin(PODIUM.t * 3 + k) * 0.6 * dt; if (p[k + 1] < 0) p[k + 1] += 16; }
+  PODIUM.confetti.geometry.attributes.position.needsUpdate = true;
+  if (msgTimer > 0) { msgTimer -= dt; if (msgTimer <= 0) $('message').innerHTML = ''; }
+  if (PODIUM.t > 5.5) endPodium();
+}
+function endPodium() {
+  if (state !== 'podium') return;
+  PODIUM.cars.forEach(pc => { pc.car.group.position.copy(pc.old); pc.car.group.rotation.y = pc.oldR; });
+  rivals.forEach(r => r.car.group.visible = true); player.car.group.visible = true;
+  if (PODIUM.g) { world.remove(PODIUM.g); PODIUM.g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); PODIUM.g = null; }
+  $('message').innerHTML = ''; msgTimer = 0;
+  state = 'finished';
+  const n = PODIUM.next; PODIUM.next = null; if (n) n();
+}
+
+// ---------- garagem de coleção ----------
+const COL = { cars: [], i: 0 };
+function openCollection() {
+  closeCollectionCars();
+  const opts = modelOpts();
+  const base = player.car.group.position, h = player.h;
+  const fw = new THREE.Vector3(Math.sin(h), 0, Math.cos(h));
+  opts.forEach((o, k) => {
+    const look = Object.assign({}, save.look, { model: o.id });
+    const car = makeCar(look);
+    car.group.position.copy(base).addScaledVector(fw, 10 * (k + 1)); car.group.rotation.y = h + 0.6;
+    if (!modelOwned(o)) car.group.traverse(m => { if (m.isMesh && m.material && !m.material.transparent) { m.material = m.material.clone(); m.material.color && m.material.color.multiplyScalar(0.15); if (m.material.emissive) m.material.emissive.setRGB(0, 0, 0); } });
+    COL.cars.push({ o, car });
+  });
+  player.car.group.visible = false;
+  COL.i = Math.max(0, opts.findIndex(o => o.id === save.look.model));
+  showScreen('colecao'); renderCollection();
+}
+function closeCollectionCars() { COL.cars.forEach(c => disposeCar(c.car)); COL.cars = []; if (player.car) player.car.group.visible = true; }
+function renderCollection() {
+  const { o } = COL.cars[COL.i];
+  const own = modelOwned(o), sel = save.look.model === o.id;
+  const total = COL.cars.length, have = COL.cars.filter(c => modelOwned(c.o)).length;
+  $('col-count').textContent = `${have} de ${total} na coleção`;
+  $('col-name').textContent = o.name;
+  $('col-desc').textContent = (own ? '' : '🔒 ') + (CAR_DESC[o.id] || '');
+  $('col-stats').innerHTML = statBars(modelStats(o.id));
+  $('col-use').textContent = sel ? '✓ Usando' : own ? 'Usar este' : '▶ Liberar com anúncio';
+  $('col-use').disabled = sel;
+}
+$('col-prev').onclick = () => { COL.i = (COL.i + COL.cars.length - 1) % COL.cars.length; renderCollection(); };
+$('col-next').onclick = () => { COL.i = (COL.i + 1) % COL.cars.length; renderCollection(); };
+$('col-use').onclick = () => {
+  const o = COL.cars[COL.i].o;
+  if (!modelOwned(o)) { closeCollectionCars(); garageMode = 'cars'; garageFromCity = false; chooseModel(o, () => {}); return; } // o anúncio volta para a tela Carros
+  const i = COL.i; chooseModel(o, () => { closeCollectionCars(); openCollection(); COL.i = i; renderCollection(); });
+};
+$('col-back').onclick = () => { closeCollectionCars(); refreshMenu(); showScreen('menu'); };
+window.addEventListener('keydown', e => { if (view !== 'colecao') return; if (e.code === 'ArrowLeft') $('col-prev').click(); if (e.code === 'ArrowRight') $('col-next').click(); if (e.code === 'Escape') $('col-back').click(); });
+$('replay-exit').onclick = stopReplay;
+$('res-replay').onclick = startReplay;
+
+const SCREENS = ['menu', 'phases', 'garage', 'pause', 'results', 'options', 'multi', 'cinema', 'achs', 'modes', 'colecao'];
 let view = 'menu';
 function showScreen(name) {
   view = name;
@@ -4998,13 +5213,14 @@ function chooseModel(o, after) {
   save.look.model = o.id; persist(); applyParts(); rebuildPlayerCar(); after();
 }
 function renderCars() {
-  let html = '<p class="hint" style="margin:0 0 10px">Escolha o seu veículo. Os bloqueados liberam assistindo ao anúncio do jogo, uma vez só.</p>';
+  let html = '<button class="btn sec" id="open-col" style="width:100%;margin:0 0 10px">🏛️ Ver a coleção em 3D</button><p class="hint" style="margin:0 0 10px">Escolha o seu veículo. Os bloqueados liberam assistindo ao anúncio do jogo, uma vez só.</p>';
   modelOpts().forEach(o => {
     const sel = save.look.model === o.id, own = modelOwned(o);
     const st = modelStats(o.id);
     html += `<div class="carcard ${sel ? 'sel' : ''}" data-model="${o.id}" role="button" tabindex="0"><div class="cn">${o.name}</div><div class="tag ${own ? '' : 'ad'}">${sel ? 'Usando' : own ? 'Usar' : '▶ Anúncio'}</div><div class="cd">${CAR_DESC[o.id] || ''}</div><div class="mini">${st.map(([n, v]) => `<div>${n}<div class="bar"><i style="width:${Math.round(8 + v * 92)}%"></i></div></div>`).join('')}</div></div>`;
   });
   $('garage-body').innerHTML = html;
+  $('open-col').onclick = () => openCollection();
   $('garage-body').querySelectorAll('[data-model]').forEach(c => {
     const go = () => chooseModel(modelOpts().find(x => x.id === c.dataset.model), () => renderGarage());
     c.onclick = go; c.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
@@ -5262,7 +5478,7 @@ function finishRace() {
   state = 'finished';
   const pos = standings().findIndex(e => e.me) + 1;
   showMessage(pos === 1 ? 'VITÓRIA!' : pos + 'º LUGAR', 3);
-  setTimeout(showResults, 3000);
+  setTimeout(() => { if (state === 'finished' && podiumOK()) showPodium(showResults); else showResults(); }, 3000);
 }
 function showResults() {
   if (state !== 'finished') return;
@@ -5398,7 +5614,7 @@ function frame() {
   readInput();
   if (state === 'menu') {
     menuAngle += dt * (view === 'ad' ? 0.55 : 0.2);
-    const cp = view === 'ad' && adCar ? adBase : player.car.group.position;
+    const cp = view === 'ad' && adCar ? adBase : view === 'colecao' && COL.cars.length ? COL.cars[COL.i].car.group.position : player.car.group.position;
     const inGarage = view === 'garage';
     const W = window.innerWidth, H = window.innerHeight, portrait = W <= 700;
     const dist = inGarage ? (portrait ? 9.5 : 6.4) : portrait ? 9 : 7;
@@ -5419,6 +5635,10 @@ function frame() {
   } else if (state === 'city') {
     if (camera.view && camera.view.enabled) camera.clearViewOffset();
     cityUpdate(dt);
+  } else if (state === 'replay') {
+    replayUpdate(dt);
+  } else if (state === 'podium') {
+    podiumUpdate(dt);
   } else if (state !== 'paused') {
     if (camera.view && camera.view.enabled) camera.clearViewOffset();
     if (state === 'countdown') {
@@ -5436,6 +5656,7 @@ function frame() {
     updateCamera(dt);
     updateHUD(dt);
     modeUpdate(dt);
+    replayRecord(dt);
   }
   if ((state === 'race' || state === 'city') && player.vF * 3.6 > 300) { ach('v300'); if (player.vF * 3.6 > 400) ach('v400'); }
   mpTick(dt);
@@ -5446,7 +5667,7 @@ function frame() {
 frame();
 
 // gancho para testes automatizados
-window.__tn = { RM: () => RM, startMode, finishRace, ghost: () => ghostCar, ACH, ach, addXP, note, updatePlayer, input, settings, applyParts, RADIO, setRadio, ramps: () => ramps, MP, mpCreate, mpJoin, city: () => city, startCity, cityAction, player, rivals: () => rivals, state: () => state, track: { P, T, S, N }, profile: () => profile, save: () => save, PHASES, buildWorld, setupRace, startRace, CAR };
+window.__tn = { REPLAY, COL, RM: () => RM, startMode, finishRace, ghost: () => ghostCar, ACH, ach, addXP, note, updatePlayer, input, settings, applyParts, RADIO, setRadio, ramps: () => ramps, MP, mpCreate, mpJoin, city: () => city, startCity, cityAction, player, rivals: () => rivals, state: () => state, track: { P, T, S, N }, profile: () => profile, save: () => save, PHASES, buildWorld, setupRace, startRace, CAR };
 })();
 </script>
 </body>
