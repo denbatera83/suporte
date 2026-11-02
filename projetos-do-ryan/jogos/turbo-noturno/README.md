@@ -15,11 +15,31 @@ Abra o arquivo `index.html` no navegador (Chrome, Edge ou Firefox). É preciso e
 | Espaço | Freio de mão |
 | L | Farol alto ou baixo |
 | C | Trocar a câmera (atrás, longe, capô, para-choque) |
-| R | Voltar para a pista |
+| R | Voltar para a pista (na cidade: desvirar o carro na rua) |
+| E | Na cidade: sair/entrar no carro e começar missões |
 | M | Ligar ou desligar o som |
 | P / Esc | Pausa |
 
 Também funciona com controle de videogame e com botões na tela do celular (jogue com o aparelho deitado).
+
+## Cidade Livre (mundo aberto)
+
+No menu, o botão **🌆 Cidade Livre** abre uma cidade grande para explorar à vontade, de noite, com ruas, quarteirões, praças, estacionamentos e prédios iluminados.
+
+- **Sair do carro e andar a pé:** aperte **E** com o carro parado. A pé, as setas andam e viram, **Shift** corre e **Espaço** pula.
+- **Entrar em qualquer carro:** chegue perto de um carro do trânsito ou estacionado e aperte **E**. O motorista desce e vai embora. Seu carro fica estacionado onde você deixou (aparece em azul no mapa).
+- **Trânsito:** carros andam pelas ruas, viram nas esquinas, param quando tem algo na frente e acendem a luz de freio.
+- **Pedestres:** andam nas calçadas e pulam para o lado quando um carro vem. Se alguém for atropelado, cai e levanta.
+- **Polícia e estrelas de procurado:** bater em carros, correr acima de 120 km/h perto de uma viatura, atropelar ou pegar um carro na frente da polícia sobe as estrelas (até 5). As viaturas chegam com sirene e luzes piscando. Fique longe delas até a barrinha encher para **despistar** (e ganhar dinheiro). Se parar perto da viatura, você é **preso** e paga multa.
+- **Missões** (marcadores coloridos, aperte **E** dentro deles):
+  - 🏁 **Corrida de rua:** passe pelos pontos amarelos antes do tempo acabar.
+  - 📦 **Entrega:** leve a encomenda até o ponto azul. Cada batida diminui o pagamento.
+  - 🚨 **Fuga da polícia:** começa com 3 estrelas; despiste para ganhar.
+  - 🔧 **Oficina:** melhora as peças e o visual do carro ali mesmo.
+- **Dinheiro nas ruas:** moedas douradas espalhadas valem R$ 100 cada.
+- Uma seta amarela em cima do carro aponta para o objetivo da missão, e o mapa mostra missões, moedas e viaturas.
+
+O dinheiro ganho na cidade é o mesmo da carreira, então dá para juntar dinheiro na cidade e gastar na oficina.
 
 ## Modo carreira: 20 fases
 
