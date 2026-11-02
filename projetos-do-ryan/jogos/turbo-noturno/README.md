@@ -129,6 +129,30 @@ Também em **Visual → Carro**, o **Blindado X** é uma picape elétrica de aç
 
 Cada um tem o seu próprio anúncio, diferente dos outros, e só é liberado assistindo a esse anúncio até o fim (Visual → Carro).
 
+## Kart, Monstro e Clássico 70
+
+- **🏎️ Kart Faísca:** pequeno (180 kg), com o piloto à mostra e muito ágil nas curvas.
+- **🛻 Monstro:** caminhão monstro com rodas gigantes e faróis no teto. Na Cidade Livre, empurra os carros do trânsito para longe.
+- **🚘 Clássico 70:** carro dos anos 70 com cromados, faróis redondos, motor V8 de ronco grosso e traseira solta para derrapar.
+
+Cada um tem o seu anúncio e libera em Visual → Carro.
+
+## Rampas e manobras
+
+A Cidade Livre tem rampas listradas nas praças e estacionamentos (uma rampa gigante na praça central). Pegue velocidade e salte:
+- **← →** no ar: giro 360.
+- **Espaço** no ar: parafuso (gira de lado). Termine o giro antes de cair, senão é "pouso torto".
+- Cada salto dá pontos, dinheiro e XP.
+
+## Conquistas e nível
+
+No menu, **Conquistas** mostra 18 medalhas (primeira vitória, 300 km/h, giro 360, fugitivo, colecionador e outras) e o nível do piloto. Cada conquista dá R$ 500 e cada nível novo dá R$ 1.000. O XP vem de corridas, missões, manobras, fugas e moedas.
+
+## Rádio e buzina
+
+- **O:** troca a estação do rádio (Neon FM, Pista FM, Retrô FM ou desligado). As músicas são feitas pelo próprio jogo. Também dá para escolher em Opções.
+- **H:** buzina (cada veículo tem a sua). Na cidade, os pedestres pulam para o lado.
+
 ## Cinema na Cidade Livre
 
 Na Cidade Livre há um **cinema** com letreiro luminoso e cartazes na fachada (marcador rosa 🎬 no mapa). Chegue a pé ou de carro e aperte **E** para entrar. Lá dentro dá para escolher e assistir no telão aos vídeos: o trailer do Turbo Noturno e os anúncios do Roadster Foguete, Blindado X, Touro V12 e Moto Relâmpago. Dá para sair de um vídeo a qualquer momento.

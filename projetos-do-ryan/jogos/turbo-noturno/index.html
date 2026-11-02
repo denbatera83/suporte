@@ -137,6 +137,10 @@
   .mitem.primary { background: linear-gradient(100deg, rgba(255,106,31,.95), rgba(255,178,31,.9)); color: #170800; }
   .mitem.primary .d, .mitem.primary .k { color: rgba(23, 8, 0, .75); }
   .mitem.primary:hover { filter: brightness(1.08); }
+  .menu-list { grid-template-columns: 1fr 1fr; }
+  .mitem.primary, #btn-city { grid-column: 1 / -1; }
+  .menu-list .mitem:not(.primary):not(#btn-city) .d { display: none; }
+  .menu-list .mitem:not(.primary):not(#btn-city) .t { font-size: 22px; }
   .menu-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .menu-foot .hint { font-size: 12px; }
 
@@ -337,6 +341,7 @@
       <button class="mitem" id="btn-parts"><span class="t">OFICINA</span><span class="d">Motor, turbo, pneus e mais</span><span class="k">9</span></button>
       <button class="mitem" id="btn-style"><span class="t">VISUAL</span><span class="d">Pintura, rodas, neon e acessórios</span><span class="k">▶</span></button>
       <button class="mitem" id="btn-multi"><span class="t">MULTIPLAYER</span><span class="d">Crie uma sala e jogue junto com um amigo</span><span class="k">2P</span></button>
+      <button class="mitem" id="btn-achs"><span class="t">CONQUISTAS</span><span class="d" id="menu-level">Nível 1 · medalhas e prêmios</span><span class="k">🏅</span></button>
       <button class="mitem" id="btn-options"><span class="t">OPÇÕES</span><span class="d">Direção, gráficos, som e controles</span><span class="k">⚙</span></button>
     </div>
     <div class="menu-foot"><div class="money num" id="menu-money">R$ 0</div><div class="hint">Seu progresso fica salvo neste navegador.</div></div>
@@ -352,6 +357,7 @@
     <div class="opt"><span class="label">Gráficos</span><div class="choices" id="gfx"></div><div class="hint">Ultra é o mais bonito, para computador forte. A resolução também se ajusta sozinha.</div></div>
     <div class="opt"><span class="label">Computador fraco</span><div class="choices" id="weak"></div><div class="hint">Diminui bastante os gráficos (resolução, sombras, reflexos, árvores, trânsito) para rodar em computador ou celular fraco. Vale por completo a partir da próxima corrida.</div></div>
     <div class="opt"><span class="label">Som</span><div class="choices" id="sound"></div></div>
+    <div class="opt"><span class="label">Rádio do carro</span><div class="choices" id="radio-choices"></div><div class="hint">Músicas feitas pelo próprio jogo. No teclado: O troca a estação, H buzina.</div></div>
     <div class="opt"><span class="label">Multiplayer</span><div class="choices"><button class="choice" id="opt-multi">Ativar multiplayer</button></div><div class="hint">Cria uma sala com senha para jogar junto em outro celular ou computador.</div></div>
     <h3>Controles no computador</h3>
     <div class="keys">
@@ -359,7 +365,7 @@
       <div><kbd>←</kbd><kbd>→</kbd> virar</div><div><kbd>Shift</kbd> nitro / correr</div>
       <div><kbd>Espaço</kbd> freio de mão / pular</div><div><kbd>E</kbd> entrar, sair, missão</div>
       <div><kbd>C</kbd> trocar câmera</div><div><kbd>L</kbd> farol alto</div>
-      <div><kbd>R</kbd> voltar para a pista</div><div><kbd>V</kbd> voar (Roadster Foguete)</div><div><kbd>Espaço</kbd> sobe · <kbd>Q</kbd> desce (voando)</div><div><kbd>P</kbd> pausa · <kbd>M</kbd> som</div>
+      <div><kbd>R</kbd> voltar para a pista</div><div><kbd>O</kbd> rádio · <kbd>H</kbd> buzina</div><div>No ar (rampas): <kbd>←</kbd><kbd>→</kbd> giro · <kbd>Espaço</kbd> parafuso</div><div><kbd>V</kbd> voar (Roadster Foguete)</div><div><kbd>Espaço</kbd> sobe · <kbd>Q</kbd> desce (voando)</div><div><kbd>P</kbd> pausa · <kbd>M</kbd> som</div>
     </div>
     <h3>No celular</h3>
     <p class="hint">Arraste o botão redondo da esquerda para virar. Acelere, freie e use o nitro com os botões da direita. Também funciona com controle de videogame.</p>
@@ -452,6 +458,17 @@
     <button class="btn sec" id="cinema-exit">← Sair do cinema</button>
   </div>
 </div>
+<!-- CONQUISTAS -->
+<div id="achs" class="screen hidden">
+  <div class="card" style="max-width: 980px">
+    <h2>CONQUISTAS</h2>
+    <div class="mp-code-box" style="margin-top:12px"><div class="label" id="ach-count">0 conquistas</div><div class="mp-code" id="ach-level" style="font-size:52px">Nível 1</div>
+      <div class="bar" style="height:10px;margin:8px 0"><i id="ach-xp"></i></div><div class="hint" id="ach-xptext"></div></div>
+    <p class="hint">Cada conquista dá R$ 500. Cada nível novo dá R$ 1.000. Ganhe XP correndo, fazendo missões, manobras nas rampas e pegando moedas.</p>
+    <div class="grid" id="ach-grid"></div>
+    <button class="btn sec" id="achs-back">← Voltar</button>
+  </div>
+</div>
 <div id="toast" class="hidden"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -527,6 +544,10 @@ function applyParts(L = save.parts, model = save.look.model) {
   CAR.electric = model === 'foguete' || model === 'blindado';
   CAR.armor = model === 'blindado';
   CAR.touro = model === 'touro'; CAR.moto = model === 'moto';
+  CAR.kart = model === 'kart'; CAR.monster = model === 'monstro'; CAR.classico = model === 'classico';
+  if (CAR.kart) { CAR.m = 180; CAR.Iz = 140; CAR.tq *= 0.32; CAR.final = 6.4; CAR.drag = 0.18; CAR.Cf = 15000; CAR.Cr = 17000; CAR.mu = Math.max(CAR.mu, 1.45); CAR.down = 0.4; CAR.shift = 0.05; }
+  if (CAR.monster) { CAR.m = 2600; CAR.Iz = 4400; CAR.tq *= 1.6; CAR.final = 3.9; CAR.drag = 0.6; CAR.Cf *= 1.7; CAR.Cr *= 1.8; CAR.hcg = 0.9; CAR.brake = Math.max(CAR.brake, 1.2); }
+  if (CAR.classico) { CAR.tq *= 1.3; CAR.final = 3.4; CAR.drag = 0.45; CAR.mu = Math.min(CAR.mu, 1.15); CAR.Cr *= 0.85; }
   if (CAR.touro) { CAR.tq *= 1.75; CAR.final = 2.8; CAR.drag = 0.3; CAR.mu = Math.max(CAR.mu, 1.5); CAR.down = Math.max(CAR.down, 3.2); CAR.m -= 100; CAR.Iz = 1900; CAR.shift = Math.min(CAR.shift, 0.08); }
   if (CAR.moto) { CAR.m = 260; CAR.Iz = 320; CAR.tq *= 0.55; CAR.final = 3.2; CAR.drag = 0.2; CAR.Cf = 21000; CAR.Cr = 24000; CAR.down = 0.25; CAR.shift = Math.min(CAR.shift, 0.08); }
   if (CAR.electric) { CAR.tq *= 1.12; CAR.shift = 0.02; }
@@ -546,8 +567,8 @@ function carStats() {
 // ---------------- VISUAL (pintura e acessórios) ----------------
 const PAINTS = ['#0b4fd6', '#1a8cff', '#00b3a4', '#0f8f4a', '#7ac70c', '#f2b200', '#ff7a00', '#d43a00', '#b00a14', '#e0115f', '#8a2be2', '#3b1d6e', '#e8e8e8', '#9aa0a8', '#3a3d42', '#0c0c0e'];
 const STYLE = [
-  { key: 'model', title: 'Carro', hint: 'Roadster Foguete: elétrico e voa (tecla V na Cidade Livre). Blindado X: picape de aço, mais de 350 km/h, antiderrapante, voa e gruda na parede. Touro V12: o mais rápido, quase 400 km/h. Moto Relâmpago: leve e deita nas curvas. Cada um libera com o seu anúncio.', opts: [
-    { id: 'esportivo', name: 'Esportivo GT', price: 0 }, { id: 'foguete', name: '🚀 Roadster Foguete', price: 0, ad: true }, { id: 'blindado', name: '⚡ Blindado X', price: 0, ad: true }, { id: 'touro', name: '🐂 Touro V12', price: 0, ad: true }, { id: 'moto', name: '🏍️ Moto Relâmpago', price: 0, ad: true }] },
+  { key: 'model', title: 'Carro', hint: 'Roadster Foguete: elétrico e voa (tecla V na Cidade Livre). Blindado X: picape de aço, mais de 350 km/h, antiderrapante, voa e gruda na parede. Touro V12: o mais rápido, quase 400 km/h. Moto Relâmpago: leve e deita nas curvas. Kart Faísca: pequeno e muito ágil. Monstro: rodas gigantes, passa por cima de tudo. Clássico 70: motor V8 e traseira solta. Cada um libera com o seu anúncio.', opts: [
+    { id: 'esportivo', name: 'Esportivo GT', price: 0 }, { id: 'foguete', name: '🚀 Roadster Foguete', price: 0, ad: true }, { id: 'blindado', name: '⚡ Blindado X', price: 0, ad: true }, { id: 'touro', name: '🐂 Touro V12', price: 0, ad: true }, { id: 'moto', name: '🏍️ Moto Relâmpago', price: 0, ad: true }, { id: 'kart', name: '🏎️ Kart Faísca', price: 0, ad: true }, { id: 'monstro', name: '🛻 Monstro', price: 0, ad: true }, { id: 'classico', name: '🚘 Clássico 70', price: 0, ad: true }] },
   { key: 'finish', title: 'Acabamento da pintura', opts: [
     { id: 'metal', name: 'Metálico', price: 0 }, { id: 'fosco', name: 'Fosco', price: 800 },
     { id: 'perola', name: 'Perolado', price: 1500 }, { id: 'cromo', name: 'Cromado', price: 5000 }] },
@@ -580,7 +601,7 @@ const HEAD = { branco: [1, 0.97, 0.92], xenon: [0.75, 0.86, 1], amarelo: [1, 0.8
 
 // ---------------- SAVE ----------------
 const DEFAULT_SAVE = {
-  money: 2500, unlocked: 1, best: {}, current: 0,
+  money: 2500, unlocked: 1, best: {}, current: 0, xp: 0, level: 1, ach: {}, stats: { wins: 0, flySec: 0, coins: 0, deliveries: 0 },
   parts: { motor: 0, turbo: 0, cambio: 0, pneus: 0, freios: 0, suspensao: 0, aero: 0, nitro: 0, peso: 0 },
   ownedParts: { motor: 0, turbo: 0, cambio: 0, pneus: 0, freios: 0, suspensao: 0, aero: 0, nitro: 0, peso: 0 },
   owned: {},
@@ -591,8 +612,8 @@ const save = JSON.parse(JSON.stringify(DEFAULT_SAVE));
 try {
   const s = JSON.parse(localStorage.getItem('tn3-save') || 'null');
   if (s) {
-    for (const k of ['parts', 'ownedParts', 'look', 'settings', 'owned', 'best']) Object.assign(save[k], s[k] || {});
-    for (const k of ['money', 'unlocked', 'current']) if (typeof s[k] === 'number') save[k] = s[k];
+    for (const k of ['parts', 'ownedParts', 'look', 'settings', 'owned', 'best', 'ach', 'stats']) Object.assign(save[k], s[k] || {});
+    for (const k of ['money', 'unlocked', 'current', 'xp', 'level']) if (typeof s[k] === 'number') save[k] = s[k];
   }
 } catch (e) {}
 function persist() { try { localStorage.setItem('tn3-save', JSON.stringify(save)); } catch (e) {} }
@@ -1552,8 +1573,14 @@ MODELS.touro = { TOP: [[-2.32, 0.6], [-2.2, 0.72], [-1.6, 0.77], [-0.8, 0.79], [
   W: [[-2.32, 0.86], [-2.0, 1.0], [-1.38, 1.03], [-0.4, 0.95], [0.6, 0.95], [1.42, 1.0], [2.1, 0.9], [2.38, 0.68]],
   ROOF: [[-1.6, 0], [-1.2, 0.14], [-0.6, 0.29], [-0.1, 0.32], [0.45, 0.23], [0.85, 0.09], [1.15, 0]], cab: [-1.6, 1.15], roofZ: [-0.95, 0.25] };
 MODELS.moto = Object.assign({}, MODELS.esportivo, { bike: true });
+MODELS.kart = Object.assign({}, MODELS.esportivo, { special: true });
+MODELS.monstro = Object.assign({}, MODELS.esportivo, { special: true });
+// carro dos anos 70: capô longo, linhas retas, teto baixo
+MODELS.classico = { TOP: [[-2.36, 0.64], [-2.3, 0.84], [-1.8, 0.88], [-0.9, 0.9], [0.9, 0.9], [2.2, 0.86], [2.38, 0.7]], BOT: BODY_BOT,
+  W: [[-2.36, 0.88], [-2.24, 0.95], [2.24, 0.95], [2.38, 0.9]],
+  ROOF: [[-1.5, 0], [-1.25, 0.3], [-0.5, 0.39], [0.35, 0.37], [0.72, 0.18], [0.92, 0]], cab: [-1.5, 0.92], roofZ: [-1.2, 0.42] };
 const MODEL_GEO = {};
-for (const [k, M] of Object.entries(MODELS)) MODEL_GEO[k] = M.bike ? MODEL_GEO.esportivo || { body: CARGEO.body, cabin: CARGEO.cabin, roof: CARGEO.roof } : M.armor ? { body: loft(armBody, -2.42, 2.42, 70), cabin: loft(armGlass, -1.55, 1.05, 40), roof: loft(armSpine, -2.3, 2.15, 40) } : k === 'esportivo' ? { body: CARGEO.body, cabin: CARGEO.cabin, roof: CARGEO.roof } :
+for (const [k, M] of Object.entries(MODELS)) MODEL_GEO[k] = (M.bike || M.special) ? MODEL_GEO.esportivo || { body: CARGEO.body, cabin: CARGEO.cabin, roof: CARGEO.roof } : M.armor ? { body: loft(armBody, -2.42, 2.42, 70), cabin: loft(armGlass, -1.55, 1.05, 40), roof: loft(armSpine, -2.3, 2.15, 40) } : k === 'esportivo' ? { body: CARGEO.body, cabin: CARGEO.cabin, roof: CARGEO.roof } :
   { body: loft(z => bodySection(z, M), -2.32, 2.38, 64), cabin: loft(z => cabinSection(z, M), M.cab[0], M.cab[1], 40), roof: loft(z => roofSection(z, M), M.roofZ[0], M.roofZ[1], 20) };
 const SHARED_GEO = new Set([...Object.values(CARGEO), ...Object.values(MODEL_GEO).flatMap(m => Object.values(m)), beamConeGeo, beamPoolGeo]);
 const SHARED_MAT = new Set(Object.values(MAT));
@@ -1626,6 +1653,8 @@ function makeBike(look, opts = {}) { // moto com piloto, que deita nas curvas
 }
 function makeCar(look, opts = {}) {
   if (look.model === 'moto') return makeBike(look, opts);
+  if (look.model === 'kart') return makeKart(look, opts);
+  if (look.model === 'monstro') return makeMonster(look, opts);
   const lite = !!opts.lite; // versão simplificada (trânsito e polícia da cidade)
   const g = new THREE.Group();
   const body = new THREE.Group(); g.add(body);
@@ -1753,6 +1782,14 @@ function makeCar(look, opts = {}) {
     mesh(new THREE.BoxGeometry(1.86, 0.05, 0.04), tail, 0, 0.92, -2.43);
     for (const [x, z] of [[1, 1.42], [-1, 1.42], [1, -1.38], [-1, -1.38]]) { const f = mesh(new THREE.BoxGeometry(0.06, 0.12, 1.12), MAT.trim, x * 1.0, 0.86, z); f.castShadow = false; }
     mesh(new THREE.BoxGeometry(1.7, 0.02, 1.5), MAT.trim, 0, armTop(-1.7) + 0.02, -1.7);
+  }
+  if (mk === 'classico' && !lite) { // para-choques cromados, faróis redondos e entrada de ar no capô
+    mesh(new THREE.BoxGeometry(1.95, 0.14, 0.14), MAT.chrome, 0, 0.42, 2.42);
+    mesh(new THREE.BoxGeometry(1.95, 0.14, 0.14), MAT.chrome, 0, 0.44, -2.42);
+    mesh(new THREE.BoxGeometry(1.2, 0.2, 0.05), MAT.chrome, 0, 0.66, 2.4);
+    for (const sx of [1, -1]) { mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.06, 18).rotateX(Math.PI / 2), headMat, sx * 0.72, 0.66, 2.39); mesh(new THREE.BoxGeometry(0.4, 0.12, 0.05), tail, sx * 0.62, 0.72, -2.4); }
+    mesh(new THREE.BoxGeometry(0.6, 0.12, 0.8), paint, 0, 0.95, 1.4);
+    mesh(new THREE.BoxGeometry(0.5, 0.08, 0.04), MAT.trim, 0, 0.96, 1.81);
   }
   if (mk === 'touro' && !lite) {
     for (const sx of [1, -1]) {
@@ -1942,6 +1979,8 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyR' && state === 'race') resetToTrack();
   if (e.code === 'KeyR' && state === 'city') cityReset();
   if (e.code === 'KeyV' && state === 'city') toggleFlight();
+  if (e.code === 'KeyO') setRadio((RADIO.st + 1) % RADIO.names.length);
+  if (e.code === 'KeyH' && (state === 'race' || state === 'city')) horn();
   if ((e.code === 'KeyE' || e.code === 'KeyF' || e.code === 'Enter') && state === 'city') cityAction();
   if ((e.code === 'KeyP' || e.code === 'Escape') && (state === 'race' || state === 'countdown' || state === 'city' || state === 'paused')) togglePause();
 });
@@ -2276,7 +2315,7 @@ function updateCars(dt) {
   pc.body.position.y = -0.05 * (1 - CAR.susp);
   if (pc.moto) { pc.body.position.y = 0; pc.body.rotation.z += (clamp(-latAcc * 0.05, -0.8, 0.8) - pc.body.rotation.z) * Math.min(1, 6 * dt); pc.body.rotation.x = 0; }
   const wheelSpinR = (player.vF * (1 + player.spin * 0.8)) * dt / CAR.rw;
-  pc.wheels.forEach((w, k) => w.rotation.x += k < 2 ? player.vF * dt / CAR.rw : wheelSpinR);
+  pc.wheels.forEach((w, k) => w.rotation.x += (k < 2 ? player.vF * dt / CAR.rw : wheelSpinR) * CAR.rw / (pc.wheelR || CAR.rw));
   pc.steer.forEach(s => s.rotation.y = player.steer);
   const flying = !!(city && city.flying && city.driving);
   if (pc.rocket) { // rodas viram propulsores ao voar
@@ -2346,6 +2385,8 @@ function updateCamera(dt) {
     look = new THREE.Vector3(player.pos.x + ox * 25, y - 0.2, player.pos.z + oz * 25);
     lerpK = 0;
   }
+  const lift = (player.car && player.car.camLift) || 0;
+  if (want) want.y += lift; if (look) look.y += lift * 0.7;
   if (lerpK) camPos.lerp(want, Math.min(1, lerpK * dt));
   camLook.lerp(look, lerpK ? Math.min(1, 12 * dt) : 1);
   camera.position.copy(camPos);
@@ -2501,7 +2542,7 @@ function updateSound() {
   const onFoot = mode === 'city' && city && !city.driving;
   const rpm = player.rpmVis || CAR.idle;
   const thr = onFoot ? 0.1 : state === 'countdown' ? (input.gas ? 1 : 0.1) : (input.gas || 0.15);
-  const f = CAR.electric && !onFoot ? 70 + Math.abs(player.vF) * 6.5 : rpm / 60 * 2 * (CAR.touro && !onFoot ? 1.5 : CAR.moto && !onFoot ? 1.9 : 1);
+  const f = CAR.electric && !onFoot ? 70 + Math.abs(player.vF) * 6.5 : rpm / 60 * 2 * (onFoot ? 1 : CAR.touro ? 1.5 : CAR.moto ? 1.9 : CAR.kart ? 2.4 : CAR.monster ? 0.7 : CAR.classico ? 0.8 : 1);
   audio.oscs.forEach(({ o, mult }) => o.frequency.setTargetAtTime(f * mult, t, 0.03));
   audio.eFilt.frequency.setTargetAtTime(300 + rpm * 0.28 + thr * 900, t, 0.04);
   audio.eGain.gain.setTargetAtTime(on ? (0.05 + thr * 0.07) * (onFoot ? 0.3 : 1) * (CAR.electric ? 0.45 : 1) : 0, t, 0.06);
@@ -2648,7 +2689,7 @@ function cityCollidePlayerCar() {
     const res = pushOutCity(cx, cz, 1.05, player.pos.y);
     if (res.hit && res.bld && CAR.armor && input.gas && player.vF > 5 && city.driving && !city.flying) { // gruda na parede e sobe
       city.flying = true; city.landing = false; player.vy = Math.max(10, player.vF * 0.6); player.climb = 1.1;
-      player.h = Math.atan2(-res.nx, -res.nz); player.vF = 2; showMessage('GRUDOU NA PAREDE!', 1.2, 'Subindo pelo prédio'); return;
+      player.h = Math.atan2(-res.nx, -res.nz); player.vF = 2; showMessage('GRUDOU NA PAREDE!', 1.2, 'Subindo pelo prédio'); ach('parede'); return;
     }
     if (res.hit) {
       player.pos.x += res.x - cx; player.pos.z += res.z - cz;
@@ -2870,6 +2911,7 @@ function buildCity() {
   instanced(boxGeo(), new THREE.MeshLambertMaterial({ map: ft, emissiveMap: ft, emissive: 0xffffff, emissiveIntensity: 1.1, color: 0x666a77 }), far,
     b => m4.compose(v3.set(b.x, 0, b.z), q.identity(), sc.set(b.w, b.h, b.w)), false);
 
+  buildRamps();
   applyTime(timeCfg, weatherCfg);
   rain.visible = false; snow.visible = false;
   if (renderer.shadowMap.enabled) world.traverse(o => { if (o.material) [].concat(o.material).forEach(m => m.needsUpdate = true); });
@@ -3206,6 +3248,7 @@ function updatePolice(dt) {
     if (nearest > 115) city.evade += dt; else city.evade = Math.max(0, city.evade - dt * 2);
     if (city.evade > 9) {
       const reward = Math.ceil(city.heat) * 300;
+      if (city.heat > 2) ach('fuga'); addXP(40 * Math.ceil(city.heat));
       city.heat = 0; city.evade = 0;
       save.money += reward; persist(); cash();
       showMessage('DESPISTOU!', 2, `A polícia perdeu você de vista · + ${brl(reward)}`);
@@ -3240,7 +3283,7 @@ function updateCoins(dt) {
     c.mesh.rotation.y += dt * 3;
     if (Math.hypot(c.x - fx, c.z - fz) < 2.6 && (!city.driving || player.pos.y < 4)) {
       c.mesh.visible = false; c.wait = 40;
-      save.money += 100; city.saveT = 0; cash();
+      save.money += 100; city.saveT = 0; cash(); save.stats.coins++; addXP(5); if (save.stats.coins >= 50) ach('moedas');
       showMessage('', 0.01); toast('+ R$ 100');
     }
   });
@@ -3296,6 +3339,8 @@ function completeMission() {
   let reward = m.reward;
   if (m.type === 'entrega') reward = Math.max(Math.round(m.reward * 0.3), Math.round(m.reward * (1 - 0.15 * m.damage) / 10) * 10);
   if (m.type === 'corrida') reward += Math.round(m.time) * 20;
+  if (m.type === 'entrega') { save.stats.deliveries++; if (save.stats.deliveries >= 3) ach('entregas'); }
+  addXP(150);
   save.money += reward; persist(); cash();
   showMessage('MISSÃO CUMPRIDA!', 2.5, `+ ${brl(reward)}`);
   city.mission = null; refreshMissionMarkers();
@@ -3380,7 +3425,7 @@ function updateFootCamera(dt) {
 
 // ---------- entrar e sair de carros ----------
 function setPlayerCarState(x, z, h) {
-  if (city) { city.flying = false; city.landing = false; }
+  if (city) { city.flying = false; city.landing = false; city.air = false; city.trick = null; }
   Object.assign(player, { vy: 0, h, vF: 0, vL: 0, r: 0, ax: 0, steer: 0, steerInput: 0, gear: 1, rpm: CAR.idle, rpmVis: CAR.idle, shiftT: 0, nitroOn: false, spin: 0, lock: 0, slipR: 0 });
   player.pos.set(x, 0, z);
 }
@@ -3460,7 +3505,7 @@ function cityVehicleCollisions() {
     const ovx = Math.sin(o.h) * ospeed, ovz = Math.cos(o.h) * ospeed;
     const vn = (vx - ovx) * nx + (vz - ovz) * nz;
     if (vn >= 0) continue;
-    const share = kind === 'parked' ? 1.3 : 0.75;
+    const share = kind === 'parked' ? (CAR.monster ? 0.4 : 1.3) : (CAR.monster || CAR.armor ? 0.2 : 0.75);
     vx -= share * vn * nx; vz -= share * vn * nz;
     player.vF = vx * sh + vz * ch; player.vL = vx * ch - vz * sh;
     player.r += (Math.random() - 0.5) * Math.min(1.5, -vn * 0.1);
@@ -3468,7 +3513,7 @@ function cityVehicleCollisions() {
     if (impact > 2) { shake = Math.max(shake, Math.min(1, impact * 0.07)); playHit(Math.min(1, impact / 15)); }
     if (kind === 'traffic') {
       o.hit = o.hit || { vx: 0, vz: 0, w: 0, t: 0 };
-      o.hit.vx -= nx * impact * 0.7; o.hit.vz -= nz * impact * 0.7; o.hit.w += (Math.random() - 0.5) * impact * 0.25; o.hit.t = 0;
+      const shove = CAR.monster ? 2.2 : 0.7; o.hit.vx -= nx * impact * shove; o.hit.vz -= nz * impact * shove; o.hit.w += (Math.random() - 0.5) * impact * 0.25; o.hit.t = 0;
       o.x -= nx * pen * 0.4; o.z -= nz * pen * 0.4;
       if (impact > 5) addHeat(city.nearestCop < 90 ? 0.6 : 0.25, 'Batida!');
     }
@@ -3593,12 +3638,15 @@ function updateFlight(dt) {
     else p.vy = Math.max(0, p.vy);
   }
   p.rpm = 900 + Math.abs(p.vF) * 85; p.rpmVis = p.rpm;
+  save.stats.flySec += dt; if (save.stats.flySec >= 60) ach('voo');
   const st = p.idx; // sem pista na cidade
   squealLevel = 0;
 }
 function cityUpdate(dt) {
   city.nearMarker = null;
-  if (city.driving && city.flying) updateFlight(dt); else updatePlayer(dt);
+  if (city.driving && city.flying) updateFlight(dt);
+  else if (city.driving && city.air) cityGroundAndAir(dt);
+  else { updatePlayer(dt); if (city.driving) cityGroundAndAir(dt); }
   document.body.classList.toggle('rocket', isRocket() && city.driving);
   document.body.classList.toggle('flying', !!city.flying && city.driving);
   if (!city.driving) updateWalker(dt);
@@ -3609,6 +3657,7 @@ function cityUpdate(dt) {
   updateCoins(dt);
   updateMissions(dt);
   updateCars(dt);
+  if (city.air && city.trick && player.car) { player.car.body.rotation.z = city.trick.roll; player.car.body.rotation.x = clamp(-(player.vy || 0) * 0.03, -0.5, 0.5); }
   updateSmoke(dt);
   if (city.driving) updateCamera(dt); else updateFootCamera(dt);
   const fx = focusX(), fz = focusZ();
@@ -3630,6 +3679,7 @@ function startCity() {
   withLoading('Cidade Livre', startCityNow);
 }
 function startCityNow() {
+  if (settings.radio && !RADIO.st) setRadio(settings.radio);
   applyGraphics();
   leaveCity();
   disposeCar(player.car); rivals.forEach(r => disposeCar(r.car)); rivals = [];
@@ -3905,6 +3955,7 @@ function mpTag() {
 }
 function mpStartGame(g) {
   MP.inRace = g.mode === 'race';
+  ach('amigo');
   if (g.mode === 'race') startRace(g.phase, true); else startCity();
 }
 
@@ -3942,9 +3993,297 @@ $('mp-start').onclick = () => { MP.game = { id: Date.now(), mode: MP.mode, phase
 $('mp-code').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4); });
 
 // =====================================================================
+// NOVOS VEÍCULOS: KART, MONSTRO (CAMINHÃO MONSTRO)
+// =====================================================================
+function makeSpecialBase(look, opts) {
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const paint = paintMaterial(look.color, look.finish);
+  const hc = HEAD[look.head] || HEAD.branco;
+  const headMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(...hc).multiplyScalar(5) });
+  const tail = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 0.03, 0.03).multiplyScalar(1.6) });
+  const rc = RIM[look.rimColor] || RIM.prata;
+  const rimMat = new THREE.MeshStandardMaterial({ color: rc[0], metalness: rc[1], roughness: rc[2] });
+  const mesh = (geo, mat, x, y, z, parent = body, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); m.castShadow = !opts.lite; parent.add(m); return m; };
+  return { g, body, paint, hc, headMat, tail, rimMat, mesh };
+}
+function finishSpecial(B, wheels, steer, pivots, extra) {
+  const { g, body, paint, hc, tail } = B;
+  const poolMat = new THREE.MeshBasicMaterial({ map: beamPoolTex, color: new THREE.Color(...hc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.7 * Math.max(0.15, timeCfg.dark), polygonOffset: true, polygonOffsetFactor: -2 });
+  const pool = new THREE.Mesh(beamPoolGeo, poolMat); pool.position.set(0, 0.12, 15); g.add(pool);
+  mergeChildren(body); wheels.forEach(mergeChildren); steer.forEach(mergeChildren);
+  scene.add(g);
+  return Object.assign({ group: g, body, wheels, steer, flames: [], paint, tail, pool, headColor: hc, rocket: false, armor: false, pivots, jets: [], mainJet: null, fold: 0 }, extra);
+}
+function makeKart(look, opts = {}) {
+  const B = makeSpecialBase(look, opts), { mesh, paint } = B;
+  const suit = lam(0x15171c), helmet = paintMaterial(look.stripeColor || '#ffffff', 'metal');
+  mesh(new THREE.BoxGeometry(1.1, 0.06, 2.0), MAT.trim, 0, 0.16, 0);                 // chassi
+  for (const s of [1, -1]) mesh(new THREE.BoxGeometry(0.3, 0.22, 1.1), paint, s * 0.55, 0.27, 0);  // laterais
+  mesh(new THREE.BoxGeometry(0.85, 0.18, 0.5), paint, 0, 0.27, 0.95, B.body, -0.25);   // bico
+  mesh(new THREE.BoxGeometry(1.15, 0.1, 0.22), paint, 0, 0.24, 1.27);                  // para-choque
+  mesh(new THREE.BoxGeometry(0.5, 0.38, 0.45), MAT.disc, 0, 0.42, -0.78);              // motor
+  mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.4, 10), MAT.chrome, 0.2, 0.5, -1.05, B.body, Math.PI / 2);
+  mesh(new THREE.BoxGeometry(0.44, 0.42, 0.08), MAT.trim, 0, 0.5, -0.36);              // encosto
+  mesh(new THREE.BoxGeometry(0.36, 0.42, 0.22), suit, 0, 0.62, -0.14, B.body, 0.2);     // piloto
+  mesh(new THREE.SphereGeometry(0.15, 14, 10), helmet, 0, 0.96, -0.08);
+  mesh(new THREE.TorusGeometry(0.12, 0.02, 6, 16), MAT.trim, 0, 0.62, 0.3, B.body, -1.0);
+  for (const s of [1, -1]) mesh(new THREE.BoxGeometry(0.08, 0.08, 0.42), suit, s * 0.15, 0.6, 0.12, B.body, 0.4);
+  mesh(new THREE.BoxGeometry(0.4, 0.05, 0.04), B.headMat, 0, 0.32, 1.39);
+  mesh(new THREE.BoxGeometry(0.3, 0.05, 0.04), B.tail, 0, 0.55, -1.02);
+  const wheels = [], steer = [], pivots = [];
+  for (const [x, z, r, w] of [[0.62, 0.75, 0.2, 0.18], [-0.62, 0.75, 0.2, 0.18], [0.64, -0.72, 0.24, 0.26], [-0.64, -0.72, 0.24, 0.26]]) {
+    const pivot = new THREE.Group(); pivot.position.set(x, r, z); B.g.add(pivot); pivots.push(pivot);
+    const wg = new THREE.Group(); pivot.add(wg);
+    mesh(new THREE.CylinderGeometry(r, r, w, 18).rotateZ(Math.PI / 2), MAT.tire, 0, 0, 0, wg);
+    mesh(new THREE.CylinderGeometry(r * 0.6, r * 0.6, w + 0.01, 14).rotateZ(Math.PI / 2), B.rimMat, 0, 0, 0, wg);
+    wheels.push(wg); if (z > 0) steer.push(pivot);
+  }
+  return finishSpecial(B, wheels, steer, pivots, { kart: true, wheelR: 0.22 });
+}
+function makeMonster(look, opts = {}) {
+  const B = makeSpecialBase(look, opts), { mesh, paint } = B;
+  const lift = new THREE.Group(); lift.position.y = 0.95; B.body.add(lift);
+  const glass = new THREE.MeshPhysicalMaterial({ color: 0x0d141c, metalness: 0.8, roughness: 0.05, clearcoat: 1 });
+  mesh(new THREE.BoxGeometry(1.9, 0.5, 1.5), paint, 0, 0.55, 1.35, lift);              // capô
+  mesh(new THREE.BoxGeometry(1.85, 0.8, 1.4), paint, 0, 0.95, 0.05, lift);             // cabine
+  mesh(new THREE.BoxGeometry(1.88, 0.42, 1.42), glass, 0, 1.12, 0.05, lift);           // vidros
+  mesh(new THREE.BoxGeometry(1.95, 0.08, 1.48), paint, 0, 1.36, 0.05, lift);            // teto
+  mesh(new THREE.BoxGeometry(1.9, 0.55, 1.9), paint, 0, 0.55, -1.6, lift);              // caçamba
+  mesh(new THREE.BoxGeometry(1.7, 0.1, 1.7), MAT.trim, 0, 0.84, -1.6, lift);
+  mesh(new THREE.BoxGeometry(2.1, 0.22, 0.2), MAT.chrome, 0, 0.35, 2.15, lift);         // para-choques
+  mesh(new THREE.BoxGeometry(2.1, 0.22, 0.2), MAT.chrome, 0, 0.35, -2.6, lift);
+  mesh(new THREE.BoxGeometry(1.2, 0.3, 0.06), MAT.chrome, 0, 0.62, 2.11, lift);         // grade
+  for (const s of [1, -1]) {
+    mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.05, 16).rotateX(Math.PI / 2), B.headMat, s * 0.7, 0.62, 2.12, lift);
+    mesh(new THREE.BoxGeometry(0.2, 0.12, 0.05), B.tail, s * 0.8, 0.6, -2.56, lift);
+  }
+  for (let k = 0; k < 4; k++) mesh(new THREE.BoxGeometry(0.22, 0.12, 0.12), B.headMat, -0.6 + k * 0.4, 1.46, 0.6, lift); // faróis de teto
+  mesh(new THREE.BoxGeometry(0.2, 0.2, 4.4), MAT.trim, 0.7, 0.62, -0.2);               // longarinas
+  mesh(new THREE.BoxGeometry(0.2, 0.2, 4.4), MAT.trim, -0.7, 0.62, -0.2);
+  const wheels = [], steer = [], pivots = [];
+  for (const [x, z] of [[1.18, 1.45], [-1.18, 1.45], [1.18, -1.5], [-1.18, -1.5]]) {
+    mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.0, 8), MAT.chrome, x * 0.62, 1.05, z, B.body, 0, 0, Math.sign(x) * 0.7); // amortecedor
+    const pivot = new THREE.Group(); pivot.position.set(x, 0.85, z); B.g.add(pivot); pivots.push(pivot);
+    const wg = new THREE.Group(); pivot.add(wg);
+    mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.62, 26).rotateZ(Math.PI / 2), MAT.tire, 0, 0, 0, wg);
+    for (let k = 0; k < 10; k++) { const tr = mesh(new THREE.BoxGeometry(0.64, 0.08, 0.16), MAT.tire, 0, 0, 0, wg); tr.rotation.x = k / 10 * Math.PI * 2; tr.translateY(0.86); } // cravos
+    mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.64, 18).rotateZ(Math.PI / 2), B.rimMat, 0, 0, 0, wg);
+    wheels.push(wg); if (z > 0) steer.push(pivot);
+  }
+  return finishSpecial(B, wheels, steer, pivots, { monster: true, wheelR: 0.85, camLift: 1.3 });
+}
+
+// =====================================================================
+// RAMPAS E MANOBRAS (CIDADE LIVRE)
+// =====================================================================
+let ramps = [];
+const rampTex = (() => { const c = document.createElement('canvas'); c.width = 64; c.height = 64; const g = c.getContext('2d'); g.fillStyle = '#f2b200'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#151515'; for (let k = -64; k < 128; k += 22) { g.beginPath(); g.moveTo(k, 0); g.lineTo(k + 11, 0); g.lineTo(k - 53, 64); g.lineTo(k - 64, 64); g.fill(); } const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(2, 3); return t; })();
+function rampGeometry() { // cunha: começa no chão (z=0) e sobe até a altura 1 no fim (z=1)
+  const g = new THREE.BufferGeometry();
+  const v = [-0.5, 0, 0, 0.5, 0, 0, -0.5, 1, 1, 0.5, 1, 1, -0.5, 0, 1, 0.5, 0, 1];
+  const idx = [0, 2, 1, 1, 2, 3, 2, 4, 5, 2, 5, 3, 0, 4, 2, 1, 3, 5, 0, 1, 4, 1, 5, 4];
+  g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3)); g.setIndex(idx);
+  g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1], 2));
+  const n = g.toNonIndexed(); n.computeVertexNormals(); return n;
+}
+function buildRamps() {
+  ramps = [];
+  let seed = 99; const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+  lots.filter(L => L.type === 'parque' || L.type === 'estacionamento').forEach(L => {
+    const cx = (L.x0 + L.x1) / 2, cz = (L.z0 + L.z1) / 2;
+    const d = Math.floor(rnd() * 4), [dx, dz] = DIRS[d];
+    const mega = L.i === 5 && L.j === 5;
+    const len = mega ? 18 : 10, h = mega ? 5 : 2.2, wid = mega ? 9 : 6;
+    // o pé da rampa fica perto da borda, para dar para chegar embalado pela rua
+    ramps.push({ x: cx - dx * len / 2, z: cz - dz * len / 2, dx, dz, len, h, wid });
+    L.trees = L.trees.filter(t => Math.abs((t.x - cx) * dz - (t.z - cz) * dx) > wid / 2 + 2 || Math.abs((t.x - cx) * dx + (t.z - cz) * dz) > len);
+  });
+  const geo = rampGeometry();
+  instanced(geo, new THREE.MeshStandardMaterial({ map: rampTex, roughness: 0.6, side: THREE.DoubleSide }), ramps, r => {
+    q.setFromAxisAngle(yAxis, Math.atan2(r.dx, r.dz)); m4.compose(v3.set(r.x, 0.2, r.z), q, sc.set(r.wid, r.h, r.len));
+  });
+}
+function rampHeightAt(x, z) {
+  let best = 0;
+  for (const r of ramps) {
+    const px = x - r.x, pz = z - r.z, u = px * r.dx + pz * r.dz, w = Math.abs(px * r.dz - pz * r.dx);
+    if (u >= 0 && u <= r.len && w <= r.wid / 2) best = Math.max(best, 0.2 + r.h * u / r.len);
+  }
+  return best;
+}
+// chão com rampas: sobe a rampa e decola no fim
+function cityGroundAndAir(dt) {
+  const p = player, T0 = city.trick;
+  const g = rampHeightAt(p.pos.x, p.pos.z);
+  if (!city.air) {
+    if (g > 0.05 || p.pos.y > 0.05) {
+      if (g >= p.pos.y - 0.25) { const prev = p.pos.y; p.pos.y = g; p.vy = (p.pos.y - prev) / Math.max(dt, 1e-3); }
+      else if (p.pos.y > 0.3) { // saiu da rampa: decolou
+        const sh = Math.sin(p.h), ch = Math.cos(p.h);
+        city.air = true; city.trick = { yaw: 0, roll: 0, time: 0, lastH: p.h, vx: sh * p.vF + ch * p.vL, vz: ch * p.vF - sh * p.vL };
+        p.vy = Math.max(p.vy || 0, 2);
+      } else { p.pos.y = 0; p.vy = 0; }
+    }
+    return;
+  }
+  // no ar: gravidade, giro com as setas, parafuso com espaço
+  const t = city.trick;
+  t.time += dt;
+  p.vy -= 16 * dt;
+  const steerIn = padSteer || ((input.left ? 1 : 0) - (input.right ? 1 : 0));
+  p.h += steerIn * 5.5 * dt;
+  t.yaw += Math.abs(wrapAngle(p.h - t.lastH)); t.lastH = p.h;
+  if (input.hb) t.roll += 9 * dt;
+  // o carro continua na direção em que pulou
+  p.pos.x += t.vx * dt; p.pos.z += t.vz * dt;
+  p.pos.y += p.vy * dt;
+  const res = pushOutCity(p.pos.x, p.pos.z, 1.05, p.pos.y);
+  if (res.hit) { p.pos.x = res.x; p.pos.z = res.z; t.vx *= -0.3; t.vz *= -0.3; }
+  const ground = rampHeightAt(p.pos.x, p.pos.z);
+  if (p.pos.y <= ground) { // pouso
+    p.pos.y = ground; city.air = false;
+    const spins = Math.floor((t.yaw + 0.6) / (Math.PI * 2)), rolls = Math.floor((t.roll + 0.5) / (Math.PI * 2));
+    const rollOff = Math.abs(wrapAngle(t.roll)), ok = rollOff < 0.9;
+    let pts = Math.round(t.time * 120) + spins * 250 + rolls * 400;
+    const names = [];
+    if (t.time > 0.8) names.push('SALTO');
+    if (spins) { names.push(spins > 1 ? `GIRO ${spins * 360}` : 'GIRO 360'); ach('giro'); }
+    if (rolls) { names.push(rolls > 1 ? `PARAFUSO x${rolls}` : 'PARAFUSO'); ach('parafuso'); }
+    if (!ok) { pts = 0; showMessage('POUSO TORTO!', 1.4, 'Termine o parafuso antes de cair'); p.vF *= 0.4; shake = 0.8; playHit(0.8); }
+    else if (pts > 60) {
+      const money = Math.round(pts / 10 / 10) * 10;
+      save.money += money; addXP(Math.round(pts / 5));
+      showMessage(names.join(' + ') || 'SALTO', 1.8, `+${pts} pontos · + ${brl(money)}`); cash();
+      if (pts >= 1000) ach('combo');
+    }
+    p.vF = Math.hypot(t.vx, t.vz) * Math.cos(wrapAngle(p.h - Math.atan2(t.vx, t.vz))); p.vL = 0; p.r = 0; p.vy = 0;
+    city.trick = null;
+  }
+}
+// =====================================================================
+// CONQUISTAS E NÍVEL DO PILOTO
+// =====================================================================
+const ACH = [
+  ['primeira', '🏁', 'Primeira vitória', 'Ganhe uma corrida'], ['campeao5', '🏆', 'Campeão', 'Ganhe 5 corridas'],
+  ['zerou', '👑', 'Zerou a carreira', 'Termine a fase 20 no pódio'], ['v300', '💨', '300 km/h', 'Passe de 300 km/h'],
+  ['v400', '⚡', 'Quase o som', 'Passe de 400 km/h'], ['voo', '🚀', 'Piloto do céu', 'Voe 60 segundos no total'],
+  ['parede', '🧲', 'Escalador', 'Suba por um prédio com o Blindado X'], ['giro', '🌀', 'Giro 360', 'Gire o carro no ar numa rampa'],
+  ['parafuso', '🔩', 'Parafuso', 'Gire o carro de lado no ar (Espaço)'], ['combo', '🎯', 'Mestre das manobras', 'Faça 1.000 pontos num salto'],
+  ['fuga', '🚨', 'Fugitivo', 'Despiste a polícia com 3 estrelas ou mais'], ['entregas', '📦', 'Entregador', 'Complete 3 entregas'],
+  ['moedas', '🪙', 'Cofrinho', 'Pegue 50 moedas na cidade'], ['cinema', '🎬', 'Cinéfilo', 'Assista a um vídeo inteiro no cinema'],
+  ['colecao', '🚗', 'Colecionador', 'Libere todos os veículos especiais'], ['avancado', '🔧', 'Mecânico', 'Compre uma peça Avançada'],
+  ['amigo', '🤝', 'Jogando junto', 'Jogue uma partida no multiplayer'], ['radio', '📻', 'DJ', 'Ligue o rádio do carro']
+].map(([id, icon, name, d]) => ({ id, icon, name, d }));
+const xpNeed = lv => 400 + lv * 200;
+function ach(id) {
+  if (!save.ach || save.ach[id]) return;
+  const a = ACH.find(x => x.id === id); if (!a) return;
+  save.ach[id] = true; save.money += 500; persist();
+  toast(`🏅 Conquista: ${a.icon} ${a.name} · + R$ 500`); cash();
+  addXP(100);
+}
+function addXP(n) {
+  save.xp += Math.max(0, Math.round(n));
+  while (save.xp >= xpNeed(save.level)) { save.xp -= xpNeed(save.level); save.level++; setTimeout(() => toast(`⭐ Subiu para o nível ${save.level}! + R$ 1.000`), 1900); save.money += 1000; }
+  persist();
+}
+function renderAchs() {
+  $('ach-level').textContent = `Nível ${save.level}`;
+  $('ach-xp').style.width = Math.min(100, save.xp / xpNeed(save.level) * 100) + '%';
+  $('ach-xptext').textContent = `${save.xp} / ${xpNeed(save.level)} XP para o nível ${save.level + 1}`;
+  const got = ACH.filter(a => save.ach[a.id]).length;
+  $('ach-count').textContent = `${got} de ${ACH.length} conquistas`;
+  const grid = $('ach-grid'); grid.innerHTML = '';
+  ACH.forEach(a => {
+    const d = document.createElement('div'); d.className = 'tile' + (save.ach[a.id] ? '' : ' locked');
+    const n = document.createElement('div'); n.className = 'n'; n.textContent = save.ach[a.id] ? a.icon : '🔒';
+    const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = a.name;
+    const ic = document.createElement('div'); ic.className = 'ic'; ic.style.fontSize = '12px'; ic.style.color = 'var(--muted)'; ic.textContent = a.d;
+    d.append(n, nm, ic); grid.appendChild(d);
+  });
+}
+function checkCollection() { if (['foguete', 'blindado', 'touro', 'moto', 'kart', 'monstro', 'classico'].every(m => save.owned['model:' + m])) ach('colecao'); }
+
+// =====================================================================
+// RÁDIO (música feita pelo próprio jogo) E BUZINA
+// =====================================================================
+const RADIO = { st: 0, next: 0, step: 0, timer: null, out: null, nb: null,
+  names: ['Desligado', 'Neon FM · synthwave', 'Pista FM · eletrônica', 'Retrô FM · 8 bits'] };
+const STATIONS = [null,
+  { bpm: 100, prog: [57, 53, 48, 55], minor: true, kick: [0, 8], snare: [4, 12], hat: 2, arp: true, bassEvery: 2, lead: 'sawtooth' },
+  { bpm: 126, prog: [50, 50, 53, 48], minor: true, kick: [0, 4, 8, 12], snare: [4, 12], hat: 4, hatOff: 2, stab: true, bassEvery: 4, bassOff: 2, lead: 'square' },
+  { bpm: 150, prog: [48, 53, 55, 48], minor: false, kick: [0, 6, 8], snare: [4, 12], hat: 2, melody: true, bassEvery: 2, lead: 'square' }];
+const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
+function radioTone(type, freq, t, dur, vol) {
+  const ctx = audio.ctx, o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g); g.connect(RADIO.out); o.start(t); o.stop(t + dur + 0.02);
+}
+function radioNoise(t, dur, vol, hp) {
+  const ctx = audio.ctx, src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+  src.buffer = RADIO.nb; f.type = 'highpass'; f.frequency.value = hp;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.connect(f); f.connect(g); g.connect(RADIO.out); src.start(t); src.stop(t + dur + 0.02);
+}
+function radioKick(t) {
+  const ctx = audio.ctx, o = ctx.createOscillator(), g = ctx.createGain();
+  o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.15);
+  g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+  o.connect(g); g.connect(RADIO.out); o.start(t); o.stop(t + 0.22);
+}
+function radioStep(S, step, t) {
+  const bar = Math.floor(step / 16) % S.prog.length, s16 = step % 16, root = S.prog[bar];
+  const third = S.minor ? 3 : 4, chord = [root, root + third, root + 7, root + 12];
+  const len = 60 / S.bpm / 4;
+  if (S.kick.includes(s16)) radioKick(t);
+  if (S.snare.includes(s16)) radioNoise(t, 0.14, 0.35, 1200);
+  if (s16 % S.hat === (S.hatOff || 0)) radioNoise(t, 0.04, 0.15, 7000);
+  if (s16 % S.bassEvery === (S.bassOff || 0)) radioTone('triangle', mtof(root - 24), t, len * 1.8, 0.4);
+  if (S.arp) radioTone(S.lead, mtof(chord[s16 % 4] + 12), t, len * 0.9, 0.06);
+  if (S.stab && (s16 === 2 || s16 === 10)) chord.slice(0, 3).forEach(n => radioTone(S.lead, mtof(n + 12), t, len * 1.5, 0.05));
+  if (S.melody && s16 % 2 === 0) { const scale = [0, 2, 4, 7, 9, 12]; const n = root + 12 + scale[(step * 7 + bar * 3) % scale.length]; radioTone(S.lead, mtof(n), t, len * 1.6, 0.06); }
+}
+function radioSchedule() {
+  if (!audio || !RADIO.st) return;
+  const S = STATIONS[RADIO.st], ctx = audio.ctx;
+  RADIO.out.gain.setTargetAtTime(soundOn ? 0.16 : 0, ctx.currentTime, 0.1);
+  while (RADIO.next < ctx.currentTime + 0.25) { radioStep(S, RADIO.step, RADIO.next); RADIO.next += 60 / S.bpm / 4; RADIO.step++; }
+}
+function setRadio(st) {
+  initAudio(); if (!audio) return;
+  if (!RADIO.out) {
+    RADIO.out = audio.ctx.createGain(); RADIO.out.gain.value = 0.16; RADIO.out.connect(audio.master);
+    const ctx = audio.ctx, b = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; RADIO.nb = b;
+  }
+  RADIO.st = st; settings.radio = st; persist();
+  RADIO.next = audio.ctx.currentTime + 0.1; RADIO.step = 0;
+  if (st && !RADIO.timer) RADIO.timer = setInterval(radioSchedule, 50);
+  if (!st && RADIO.timer) { clearInterval(RADIO.timer); RADIO.timer = null; }
+  if (st) ach('radio');
+  toast(`📻 Rádio: ${RADIO.names[st]}`);
+  if ($('radio-choices')) renderRadioChoices();
+}
+function renderRadioChoices() {
+  const el = $('radio-choices'); el.innerHTML = '';
+  RADIO.names.forEach((n, i) => { const b = document.createElement('button'); b.className = 'choice' + (RADIO.st === i ? ' sel' : ''); b.textContent = n.split(' · ')[0]; b.onclick = () => setRadio(i); el.appendChild(b); });
+}
+let hornT = 0;
+function horn() {
+  initAudio(); if (!audio || !soundOn || performance.now() - hornT < 400) return;
+  hornT = performance.now();
+  const ctx = audio.ctx, t = ctx.currentTime, g = ctx.createGain();
+  g.gain.setValueAtTime(0.12, t); g.gain.setTargetAtTime(0, t + 0.45, 0.04); g.connect(audio.master);
+  const freqs = CAR.moto ? [520] : CAR.monster ? [180, 228] : CAR.kart ? [700] : [392, 494];
+  freqs.forEach(f => { const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f; o.connect(g); o.start(t); o.stop(t + 0.6); });
+  if (city && city.driving) city.peds.forEach(p => { if (p.state === 'walk' && Math.hypot(p.x - player.pos.x, p.z - player.pos.z) < 18) { p.offT = 1.6; p.timer = 1.2; } });
+}
+
+// =====================================================================
 // MENUS, OFICINA, VISUAL E CARREIRA
 // =====================================================================
-const SCREENS = ['menu', 'phases', 'garage', 'pause', 'results', 'options', 'multi', 'cinema'];
+const SCREENS = ['menu', 'phases', 'garage', 'pause', 'results', 'options', 'multi', 'cinema', 'achs'];
 let view = 'menu';
 function showScreen(name) {
   view = name;
@@ -3968,6 +4307,7 @@ const MEDAL = ['🥇', '🥈', '🥉'];
 
 function refreshMenu() {
   $('menu-money').textContent = brl(save.money);
+  $('menu-level').textContent = `Nível ${save.level} · ${ACH.filter(a => save.ach[a.id]).length} de ${ACH.length} medalhas`;
   const ph = PHASES[save.current];
   $('menu-phase').textContent = `Fase ${ph.n}: ${ph.name} · ${ph.laps} voltas · até ${brl(ph.prize)}`;
 }
@@ -4027,7 +4367,22 @@ const AD_SETS = {
     { k: 'Duas rodas', t: 'MOTO <em>RELÂMPAGO</em>', d: 'Leve, rápida e ágil.' },
     { k: 'Deita na curva', t: 'INCLINA DE <em>VERDADE</em>', d: 'O piloto deita a moto em cada curva.' },
     { k: 'Arrancada', t: 'LEVE COMO <em>PENA</em>', d: 'Pesa só 260 kg e sai voando do sinal.' },
-    { k: 'Cidade Livre', t: 'PASSA ENTRE OS <em>CARROS</em>', d: 'Fuja do trânsito e da polícia.' }, { k: 'Grátis', t: 'PEGUE A <em>SUA</em>', d: 'Turbo Noturno · Visual → Carro.' }] }
+    { k: 'Cidade Livre', t: 'PASSA ENTRE OS <em>CARROS</em>', d: 'Fuja do trânsito e da polícia.' }, { k: 'Grátis', t: 'PEGUE A <em>SUA</em>', d: 'Turbo Noturno · Visual → Carro.' }] },
+  kart: { label: 'Kart Faísca', model: 'kart', accent: '#48e08a', scenes: [
+    { k: 'Pequeno e bravo', t: 'KART <em>FAÍSCA</em>', d: 'Pesa só 180 kg e vira na ponta do dedo.' },
+    { k: 'Curvas', t: 'GRUDADO NO <em>CHÃO</em>', d: 'Faz curva onde os carros grandes freiam.' },
+    { k: 'Rampas', t: 'VOA NAS <em>RAMPAS</em>', d: 'Leve como ele só: salta longe na Cidade Livre.' },
+    { k: 'Piloto à mostra', t: 'SENTE O <em>VENTO</em>', d: 'Sem teto, sem porta, só diversão.' }, GET] },
+  monstro: { label: 'Monstro', model: 'monstro', accent: '#ff3d4f', scenes: [
+    { k: 'Caminhão monstro', t: 'O <em>MONSTRO</em>', d: 'Rodas de quase dois metros de altura.' },
+    { k: 'Força bruta', t: 'PASSA POR <em>CIMA</em>', d: 'Empurra os carros do trânsito para longe.' },
+    { k: 'Rampas', t: 'SALTOS <em>GIGANTES</em>', d: 'Pule nas rampas e caia de pé.' },
+    { k: 'Faróis no teto', t: 'ILUMINA A <em>NOITE</em>', d: 'Quatro faróis em cima da cabine.' }, GET] },
+  classico: { label: 'Clássico 70', model: 'classico', accent: '#ffb21f', scenes: [
+    { k: 'Anos 70', t: 'CLÁSSICO <em>70</em>', d: 'Cromados, faróis redondos e muito estilo.' },
+    { k: 'Motor V8', t: 'RONCO <em>GROSSO</em>', d: 'O som mais grave da cidade.' },
+    { k: 'Traseira solta', t: 'FEITO PARA <em>DERRAPAR</em>', d: 'Puxe o freio de mão e saia de lado.' },
+    { k: 'Lenda das ruas', t: 'O VOVÔ <em>RÁPIDO</em>', d: 'Velho, mas ainda deixa muito carro para trás.' }, GET] }
 };
 let adFly = false, adTimer = null, adCar = null, adCtx = null;
 const adBase = new THREE.Vector3();
@@ -4063,7 +4418,7 @@ function playAd(onReward, model = 'foguete', label, opts = {}) {
     }
     $('ad-time').textContent = t < total ? (opts.cinema ? `${Math.ceil(total - t)} s` : `Recompensa em ${Math.ceil(total - t)} s`) : 'Fim';
     $('ad-bar').style.width = Math.min(100, t / total * 100) + '%';
-    if (t >= total) { clearInterval(adTimer); adTimer = null; adFly = false; $('ad-reward').classList.add('hidden'); $('ad-claim').classList.remove('hidden'); if (!opts.cinema) cash(); }
+    if (t >= total) { clearInterval(adTimer); adTimer = null; adFly = false; $('ad-reward').classList.add('hidden'); $('ad-claim').classList.remove('hidden'); if (!opts.cinema) cash(); else ach('cinema'); }
   };
   clearInterval(adTimer); adTimer = setInterval(tick, 100); tick();
 }
@@ -4145,7 +4500,7 @@ function renderGarage() {
       const id = b.dataset.part, lv = +b.dataset.lv, p = PARTS.find(x => x.id === id);
       if (lv > save.ownedParts[id]) {
         if (save.money < p.price[lv]) { toast('Dinheiro insuficiente. Corra mais para ganhar!'); return; }
-        save.money -= p.price[lv]; save.ownedParts[id] = lv; cash(); toast(`${p.name} ${LEVELS[lv]} comprado!`);
+        save.money -= p.price[lv]; save.ownedParts[id] = lv; if (lv === 2) ach('avancado'); cash(); toast(`${p.name} ${LEVELS[lv]} comprado!`);
       }
       save.parts[id] = lv; persist(); applyParts(); renderGarage();
     });
@@ -4178,7 +4533,7 @@ function renderGarage() {
       const cat = STYLE.find(c => c.key === key);
       if (!cat.color) {
         const o = cat.opts.find(x => x.id === val);
-        if (o.ad && !save.owned[key + ':' + val]) { playAd(() => { save.owned[key + ':' + val] = true; save.look[key] = val; persist(); if (key === 'model') applyParts(); rebuildPlayerCar(); toast(`${o.name} liberado!`); }, val, o.name.replace(/^\S+\s/, '')); return; }
+        if (o.ad && !save.owned[key + ':' + val]) { playAd(() => { save.owned[key + ':' + val] = true; save.look[key] = val; persist(); if (key === 'model') applyParts(); rebuildPlayerCar(); toast(`${o.name} liberado!`); checkCollection(); }, val, o.name.replace(/^\S+\s/, '')); return; }
         if (o.price > 0 && !save.owned[key + ':' + val]) {
           if (save.money < o.price) { toast('Dinheiro insuficiente. Corra mais para ganhar!'); return; }
           save.money -= o.price; save.owned[key + ':' + val] = true; cash(); toast(`${o.name} comprado!`);
@@ -4210,6 +4565,9 @@ function showResults() {
   if (!MP.inRace && pos <= 3 && phase.n === 20) unlockMsg = ' · 🏆 VOCÊ ZEROU A CARREIRA!';
   const canNext = !MP.inRace && phase.n < 20 && save.unlocked > phase.n;
   if (canNext) save.current = phase.n;
+  if (pos === 1) { save.stats.wins++; ach('primeira'); if (save.stats.wins >= 5) ach('campeao5'); }
+  if (!MP.inRace && pos <= 3 && phase.n === 20) ach('zerou');
+  addXP(Math.max(30, 180 - pos * 25));
   persist(); cash();
   $('res-title').textContent = pos === 1 ? '🏆 1º LUGAR!' : pos + 'º LUGAR';
   $('res-info').textContent = `FASE ${phase.n} · ${phase.name.toUpperCase()} · TEMPO ${fmt(player.finishTime)} · MELHOR VOLTA ${isFinite(player.best) ? fmt(player.best) : '--'}`;
@@ -4239,6 +4597,7 @@ function startRace(idx = save.current, mp = false) {
   persist();
   MP.inRace = !!mp;
   const ph = PHASES[idx];
+  if (settings.radio && !RADIO.st) setRadio(settings.radio);
   state = 'loading';
   withLoading(`Fase ${ph.n} · ${ph.name}`, () => {
     leaveCity();
@@ -4277,6 +4636,9 @@ $('btn-options').onclick = () => { optionsFrom = 'menu'; showScreen('options'); 
 $('pause-options').onclick = () => { optionsFrom = 'pause'; showScreen('options'); };
 $('options-back').onclick = () => showScreen(optionsFrom);
 $('btn-play').onclick = () => startRace();
+$('btn-achs').onclick = () => { renderAchs(); showScreen('achs'); };
+$('achs-back').onclick = () => { refreshMenu(); showScreen('menu'); };
+renderRadioChoices();
 $('res-room').onclick = () => { openMenu(); openMulti(); };
 $('btn-city').onclick = startCity;
 $('btn-phases').onclick = () => { renderPhases(); showScreen('phases'); };
@@ -4355,6 +4717,7 @@ function frame() {
     updateCamera(dt);
     updateHUD(dt);
   }
+  if ((state === 'race' || state === 'city') && player.vF * 3.6 > 300) { ach('v300'); if (player.vF * 3.6 > 400) ach('v400'); }
   mpTick(dt);
   updateWeather(dt);
   updateSound();
@@ -4363,7 +4726,7 @@ function frame() {
 frame();
 
 // gancho para testes automatizados
-window.__tn = { MP, mpCreate, mpJoin, city: () => city, startCity, cityAction, player, rivals: () => rivals, state: () => state, track: { P, T, S, N }, profile: () => profile, save: () => save, PHASES, buildWorld, setupRace, startRace, CAR };
+window.__tn = { ACH, RADIO, setRadio, ramps: () => ramps, MP, mpCreate, mpJoin, city: () => city, startCity, cityAction, player, rivals: () => rivals, state: () => state, track: { P, T, S, N }, profile: () => profile, save: () => save, PHASES, buildWorld, setupRace, startRace, CAR };
 })();
 </script>
 </body>
