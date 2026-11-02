@@ -113,6 +113,15 @@ Na garagem (**Visual → Carro**) dá para ganhar de graça o **Roadster Foguete
 
 Na **Cidade Livre** ele voa: aperte **V** e as rodas viram propulsores com jatos azuis. **Espaço** sobe, **Q** desce, as setas pilotam, **Shift** dá nitro e **V** de novo pousa. Dá para passar por cima dos prédios e fugir da polícia pelo céu. No celular aparecem os botões VOAR, SUBIR e DESCER. Nas corridas ele anda no chão.
 
+## Blindado X (picape blindada)
+
+Também em **Visual → Carro**, o **Blindado X** é uma picape elétrica de aço, em ângulos retos, inspirada na picape blindada do Elon Musk. Para liberar, é preciso assistir ao anúncio do jogo, mesmo para quem já tem o Roadster Foguete.
+
+- **Muito rápido:** passa de 350 km/h.
+- **Antiderrapante:** não sai de traseira nem faz drift, nem com o freio de mão.
+- **Gruda na parede:** na corrida, encostar no muro não tira a velocidade; ele desliza junto do muro. Na Cidade Livre, acelere contra um prédio e ele gruda e sobe pela parede.
+- **Voa:** na Cidade Livre, aperte **V**, como o Roadster Foguete.
+
 ## Visual: pintura e acessórios
 
 - **Pintura:** 16 cores prontas ou qualquer cor escolhida, com acabamento metálico, fosco, perolado ou cromado.
