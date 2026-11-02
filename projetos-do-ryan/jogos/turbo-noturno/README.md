@@ -13,6 +13,7 @@ Abra o arquivo `index.html` no navegador (Chrome, Edge ou Firefox). É preciso e
 | ← → / A D | Virar |
 | Shift | Nitro |
 | Espaço | Freio de mão |
+| L | Farol alto ou baixo |
 | C | Trocar a câmera (atrás, longe, capô, para-choque) |
 | R | Voltar para a pista |
 | M | Ligar ou desligar o som |
@@ -32,7 +33,8 @@ Também funciona com controle de videogame: gatilho direito acelera, gatilho esq
 ## Gráficos e som
 
 - Pintura metálica com verniz, que reflete as luzes da cidade.
-- Sombras, brilho (bloom) nas luzes e faróis que iluminam a pista.
+- Sombras e brilho (bloom) nas luzes.
+- Faróis acesos em todos os carros, com facho de luz no asfalto e farol alto (tecla L).
 - Marcas de pneu no asfalto e fumaça no drift.
 - Luz de freio que acende, e a carroceria que inclina e mergulha.
 - Ronco do motor que segue o giro, cantada de pneu, vento e batidas.
