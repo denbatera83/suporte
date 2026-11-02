@@ -1666,7 +1666,11 @@ const CARGEO = {
   body: loft(bodySection, -2.32, 2.38, 64),
   cabin: loft(cabinSection, -1.8, 1.08, 40),
   roof: loft(roofSection, -1.05, 0.15, 20),
-  tire: new THREE.CylinderGeometry(0.34, 0.34, 0.27, 28).rotateZ(Math.PI / 2),
+  tire: new THREE.LatheGeometry([[0.236, -0.135], [0.3, -0.137], [0.326, -0.128], [0.338, -0.108], [0.342, -0.06], [0.343, 0], [0.342, 0.06], [0.338, 0.108], [0.326, 0.128], [0.3, 0.137], [0.236, 0.135]].map(([r, y]) => new THREE.Vector2(r, y)), 40).rotateZ(Math.PI / 2),
+  rimLip: new THREE.TorusGeometry(0.232, 0.012, 8, 40).rotateY(Math.PI / 2),
+  lens: new THREE.CylinderGeometry(0.052, 0.058, 0.05, 24).rotateX(Math.PI / 2),
+  lensRing: new THREE.TorusGeometry(0.064, 0.011, 8, 24),
+  bowl: new THREE.SphereGeometry(0.075, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2).rotateX(Math.PI / 2),
   rim: new THREE.CylinderGeometry(0.235, 0.235, 0.28, 24).rotateZ(Math.PI / 2),
   disc: new THREE.CylinderGeometry(0.2, 0.2, 0.03, 20).rotateZ(Math.PI / 2),
   caliper: new THREE.BoxGeometry(0.07, 0.14, 0.16),
@@ -1685,7 +1689,13 @@ const MAT = {
   chrome: new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.12, metalness: 1 }),
   disc: new THREE.MeshStandardMaterial({ color: 0x55585e, roughness: 0.4, metalness: 0.9 }),
   caliper: new THREE.MeshStandardMaterial({ color: 0xc8141c, roughness: 0.4 }),
-  plate: new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.5 })
+  plate: new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.5 }),
+  housing: new THREE.MeshStandardMaterial({ color: 0x15171b, roughness: 0.18, metalness: 1 }),
+  reflector: new THREE.MeshStandardMaterial({ color: 0xe8ecf2, roughness: 0.05, metalness: 1, envMapIntensity: 1.6 }),
+  amber: new THREE.MeshStandardMaterial({ color: 0xff8a10, emissive: 0xff6a00, emissiveIntensity: 0.35, roughness: 0.3 }),
+  reverse: new THREE.MeshStandardMaterial({ color: 0xf4f4f4, emissive: 0x888888, emissiveIntensity: 0.15, roughness: 0.2 }),
+  headGlass: new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0, metalness: 0, transparent: true, opacity: 0.16, clearcoat: 1, clearcoatRoughness: 0, envMapIntensity: 2.5, depthWrite: false }),
+  tailGlass: new THREE.MeshPhysicalMaterial({ color: 0x8a0008, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.55, clearcoat: 1, clearcoatRoughness: 0, envMapIntensity: 2, depthWrite: false })
 };
 const lin = (pts, z) => { if (z <= pts[0][0]) return pts[0][1]; for (let i = 1; i < pts.length; i++) if (z <= pts[i][0]) { const [z0, a] = pts[i - 1], [z1, b] = pts[i]; return a + (b - a) * (z - z0) / (z1 - z0); } return pts[pts.length - 1][1]; };
 const ARM = { TOP: [[-2.42, 0.96], [-0.45, 1.64], [2.2, 0.92], [2.42, 0.66]], BOT: [[-2.42, 0.44], [-2.28, 0.36], [2.28, 0.36], [2.42, 0.48]], W: [[-2.42, 0.94], [-2.3, 0.99], [2.3, 0.99], [2.42, 0.93]] };
@@ -1822,18 +1832,36 @@ function makeCarBase(look, opts = {}) {
   const flareMat = new THREE.SpriteMaterial({ map: flareTex, color: new THREE.Color(...hc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.2 + 0.8 * timeCfg.dark });
   if (lite) for (const s of [1, -1]) mesh(new THREE.BoxGeometry(0.4, 0.09, 0.05), headMat, s * 0.62, 0.64, 2.38);
   else for (const s of [1, -1]) {
-    const housing = mesh(new THREE.BoxGeometry(0.56, 0.14, 0.24), MAT.chrome, s * 0.62, 0.63, 2.28); housing.rotation.x = -0.3; housing.rotation.y = s * 0.18;
-    const hl = mesh(new THREE.BoxGeometry(0.2, 0.09, 0.05), headMat, s * 0.5, 0.64, 2.4); hl.rotation.y = s * 0.18;
-    const hl2 = mesh(new THREE.BoxGeometry(0.2, 0.09, 0.05), headMat, s * 0.74, 0.63, 2.36); hl2.rotation.y = s * 0.18;
-    mesh(new THREE.BoxGeometry(0.46, 0.025, 0.08), drlMat, s * 0.62, 0.57, 2.42);
+    // farol completo: carcaça escura, refletores cromados, dois projetores com lente, LED diurno em "L", seta âmbar e vidro por cima
+    const hg = new THREE.Group(); hg.position.set(s * 0.62, 0.635, 2.33); hg.rotation.y = s * 0.18; body.add(hg);
+    const hm = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); hg.add(m); return m; };
+    hm(new THREE.BoxGeometry(0.58, 0.16, 0.22), MAT.housing, 0, 0, -0.06);
+    for (const [px, k] of [[-0.12 * s, 0], [0.1 * s, 1]]) {
+      hm(CARGEO.bowl, MAT.reflector, px, 0.005, 0.03);
+      hm(CARGEO.lens, headMat, px, 0.005, 0.07);
+      hm(CARGEO.lensRing, MAT.chrome, px, 0.005, 0.085);
+    }
+    hm(new THREE.BoxGeometry(0.44, 0.018, 0.02), drlMat, -0.01 * s, -0.062, 0.075);
+    hm(new THREE.BoxGeometry(0.018, 0.1, 0.02), drlMat, 0.22 * s, -0.015, 0.075);
+    hm(new THREE.BoxGeometry(0.05, 0.05, 0.02), MAT.amber, 0.255 * s, 0.045, 0.06);
+    hm(new THREE.BoxGeometry(0.6, 0.17, 0.02), MAT.headGlass, 0, 0, 0.1);
     const cone = new THREE.Mesh(beamConeGeo, coneMat); cone.position.set(s * 0.62, 0.64, 2.45); cone.rotation.x = 0.06; cone.renderOrder = 2; g.add(cone);
-    const flare = new THREE.Sprite(flareMat); flare.position.set(s * 0.62, 0.64, 2.5); flare.scale.setScalar(0.35 + 0.3 * timeCfg.dark); g.add(flare);
+    for (const fx of [-0.12, 0.1]) { const flare = new THREE.Sprite(flareMat); flare.position.set(s * 0.62 + Math.cos(s * 0.18) * fx * s, 0.64, 2.47); flare.scale.setScalar(0.14 + 0.12 * timeCfg.dark); g.add(flare); }
     mesh(new THREE.BoxGeometry(0.16, 0.08, 0.2), paint, s * 0.96, 0.98, 0.92);      // retrovisor
     mesh(new THREE.BoxGeometry(0.03, 0.08, 1.7), MAT.trim, s * 0.925, 0.33, 0.02);  // saia lateral
   }
   // traseira
   mesh(new THREE.BoxGeometry(1.5, 0.05, 0.05), tail, 0, 0.8, -2.4);
-  for (const s of [1, -1]) mesh(new THREE.BoxGeometry(0.34, 0.1, 0.06), tail, s * 0.7, 0.77, -2.4);
+  if (lite) for (const s of [1, -1]) mesh(new THREE.BoxGeometry(0.34, 0.1, 0.06), tail, s * 0.7, 0.77, -2.4);
+  else for (const s of [1, -1]) {
+    // lanterna: moldura escura, LEDs em camadas (acendem mais na freada), ré branca, seta âmbar e vidro vermelho
+    mesh(new THREE.BoxGeometry(0.42, 0.15, 0.05), MAT.housing, s * 0.7, 0.77, -2.39);
+    for (const [y, w] of [[0.815, 0.36], [0.775, 0.3], [0.735, 0.24]]) mesh(new THREE.BoxGeometry(w, 0.016, 0.03), tail, s * (0.7 + (0.36 - w) / 2), y, -2.415);
+    mesh(new THREE.BoxGeometry(0.016, 0.1, 0.03), tail, s * 0.885, 0.775, -2.415);
+    mesh(new THREE.BoxGeometry(0.08, 0.035, 0.03), MAT.reverse, s * 0.56, 0.735, -2.412);
+    mesh(new THREE.BoxGeometry(0.06, 0.035, 0.03), MAT.amber, s * 0.84, 0.735, -2.412);
+    mesh(new THREE.BoxGeometry(0.43, 0.16, 0.015), MAT.tailGlass, s * 0.7, 0.77, -2.428);
+  }
   if (!lite) {
     mesh(new THREE.BoxGeometry(1.6, 0.12, 0.2), MAT.trim, 0, 0.38, -2.36);
     mesh(new THREE.BoxGeometry(0.52, 0.12, 0.02), MAT.plate, 0, 0.57, -2.42);
@@ -1883,6 +1911,7 @@ function makeCarBase(look, opts = {}) {
     mesh(CARGEO.disc, MAT.disc, -s * 0.03, 0, 0, pivot);
     mesh(CARGEO.caliper, MAT.caliper, 0, 0.12, z > 0 ? -0.1 : 0.1, pivot);
     mesh(CARGEO.face, look.rimStyle === 'disco' ? rimMat : MAT.trim, s * 0.142, 0, 0, w);
+    mesh(CARGEO.rimLip, rimMat, s * 0.136, 0, 0, w);
     for (let k = 0; k < spokes[0]; k++) {
       const sp = mesh(spokeGeo, rimMat, s * 0.15, 0, 0, w); sp.rotation.x = k / spokes[0] * Math.PI * 2;
       if (look.rimStyle === 'disco') { sp.scale.set(1, 0.55, 1); sp.rotation.y = 0.5 * s; }
@@ -5114,7 +5143,7 @@ const COL = { cars: [], i: 0 };
 function openCollection() {
   closeCollectionCars();
   const opts = modelOpts();
-  const base = player.car.group.position, h = player.h;
+  const base = SR.on ? SR.spot : player.car.group.position, h = SR.on ? Math.PI / 2 : player.h;
   const fw = new THREE.Vector3(Math.sin(h), 0, Math.cos(h));
   opts.forEach((o, k) => {
     const look = Object.assign({}, save.look, { model: o.id });
@@ -5151,6 +5180,76 @@ window.addEventListener('keydown', e => { if (view !== 'colecao') return; if (e.
 $('replay-exit').onclick = stopReplay;
 $('res-replay').onclick = startReplay;
 
+// =====================================================================
+// GARAGEM-ESTÚDIO: onde o carro aparece no menu, na oficina e na coleção
+// (painéis de luz no teto refletem na pintura, como numa sessão de fotos)
+// =====================================================================
+const SR = { g: null, env: null, on: false, spot: new THREE.Vector3(-3000, 0, -3000), saved: null, key: null, red: null };
+function buildShowroom() {
+  if (SR.g) return;
+  const g = new THREE.Group(); g.position.copy(SR.spot); scene.add(g); g.visible = false;
+  const L = 110, W = 30, H = 4.9, x0 = -12; // sala comprida: cabe a coleção inteira em fila
+  const floorTex = canvasTex(256, 256, (c, w, h) => {
+    c.fillStyle = '#2b2d31'; c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 9000; i++) { const v = 34 + Math.random() * 22; c.fillStyle = `rgba(${v},${v},${v + 3},.5)`; c.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+    c.strokeStyle = 'rgba(10,10,12,.6)'; c.lineWidth = 2; c.strokeRect(0, 0, w, h);
+  });
+  floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping; floorTex.repeat.set(L / 8, W / 8);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(L, W).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ map: floorTex, color: 0x5a5c62, roughness: 0.28, metalness: 0.2, envMapIntensity: 0.9 }));
+  floor.position.set(x0 + L / 2, 0.001, 0); floor.receiveShadow = true; g.add(floor);
+  const wallMat = new THREE.MeshStandardMaterial({ color: 0x14161b, roughness: 0.8 });
+  const box = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); g.add(m); return m; };
+  box(L, H, 0.4, wallMat, x0 + L / 2, H / 2, -W / 2); box(L, H, 0.4, wallMat, x0 + L / 2, H / 2, W / 2);
+  box(0.4, H, W, wallMat, x0, H / 2, 0); box(0.4, H, W, wallMat, x0 + L, H / 2, 0);
+  box(L, 0.4, W, new THREE.MeshStandardMaterial({ color: 0x0c0d10, roughness: 0.9 }), x0 + L / 2, H + 0.2, 0);
+  // painéis de luz no teto em "V", em fileiras
+  const panel = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 2.4, 2.6), toneMapped: false });
+  const tube = new THREE.BoxGeometry(3.2, 0.06, 0.32);
+  for (let x = x0 + 4; x < x0 + L - 2; x += 5) for (const z of [-6, -2, 2, 6]) for (const s of [1, -1]) {
+    const m = new THREE.Mesh(tube, panel); m.position.set(x + s * 1.3, H - 0.35, z); m.rotation.y = s * 0.55; g.add(m);
+  }
+  // pilares com faixa de LED vermelha e friso azul no fundo
+  const pillar = new THREE.MeshStandardMaterial({ color: 0x1b1d22, roughness: 0.6 });
+  const redLed = new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 0.15, 0.12), toneMapped: false });
+  const blueLed = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.2, 0.6, 3), toneMapped: false });
+  for (let x = x0 + 8; x < x0 + L; x += 20) for (const z of [-W / 2 + 2.5, W / 2 - 2.5]) {
+    box(1.1, H, 1.1, pillar, x, H / 2, z);
+    box(0.08, H * 0.7, 0.08, redLed, x + 0.56, H * 0.4, z + (z < 0 ? 0.3 : -0.3));
+  }
+  box(L - 1, 0.08, 0.08, blueLed, x0 + L / 2, 0.25, -W / 2 + 0.25);
+  // luzes que só acendem na garagem (sempre na cena, para não recompilar os materiais)
+  SR.key = new THREE.SpotLight(0xffffff, 0, 30, 0.9, 0.6, 1.2); SR.key.position.set(0, H - 0.7, 0); SR.key.target.position.set(0, 0, 0);
+  SR.red = new THREE.PointLight(0xff2a1a, 0, 12, 2); SR.red.position.set(-7, 2, -10);
+  g.add(SR.key, SR.key.target, SR.red);
+  SR.g = g;
+  // mapa de reflexo: a pintura reflete as faixas de luz do teto
+  const env = new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.BoxGeometry(60, 16, 40), new THREE.MeshBasicMaterial({ color: 0x08090c, side: THREE.BackSide })));
+  const envPanel = new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 3.2, 3.5) });
+  for (let x = -24; x <= 24; x += 5) for (const z of [-6, -2, 2, 6]) for (const s of [1, -1]) { const m = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.1, 0.4), envPanel); m.position.set(x + s * 1.3, 4.6, z); m.rotation.y = s * 0.55; env.add(m); }
+  const envRed = new THREE.Mesh(new THREE.BoxGeometry(0.3, 10, 0.3), new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 0.15, 0.1) })); envRed.position.set(-8, 3, -14); env.add(envRed);
+  const envFloor = new THREE.Mesh(new THREE.PlaneGeometry(60, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x1c1d21 })); envFloor.position.y = -0.5; env.add(envFloor);
+  SR.env = pmrem.fromScene(env, 0.01).texture;
+  env.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+}
+// sala só na pista (não na Cidade Livre nem no modo computador fraco)
+const showroomWanted = () => state === 'menu' && !city && !settings.weak && (view === 'menu' || view === 'garage' || view === 'colecao' || view === 'ad' || view === 'achs' || view === 'modes' || view === 'options' || view === 'multi' || view === 'phases');
+function showroomSet(on) {
+  if (on) {
+    buildShowroom();
+    // reaplica todo quadro (barato) para nada de fora apagar a luz da garagem
+    scene.environment = SR.env; sun.intensity = 0; hemi.intensity = 0.12; renderer.toneMappingExposure = 0.95; scene.fog.density = 0.0004;
+    SR.key.intensity = 7; SR.red.intensity = 2.5; SR.g.visible = true;
+  }
+  if (on === SR.on) return;
+  SR.on = on;
+  if (!on && SR.g) { SR.g.visible = false; SR.key.intensity = 0; SR.red.intensity = 0; applyTime(timeCfg, weatherCfg); }
+}
+function placeInShowroom() {
+  if (!SR.on || !player.car) return;
+  player.car.group.position.copy(SR.spot); player.car.group.rotation.y = 2.35;
+}
+
 const SCREENS = ['menu', 'phases', 'garage', 'pause', 'results', 'options', 'multi', 'cinema', 'achs', 'modes', 'colecao'];
 let view = 'menu';
 function showScreen(name) {
@@ -5162,6 +5261,7 @@ function showScreen(name) {
   document.body.classList.toggle('playing', name === null);
 }
 function withLoading(text, fn) {
+  showroomSet(false);
   $('loading-text').textContent = text;
   $('loading-tip').textContent = TIPS[Math.floor(Math.random() * TIPS.length)];
   $('loading').classList.remove('hidden');
@@ -5323,7 +5423,7 @@ function playAd(onReward, model = 'foguete', label, opts = {}) {
   // carro do anúncio no lugar do carro (ou de quem está a pé)
   adBase.copy(city && !city.driving ? new THREE.Vector3(city.walker.x, 0, city.walker.z) : player.car.group.position).setY(0);
   const look = Object.assign({}, city ? city.curLook : save.look, { model: set.model });
-  adCar = makeCar(look); adCar.group.position.copy(adBase); adCar.group.rotation.y = player.h;
+  adCar = makeCar(look); adCar.group.position.copy(adBase); adCar.group.rotation.y = SR.on ? 2.35 : player.h;
   player.car.group.visible = false; if (city && city.walker) city.walker.hm.g.visible = false;
   if (city) { city.markers.forEach(mk => mk.g.visible = false); if (city.objMarker) city.objMarker.visible = false; }
   state = 'menu';
@@ -5612,7 +5712,9 @@ function frame() {
   adaptResolution(realDt);
   if (state === 'loading') { renderer.render(scene, camera); return; }
   readInput();
+  showroomSet(showroomWanted());
   if (state === 'menu') {
+    placeInShowroom();
     menuAngle += dt * (view === 'ad' ? 0.55 : 0.2);
     const cp = view === 'ad' && adCar ? adBase : view === 'colecao' && COL.cars.length ? COL.cars[COL.i].car.group.position : player.car.group.position;
     const inGarage = view === 'garage';
@@ -5628,7 +5730,7 @@ function frame() {
     else if (view === 'menu') camera.setViewOffset(W, H, 0, H * 0.3, W, H);
     else camera.clearViewOffset();
     camera.fov = 45; camera.updateProjectionMatrix();
-    updateCars(0);
+    updateCars(0); placeInShowroom();
     if (view === 'ad') updateAdCar(dt);
   } else if (state === 'cinema') {
     // parado no cinema

@@ -31,6 +31,14 @@ Também funciona com controle de videogame. No celular, jogue com o aparelho dei
 - Tela **Carros**: os 8 veículos com descrição e barras; os bloqueados liberam com o anúncio de cada um.
 - Conquistas e subida de nível aparecem como cartões animados com som; a tela de carregamento mostra dicas.
 
+## Visual realista
+
+- **Garagem-estúdio:** no menu, na oficina e na coleção, o carro fica numa garagem escura com painéis de luz em "V" no teto, pilares com LED vermelho e piso de concreto polido. A pintura com verniz reflete as faixas de luz.
+- **Faróis detalhados:** carcaça escura, refletores cromados, dois projetores com lente e anel cromado, LED diurno em "L", seta âmbar e vidro transparente por cima.
+- **Lanternas:** LEDs em camadas que acendem mais forte na freada, luz de ré branca, seta âmbar e vidro vermelho.
+- **Pneus e rodas:** pneu com ombro arredondado e aro com borda cromada.
+- No modo *Computador fraco* a garagem-estúdio fica desligada para não pesar.
+
 ## Replay, pódio, número e coleção
 
 - **🏆 Pódio:** terminando a corrida entre os 3 primeiros (carreira e campeonato), os carros sobem no pódio com medalhas e chuva de confete.
