@@ -31,6 +31,20 @@ Também funciona com controle de videogame. No celular, jogue com o aparelho dei
 - Tela **Carros**: os 8 veículos com descrição e barras; os bloqueados liberam com o anúncio de cada um.
 - Conquistas e subida de nível aparecem como cartões animados com som; a tela de carregamento mostra dicas.
 
+## Modos de corrida
+
+No menu, **Modos de corrida** abre a escolha da pista (qualquer fase já liberada) e os modos:
+
+| Modo | Como funciona |
+|---|---|
+| ⏱️ Contra o relógio | Sozinho, 3 voltas. A melhor volta vira um **fantasma** azul transparente que corre com você na próxima vez. |
+| 🚓 Fuga da polícia | 3 viaturas com sirene perseguem você por 2 voltas. Se ficar devagar perto delas, a barra de **cerco** enche e você é pego. |
+| 🚦 Arrancada | 400 metros lado a lado contra um rival. |
+| 💨 Desafio de drift | 2 voltas fazendo pontos derrapando. O combo cresce enquanto você derrapa e zera se bater no muro. Medalhas: bronze 1.500, prata 3.500, ouro 6.000. |
+| 🏆 Campeonato | 5 copas (Bronze, Prata, Ouro, Platina, Diamante), 4 corridas cada. Pontos 10-8-6-4-2-1; quem somar mais leva o troféu e o prêmio. Cada copa libera junto com as fases da carreira. |
+
+Novas conquistas: fantasma, fugitivo, largada perfeita, rei do drift e campeão de copa.
+
 ## Opções
 
 - **Direção:** Grudado (padrão: o carro não escorrega nas curvas), Drift (a traseira solta, para quem gosta de derrapar) ou Simulação (física completa). Em todos, o freio de mão faz o carro derrapar.

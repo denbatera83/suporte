@@ -137,6 +137,20 @@
   .mitem.primary { background: linear-gradient(100deg, rgba(255,106,31,.95), rgba(255,178,31,.9)); color: #170800; }
   .mitem.primary .d, .mitem.primary .k { color: rgba(23, 8, 0, .75); }
   .mitem.primary:hover { filter: brightness(1.08); }
+  .mgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin: 12px 0; }
+  .mcard { cursor: pointer; text-align: left; display: flex; flex-direction: column; gap: 4px; padding: 14px; background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--accent); color: var(--text); transition: background .15s, transform .15s; }
+  .mcard:hover, .mcard:focus-visible { background: rgba(255,106,31,.14); transform: translateY(-2px); outline: none; }
+  .mcard.locked { opacity: .5; border-top-color: var(--line); }
+  .mcard b { font-size: 28px; line-height: 1; }
+  .mcard .mn { font: italic 900 22px/1 var(--display); margin-top: 4px; }
+  .mcard .md2 { font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+  .mcard .mx { font: 700 11px var(--body); letter-spacing: .08em; text-transform: uppercase; color: #ffcf33; margin-top: 2px; }
+  #mode-hud { position: absolute; top: max(16px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); margin-top: 58px; display: flex; align-items: center; gap: 16px; padding: 7px 16px; background: rgba(6,8,14,.7); border: 1px solid var(--line); font: 700 12px var(--body); letter-spacing: .12em; color: var(--muted); white-space: nowrap; }
+  #mode-hud b { font: italic 900 22px var(--display); color: var(--text); margin-left: 6px; letter-spacing: 0; }
+  #mode-hud .combo b { color: #ffcf33; }
+  #mode-hud .heat { width: 160px; height: 10px; background: rgba(255,255,255,.1); }
+  #mode-hud .heat i { display: block; height: 100%; background: linear-gradient(90deg, #2a6bff, #ff2a2a); }
+  body.city-mode #mode-hud { display: none; }
   .menu-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
   .tile2 { cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 6px 10px; background: var(--panel); border: 1px solid var(--line); color: var(--text); font: italic 800 17px/1 var(--display); letter-spacing: .04em; text-transform: uppercase; transition: background .15s, border-color .15s, transform .15s; }
   .tile2 b { font-size: 24px; font-style: normal; line-height: 1; }
@@ -325,6 +339,7 @@
   </div>
   <div id="board"></div>
   <div id="phase-tag"></div>
+  <div id="mode-hud" class="hidden"></div>
   <div id="mp-tag" class="hidden"></div>
   <div id="hud-right" class="hud-box">
     <div><div class="label">Tempo</div><div class="big" id="time">0:00.00</div></div>
@@ -373,6 +388,7 @@
     <div class="menu-list">
       <button class="mitem primary" id="btn-play"><span class="t">CARREIRA</span><span class="d" id="menu-phase">Fase 1</span><span class="k">▶</span></button>
       <button class="mitem" id="btn-city"><span class="t">CIDADE LIVRE</span><span class="d">Dirija, saia do carro, missões e cinema</span><span class="k">▶</span></button>
+      <button class="mitem" id="btn-modes"><span class="t">MODOS DE CORRIDA</span><span class="d">Relógio, polícia, arrancada, drift e campeonato</span><span class="k">5</span></button>
       <button class="mitem" id="btn-multi"><span class="t">MULTIPLAYER</span><span class="d">Jogue com um amigo · sala com senha</span><span class="k">2P</span></button>
     </div>
     <div class="menu-tiles">
@@ -424,6 +440,17 @@
 </div>
 
 <!-- ESCOLHA DE FASE -->
+<div id="modes" class="screen hidden">
+  <div class="card" style="max-width: 980px">
+    <h2>MODOS DE CORRIDA</h2>
+    <h3>Escolha a pista</h3>
+    <div class="choices" id="mode-track" style="justify-content:flex-start"></div>
+    <div class="mgrid" id="mode-grid"></div>
+    <h3>Campeonatos · 4 corridas, quem somar mais pontos leva o troféu</h3>
+    <div class="mgrid" id="cup-grid"></div>
+    <button class="btn sec" id="modes-back" style="margin-top:14px">← Voltar</button>
+  </div>
+</div>
 <div id="phases" class="screen hidden">
   <div class="card" style="max-width: 980px">
     <h2>ESCOLHA A FASE</h2>
@@ -2012,6 +2039,7 @@ function setupRace() {
   $('best').textContent = fmtBest();
   updateRivals(0);
   updateCars(0);
+  modeSetup();
 }
 
 // =====================================================================
@@ -2116,7 +2144,7 @@ function updatePlayer(dt) {
   const assists = arcade || settings.assists === 1;
   let throttle = canDrive ? input.gas : 0, brakeIn = canDrive ? input.brake : 0;
   const hb = canDrive && input.hb;
-  const grippy = settings.steer === 'arcade';
+  const grippy = settings.steer === 'arcade' && RM.id !== 'drift';
   let steerTarget = canDrive ? (padSteer || ((input.left ? 1 : 0) - (input.right ? 1 : 0))) : 0;
   if (auto) {
     const j = mod(player.idx + 16);
@@ -2128,7 +2156,7 @@ function updatePlayer(dt) {
   const steerRate = padSteer ? 9 : arcade ? (Math.abs(steerTarget) > Math.abs(player.steerInput) ? 3.8 : 7) : (Math.abs(steerTarget) > Math.abs(player.steerInput) ? 2.6 : 4.5);
   player.steerInput += clamp(steerTarget - player.steerInput, -steerRate * dt, steerRate * dt);
   const delta = arcade ? player.steerInput * 0.6 / (1 + speed / 24) : player.steerInput * 0.58 / (1 + speed / 16);
-  const latGrip = CAR.armor ? 2.4 : grippy ? (CAR.classico ? 1.7 : 1.95) : arcade ? 1.35 : 1; // blindado: antiderrapante
+  const latGrip = CAR.armor ? 2.4 : grippy ? (CAR.classico ? 1.7 : 1.95) : arcade ? (RM.id === 'drift' ? 1.1 : 1.35) : 1; // blindado: antiderrapante
 
   const wantReverse = brakeIn > 0.5 && player.vF < 1 && throttle === 0 && canDrive;
   if (wantReverse && player.gear !== -1 && player.vF < 0.5) player.gear = -1;
@@ -2254,6 +2282,7 @@ function updatePlayer(dt) {
       player.vF = vx * sh + vz * ch; player.vL = vx * ch - vz * sh;
       if (CAR.armor) { player.r *= 0.2; const ta = angleAt(player.idx), dir = Math.cos(wrapAngle(player.h - ta)) >= 0 ? ta : ta + Math.PI; player.h += wrapAngle(dir - player.h) * 0.25; }
       else player.r *= 0.4;
+      if (-vn > 1.5) RM.wallHit = true;
       if (-vn > 2 && !CAR.armor) { shake = Math.max(shake, Math.min(1.2, -vn * 0.08)); playHit(Math.min(1, -vn / 20)); }
     }
   }
@@ -2283,8 +2312,9 @@ function completeLap(lapNum) {
   const key = 'tn3-lap-' + phase.n;
   try { const old = parseFloat(localStorage.getItem(key)); if (!old || lt < old) { localStorage.setItem(key, lt); rec = ' · RECORDE!'; } } catch (e) {}
   $('best').textContent = fmtBest();
-  if (lapNum >= phase.laps) { finishRace(); return; }
-  showMessage(lapNum === phase.laps - 1 ? 'ÚLTIMA VOLTA!' : 'VOLTA ' + (lapNum + 1), 1.8, fmt(lt) + rec);
+  rec += modeLap(lt);
+  if (lapNum >= lapsN()) { finishRace(); return; }
+  showMessage(lapNum === lapsN() - 1 ? 'ÚLTIMA VOLTA!' : 'VOLTA ' + (lapNum + 1), 1.8, fmt(lt) + rec);
 }
 
 // =====================================================================
@@ -2298,6 +2328,7 @@ function updateRivals(dt) {
     const gap = r.s - player.progress;
     const band = state === 'finished' ? 1 : gap > 150 ? 0.96 : gap < -150 ? 1.04 : 1;
     let target = racing ? profile[idx] * r.skill * band : 0;
+    if (r.cop && racing) target = copAI(r, idx, target);
     if (r.finished) target = Math.min(target, 28);
     r.prevSpeed = r.speed;
     const accMax = 7.5 * weatherCfg.grip * (1 - Math.pow(r.speed / 95, 2));
@@ -2306,7 +2337,8 @@ function updateRivals(dt) {
     const turn = T[behind].x * T[ahead].z - T[behind].z * T[ahead].x;
     let laneT = clamp(r.laneBase - turn * 22, -HALF + 1.5, HALF - 1.5) + Math.sin(raceTime * 0.25 + r.phase) * 0.8;
     const pd = player.progress - r.s;
-    if (pd > 0 && pd < 7 && Math.abs(pLat - r.lat) < 2.6) laneT = pLat + (pLat > 0 ? -3.2 : 3.2);
+    if (r.cop && pd > 0 && pd < 40) laneT = pLat;
+    else if (pd > 0 && pd < 7 && Math.abs(pLat - r.lat) < 2.6) laneT = pLat + (pLat > 0 ? -3.2 : 3.2);
     rivals.forEach((o, m) => {
       if (m === k) return;
       const dd = o.s - r.s;
@@ -2315,7 +2347,7 @@ function updateRivals(dt) {
     laneT = clamp(laneT, -HALF + 1.3, HALF - 1.3);
     r.lat += clamp(laneT - r.lat, -2.5 * dt, 2.5 * dt);
     r.s += r.speed * dt / SEG;
-    if (!r.finished && r.s >= phase.laps * N && state !== 'countdown') { r.finished = true; r.finishTime = raceTime; }
+    if (!r.cop && !r.finished && r.s >= lapsN() * N && state !== 'countdown') { r.finished = true; r.finishTime = raceTime; }
     const tmp = {}; placeOnTrack(tmp, r.s, r.lat);
     const prevX = r.pos.x, prevZ = r.pos.z;
     r.pos.set(tmp.x, 0, tmp.z);
@@ -2466,7 +2498,8 @@ function fmtBest() {
 }
 function standings() {
   const list = [{ name: 'Você', p: player.finished ? 1e9 - player.finishTime : player.progress, me: true }]
-    .concat(rivals.map(r => ({ name: r.name, p: r.finished ? 1e9 - r.finishTime : r.s })), mpRemoteRacers());
+    
+    .concat(rivals.filter(r => !r.cop).map(r => ({ name: r.name, p: r.finished ? 1e9 - r.finishTime : r.s })), mpRemoteRacers());
   return list.sort((a, b) => b.p - a.p);
 }
 function showMessage(text, time, sub) {
@@ -2549,7 +2582,7 @@ function updateHUD(dt) {
     hudT = 0.1;
     const st = standings();
     $('pos').textContent = (st.findIndex(e => e.me) + 1) + '/' + st.length;
-    $('lap').textContent = Math.min(phase.laps, Math.max(1, Math.floor(player.progress / N) + 1)) + '/' + phase.laps;
+    $('lap').textContent = RM.id === 'arrancada' ? '1/1' : Math.min(lapsN(), Math.max(1, Math.floor(player.progress / N) + 1)) + '/' + lapsN();
     $('board').innerHTML = st.map((e, i) => `<div class="${e.me ? 'me' : ''}">${i + 1}. ${escHtml(e.name)}</div>`).join('');
     drawMinimap();
   }
@@ -4232,7 +4265,9 @@ const ACH = [
   ['fuga', '🚨', 'Fugitivo', 'Despiste a polícia com 3 estrelas ou mais'], ['entregas', '📦', 'Entregador', 'Complete 3 entregas'],
   ['moedas', '🪙', 'Cofrinho', 'Pegue 50 moedas na cidade'], ['cinema', '🎬', 'Cinéfilo', 'Assista a um vídeo inteiro no cinema'],
   ['colecao', '🚗', 'Colecionador', 'Libere todos os veículos especiais'], ['avancado', '🔧', 'Mecânico', 'Compre uma peça Avançada'],
-  ['amigo', '🤝', 'Jogando junto', 'Jogue uma partida no multiplayer'], ['radio', '📻', 'DJ', 'Ligue o rádio do carro']
+  ['amigo', '🤝', 'Jogando junto', 'Jogue uma partida no multiplayer'], ['radio', '📻', 'DJ', 'Ligue o rádio do carro'],
+  ['fantasma', '👻', 'Mais rápido que o fantasma', 'Bata o seu fantasma no contra o relógio'], ['fuga', '🚓', 'Fugitivo', 'Escape da polícia'],
+  ['arrancada', '🚦', 'Largada perfeita', 'Ganhe uma arrancada'], ['drift', '💨', 'Rei do drift', 'Faça ouro no desafio de drift'], ['copa', '🏆', 'Campeão de copa', 'Ganhe um campeonato']
 ].map(([id, icon, name, d]) => ({ id, icon, name, d }));
 const xpNeed = lv => 400 + lv * 200;
 function ach(id) {
@@ -4349,7 +4384,246 @@ function horn() {
 // =====================================================================
 // MENUS, OFICINA, VISUAL E CARREIRA
 // =====================================================================
-const SCREENS = ['menu', 'phases', 'garage', 'pause', 'results', 'options', 'multi', 'cinema', 'achs'];
+// =====================================================================
+// MODOS DE CORRIDA: contra o relógio (fantasma), polícia, arrancada, drift, campeonato
+// =====================================================================
+let RM = { id: 'carreira' };
+const lapsN = () => RM.laps || phase.laps;
+const MODES = [
+  { id: 'tempo', icon: '⏱️', name: 'Contra o relógio', desc: 'Sozinho na pista, 3 voltas. O fantasma mostra a sua melhor volta para você bater.' },
+  { id: 'policia', icon: '🚓', name: 'Fuga da polícia', desc: 'Complete 2 voltas sem deixar as viaturas te cercarem. Se ficar parado perto delas, é pego!' },
+  { id: 'arrancada', icon: '🚦', name: 'Arrancada', desc: '400 metros contra um rival, lado a lado. Acelere no VAI e use o nitro!' },
+  { id: 'drift', icon: '💨', name: 'Desafio de drift', desc: '2 voltas derrapando nas curvas para fazer pontos. Use o freio de mão. Bater no muro zera o combo.' }
+];
+const CUPS = [
+  { name: 'Copa Bronze', icon: '🥉', ph: [0, 1, 2, 3], prize: 6000 }, { name: 'Copa Prata', icon: '🥈', ph: [4, 5, 6, 7], prize: 12000 },
+  { name: 'Copa Ouro', icon: '🥇', ph: [8, 9, 10, 11], prize: 20000 }, { name: 'Copa Platina', icon: '💎', ph: [12, 13, 14, 15], prize: 30000 },
+  { name: 'Copa Diamante', icon: '👑', ph: [16, 17, 18, 19], prize: 45000 }
+];
+const PTS = [10, 8, 6, 4, 2, 1];
+const DRIFT_MEDALS = [[1500, '🥉 Bronze', 1000], [3500, '🥈 Prata', 2500], [6000, '🥇 Ouro', 5000]];
+let ghostCar = null, ghostData = null, modeTrack = 0;
+
+function loadGhost(n) { try { const g = JSON.parse(localStorage.getItem('tn3-ghost-' + n)); if (g && Array.isArray(g.d) && g.d.length > 10) return g; } catch (e) {} return null; }
+function makeGhost() {
+  const car = makeCar(save.look, { lite: true });
+  car.group.traverse(o => {
+    if (!o.material) return;
+    const mk = m => { m = m.clone(); m.transparent = true; m.opacity = 0.32; m.depthWrite = false; if (m.emissive) m.emissive.set(0x3a7bff); return m; };
+    o.material = Array.isArray(o.material) ? o.material.map(mk) : mk(o.material);
+    o.castShadow = false;
+  });
+  return car;
+}
+
+function modeSetup() {
+  Object.assign(RM, { score: 0, combo: 0, comboT: 0, heat: 0, cur: [], recT: 0, busted: false, wallHit: false, start: player.progress, rivalT: 0 });
+  if (ghostCar) { disposeCar(ghostCar); ghostCar = null; }
+  ghostData = null;
+  const hud = $('mode-hud'); hud.classList.toggle('hidden', RM.id === 'carreira'); hud.innerHTML = '';
+  if (RM.id === 'tempo' || RM.id === 'drift') { rivals.forEach(r => disposeCar(r.car)); rivals = []; }
+  if (RM.id === 'tempo') { ghostData = loadGhost(phase.n); if (ghostData) { ghostCar = makeGhost(); ghostCar.group.visible = false; } }
+  if (RM.id === 'arrancada') {
+    rivals.slice(1).forEach(r => disposeCar(r.car)); rivals = rivals.slice(0, 1);
+    const r = rivals[0]; r.s = player.progress; r.lat = r.laneBase = 3; r.skill = Math.max(1, phase.skill) * 1.02;
+    const pl = {}; placeOnTrack(pl, player.idx, -3); player.pos.set(pl.x, 0, pl.z); player.h = angleAt(player.idx);
+  }
+  if (RM.id === 'policia') {
+    rivals.forEach(r => disposeCar(r.car));
+    rivals = [0, 1, 2].map(k => ({ name: 'Viatura ' + (k + 1), cop: true, car: makePoliceCar(), s: player.progress - 22 - k * 8, lat: [0, -3, 3][k], laneBase: 0, speed: 0, prevSpeed: 0,
+      skill: phase.skill * 1.1, phase: k * 3, finished: false, finishTime: 0, pos: new THREE.Vector3(), h: player.h, steerVis: 0, yawRate: 0 }));
+  }
+  updateRivals(0); updateCars(0);
+}
+
+function modeTag() {
+  if (RM.id === 'campeonato') return `${CUPS[RM.cup].name.toUpperCase()} · CORRIDA ${RM.race + 1}/4 · `;
+  const m = MODES.find(x => x.id === RM.id);
+  return m ? m.name.toUpperCase() + ' · ' : '';
+}
+
+function modeLap(lt) {
+  if (RM.id !== 'tempo') return '';
+  const d = RM.cur; RM.cur = []; RM.recT = 0;
+  const old = loadGhost(phase.n);
+  if (d.length > 10 && (!old || lt < old.t)) {
+    try { localStorage.setItem('tn3-ghost-' + phase.n, JSON.stringify({ t: lt, d })); } catch (e) {}
+    const had = !!old;
+    ghostData = { t: lt, d };
+    if (!ghostCar) ghostCar = makeGhost();
+    if (had) ach('fantasma');
+    RM.newRec = true;
+    return ' · NOVO FANTASMA!';
+  }
+  return '';
+}
+
+function modeUpdate(dt) {
+  if (RM.id === 'carreira') return;
+  const hud = $('mode-hud');
+  const racing = state === 'race' && !player.finished;
+  if (RM.id === 'tempo') {
+    if (racing) { RM.recT -= dt; if (RM.recT <= 0) { RM.recT += 0.1; RM.cur.push([+player.pos.x.toFixed(2), +player.pos.z.toFixed(2), +player.h.toFixed(3)]); } }
+    if (ghostCar && ghostData) {
+      const t = (raceTime - player.lapStart) * 10, i = Math.floor(t), d = ghostData.d;
+      const show = state !== 'countdown' && i < d.length - 1 && !player.finished;
+      ghostCar.group.visible = show;
+      if (show) {
+        const a = d[i], b = d[i + 1], f = t - i;
+        ghostCar.group.position.set(a[0] + (b[0] - a[0]) * f, 0, a[1] + (b[1] - a[1]) * f);
+        ghostCar.group.rotation.y = a[2] + wrapAngle(b[2] - a[2]) * f;
+      }
+    }
+    const cur = raceTime - player.lapStart;
+    hud.innerHTML = `<span>VOLTA ATUAL <b>${fmt(cur)}</b></span><span>FANTASMA <b>${ghostData ? fmt(ghostData.t) : '--'}</b></span>`;
+  } else if (RM.id === 'arrancada') {
+    const dist = Math.max(0, (player.progress - RM.start) * SEG);
+    const r = rivals[0];
+    const rd = r ? Math.max(0, (r.s - RM.start) * SEG) : 0;
+    if (r && !r.finished && rd >= 402 && state !== 'countdown') { r.finished = true; r.finishTime = raceTime; }
+    if (racing && dist >= 402) { RM.top = player.vF * 3.6; finishRace(); }
+    hud.innerHTML = `<span>VOCÊ <b>${Math.min(402, Math.round(dist))} m</b></span><span>RIVAL <b>${Math.min(402, Math.round(rd))} m</b></span>`;
+  } else if (RM.id === 'drift') {
+    const speed = Math.hypot(player.vF, player.vL);
+    const beta = Math.abs(Math.atan2(player.vL, Math.abs(player.vF))) * 57.3;
+    if (RM.wallHit) { RM.wallHit = false; if (RM.combo > 50) showMessage('COMBO PERDIDO', 1); RM.combo = 0; RM.comboT = 0; }
+    if (racing && speed > 8 && beta > 7 && player.vF > 0) { RM.combo += beta * speed * 3.6 * 0.1 * dt * (1 + Math.min(2, RM.combo / 2000)); RM.comboT = 1; }
+    else if (RM.combo > 0) { RM.comboT -= dt; if (RM.comboT <= 0 || !racing) { RM.score += Math.round(RM.combo); if (RM.combo > 400) showMessage('+' + Math.round(RM.combo), 1); RM.combo = 0; } }
+    hud.innerHTML = `<span>PONTOS <b>${Math.round(RM.score).toLocaleString('pt-BR')}</b></span>${RM.combo > 0 ? `<span class="combo">COMBO <b>+${Math.round(RM.combo)}</b></span>` : ''}`;
+  } else if (RM.id === 'policia') {
+    let near = 0;
+    rivals.forEach(r => { const d = Math.hypot(r.pos.x - player.pos.x, r.pos.z - player.pos.z); if (d < 30) near++; });
+    if (racing) {
+      if (near && Math.abs(player.vF) < 12) RM.heat += dt * (0.12 + near * 0.06);
+      else RM.heat = Math.max(0, RM.heat - dt * 0.2);
+      if (RM.heat >= 1) { RM.busted = true; player.finished = true; player.finishTime = raceTime; state = 'finished'; showMessage('PEGO!', 3, 'As viaturas te cercaram'); setTimeout(showResults, 2600); }
+    }
+    if (RM.busted) { player.vF *= Math.max(0, 1 - 4 * dt); player.vL *= Math.max(0, 1 - 4 * dt); }
+    const fl = Math.floor(raceTime * 6) % 2;
+    rivals.forEach(r => { const L = r.car.lights; if (!L) return; L.red.visible = !!fl; L.blue.visible = !fl; L.glowR.intensity = fl ? 3 : 0; L.glowB.intensity = fl ? 0 : 3; });
+    hud.innerHTML = `<span>CERCO</span><div class="heat"><i style="width:${Math.round(Math.min(1, RM.heat) * 100)}%"></i></div>`;
+  } else if (RM.id === 'campeonato') {
+    hud.innerHTML = `<span>${CUPS[RM.cup].icon} ${CUPS[RM.cup].name} · corrida <b>${RM.race + 1}/4</b></span>`;
+  }
+}
+
+function copAI(r, idx, target) {
+  // viaturas: perseguem o jogador, aceleram mais quando estão atrás
+  const gap = player.progress - r.s;
+  if (gap > 0 && gap < 160) target = Math.min(Math.max(target, Math.abs(player.vF) + 6), profile[idx] * 1.12, Math.abs(player.vF) + clamp(gap * 0.5, 1, 30));
+  if (gap < 0) target = Math.min(target, Math.max(0, Math.abs(player.vF) - (gap > -12 ? 1 : 5))); // passou: fecha a frente e espera
+  if (raceTime < 2.5 || RM.busted) target = 0; // vantagem de largada / já pegou
+  return target;
+}
+
+function modeResults() {
+  $('message').innerHTML = ''; msgTimer = 0;
+  let title = '', info = '', prize = 0, rec = '', table = '', xp = 60, nextLabel = '', canNext = false;
+  const ph = phase;
+  if (RM.id === 'tempo') {
+    const best = isFinite(player.best) ? player.best : 0;
+    title = RM.newRec ? '👻 NOVO RECORDE!' : '⏱️ FIM DO TREINO';
+    info = `${ph.name.toUpperCase()} · MELHOR VOLTA ${best ? fmt(best) : '--'} · TOTAL ${fmt(player.finishTime)}`;
+    prize = 600 + (RM.newRec ? 1000 : 0);
+    rec = RM.newRec ? 'O seu fantasma foi salvo. Na próxima vez ele corre com você!' : `Seu fantasma: ${ghostData ? fmt(ghostData.t) : '--'}. Tente de novo para bater!`;
+    table = player.lapTimes.map((t, k) => `<tr class="${t === best ? 'me' : ''}"><td>Volta ${k + 1}</td><td></td><td style="text-align:right">${fmt(t)}</td></tr>`).join('');
+  } else if (RM.id === 'arrancada') {
+    const r = rivals[0];
+    const win = !r || !r.finished || player.finishTime <= r.finishTime;
+    title = win ? '🚦 VOCÊ VENCEU!' : '🚦 O RIVAL VENCEU';
+    info = `400 METROS · ${fmt(player.finishTime)} · ${Math.round(RM.top || 0)} KM/H NA CHEGADA`;
+    prize = win ? 1500 : 300; xp = win ? 120 : 40;
+    if (win) { ach('arrancada'); save.stats.wins++; }
+    rec = win ? 'Largada perfeita!' : 'Dica: segure o acelerador na contagem e use o nitro logo depois do VAI.';
+    table = `<tr class="me"><td>${win ? '1º' : '2º'}</td><td>Você</td><td style="text-align:right">${fmt(player.finishTime)}</td></tr><tr><td>${win ? '2º' : '1º'}</td><td>${r ? escHtml(r.name) : ''}</td><td style="text-align:right">${r && r.finished ? fmt(r.finishTime) : '--'}</td></tr>`;
+  } else if (RM.id === 'drift') {
+    RM.score += Math.round(RM.combo); RM.combo = 0;
+    const m = DRIFT_MEDALS.filter(x => RM.score >= x[0]).pop();
+    title = m ? '💨 ' + m[1].toUpperCase() : '💨 FIM DO DRIFT';
+    info = `${ph.name.toUpperCase()} · ${Math.round(RM.score).toLocaleString('pt-BR')} PONTOS`;
+    prize = m ? m[2] : 200; xp = m ? 150 : 40;
+    if (m && m[0] >= 6000) ach('drift');
+    let bestD = 0; try { bestD = +localStorage.getItem('tn3-drift-' + ph.n) || 0; } catch (e) {}
+    if (RM.score > bestD) { try { localStorage.setItem('tn3-drift-' + ph.n, Math.round(RM.score)); } catch (e) {} rec = 'Novo recorde de drift nesta pista!'; }
+    else rec = `Seu recorde nesta pista: ${bestD.toLocaleString('pt-BR')} pontos.`;
+    table = DRIFT_MEDALS.map(x => `<tr class="${m === x ? 'me' : ''}"><td>${x[1]}</td><td></td><td style="text-align:right">${x[0].toLocaleString('pt-BR')} pts</td></tr>`).join('');
+  } else if (RM.id === 'policia') {
+    const ok = !RM.busted;
+    title = ok ? '🚓 VOCÊ ESCAPOU!' : '🚓 PEGO!';
+    info = `${ph.name.toUpperCase()} · ${fmt(player.finishTime)}`;
+    prize = ok ? 2500 : 200; xp = ok ? 150 : 40;
+    if (ok) ach('fuga');
+    rec = ok ? 'As viaturas ficaram para trás!' : 'Dica: não pare perto das viaturas. Use o nitro para abrir distância.';
+  } else if (RM.id === 'campeonato') {
+    const st = standings();
+    st.forEach((e, k) => { RM.pts[e.name] = (RM.pts[e.name] || 0) + PTS[k]; });
+    const pos = st.findIndex(e => e.me) + 1;
+    const cup = CUPS[RM.cup];
+    const order = Object.entries(RM.pts).sort((a, b) => b[1] - a[1]);
+    const last = RM.race >= 3;
+    if (last) {
+      const champ = order[0][0] === 'Você';
+      title = champ ? '🏆 CAMPEÃO!' : `${order.findIndex(e => e[0] === 'Você') + 1}º NO CAMPEONATO`;
+      prize = champ ? cup.prize : Math.round(cup.prize * 0.15);
+      xp = champ ? 400 : 100;
+      if (champ) { ach('copa'); save.cups = save.cups || {}; save.cups[RM.cup] = true; }
+      rec = champ ? `Você ganhou a ${cup.name}!` : 'Ganhe mais corridas para levar o troféu.';
+    } else {
+      title = pos === 1 ? `🏁 1º LUGAR` : `${pos}º LUGAR`;
+      prize = Math.round(ph.prize * PRIZE_SHARE[pos - 1] / 10) * 10;
+      rec = `Você fez ${PTS[pos - 1]} pontos nesta corrida.`;
+      canNext = true; nextLabel = `PRÓXIMA CORRIDA (${RM.race + 2}/4) →`;
+    }
+    if (pos === 1) { save.stats.wins++; ach('primeira'); }
+    info = `${cup.name.toUpperCase()} · CORRIDA ${RM.race + 1}/4 · ${ph.name.toUpperCase()}`;
+    table = order.map(([n, p], k) => `<tr class="${n === 'Você' ? 'me' : ''}"><td>${k + 1}º</td><td>${escHtml(n)}</td><td style="text-align:right">${p} pts</td></tr>`).join('');
+  }
+  save.money += prize; addXP(xp); persist(); cash();
+  $('res-title').textContent = title;
+  $('res-info').textContent = info;
+  $('res-prize').textContent = '+ ' + brl(prize);
+  $('res-record').textContent = rec;
+  $('res-table').innerHTML = table;
+  $('res-next').classList.toggle('hidden', !canNext);
+  $('res-next').textContent = nextLabel || 'PRÓXIMA FASE →';
+  $('res-room').classList.add('hidden');
+  $('again').classList.toggle('hidden', RM.id === 'campeonato');
+  showScreen('results');
+}
+
+function startMode(id, extra = {}) {
+  RM = Object.assign({ id }, extra);
+  if (id === 'tempo') RM.laps = 3;
+  if (id === 'drift' || id === 'policia') RM.laps = 2;
+  if (id === 'arrancada') RM.laps = 99;
+  if (id === 'campeonato') { startRace(CUPS[RM.cup].ph[RM.race]); return; }
+  startRace(modeTrack);
+}
+function renderModes() {
+  const avail = PHASES.slice(0, save.unlocked);
+  if (modeTrack >= save.unlocked) modeTrack = 0;
+  $('mode-track').innerHTML = avail.map((ph, i) => `<button class="choice ${i === modeTrack ? 'sel' : ''}" data-t="${i}">${ph.n}. ${ph.name}</button>`).join('');
+  $('mode-track').querySelectorAll('[data-t]').forEach(b => b.onclick = () => { modeTrack = +b.dataset.t; renderModes(); });
+  $('mode-grid').innerHTML = MODES.map(m => {
+    let extra = '';
+    if (m.id === 'tempo') { const g = loadGhost(PHASES[modeTrack].n); extra = g ? 'Fantasma: ' + fmt(g.t) : 'Ainda sem fantasma'; }
+    if (m.id === 'drift') { let b = 0; try { b = +localStorage.getItem('tn3-drift-' + PHASES[modeTrack].n) || 0; } catch (e) {} extra = b ? 'Recorde: ' + b.toLocaleString('pt-BR') + ' pts' : 'Sem recorde'; }
+    return `<button class="mcard" data-m="${m.id}"><b>${m.icon}</b><span class="mn">${m.name}</span><span class="md2">${m.desc}</span>${extra ? `<span class="mx">${extra}</span>` : ''}</button>`;
+  }).join('');
+  $('mode-grid').querySelectorAll('[data-m]').forEach(b => b.onclick = () => startMode(b.dataset.m));
+  $('cup-grid').innerHTML = CUPS.map((c, k) => {
+    const locked = save.unlocked < c.ph[0] + 1;
+    const won = save.cups && save.cups[k];
+    return `<button class="mcard ${locked ? 'locked' : ''}" data-c="${k}"><b>${locked ? '🔒' : c.icon}</b><span class="mn">${c.name}</span><span class="md2">Fases ${c.ph[0] + 1} a ${c.ph[3] + 1} · prêmio ${brl(c.prize)}</span>${won ? '<span class="mx">🏆 Conquistada</span>' : locked ? `<span class="mx">Libere a fase ${c.ph[0] + 1} na carreira</span>` : ''}</button>`;
+  }).join('');
+  $('cup-grid').querySelectorAll('[data-c]').forEach(b => b.onclick = () => {
+    const k = +b.dataset.c;
+    if (save.unlocked < CUPS[k].ph[0] + 1) { toast(`Libere a fase ${CUPS[k].ph[0] + 1} na carreira primeiro.`); return; }
+    startMode('campeonato', { cup: k, race: 0, pts: {} });
+  });
+}
+
+const SCREENS = ['menu', 'phases', 'garage', 'pause', 'results', 'options', 'multi', 'cinema', 'achs', 'modes'];
 let view = 'menu';
 function showScreen(name) {
   view = name;
@@ -4442,6 +4716,7 @@ function ensureWorld() {
   state = 'menu';
 }
 function openMenu() {
+  RM = { id: 'carreira' };
   ensureWorld();
   refreshMenu(); showScreen('menu');
 }
@@ -4458,7 +4733,7 @@ function renderPhases() {
   $('phase-grid').querySelectorAll('.tile').forEach(el => el.onclick = () => {
     const i = +el.dataset.i;
     if (i + 1 > save.unlocked) { toast('Termine a fase anterior em 1º, 2º ou 3º para liberar.'); return; }
-    save.current = i; persist(); startRace();
+    save.current = i; persist(); RM = { id: 'carreira' }; startRace();
   });
 }
 
@@ -4678,6 +4953,7 @@ function finishRace() {
 }
 function showResults() {
   if (state !== 'finished') return;
+  if (RM.id !== 'carreira') return modeResults();
   $('message').innerHTML = ''; msgTimer = 0;
   const st = standings();
   const pos = st.findIndex(e => e.me) + 1;
@@ -4721,6 +4997,7 @@ function startRace(idx = save.current, mp = false) {
   initAudio();
   persist();
   MP.inRace = !!mp;
+  if (mp) RM = { id: 'carreira' };
   const ph = PHASES[idx];
   if (settings.radio && !RADIO.st) setRadio(settings.radio);
   state = 'loading';
@@ -4731,7 +5008,7 @@ function startRace(idx = save.current, mp = false) {
     setupRace();
     if (mp) mpGrid();
     countdown = 3.999; state = 'countdown';
-    $('phase-tag').textContent = `FASE ${ph.n} · ${ph.name.toUpperCase()}  ${phaseIcons(ph)}`;
+    $('phase-tag').textContent = modeTag() + `FASE ${ph.n} · ${ph.name.toUpperCase()}  ${phaseIcons(ph)}`;
     showScreen(null);
     $('message').innerHTML = ''; lastCount = 4;
   });
@@ -4760,7 +5037,9 @@ let optionsFrom = 'menu';
 $('btn-options').onclick = () => { optionsFrom = 'menu'; showScreen('options'); };
 $('pause-options').onclick = () => { optionsFrom = 'pause'; showScreen('options'); };
 $('options-back').onclick = () => showScreen(optionsFrom);
-$('btn-play').onclick = () => startRace();
+$('btn-play').onclick = () => { RM = { id: 'carreira' }; startRace(); };
+$('btn-modes').onclick = () => { renderModes(); showScreen('modes'); };
+$('modes-back').onclick = () => { refreshMenu(); showScreen('menu'); };
 $('btn-achs').onclick = () => { renderAchs(); showScreen('achs'); };
 $('achs-back').onclick = () => { refreshMenu(); showScreen('menu'); };
 renderRadioChoices();
@@ -4776,11 +5055,11 @@ $('garage-back').onclick = () => {
   if (garageFromCity && city) { garageFromCity = false; applyParts(city.own ? save.parts : ZERO_PARTS, city.curLook.model); state = 'city'; showScreen(null); return; }
   refreshMenu(); showScreen('menu');
 };
-$('again').onclick = () => { save.current = phase.n - 1; startRace(); };
-$('res-next').onclick = () => { save.current = +$('res-next').dataset.next; startRace(); };
-$('res-garage').onclick = () => { save.current = phase.n - 1; persist(); openGarage('parts'); };
+$('again').onclick = () => { if (RM.id === 'carreira') { save.current = phase.n - 1; startRace(); } else startRace(phase.n - 1); };
+$('res-next').onclick = () => { if (RM.id === 'campeonato') { RM.race++; startRace(CUPS[RM.cup].ph[RM.race]); return; } save.current = +$('res-next').dataset.next; startRace(); };
+$('res-garage').onclick = () => { if (RM.id === 'carreira') save.current = phase.n - 1; persist(); RM = { id: 'carreira' }; openGarage('parts'); };
 $('res-menu').onclick = () => openMenu();
-$('restart').onclick = () => (mode === 'city' ? startCity() : startRace());
+$('restart').onclick = () => (mode === 'city' ? startCity() : startRace(RM.id === 'carreira' ? save.current : phase.n - 1));
 $('resume').onclick = togglePause;
 $('pause-btn').onclick = togglePause;
 $('to-menu').onclick = () => openMenu();
@@ -4843,6 +5122,7 @@ function frame() {
     updateSmoke(dt);
     updateCamera(dt);
     updateHUD(dt);
+    modeUpdate(dt);
   }
   if ((state === 'race' || state === 'city') && player.vF * 3.6 > 300) { ach('v300'); if (player.vF * 3.6 > 400) ach('v400'); }
   mpTick(dt);
@@ -4853,7 +5133,7 @@ function frame() {
 frame();
 
 // gancho para testes automatizados
-window.__tn = { ACH, ach, addXP, note, updatePlayer, input, settings, applyParts, RADIO, setRadio, ramps: () => ramps, MP, mpCreate, mpJoin, city: () => city, startCity, cityAction, player, rivals: () => rivals, state: () => state, track: { P, T, S, N }, profile: () => profile, save: () => save, PHASES, buildWorld, setupRace, startRace, CAR };
+window.__tn = { RM: () => RM, startMode, finishRace, ghost: () => ghostCar, ACH, ach, addXP, note, updatePlayer, input, settings, applyParts, RADIO, setRadio, ramps: () => ramps, MP, mpCreate, mpJoin, city: () => city, startCity, cityAction, player, rivals: () => rivals, state: () => state, track: { P, T, S, N }, profile: () => profile, save: () => save, PHASES, buildWorld, setupRace, startRace, CAR };
 })();
 </script>
 </body>
