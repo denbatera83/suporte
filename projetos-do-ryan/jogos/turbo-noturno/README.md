@@ -122,6 +122,17 @@ Também em **Visual → Carro**, o **Blindado X** é uma picape elétrica de aç
 - **Gruda na parede:** na corrida, encostar no muro não tira a velocidade; ele desliza junto do muro. Na Cidade Livre, acelere contra um prédio e ele gruda e sobe pela parede.
 - **Voa:** na Cidade Livre, aperte **V**, como o Roadster Foguete.
 
+## Touro V12 e Moto Relâmpago
+
+- **🐂 Touro V12:** supercarro baixo e largo, inspirado nas Lamborghini. É o mais rápido do jogo: chega a quase 400 km/h, mais que o Blindado X, com ronco de motor V12.
+- **🏍️ Moto Relâmpago:** moto com piloto, leve (260 kg), com arrancada forte e que deita de verdade nas curvas.
+
+Cada um tem o seu próprio anúncio, diferente dos outros, e só é liberado assistindo a esse anúncio até o fim (Visual → Carro).
+
+## Cinema na Cidade Livre
+
+Na Cidade Livre há um **cinema** com letreiro luminoso e cartazes na fachada (marcador rosa 🎬 no mapa). Chegue a pé ou de carro e aperte **E** para entrar. Lá dentro dá para escolher e assistir no telão aos vídeos: o trailer do Turbo Noturno e os anúncios do Roadster Foguete, Blindado X, Touro V12 e Moto Relâmpago. Dá para sair de um vídeo a qualquer momento.
+
 ## Visual: pintura e acessórios
 
 - **Pintura:** 16 cores prontas ou qualquer cor escolhida, com acabamento metálico, fosco, perolado ou cromado.

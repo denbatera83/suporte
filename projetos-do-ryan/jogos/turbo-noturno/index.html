@@ -201,7 +201,9 @@
   #ad .ad-scene { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; padding: 0 max(16px, env(safe-area-inset-left)); }
   #ad .ad-k { font: 800 14px var(--body); letter-spacing: .3em; color: var(--accent); text-transform: uppercase; text-shadow: 0 2px 10px #000; }
   #ad .ad-t { font: italic 900 clamp(46px, 10vw, 120px)/.9 var(--display); text-shadow: 0 6px 30px rgba(0,0,0,.7); margin-top: 6px; text-wrap: balance; }
-  #ad .ad-t em { color: var(--accent); font-style: italic; }
+  #ad .ad-t em { color: var(--ad-accent, var(--accent)); font-style: italic; }
+  #ad .ad-k { color: var(--ad-accent, var(--accent)) !important; }
+  #ad .ad-bar i { background: var(--ad-accent, var(--accent-2)) !important; }
   #ad .ad-d { font: 600 clamp(15px, 2.4vw, 22px) var(--body); color: #e6ebf2; margin-top: 12px; text-shadow: 0 2px 8px #000; }
   #ad .ad-scene.in .ad-t { animation: adIn .7s cubic-bezier(.2,.9,.2,1) both; }
   #ad .ad-scene.in .ad-k, #ad .ad-scene.in .ad-d { animation: adFade .9s .25s both; }
@@ -432,12 +434,22 @@
   </div>
 </div>
 <div id="ad" class="hidden" role="dialog" aria-label="Anúncio">
-  <div class="ad-top"><span class="ad-badge">ANÚNCIO</span><span class="ad-time" id="ad-time">15</span></div>
+  <div class="ad-top"><span class="ad-badge">ANÚNCIO</span><span style="display:flex;gap:8px;align-items:center"><span class="ad-time" id="ad-time">15</span><button class="btn sec hidden" id="ad-close" style="margin:0;padding:6px 14px;font-size:15px">✕ Sair</button></span></div>
   <div class="ad-scene" id="ad-scene"></div>
   <div class="ad-bottom">
     <div class="ad-reward" id="ad-reward">Assista até o fim para ganhar o <b>Roadster Foguete</b></div>
     <button class="btn hidden" id="ad-claim">PEGAR O FOGUETE 🚀</button>
     <div class="ad-bar"><i id="ad-bar"></i></div>
+  </div>
+</div>
+<!-- CINEMA DA CIDADE LIVRE -->
+<div id="cinema" class="screen hidden">
+  <div class="card" style="max-width: 900px">
+    <div class="label" style="color:var(--accent)">Cidade Livre</div>
+    <h2>CINEMA TURBO</h2>
+    <p class="hint" style="margin-top:6px">Escolha um vídeo para assistir no telão.</p>
+    <div class="grid" id="cinema-grid"></div>
+    <button class="btn sec" id="cinema-exit">← Sair do cinema</button>
   </div>
 </div>
 <div id="toast" class="hidden"></div>
@@ -514,6 +526,9 @@ function applyParts(L = save.parts, model = save.look.model) {
   CAR.Iz = 2100 * CAR.m / 1350;
   CAR.electric = model === 'foguete' || model === 'blindado';
   CAR.armor = model === 'blindado';
+  CAR.touro = model === 'touro'; CAR.moto = model === 'moto';
+  if (CAR.touro) { CAR.tq *= 1.75; CAR.final = 2.8; CAR.drag = 0.3; CAR.mu = Math.max(CAR.mu, 1.5); CAR.down = Math.max(CAR.down, 3.2); CAR.m -= 100; CAR.Iz = 1900; CAR.shift = Math.min(CAR.shift, 0.08); }
+  if (CAR.moto) { CAR.m = 260; CAR.Iz = 320; CAR.tq *= 0.55; CAR.final = 3.2; CAR.drag = 0.2; CAR.Cf = 21000; CAR.Cr = 24000; CAR.down = 0.25; CAR.shift = Math.min(CAR.shift, 0.08); }
   if (CAR.electric) { CAR.tq *= 1.12; CAR.shift = 0.02; }
   if (CAR.armor) { CAR.tq *= 1.45; CAR.final = 3.0; CAR.m += 150; CAR.Iz = 2400; CAR.down = Math.max(CAR.down, 3.5); CAR.brake = Math.max(CAR.brake, 1.5); CAR.mu = Math.max(CAR.mu, 1.45); }
 }
@@ -531,8 +546,8 @@ function carStats() {
 // ---------------- VISUAL (pintura e acessórios) ----------------
 const PAINTS = ['#0b4fd6', '#1a8cff', '#00b3a4', '#0f8f4a', '#7ac70c', '#f2b200', '#ff7a00', '#d43a00', '#b00a14', '#e0115f', '#8a2be2', '#3b1d6e', '#e8e8e8', '#9aa0a8', '#3a3d42', '#0c0c0e'];
 const STYLE = [
-  { key: 'model', title: 'Carro', hint: 'Roadster Foguete: elétrico e voa (tecla V na Cidade Livre). Blindado X: picape de aço, mais de 350 km/h, antiderrapante, voa e gruda na parede.', opts: [
-    { id: 'esportivo', name: 'Esportivo GT', price: 0 }, { id: 'foguete', name: '🚀 Roadster Foguete', price: 0, ad: true }, { id: 'blindado', name: '⚡ Blindado X', price: 0, ad: true }] },
+  { key: 'model', title: 'Carro', hint: 'Roadster Foguete: elétrico e voa (tecla V na Cidade Livre). Blindado X: picape de aço, mais de 350 km/h, antiderrapante, voa e gruda na parede. Touro V12: o mais rápido, quase 400 km/h. Moto Relâmpago: leve e deita nas curvas. Cada um libera com o seu anúncio.', opts: [
+    { id: 'esportivo', name: 'Esportivo GT', price: 0 }, { id: 'foguete', name: '🚀 Roadster Foguete', price: 0, ad: true }, { id: 'blindado', name: '⚡ Blindado X', price: 0, ad: true }, { id: 'touro', name: '🐂 Touro V12', price: 0, ad: true }, { id: 'moto', name: '🏍️ Moto Relâmpago', price: 0, ad: true }] },
   { key: 'finish', title: 'Acabamento da pintura', opts: [
     { id: 'metal', name: 'Metálico', price: 0 }, { id: 'fosco', name: 'Fosco', price: 800 },
     { id: 'perola', name: 'Perolado', price: 1500 }, { id: 'cromo', name: 'Cromado', price: 5000 }] },
@@ -1532,8 +1547,13 @@ const armBody = z => { const yb = lin(ARM.BOT, z), ya = armArch(z), yt = armTop(
 const armGlass = z => { const yt = armTop(z), w = armW(z), belt = armBelt(z) + 0.05; return [[0, belt], [w + 0.006, belt], [w + 0.006, belt + 0.004], [0.74 * w + 0.006, yt + 0.004], [0, yt + 0.006]]; };
 const armSpine = z => { const yt = armTop(z); return [[0, yt - 0.01], [0.42, yt - 0.01], [0.42, yt + 0.009], [0, yt + 0.012]]; };
 MODELS.blindado = Object.assign({}, MODELS.esportivo, { armor: true });
+// supercarro baixo e largo, nariz em cunha
+MODELS.touro = { TOP: [[-2.32, 0.6], [-2.2, 0.72], [-1.6, 0.77], [-0.8, 0.79], [0.6, 0.69], [1.5, 0.59], [2.2, 0.49], [2.38, 0.38]], BOT: BODY_BOT,
+  W: [[-2.32, 0.86], [-2.0, 1.0], [-1.38, 1.03], [-0.4, 0.95], [0.6, 0.95], [1.42, 1.0], [2.1, 0.9], [2.38, 0.68]],
+  ROOF: [[-1.6, 0], [-1.2, 0.14], [-0.6, 0.29], [-0.1, 0.32], [0.45, 0.23], [0.85, 0.09], [1.15, 0]], cab: [-1.6, 1.15], roofZ: [-0.95, 0.25] };
+MODELS.moto = Object.assign({}, MODELS.esportivo, { bike: true });
 const MODEL_GEO = {};
-for (const [k, M] of Object.entries(MODELS)) MODEL_GEO[k] = M.armor ? { body: loft(armBody, -2.42, 2.42, 70), cabin: loft(armGlass, -1.55, 1.05, 40), roof: loft(armSpine, -2.3, 2.15, 40) } : k === 'esportivo' ? { body: CARGEO.body, cabin: CARGEO.cabin, roof: CARGEO.roof } :
+for (const [k, M] of Object.entries(MODELS)) MODEL_GEO[k] = M.bike ? MODEL_GEO.esportivo || { body: CARGEO.body, cabin: CARGEO.cabin, roof: CARGEO.roof } : M.armor ? { body: loft(armBody, -2.42, 2.42, 70), cabin: loft(armGlass, -1.55, 1.05, 40), roof: loft(armSpine, -2.3, 2.15, 40) } : k === 'esportivo' ? { body: CARGEO.body, cabin: CARGEO.cabin, roof: CARGEO.roof } :
   { body: loft(z => bodySection(z, M), -2.32, 2.38, 64), cabin: loft(z => cabinSection(z, M), M.cab[0], M.cab[1], 40), roof: loft(z => roofSection(z, M), M.roofZ[0], M.roofZ[1], 20) };
 const SHARED_GEO = new Set([...Object.values(CARGEO), ...Object.values(MODEL_GEO).flatMap(m => Object.values(m)), beamConeGeo, beamPoolGeo]);
 const SHARED_MAT = new Set(Object.values(MAT));
@@ -1551,7 +1571,61 @@ function paintMaterial(color, finish) {
   return m;
 }
 
+function makeBike(look, opts = {}) { // moto com piloto, que deita nas curvas
+  const lite = !!opts.lite;
+  const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
+  const paint = paintMaterial(look.color, look.finish);
+  const hc = HEAD[look.head] || HEAD.branco;
+  const headMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(...hc).multiplyScalar(5) });
+  const tail = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 0.03, 0.03).multiplyScalar(1.6) });
+  const rc = RIM[look.rimColor] || RIM.prata;
+  const rimMat = new THREE.MeshStandardMaterial({ color: rc[0], metalness: rc[1], roughness: rc[2] });
+  const glassMat = new THREE.MeshPhysicalMaterial({ color: 0x223040, metalness: 0.4, roughness: 0.05, transparent: true, opacity: 0.55 });
+  const suit = lam(0x15171c), helmet = paintMaterial(look.stripeColor || '#ffffff', 'metal');
+  const mesh = (geo, mat, x, y, z, parent = body, rx = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.x = rx; m.castShadow = !lite; parent.add(m); return m; };
+  mesh(new THREE.BoxGeometry(0.36, 0.3, 0.8), paint, 0, 0.82, 0.18);                       // tanque
+  mesh(new THREE.CylinderGeometry(0.16, 0.3, 0.62, 14), paint, 0, 0.82, 0.62, body, Math.PI / 2 + 0.35); // carenagem
+  mesh(new THREE.BoxGeometry(0.3, 0.07, 0.62), MAT.trim, 0, 0.9, -0.38);                  // banco
+  mesh(new THREE.BoxGeometry(0.26, 0.16, 0.55), paint, 0, 0.92, -0.86, body, -0.18);      // rabeta
+  mesh(new THREE.BoxGeometry(0.34, 0.36, 0.52), MAT.disc, 0, 0.5, 0.05);                   // motor
+  mesh(new THREE.BoxGeometry(0.06, 0.06, 1.4), MAT.chrome, 0.12, 0.62, -0.1, body, 0.15);  // quadro
+  mesh(new THREE.BoxGeometry(0.06, 0.06, 1.4), MAT.chrome, -0.12, 0.62, -0.1, body, 0.15);
+  mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.7, 10), MAT.chrome, 0.22, 0.55, -0.72, body, Math.PI / 2 - 0.25); // escapamento
+  mesh(new THREE.BoxGeometry(0.18, 0.1, 0.05), headMat, 0, 0.9, 0.93);
+  mesh(new THREE.BoxGeometry(0.16, 0.05, 0.04), tail, 0, 0.98, -1.14);
+  mesh(new THREE.BoxGeometry(0.3, 0.2, 0.02), glassMat, 0, 1.1, 0.74, body, -0.6);         // para-brisa
+  // piloto agachado
+  mesh(new THREE.BoxGeometry(0.36, 0.5, 0.24), suit, 0, 1.18, -0.2, body, 0.75);
+  mesh(new THREE.SphereGeometry(0.16, 14, 10), helmet, 0, 1.47, 0.08);
+  mesh(new THREE.BoxGeometry(0.2, 0.06, 0.12), MAT.trim, 0, 1.47, 0.22);                  // viseira
+  for (const sx of [1, -1]) {
+    mesh(new THREE.BoxGeometry(0.09, 0.09, 0.5), suit, sx * 0.22, 1.2, 0.22, body, 0.55);   // braço
+    mesh(new THREE.BoxGeometry(0.12, 0.12, 0.5), suit, sx * 0.17, 0.82, -0.3, body, -0.9);  // perna
+  }
+  const wheels = [], steer = [], pivots = [];
+  for (const z of [0.8, -0.74]) {
+    const pivot = new THREE.Group(); pivot.position.set(0, 0.33, z); body.add(pivot); pivots.push(pivot);
+    const w = new THREE.Group(); pivot.add(w);
+    mesh(new THREE.TorusGeometry(0.26, 0.08, 10, 28).rotateY(Math.PI / 2), MAT.tire, 0, 0, 0, w);
+    mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.05, 18).rotateZ(Math.PI / 2), rimMat, 0, 0, 0, w);
+    if (z > 0) { // garfo e guidão viram junto
+      mesh(new THREE.BoxGeometry(0.04, 0.7, 0.05), MAT.chrome, 0.1, 0.3, -0.08, pivot, -0.35);
+      mesh(new THREE.BoxGeometry(0.04, 0.7, 0.05), MAT.chrome, -0.1, 0.3, -0.08, pivot, -0.35);
+      mesh(new THREE.BoxGeometry(0.66, 0.035, 0.035), MAT.trim, 0, 0.68, -0.25, pivot);
+      steer.push(pivot);
+    }
+    wheels.push(w);
+  }
+  const ao = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 2.4).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: aoTex, transparent: true, depthWrite: false, opacity: 0.8 }));
+  ao.position.y = 0.11; g.add(ao);
+  const poolMat = new THREE.MeshBasicMaterial({ map: beamPoolTex, color: new THREE.Color(...hc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.6 * Math.max(0.15, timeCfg.dark), polygonOffset: true, polygonOffsetFactor: -2 });
+  const pool = new THREE.Mesh(beamPoolGeo, poolMat); pool.position.set(0, 0.12, 14); pool.scale.set(0.6, 1, 0.8); g.add(pool);
+  mergeChildren(body); wheels.forEach(mergeChildren); steer.forEach(mergeChildren);
+  scene.add(g);
+  return { group: g, body, wheels, steer, flames: [], paint, tail, pool, headColor: hc, rocket: false, armor: false, moto: true, pivots, jets: [], mainJet: null, fold: 0 };
+}
 function makeCar(look, opts = {}) {
+  if (look.model === 'moto') return makeBike(look, opts);
   const lite = !!opts.lite; // versão simplificada (trânsito e polícia da cidade)
   const g = new THREE.Group();
   const body = new THREE.Group(); g.add(body);
@@ -1679,6 +1753,15 @@ function makeCar(look, opts = {}) {
     mesh(new THREE.BoxGeometry(1.86, 0.05, 0.04), tail, 0, 0.92, -2.43);
     for (const [x, z] of [[1, 1.42], [-1, 1.42], [1, -1.38], [-1, -1.38]]) { const f = mesh(new THREE.BoxGeometry(0.06, 0.12, 1.12), MAT.trim, x * 1.0, 0.86, z); f.castShadow = false; }
     mesh(new THREE.BoxGeometry(1.7, 0.02, 1.5), MAT.trim, 0, armTop(-1.7) + 0.02, -1.7);
+  }
+  if (mk === 'touro' && !lite) {
+    for (const sx of [1, -1]) {
+      const inl = mesh(new THREE.BoxGeometry(0.05, 0.22, 0.7), MAT.trim, sx * 1.0, 0.62, -0.75); inl.rotation.y = sx * 0.12; // entrada de ar
+      const y1 = mesh(new THREE.BoxGeometry(0.34, 0.04, 0.04), tail, sx * 0.62, 0.66, -2.36); y1.rotation.z = sx * 0.5;     // lanterna em Y
+      const y2 = mesh(new THREE.BoxGeometry(0.34, 0.04, 0.04), tail, sx * 0.62, 0.56, -2.36); y2.rotation.z = -sx * 0.5;
+      const hl = mesh(new THREE.BoxGeometry(0.42, 0.03, 0.05), headMat, sx * 0.62, 0.5, 2.24); hl.rotation.z = sx * 0.25;
+    }
+    mesh(new THREE.BoxGeometry(1.5, 0.08, 0.3), MAT.trim, 0, 0.36, 2.36);
   }
   return { group: g, body, wheels, steer, flames, paint, tail, pool, headColor: hc, rocket, armor, pivots, jets, mainJet, fold: 0 };
 }
@@ -1994,7 +2077,7 @@ function updatePlayer(dt) {
     const ratio = player.gear === -1 ? CAR.rev : CAR.gears[player.gear - 1];
     const rpm = Math.max(CAR.idle, Math.abs(vF) / CAR.rw * ratio * CAR.final * RPM_K);
     let drive = 0;
-    if (player.shiftT <= 0 && rpm < CAR.red) drive = (CAR.electric ? (rpm < 6500 ? 600 : Math.max(250, 600 - (rpm - 6500) * 0.25)) : torqueAt(rpm)) * CAR.tq * ratio * CAR.final / CAR.rw * 0.88 * driveIn;
+    if (player.shiftT <= 0 && rpm < CAR.red) drive = (CAR.electric ? (rpm < 6500 || CAR.armor ? 600 : Math.max(250, 600 - (rpm - 6500) * 0.25)) : torqueAt(rpm)) * CAR.tq * ratio * CAR.final / CAR.rw * 0.88 * driveIn;
     if (player.nitroOn) drive += CAR.nitroF;
     if (player.gear === -1) drive = -Math.min(drive, 6000);
     const brakeTotal = CAR.brake * m * G * brakeCmd;
@@ -2191,10 +2274,11 @@ function updateCars(dt) {
   pc.body.rotation.z += (clamp(latAcc * 0.006 * CAR.susp, -0.06, 0.06) - pc.body.rotation.z) * Math.min(1, 8 * dt);
   pc.body.rotation.x += (clamp(player.ax * 0.0045 * CAR.susp, -0.04, 0.035) - pc.body.rotation.x) * Math.min(1, 8 * dt);
   pc.body.position.y = -0.05 * (1 - CAR.susp);
+  if (pc.moto) { pc.body.position.y = 0; pc.body.rotation.z += (clamp(-latAcc * 0.05, -0.8, 0.8) - pc.body.rotation.z) * Math.min(1, 6 * dt); pc.body.rotation.x = 0; }
   const wheelSpinR = (player.vF * (1 + player.spin * 0.8)) * dt / CAR.rw;
   pc.wheels.forEach((w, k) => w.rotation.x += k < 2 ? player.vF * dt / CAR.rw : wheelSpinR);
   pc.steer.forEach(s => s.rotation.y = player.steer);
-  const flying = !!(city && city.flying && city.driving) || adFly;
+  const flying = !!(city && city.flying && city.driving);
   if (pc.rocket) { // rodas viram propulsores ao voar
     pc.fold += ((flying ? 1 : 0) - pc.fold) * Math.min(1, 4 * dt);
     pc.pivots.forEach(pv => { pv.rotation.z = -Math.sign(pv.position.x) * Math.PI / 2 * pc.fold; if (pc.fold > 0.05) pv.rotation.y = 0; });
@@ -2417,7 +2501,7 @@ function updateSound() {
   const onFoot = mode === 'city' && city && !city.driving;
   const rpm = player.rpmVis || CAR.idle;
   const thr = onFoot ? 0.1 : state === 'countdown' ? (input.gas ? 1 : 0.1) : (input.gas || 0.15);
-  const f = CAR.electric && !onFoot ? 70 + Math.abs(player.vF) * 6.5 : rpm / 60 * 2;
+  const f = CAR.electric && !onFoot ? 70 + Math.abs(player.vF) * 6.5 : rpm / 60 * 2 * (CAR.touro && !onFoot ? 1.5 : CAR.moto && !onFoot ? 1.9 : 1);
   audio.oscs.forEach(({ o, mult }) => o.frequency.setTargetAtTime(f * mult, t, 0.03));
   audio.eFilt.frequency.setTargetAtTime(300 + rpm * 0.28 + thr * 900, t, 0.04);
   audio.eGain.gain.setTargetAtTime(on ? (0.05 + thr * 0.07) * (onFoot ? 0.3 : 1) * (CAR.electric ? 0.45 : 1) : 0, t, 0.06);
@@ -2590,10 +2674,11 @@ function buildCity() {
     let type = 'predio';
     const r = rnd();
     if (i === 2 && j === 2) type = 'oficina';
+    else if (i === 4 && j === 8) type = 'cinema';
     else if ((i === 5 || i === 6) && (j === 5 || j === 6)) type = 'parque';
     else if (r < 0.09) type = 'parque';
     else if (r < 0.16) type = 'estacionamento';
-    lots.push({ i, j, x0, x1, z0, z1, type, solid: type === 'predio' || type === 'oficina', trees: [], h: type === 'oficina' ? 9.3 : 0 });
+    lots.push({ i, j, x0, x1, z0, z1, type, solid: type === 'predio' || type === 'oficina' || type === 'cinema', trees: [], h: type === 'oficina' ? 9.3 : type === 'cinema' ? 14.3 : 0 });
   }
 
   // asfalto da cidade inteira e grama em volta
@@ -2707,6 +2792,27 @@ function buildCity() {
   sign.position.set((of.x0 + of.x1) / 2, 11.5, of.z0 - 0.2); sign.rotation.y = Math.PI;
   const door = addMesh(new THREE.PlaneGeometry(14, 5), new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 0.8, 0.5).multiplyScalar(0.6) }));
   door.position.set((of.x0 + of.x1) / 2, 2.7, of.z0 - 0.05); door.rotation.y = Math.PI;
+  // cinema (letreiro luminoso e cartazes)
+  const cin = lots.find(L => L.type === 'cinema');
+  if (cin) {
+    const cx = (cin.x0 + cin.x1) / 2, cw = cin.x1 - cin.x0, cd = cin.z1 - cin.z0;
+    const cb = addMesh(new THREE.BoxGeometry(cw, 14, cd).translate(0, 7, 0), new THREE.MeshStandardMaterial({ color: 0x3a1420, roughness: 0.7 }), { shadow: true });
+    cb.position.set(cx, 0.18, (cin.z0 + cin.z1) / 2);
+    const marqueeTex = canvasTex(512, 128, (g, w, h) => {
+      g.fillStyle = '#0a0410'; g.fillRect(0, 0, w, h);
+      for (let x = 10; x < w; x += 22) { g.fillStyle = '#ffd36a'; g.beginPath(); g.arc(x, 10, 5, 0, 7); g.arc(x, h - 10, 5, 0, 7); g.fill(); }
+      g.fillStyle = '#ff3bd4'; g.font = 'italic 900 70px Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('🎬 CINEMA', w / 2, h / 2 + 4);
+    });
+    const marquee = addMesh(new THREE.BoxGeometry(26, 6, 1.2), [MAT.trim, MAT.trim, MAT.trim, MAT.trim, MAT.trim, new THREE.MeshBasicMaterial({ map: marqueeTex, color: new THREE.Color(1.8, 1.8, 1.8) })]);
+    marquee.position.set(cx, 10, cin.z0 - 0.7); marquee.rotation.y = Math.PI;
+    const posterCols = ['#ff6a1f', '#39c6ff', '#ffcf00', '#b8c4d4'];
+    ['ROADSTER FOGUETE', 'MOTO RELÂMPAGO', 'TOURO V12', 'BLINDADO X'].forEach((txt, k) => {
+      const pt = canvasTex(128, 192, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, posterCols[k]); gr.addColorStop(1, '#0a0410'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.fillStyle = '#fff'; g.font = 'italic 900 20px Arial'; g.textAlign = 'center'; txt.split(' ').forEach((wd, i2) => g.fillText(wd, w / 2, 140 + i2 * 22)); });
+      const po = addMesh(new THREE.PlaneGeometry(3.4, 5.1), new THREE.MeshBasicMaterial({ map: pt, color: new THREE.Color(1.4, 1.4, 1.4) }));
+      po.position.set(cin.x0 + 4 + k * ((cw - 8) / 3), 3.4, cin.z0 - 0.05); po.rotation.y = Math.PI;
+    });
+    cin.h = 14.3;
+  }
 
   // faixas: amarela dupla no meio de cada rua e faixas de pedestre nos cruzamentos
   const lines = [], walks = [];
@@ -3147,13 +3253,15 @@ const MISSIONS = [
   { type: 'entrega', icon: '📦', name: 'Entrega rápida', color: 0x29c6ff, lot: [4, 3], side: 1, reward: 1500 },
   { type: 'entrega', icon: '📦', name: 'Entrega frágil', color: 0x29c6ff, lot: [9, 9], side: 0, reward: 2000 },
   { type: 'fuga', icon: '🚨', name: 'Fuga da polícia', color: 0xff3b5c, lot: [7, 1], side: 1, reward: 2500 },
-  { type: 'oficina', icon: '🔧', name: 'Oficina', color: 0x7dffb8, lot: [2, 2], side: 0, reward: 0 }
+  { type: 'oficina', icon: '🔧', name: 'Oficina', color: 0x7dffb8, lot: [2, 2], side: 0, reward: 0 },
+  { type: 'cinema', icon: '🎬', name: 'Cinema', color: 0xff3bd4, lot: [4, 8], side: 0, reward: 0 }
 ];
 function startMission(mk) {
   const m = mk.def;
   const { B, NB } = CITY;
   const here = { x: mk.x, z: mk.z };
   if (m.type === 'oficina') { openGarage('parts', true); return; }
+  if (m.type === 'cinema') { player.vF = 0; player.vL = 0; openCinema(); return; }
   if (m.type === 'corrida') {
     let ni = Math.round(here.x / B), nj = Math.round(here.z / B);
     const cps = [];
@@ -3219,7 +3327,7 @@ function updateMissions(dt) {
     for (const mk of city.markers) {
       mk.g.userData.icon.position.y = 6.8 + Math.sin(performance.now() / 400) * 0.3;
       if (Math.hypot(mk.x - fx, mk.z - fz) < 4.5) {
-        if (!city.driving && mk.def.type !== 'oficina') city.prompt = 'Entre num carro para começar: ' + mk.def.name;
+        if (!city.driving && mk.def.type !== 'oficina' && mk.def.type !== 'cinema') city.prompt = 'Entre num carro para começar: ' + mk.def.name;
         else { city.prompt = `Aperte E para: ${mk.def.icon} ${mk.def.name}` + (mk.def.reward ? ` (prêmio ${brl(mk.def.reward)})` : ''); city.nearMarker = mk; }
       }
     }
@@ -3321,7 +3429,7 @@ function enterCar() {
 }
 function cityAction() {
   if (!city || state !== 'city') return;
-  if (city.nearMarker && !city.mission && (city.driving ? Math.abs(player.vF) < 12 : city.nearMarker.def.type === 'oficina')) { const mk = city.nearMarker; city.nearMarker = null; startMission(mk); return; }
+  if (city.nearMarker && !city.mission && (city.driving ? Math.abs(player.vF) < 12 : (city.nearMarker.def.type === 'oficina' || city.nearMarker.def.type === 'cinema'))) { const mk = city.nearMarker; city.nearMarker = null; startMission(mk); return; }
   if (city.driving) { if (city.flying || player.pos.y > 0.3) { toast('Pouse antes de sair (tecla V)'); return; } if (Math.abs(player.vF) > 6) { toast('Pare o carro para sair'); return; } exitCar(); }
   else enterCar();
 }
@@ -3836,7 +3944,7 @@ $('mp-code').addEventListener('input', e => { e.target.value = e.target.value.re
 // =====================================================================
 // MENUS, OFICINA, VISUAL E CARREIRA
 // =====================================================================
-const SCREENS = ['menu', 'phases', 'garage', 'pause', 'results', 'options', 'multi'];
+const SCREENS = ['menu', 'phases', 'garage', 'pause', 'results', 'options', 'multi', 'cinema'];
 let view = 'menu';
 function showScreen(name) {
   view = name;
@@ -3891,30 +3999,61 @@ function renderPhases() {
   });
 }
 
-// ---------- anúncio do próprio jogo (15 s) ----------
-const AD_SCENES = [
-  { k: 'Novo jogo de corrida', t: 'TURBO <em>NOTURNO</em>', d: 'Corridas de rua de noite, com física de carro de verdade.' },
-  { k: '20 fases', t: 'CIDADE, PRAIA, DESERTO E NEVE', d: 'Chuva, neblina e nevasca. Cada pista é diferente.' },
-  { k: 'Mundo aberto', t: 'CIDADE <em>LIVRE</em>', d: 'Saia do carro, pegue outros, fuja da polícia e faça missões.' },
-  { k: 'Exclusivo', t: 'ROADSTER <em>FOGUETE</em>', d: 'O carro elétrico que voa. Aperte V e decole por cima dos prédios.', fly: true, only: 'foguete' },
-  { k: 'Exclusivo', t: 'BLINDADO <em>X</em>', d: 'Picape de aço, mais de 350 km/h, antiderrapante. Voa e gruda na parede.', fly: true, only: 'blindado' },
-  { k: 'Multiplayer', t: 'JOGUE COM UM <em>AMIGO</em>', d: 'Crie uma sala, passe a senha e corram juntos. Turbo Noturno: jogue agora!' }
-];
-let adFly = false, adTimer = null, adBackupLook = null;
-function playAd(onReward, model = 'foguete', label = 'Roadster Foguete') {
+// ---------- anúncios do próprio jogo (15 s, um para cada veículo) ----------
+const GET = { k: 'Grátis', t: 'PEGUE O <em>SEU</em>', d: 'Turbo Noturno · Visual → Carro.' };
+const AD_SETS = {
+  trailer: { label: 'Turbo Noturno', model: 'esportivo', accent: '#ff6a1f', scenes: [
+    { k: 'Novo jogo de corrida', t: 'TURBO <em>NOTURNO</em>', d: 'Corridas de rua de noite, com física de carro de verdade.' },
+    { k: '20 fases', t: 'CIDADE, PRAIA, DESERTO E <em>NEVE</em>', d: 'Chuva, neblina e nevasca. Cada pista é diferente.' },
+    { k: 'Mundo aberto', t: 'CIDADE <em>LIVRE</em>', d: 'Saia do carro, pegue outros, fuja da polícia e faça missões.' },
+    { k: 'Na oficina', t: 'MOTOR, TURBO E <em>NITRO</em>', d: 'Monte o carro do básico ao avançado.' },
+    { k: 'Multiplayer', t: 'JOGUE COM UM <em>AMIGO</em>', d: 'Crie uma sala, passe a senha e corram juntos.' }] },
+  foguete: { label: 'Roadster Foguete', model: 'foguete', accent: '#ff6a1f', scenes: [
+    { k: 'Elétrico', t: 'ROADSTER <em>FOGUETE</em>', d: 'Do zero a 100 km/h num piscar de olhos.' },
+    { k: 'Aperte V', t: 'ELE <em>VOA</em>', d: 'As rodas viram propulsores e você decola.', fly: true },
+    { k: 'Por cima de tudo', t: 'ACIMA DOS <em>PRÉDIOS</em>', d: 'Fuja da polícia pelo céu da Cidade Livre.', fly: true },
+    { k: 'Turbo do foguete', t: 'NITRO <em>NO AR</em>', d: 'Shift acende o propulsor traseiro.', fly: true }, GET] },
+  blindado: { label: 'Blindado X', model: 'blindado', accent: '#b8c4d4', scenes: [
+    { k: 'Aço inoxidável', t: 'BLINDADO <em>X</em>', d: 'Uma picape feita para não parar.' },
+    { k: 'Mais de 350 km/h', t: 'MUITO <em>RÁPIDO</em>', d: 'Motor elétrico com força de sobra.' },
+    { k: 'Antiderrapante', t: 'NÃO <em>DERRAPA</em>', d: 'Curva colado no asfalto, até no freio de mão.' },
+    { k: 'Gruda na parede', t: 'SOBE NOS <em>PRÉDIOS</em>', d: 'Acelere contra a parede e suba.', fly: true }, GET] },
+  touro: { label: 'Touro V12', model: 'touro', accent: '#ffcf00', scenes: [
+    { k: 'Supercarro', t: 'TOURO <em>V12</em>', d: 'O carro mais rápido do jogo.' },
+    { k: 'Quase 400 km/h', t: 'MAIS RÁPIDO QUE O <em>BLINDADO</em>', d: 'Nenhum carro alcança.' },
+    { k: 'Doze cilindros', t: 'ESCUTE O <em>RONCO</em>', d: 'O motor grita a 7.800 rotações por minuto.' },
+    { k: 'Aerodinâmica', t: 'COLADO NO <em>CHÃO</em>', d: 'Baixo, largo e feito para curvas rápidas.' }, GET] },
+  moto: { label: 'Moto Relâmpago', model: 'moto', accent: '#39c6ff', scenes: [
+    { k: 'Duas rodas', t: 'MOTO <em>RELÂMPAGO</em>', d: 'Leve, rápida e ágil.' },
+    { k: 'Deita na curva', t: 'INCLINA DE <em>VERDADE</em>', d: 'O piloto deita a moto em cada curva.' },
+    { k: 'Arrancada', t: 'LEVE COMO <em>PENA</em>', d: 'Pesa só 260 kg e sai voando do sinal.' },
+    { k: 'Cidade Livre', t: 'PASSA ENTRE OS <em>CARROS</em>', d: 'Fuja do trânsito e da polícia.' }, { k: 'Grátis', t: 'PEGUE A <em>SUA</em>', d: 'Turbo Noturno · Visual → Carro.' }] }
+};
+let adFly = false, adTimer = null, adCar = null, adCtx = null;
+const adBase = new THREE.Vector3();
+function playAd(onReward, model = 'foguete', label, opts = {}) {
   initAudio();
-  const scenes = AD_SCENES.filter(sc => !sc.only || sc.only === model);
-  const total = 15, per = total / scenes.length;
-  $('ad-reward').innerHTML = 'Assista até o fim para ganhar o <b></b>'; $('ad-reward').querySelector('b').textContent = label;
-  $('ad-claim').textContent = model === 'blindado' ? 'PEGAR O BLINDADO X ⚡' : 'PEGAR O FOGUETE 🚀';
-  let t = 0, shown = -1;
-  const t0 = performance.now();
-  adBackupLook = JSON.parse(JSON.stringify(save.look));
-  disposeCar(player.car); player.car = makeCar(Object.assign({}, save.look, { model })); updateCars(0);
+  const set = AD_SETS[model] || AD_SETS.trailer, scenes = set.scenes;
+  label = label || set.label;
+  const total = 15, per = total / scenes.length, t0 = performance.now();
+  let shown = -1;
+  adCtx = { prevState: state, cinema: !!opts.cinema, onReward };
+  // carro do anúncio no lugar do carro (ou de quem está a pé)
+  adBase.copy(city && !city.driving ? new THREE.Vector3(city.walker.x, 0, city.walker.z) : player.car.group.position).setY(0);
+  const look = Object.assign({}, city ? city.curLook : save.look, { model: set.model });
+  adCar = makeCar(look); adCar.group.position.copy(adBase); adCar.group.rotation.y = player.h;
+  player.car.group.visible = false; if (city && city.walker) city.walker.hm.g.visible = false;
+  if (city) { city.markers.forEach(mk => mk.g.visible = false); if (city.objMarker) city.objMarker.visible = false; }
+  state = 'menu';
+  $('ad').style.setProperty('--ad-accent', set.accent);
   $('ad').classList.remove('hidden'); $('ad-claim').classList.add('hidden'); $('ad-reward').classList.remove('hidden');
+  $('ad-close').classList.toggle('hidden', !opts.cinema);
+  $('ad-reward').innerHTML = opts.cinema ? 'Cinema Turbo · <b></b>' : 'Assista até o fim para ganhar: <b></b>';
+  $('ad-reward').querySelector('b').textContent = label;
+  $('ad-claim').textContent = opts.cinema ? 'VOLTAR AO CINEMA' : `PEGAR: ${label.toUpperCase()}`;
   showScreen('ad');
   const tick = () => {
-    t = (performance.now() - t0) / 1000;
+    const t = (performance.now() - t0) / 1000;
     const i = Math.min(scenes.length - 1, Math.floor(t / per));
     if (i !== shown) {
       shown = i; const sc = scenes[i], el = $('ad-scene');
@@ -3922,18 +4061,57 @@ function playAd(onReward, model = 'foguete', label = 'Roadster Foguete') {
       void el.offsetWidth; el.classList.add('in');
       adFly = !!sc.fly; beep(i === scenes.length - 1 ? 1046 : 660 + i * 80, 0.15);
     }
-    $('ad-time').textContent = t < total ? `Recompensa em ${Math.ceil(total - t)} s` : 'Pronto!';
+    $('ad-time').textContent = t < total ? (opts.cinema ? `${Math.ceil(total - t)} s` : `Recompensa em ${Math.ceil(total - t)} s`) : 'Fim';
     $('ad-bar').style.width = Math.min(100, t / total * 100) + '%';
-    if (t >= total) { clearInterval(adTimer); adTimer = null; adFly = false; $('ad-reward').classList.add('hidden'); $('ad-claim').classList.remove('hidden'); cash(); }
+    if (t >= total) { clearInterval(adTimer); adTimer = null; adFly = false; $('ad-reward').classList.add('hidden'); $('ad-claim').classList.remove('hidden'); if (!opts.cinema) cash(); }
   };
-  adTimer = setInterval(tick, 100); tick();
-  $('ad-claim').onclick = () => {
-    $('ad').classList.add('hidden');
-    disposeCar(player.car); player.car = makeCar(adBackupLook); updateCars(0);
-    onReward();
-    renderGarage(); showScreen('garage');
-  };
+  clearInterval(adTimer); adTimer = setInterval(tick, 100); tick();
 }
+function finishAd(rewarded) {
+  clearInterval(adTimer); adTimer = null; adFly = false;
+  $('ad').classList.add('hidden');
+  if (adCar) disposeCar(adCar); adCar = null;
+  player.car.group.visible = true; if (city && city.walker && !city.driving) city.walker.hm.g.visible = true;
+  if (city) { city.markers.forEach(mk => mk.g.visible = !city.mission); if (city.objMarker) city.objMarker.visible = true; }
+  const ctx = adCtx; adCtx = null;
+  if (ctx.cinema) { openCinema(); return; }
+  state = ctx.prevState;
+  if (rewarded && ctx.onReward) ctx.onReward();
+  renderGarage(); showScreen('garage');
+}
+$('ad-claim').onclick = () => finishAd(true);
+$('ad-close').onclick = () => finishAd(false);
+function updateAdCar(dt) {
+  const c = adCar; if (!c) return;
+  c.wheels.forEach(w => w.rotation.x += dt * 6);
+  const fly = adFly && (c.rocket);
+  if (c.rocket) {
+    c.fold += ((fly ? 1 : 0) - c.fold) * Math.min(1, 4 * dt);
+    c.pivots.forEach(pv => { pv.rotation.z = -Math.sign(pv.position.x) * Math.PI / 2 * c.fold; });
+    const fl = 0.75 + Math.random() * 0.5;
+    c.jets.forEach(j => { j.visible = c.fold > 0.6; j.scale.set(1, fl, 1); });
+    if (c.mainJet) { c.mainJet.visible = fly; c.mainJet.scale.set(1, fl, 1); }
+  }
+  if (c.moto) c.body.rotation.z = Math.sin(performance.now() / 700) * 0.45;
+  c.group.position.y += ((fly ? 2.2 + Math.sin(performance.now() / 400) * 0.25 : 0) - c.group.position.y) * Math.min(1, 3 * dt);
+}
+
+// ---------- cinema da Cidade Livre ----------
+function openCinema() {
+  state = 'cinema';
+  const grid = $('cinema-grid'); grid.innerHTML = '';
+  Object.entries(AD_SETS).forEach(([key, set]) => {
+    const b = document.createElement('button'); b.className = 'tile';
+    const n = document.createElement('div'); n.className = 'n'; n.textContent = '▶';
+    const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = key === 'trailer' ? 'Trailer: Turbo Noturno' : set.label;
+    const ic = document.createElement('div'); ic.className = 'ic'; ic.textContent = '15 s';
+    b.append(n, nm, ic);
+    b.onclick = () => { $('cinema').classList.add('hidden'); state = 'city'; playAd(null, key, set.label, { cinema: true }); };
+    grid.appendChild(b);
+  });
+  showScreen('cinema');
+}
+$('cinema-exit').onclick = () => { state = 'city'; showScreen(null); };
 let garageMode = 'parts';
 let garageFromCity = false;
 function openGarage(gm, fromCity = false) {
@@ -4139,7 +4317,7 @@ function frame() {
   readInput();
   if (state === 'menu') {
     menuAngle += dt * (view === 'ad' ? 0.55 : 0.2);
-    const cp = player.car.group.position;
+    const cp = view === 'ad' && adCar ? adBase : player.car.group.position;
     const inGarage = view === 'garage';
     const W = window.innerWidth, H = window.innerHeight, portrait = W <= 700;
     const dist = inGarage ? (portrait ? 9.5 : 6.4) : portrait ? 9 : 7;
@@ -4153,8 +4331,10 @@ function frame() {
     else if (view === 'menu') camera.setViewOffset(W, H, 0, H * 0.3, W, H);
     else camera.clearViewOffset();
     camera.fov = 45; camera.updateProjectionMatrix();
-    updateCars(view === 'ad' ? dt : 0);
-    if (view === 'ad') { const g = player.car.group; g.position.y = adFly ? 2.2 + Math.sin(performance.now() / 400) * 0.25 : 0; }
+    updateCars(0);
+    if (view === 'ad') updateAdCar(dt);
+  } else if (state === 'cinema') {
+    // parado no cinema
   } else if (state === 'city') {
     if (camera.view && camera.view.enabled) camera.clearViewOffset();
     cityUpdate(dt);
