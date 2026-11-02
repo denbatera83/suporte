@@ -48,6 +48,20 @@ No menu, o botão **🌆 Cidade Livre** abre uma cidade grande para explorar à 
 
 O dinheiro ganho na cidade é o mesmo da carreira, então dá para juntar dinheiro na cidade e gastar na oficina.
 
+## Multiplayer (2 jogadores)
+
+No menu, **Multiplayer** (ou em **Opções → Ativar multiplayer**):
+
+1. Uma pessoa digita o nome e toca em **Criar sala**. Aparece uma **senha de 4 números** em cima.
+2. No outro celular ou computador, a outra pessoa abre o jogo, vai em **Multiplayer**, digita a senha e toca em **Entrar na sala**.
+3. Quem criou a sala escolhe **Corrida** (e a pista) ou **Cidade Livre** e toca em **Começar**. Os dois entram juntos.
+
+Na corrida, só vocês dois disputam (sem os rivais do computador). Na Cidade Livre, um vê o outro dirigindo, voando com o Roadster Foguete ou andando a pé. O nome de cada um aparece em cima do carro, e o amigo aparece em laranja no mapa.
+
+Como funciona a conexão:
+- **Pelo link do Claude:** a sala usa a sala ao vivo do próprio Claude. A outra pessoa precisa conseguir abrir o link logada no Claude (compartilhe o jogo com ela pelo botão Compartilhar).
+- **Pelo arquivo `index.html`:** os dois aparelhos se conectam direto pela internet (PeerJS). Os dois precisam estar com internet. Em algumas redes (por exemplo, certas redes de empresa), a conexão direta pode ser bloqueada.
+
 ## Modo carreira: 20 fases
 
 Cada fase tem uma pista diferente, um cenário, uma hora do dia e um clima. Chegar em 1º, 2º ou 3º libera a próxima fase, e toda corrida paga um prêmio em dinheiro. Os rivais ficam mais rápidos a cada fase.
