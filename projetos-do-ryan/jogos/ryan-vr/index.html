@@ -81,7 +81,7 @@
       <button id="btn-tela" class="sec">📱 Ver sem óculos</button>
     </div>
     <p class="nota">Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 1.4</p>
+    <p class="nota" id="versao">Ryan VR 1.5</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -247,9 +247,9 @@ const APP = /\bwv\b/.test(navigator.userAgent);
 const Q = new URLSearchParams(location.search);
 const AJ = (() => { // ajustes guardados no celular (valem também para o Blocos VR)
   const g = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
-  return { ipd: g('ryanvr-ipd', 0.064), lente: g('ryanvr-lente', true), fuse: g('ryanvr-fuse', 1.2), musica: g('ryanvr-musica', true), maos: g('ryanvr-maos', true), camFov: g('ryanvr-camfov2', 0) };
+  return { ipd: g('ryanvr-ipd', 0.064), lente: g('ryanvr-lente', true), fuse: g('ryanvr-fuse', 1.2), musica: g('ryanvr-musica', true), maos: g('ryanvr-maos', true), camFov: g('ryanvr-camfov2', 0), distTV: g('ryanvr-disttv', 2.2) };
 })();
-const salva = () => { try { localStorage.setItem('ryanvr-ipd', JSON.stringify(AJ.ipd)); localStorage.setItem('ryanvr-lente', JSON.stringify(AJ.lente)); localStorage.setItem('ryanvr-fuse', JSON.stringify(AJ.fuse)); localStorage.setItem('ryanvr-musica', JSON.stringify(AJ.musica)); localStorage.setItem('ryanvr-maos', JSON.stringify(AJ.maos)); localStorage.setItem('ryanvr-camfov2', JSON.stringify(AJ.camFov)); } catch (e) {} };
+const salva = () => { try { localStorage.setItem('ryanvr-ipd', JSON.stringify(AJ.ipd)); localStorage.setItem('ryanvr-lente', JSON.stringify(AJ.lente)); localStorage.setItem('ryanvr-fuse', JSON.stringify(AJ.fuse)); localStorage.setItem('ryanvr-musica', JSON.stringify(AJ.musica)); localStorage.setItem('ryanvr-maos', JSON.stringify(AJ.maos)); localStorage.setItem('ryanvr-camfov2', JSON.stringify(AJ.camFov)); localStorage.setItem('ryanvr-disttv', JSON.stringify(AJ.distTV)); } catch (e) {} };
 // reconhecimento da mão (MediaPipe, do Google): no app vem de dentro do APK
 const MP_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/';
 const MP_MODELO = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
@@ -349,6 +349,13 @@ function capa(id) {
     g.fillStyle = '#1a1a24'; g.fillRect(0, 250, W, 110);
     for (let k = 0; k < 2; k++) { g.strokeStyle = k ? 'rgba(255,60,60,.9)' : 'rgba(255,220,180,.9)'; g.lineWidth = 6; g.beginPath(); g.moveTo(0, 300 + k * 26); g.lineTo(W, 290 + k * 30); g.stroke(); }
     g.fillStyle = '#ff6a1f'; g.font = FONTE_T(64); g.textAlign = 'center'; g.fillText('TURBO', 320, 120);
+  } else if (id === 'corrida') {
+    g.fillStyle = grad(0, H, [[0, '#4a9be8'], [0.55, '#ffe3c4'], [0.56, '#5fae4a'], [1, '#3f8a34']]); g.fillRect(0, 0, W, H);
+    g.fillStyle = '#3a3c42'; g.beginPath(); g.moveTo(290, 200); g.lineTo(350, 200); g.lineTo(560, H); g.lineTo(80, H); g.fill();
+    g.fillStyle = '#ffd23d'; for (let k = 0; k < 5; k++) { const y = 210 + k * 32, w2 = 3 + k * 2; g.fillRect(320 - w2 / 2 - 40 - k * 18, y, w2, 16); g.fillRect(320 - w2 / 2 + 40 + k * 18, y, w2, 16); }
+    caixa(g, 360, 230, 50, 40, 8, '#d83a3a'); caixa(g, 250, 250, 60, 46, 8, '#3a7bd8');
+    g.strokeStyle = '#222'; g.lineWidth = 16; g.beginPath(); g.arc(320, 380, 90, Math.PI * 1.05, Math.PI * 1.95); g.stroke();
+    g.font = '64px serif'; g.textAlign = 'center'; g.fillText('✋', 200, 330); g.fillText('🪙', 470, 200);
   } else if (id === 'baloes') {
     g.fillStyle = grad(0, H, [[0, '#f6e7d8'], [0.7, '#e9d3c0'], [1, '#c9a98f']]); g.fillRect(0, 0, W, H);
     g.fillStyle = '#d9c2ad'; g.fillRect(0, 250, W, 110); g.fillStyle = '#8a6a55'; g.fillRect(420, 120, 160, 130); g.fillStyle = '#2b2f3a'; g.fillRect(432, 132, 136, 90);
@@ -369,6 +376,7 @@ const VIDEOS = [
   { id: 'aurora', titulo: 'Aurora no Lago', dur: 75, data: '3 de nov. de 2026', tags: ['360°', 'Noite', 'Relaxar'], desc: 'Uma noite tranquila à beira de um lago, com a aurora boreal dançando no céu, vaga-lumes e o reflexo das estrelas na água.' }
 ];
 const JOGOS = [
+  { id: 'corrida', titulo: 'Corrida VR', tipo: 'Dirija com a mão (câmera)', tags: ['Carro', 'Mão de verdade', '90 s'], desc: 'Você está dentro do carro numa estrada. Gire a mão como se segurasse um volante para virar, feche a mão (ou faça a pinça) para o turbo. Desvie dos carros e pegue moedas. Sem câmera, vire a cabeça para dirigir.', interno: true, vr: true },
   { id: 'baloes', titulo: 'Estoura Balões', tipo: 'Jogo com a mão (câmera)', tags: ['Mão de verdade', 'Modo Casa', '60 s'], desc: 'Balões coloridos aparecem na sua frente e você estoura com o dedo de verdade! Ligue o Modo Casa (📷) para ver a sua casa e usar a mão. Sem câmera, dá para estourar olhando.', interno: true, vr: true },
   { id: 'blocos', titulo: 'Blocos VR', tipo: 'Jogo em VR', tags: ['VR', 'Cores', '3 níveis'], desc: 'Pegue os blocos coloridos com a mão e entregue cada um na caixa da mesma cor. Funciona com o olhar e com o botão do Cardboard.', url: '../blocos-vr/index.html', vr: true },
   { id: 'turbo', titulo: 'Turbo Noturno', tipo: 'Tela normal (sem óculos)', tags: ['Corrida', 'Cidade Livre', 'Multiplayer'], desc: 'Corridas à noite, 20 fases, Cidade Livre, carros especiais e multiplayer. Este jogo é de tela normal: tire o celular do Cardboard para jogar.', url: '../turbo-noturno/index.html', vr: false }
@@ -396,8 +404,9 @@ class Painel {
     this.el.object3D.position.set(0, o.y, 0); this.el.object3D.rotation.y = -(o.ang || 0);
     if (o.inclina) this.el.object3D.rotation.x = o.inclina;
     (o.pai || document.querySelector('a-scene')).appendChild(this.el);
-    this.botoes = []; this.hover = null; this.desenhar = o.desenhar; PAINEIS.push(this);
+    this.botoes = []; this.hover = null; this.desenhar = o.desenhar; PAINEIS.push(this); this.o = o;
   }
+  setRaio(r) { this.mesh.geometry.dispose(); this.mesh.geometry = geoCurva(this.o.larg, this.o.alt, r); this.o.raio = r; }
   render() { const g = this.g; g.clearRect(0, 0, this.W, this.H); this.botoes = []; this.desenhar(g, this); this.t.needsUpdate = true; }
   botao(id, x, y, w, h, acao) { this.botoes.push({ id, x, y, w, h, acao }); return this.hover === id; }
   acha(uv) { const px = uv.x * this.W, py = (1 - uv.y) * this.H; return this.botoes.find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) || null; }
@@ -710,7 +719,7 @@ AFRAME.registerComponent('ryan-vr', {
       const muda = (k, v) => { AJ[k] = v; salva(); const cb = this.el.components.cardboard; if (cb) { cb.distancia = AJ.ipd; cb.lenteLigada(AJ.lente); } volumeMusica(); this.renderTudo(); };
       linha(160, 'Distância dos olhos', (AJ.ipd * 1000).toFixed(0) + ' mm', () => muda('ipd', Math.max(0.054, AJ.ipd - 0.002)), () => muda('ipd', Math.min(0.074, AJ.ipd + 0.002)));
       linha(270, 'Correção da lente', AJ.lente ? 'Ligada' : 'Desligada', () => muda('lente', !AJ.lente), () => muda('lente', !AJ.lente));
-      linha(380, 'Tempo do olhar', AJ.fuse.toFixed(1) + ' s', () => muda('fuse', Math.max(0.6, +(AJ.fuse - 0.2).toFixed(1))), () => muda('fuse', Math.min(2.4, +(AJ.fuse + 0.2).toFixed(1))));
+      linha(380, 'Distância da TV', AJ.distTV.toFixed(1) + ' m', () => { muda('distTV', Math.max(1.4, +(AJ.distTV - 0.2).toFixed(1))); this.raioAtual = 0; this.aplicaDistancia(); }, () => { muda('distTV', Math.min(3.2, +(AJ.distTV + 0.2).toFixed(1))); this.raioAtual = 0; this.aplicaDistancia(); });
       linha(490, 'Modo Casa (câmera)', this.casa ? 'Ligado' : 'Desligado', () => this.ligarCasa(!this.casa), () => this.ligarCasa(!this.casa));
       linha(600, 'Mão como controle', AJ.maos ? 'Ligada' : 'Desligada', () => { muda('maos', !AJ.maos); if (AJ.maos && this.casa) this.ligaMaos(); }, () => { muda('maos', !AJ.maos); if (AJ.maos && this.casa) this.ligaMaos(); });
       const fovAtual = AJ.camFov || 0;
@@ -851,10 +860,10 @@ AFRAME.registerComponent('ryan-vr', {
   // ---------- abrir conteúdo ----------
   abrir(it) {
     if (it.dur) return this.abrirExperiencia(it);
-    if (it.interno) return this.iniciarBaloes();
+    if (it.interno) return it.id === 'corrida' ? this.iniciarCorrida() : this.iniciarBaloes();
     som('abre');
     const vr = this.el.components.cardboard.ativo;
-    const url = it.url + (it.vr && vr ? '?vr=1' : '');
+    const url = it.url + (it.vr && vr ? '?vr=1' : '') + (it.vr && vr && AJ.maos && MAO.hl ? '&mao=1' : '');
     if (!it.vr && vr) { this.el.components.cardboard.sair(); }
     this.transicao(() => { location.href = url; });
   },
@@ -908,7 +917,22 @@ AFRAME.registerComponent('ryan-vr', {
     this.tvRT = new THREE.WebGLRenderTarget(960, 540, { samples: this.el.renderer.capabilities.isWebGL2 ? 2 : 0 });
     const tela = new THREE.Mesh(geoCurva(1.56, 0.8775, 1.545, 36), new THREE.MeshBasicMaterial({ map: this.tvRT.texture, toneMapped: false, side: THREE.DoubleSide }));
     tela.renderOrder = 6; tela.visible = false; g.add(tela);
-    this.tv = g; this.tvTela = tela; this.tvMoldura = moldura;
+    this.tv = g; this.tvTela = tela; this.tvMoldura = moldura; this.tvAura = aura; this.tvLed = led;
+    this.aplicaDistancia();
+  },
+  // distância da TV: no Modo TV fica mais longe (mais fácil de apontar com a mão); o tamanho real não muda
+  aplicaDistancia() {
+    const r = this.casa ? AJ.distTV : 1.55;
+    if (this.raioAtual === r) return; this.raioAtual = r;
+    this.pCentro.setRaio(r); this.pMenu.setRaio(r); this.pLado.setRaio(r); this.pDock.setRaio(r - 0.05);
+    const lado = (1.56 / 2 + 0.06 + 0.62 / 2) / r;
+    this.pMenu.el.object3D.rotation.y = lado; this.pLado.el.object3D.rotation.y = -lado;
+    if (this.tv) {
+      this.tvMoldura.geometry.dispose(); this.tvMoldura.geometry = geoCurva(1.66, 1.06, r + 0.02, 36);
+      this.tvAura.geometry.dispose(); this.tvAura.geometry = geoCurva(2.1, 1.45, r + 0.05, 24);
+      this.tvTela.geometry.dispose(); this.tvTela.geometry = geoCurva(1.56, 0.8775, r - 0.005, 36);
+      this.tvLed.position.z = -(r + 0.015);
+    }
   },
   mostraTV(passando, mapa) {
     this.montaTV();
@@ -975,8 +999,8 @@ AFRAME.registerComponent('ryan-vr', {
   // =====================================================================
   // MODO CASA: a câmera de trás mostra a sua casa; os painéis flutuam como uma TV
   // =====================================================================
-  async ligarCasa(ligar) {
-    if (!ligar) { this.desligaCamera(); this.casa = false; this.atualizaFundo(); this.renderTudo(); this.aviso('Modo Casa desligado'); return; }
+  async ligarCasa(ligar, escondida) {
+    if (!ligar) { this.desligaCamera(); this.casa = false; this.aplicaDistancia(); this.atualizaFundo(); this.renderTudo(); this.aviso('Modo Casa desligado'); return; }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { this.aviso('Este navegador não deixa usar a câmera'); return; }
     this.aviso('Permita a câmera na tela do celular');
     try {
@@ -990,8 +1014,8 @@ AFRAME.registerComponent('ryan-vr', {
       this.camPlano = plano; this.cam.object3D.add(plano);
       this.ajustaPlano();
       v.addEventListener('resize', () => this.ajustaPlano());
-      this.casa = true; this.montaTV(); this.atualizaFundo(); this.renderTudo();
-      this.aviso(AJ.maos ? 'Modo Casa! Mostre a mão para a câmera' : 'Modo Casa ligado');
+      if (escondida) { this.camSo = true; plano.visible = false; this.aviso('Mostre a mão para a câmera'); }
+      else { this.casa = true; this.montaTV(); this.aplicaDistancia(); this.atualizaFundo(); this.renderTudo(); this.aviso(AJ.maos ? 'Modo Casa! Mostre a mão para a câmera' : 'Modo Casa ligado'); }
       if (AJ.maos) this.ligaMaos();
     } catch (e) {
       this.aviso(e && e.name === 'NotAllowedError' ? 'A câmera não foi permitida' : 'Não deu para abrir a câmera');
@@ -1018,7 +1042,7 @@ AFRAME.registerComponent('ryan-vr', {
   atualizaFundo() {
     // no Modo Casa some o céu e o deque; nas experiências 360° a câmera fica escondida (imersão total)
     const midia = this.estado === 'midia' && !this.naTV;
-    if (this.camPlano) this.camPlano.visible = this.casa && !midia;
+    if (this.camPlano) this.camPlano.visible = this.casa && !midia && this.estado !== 'corrida';
     if (this.tv) this.tv.visible = this.casa && !midia && (this.estado === 'saguao' || this.naTV);
     if (this.luzes) this.luzes.visible = !midia; // as experiências têm a própria luz
     this.saguao.visible = !midia && !this.casa && this.estado !== 'baloes-casa';
@@ -1054,8 +1078,10 @@ AFRAME.registerComponent('ryan-vr', {
     const antes = MAO.pinca;
     if (!MAO.pinca && razao < 0.32) MAO.pinca = true; else if (MAO.pinca && razao > 0.5) MAO.pinca = false;
     if (MAO.pinca && !antes) MAO.pincou = true;
+    let dobrados = 0; [[8, 5], [12, 9], [16, 13], [20, 17]].forEach(([p, b]) => { if (d(p, 0) < d(b, 0) * 1.15) dobrados++; });
+    MAO.fechada = dobrados >= 3;
   },
-  maoVisivel() { return this.casa && MAO.lm && performance.now() - MAO.vistoEm < 400; },
+  maoVisivel() { return (this.casa || this.camSo) && MAO.lm && performance.now() - MAO.vistoEm < 400; },
   pontoNaImagem(x, y, dist) {
     // ponto da imagem da câmera → posição no mundo, na distância pedida (a partir do olho)
     const P = new THREE.Vector3((x - 0.5) * this.camW, (0.5 - y) * this.camH, -this.camD).normalize().multiplyScalar(dist);
@@ -1169,6 +1195,7 @@ AFRAME.registerComponent('ryan-vr', {
     if (this.bt >= this.bdur && !this.baloes.length) this.fimBaloes();
   },
   fimBaloes() {
+    this.fimDe = 'baloes';
     this.estado = 'baloes-fim'; this.balHud.visible = false; som('abre');
     let rec = 0; try { rec = +localStorage.getItem('ryanvr-baloes-recorde') || 0; } catch (e) {}
     this.bNovoRec = this.bpontos > rec; if (this.bNovoRec) try { localStorage.setItem('ryanvr-baloes-recorde', this.bpontos); } catch (e) {}
@@ -1181,11 +1208,11 @@ AFRAME.registerComponent('ryan-vr', {
   desenhaFim(g, p) {
     caixa(g, 0, 0, p.W, p.H, 40, UI.fundo);
     texto(g, this.bNovoRec ? '🏆 Novo recorde!' : 'Fim de jogo!', p.W / 2, 100, FONTE_T(64), UI.txt, 'center');
-    texto(g, `🎈 ${this.bpontos} balões`, p.W / 2, 190, FONTE(800, 56), UI.acc2, 'center');
+    texto(g, this.fimDe === 'corrida' ? `🏁 ${this.bpontos} pontos` : `🎈 ${this.bpontos} balões`, p.W / 2, 190, FONTE(800, 56), UI.acc2, 'center');
     texto(g, `Recorde: ${this.bRec}`, p.W / 2, 245, FONTE(700, 32), UI.sub, 'center');
-    const hv1 = p.botao('denovo', 60, 320, 370, 150, () => this.iniciarBaloes());
+    const hv1 = p.botao('denovo', 60, 320, 370, 150, () => this.fimDe === 'corrida' ? this.iniciarCorrida() : this.iniciarBaloes());
     caixa(g, 60, 320, 370, 150, 30, hv1 ? '#ffc58a' : UI.acc2); texto(g, '🔁 Jogar de novo', 245, 410, FONTE(800, 38), '#120d2e', 'center');
-    const hv2 = p.botao('sairb', 470, 320, 370, 150, () => this.sairBaloes());
+    const hv2 = p.botao('sairb', 470, 320, 370, 150, () => this.fimDe === 'corrida' ? this.sairCorrida() : this.sairBaloes());
     caixa(g, 470, 320, 370, 150, 30, hv2 ? UI.cardHover : UI.card, hv2 ? UI.acc : null, 5); texto(g, '🏠 Menu', 655, 410, FONTE(800, 38), UI.txt, 'center');
   },
   sairBaloes() {
@@ -1193,6 +1220,177 @@ AFRAME.registerComponent('ryan-vr', {
       if (this.balGrupo) { this.baloes.forEach(b => this.balGrupo.remove(b.g)); this.baloes = []; }
       if (this.balHud) this.balHud.visible = false; if (this.pFim) this.pFim.visivel = false;
       this.estado = 'saguao'; this.atualizaFundo();
+      [this.pMenu, this.pCentro, this.pLado, this.pDock].forEach(p => p.visivel = true);
+      this.secao = 'jogos'; this.detalhe = null; this.renderTudo(); tocaTrilha('saguao');
+    });
+  },
+
+  // =====================================================================
+  // CORRIDA VR: você dirige com a mão (gire como um volante; feche a mão para o turbo)
+  // =====================================================================
+  async iniciarCorrida() {
+    // a câmera escaneia a mão sem aparecer (você fica na estrada, não na sua casa)
+    if (AJ.maos && !this.camVideo) await this.ligarCasa(true, true);
+    this.transicao(() => {
+      this.estado = 'corrida'; this.saguao.visible = false; if (this.luzes) this.luzes.visible = false;
+      if (this.camPlano) this.camPlano.visible = false; if (this.tv) this.tv.visible = false;
+      [this.pMenu, this.pCentro, this.pLado, this.pDock].forEach(p => p.visivel = false);
+      if (this.pFim) this.pFim.visivel = false;
+      this.montaCorrida();
+      const d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d); this.cyaw0 = Math.atan2(d.x, d.z);
+      Object.assign(this.cr, { x: 0, vx: 0, v: 18, dist: 0, pegas: 0, vidas: 3, t: 0, turbo: 0, batida: 0, fim: false, direcao: 0, turboPronto: true });
+      this.cr.grupo.visible = true; this.cr.grupo.rotation.y = this.cyaw0;
+      this.cr.carros.forEach((c, i) => this.reposCarro(c, -60 - i * 45));
+      this.cr.moedas.forEach((m, i) => this.reposMoeda(m, -30 - i * 17));
+      this.crHud.visible = true; this.hudCorrida();
+      tocaTrilha('montanha'); this.motor(true);
+      this.aviso(this.maoVisivel() ? 'Gire a mão como um volante!' : AJ.maos && this.camVideo ? 'Mostre a mão: gire como um volante' : 'Vire a cabeça para os lados para dirigir');
+    });
+  },
+  montaCorrida() {
+    if (this.cr) return;
+    const G = new THREE.Group(); this.el.object3D.add(G);
+    G.add(ceuGradiente([[0, '#4a9be8'], [0.46, '#bfe2ff'], [0.52, '#ffe3c4'], [1, '#6b8f4e']], 300));
+    const grama = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), materialPadrao(0x5fae4a)); grama.rotation.x = -Math.PI / 2; grama.position.y = -0.02; G.add(grama);
+    const pistaTex = tex(256, 512, (g, w, h) => {
+      g.fillStyle = '#3a3c42'; g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 4000; i++) { const c = 50 + Math.random() * 30; g.fillStyle = `rgb(${c},${c},${c + 4})`; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+      g.fillStyle = '#f2f2f2'; g.fillRect(6, 0, 8, h); g.fillRect(w - 14, 0, 8, h);
+      g.fillStyle = '#ffd23d'; for (const x of [w / 3, 2 * w / 3]) for (let y = 0; y < h; y += 128) g.fillRect(x - 4, y, 8, 64);
+    });
+    pistaTex.wrapT = THREE.RepeatWrapping; pistaTex.repeat.set(1, 30);
+    const pista = new THREE.Mesh(new THREE.PlaneGeometry(9, 300), new THREE.MeshStandardMaterial({ map: pistaTex, roughness: 0.85 })); pista.rotation.x = -Math.PI / 2; pista.position.set(0, 0, -140); G.add(pista);
+    // árvores, postes e montanhas que passam
+    const cenario = [];
+    const arv = materialPadrao(0x2f8a4a, { flatShading: true }), tronco = materialPadrao(0x6b4a2f), poste = materialPadrao(0xdddddd);
+    for (let i = 0; i < 26; i++) {
+      const g = new THREE.Group(), lado = i % 2 ? 1 : -1;
+      if (i % 3) { const c = new THREE.Mesh(new THREE.ConeGeometry(1.4, 4, 7), arv); c.position.y = 3; const t = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.25, 1.2, 6), tronco); t.position.y = 0.6; g.add(c, t); }
+      else { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 5, 6), poste); p.position.y = 2.5; const l = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(2, 1.8, 1.2), toneMapped: false })); l.position.set(-lado * 0.6, 5, 0); g.add(p, l); }
+      g.position.set(lado * (6.5 + Math.random() * 6), 0, -i * 11.5); G.add(g); cenario.push(g);
+    }
+    for (let i = 0; i < 10; i++) { const a = (i / 10 - 0.5) * 2.6, m = new THREE.Mesh(new THREE.ConeGeometry(30 + Math.random() * 20, 40 + Math.random() * 40, 5), materialPadrao(0x8d9fd6, { flatShading: true })); m.position.set(Math.sin(a) * 200, 10, -Math.cos(a) * 200); G.add(m); }
+    // carros na pista para desviar
+    const cores = [0xd83a3a, 0x3a7bd8, 0xf2b200, 0x2fae6a, 0x9a4ad8, 0xf28a2a];
+    const carros = cores.map(c => {
+      const g = new THREE.Group(), m = materialPadrao(c, { roughness: 0.35, metalness: 0.3 });
+      const corpo = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.6, 4), m); corpo.position.y = 0.55; g.add(corpo);
+      const cab = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 2), materialPadrao(0x1d2430, { roughness: 0.2, metalness: 0.6 })); cab.position.set(0, 1.05, 0.2); g.add(cab);
+      const luz = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.5, 0.2, 0.2), toneMapped: false });
+      for (const s of [-0.6, 0.6]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 0.05), luz); l.position.set(s, 0.65, 2.01); g.add(l); }
+      for (const [x, z] of [[-0.85, 1.3], [0.85, 1.3], [-0.85, -1.3], [0.85, -1.3]]) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.33, 0.33, 0.25, 14), materialPadrao(0x111111)); r.rotation.z = Math.PI / 2; r.position.set(x, 0.33, z); g.add(r); }
+      G.add(g); return { g, v: 0, faixa: 0 };
+    });
+    const moedaMat = new THREE.MeshStandardMaterial({ color: 0xffcc33, metalness: 0.8, roughness: 0.25, emissive: 0x553300 });
+    const moedas = []; for (let i = 0; i < 8; i++) { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.08, 20), moedaMat); m.rotation.x = Math.PI / 2; m.position.y = 1; G.add(m); moedas.push({ m }); }
+    G.add(new THREE.HemisphereLight(0xffffff, 0x557744, 1.1)); const sol = new THREE.DirectionalLight(0xfff0d0, 1.3); sol.position.set(20, 40, 10); G.add(sol);
+    // cabine: painel e volante (presos no "carrinho" = grupo da corrida, não na cabeça)
+    const cab = new THREE.Group(); G.add(cab);
+    const painel = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.25, 0.5), materialPadrao(0x1a1c22, { roughness: 0.6 })); painel.position.set(0, 0.62, -0.8); cab.add(painel);
+    const capo = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.12, 1.6), materialPadrao(0xff6a1f, { roughness: 0.3, metalness: 0.4 })); capo.position.set(0, 0.45, -1.8); cab.add(capo);
+    const volante = new THREE.Group(); volante.position.set(0, 0.8, -0.5); volante.rotation.x = -0.7; volante.scale.setScalar(0.8); cab.add(volante);
+    const aro = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.022, 10, 36), materialPadrao(0x222222, { roughness: 0.5 })); volante.add(aro);
+    for (let k = 0; k < 3; k++) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.025, 0.02), materialPadrao(0x555555)); r.position.x = 0.08; const piv = new THREE.Group(); piv.rotation.z = k * 2.094 + Math.PI / 2; piv.add(r); volante.add(piv); }
+    const centro = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.03, 16), materialPadrao(0xff6a1f)); centro.rotation.x = Math.PI / 2; volante.add(centro);
+    // HUD
+    this.crHudTex = tex(900, 110, () => {});
+    this.crHud = new THREE.Mesh(new THREE.PlaneGeometry(0.42, 0.051), new THREE.MeshBasicMaterial({ map: this.crHudTex, transparent: true, depthTest: false, toneMapped: false }));
+    this.crHud.position.set(0, 0.2, -0.7); this.crHud.renderOrder = 30; this.cam.object3D.add(this.crHud);
+    this.cr = { grupo: G, pistaTex, cenario, carros, moedas, cab, volante, painel };
+  },
+  reposCarro(c, z) { c.faixa = Math.floor(Math.random() * 3) - 1; c.g.position.set(c.faixa * 3, 0, z); c.v = 9 + Math.random() * 7; },
+  reposMoeda(m, z) { m.m.position.set((Math.floor(Math.random() * 3) - 1) * 3, 1, z); m.m.visible = true; },
+  hudCorrida() {
+    const c = this.crHudTex.image, g = c.getContext('2d'), r = this.cr; g.clearRect(0, 0, c.width, c.height);
+    caixa(g, 4, 4, c.width - 8, c.height - 8, 50, 'rgba(14,12,26,.85)');
+    texto(g, '❤️'.repeat(Math.max(0, r.vidas)) + '🖤'.repeat(Math.max(0, 3 - r.vidas)), 40, 74, FONTE(800, 40), '#fff');
+    texto(g, `${Math.round(r.v * 3.6)} km/h`, c.width / 2, 74, FONTE(800, 46), r.turbo > 0 ? '#ffb36b' : '#fff', 'center');
+    texto(g, `🪙 ${r.pegas}  ·  ${Math.round(r.dist)} m`, c.width - 40, 74, FONTE(800, 38), '#fff', 'right');
+    this.crHudTex.needsUpdate = true;
+  },
+  somBatida() {
+    const a = audio(); if (!a) return;
+    const t = a.currentTime, n = a.createBufferSource(), buf = a.createBuffer(1, a.sampleRate * 0.4, a.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
+    const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 700; const g = a.createGain(); g.gain.value = 0.5;
+    n.buffer = buf; n.connect(f); f.connect(g); g.connect(a.destination); n.start(t);
+  },
+  motor(liga) {
+    const a = audio(); if (!a) return;
+    if (liga && !this.crMotor) { const o = a.createOscillator(), o2 = a.createOscillator(), f = a.createBiquadFilter(), g = a.createGain(); o.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; f.frequency.value = 600; g.gain.value = 0.035; o.connect(f); o2.connect(f); f.connect(g); g.connect(a.destination); o.start(); o2.start(); this.crMotor = { o, o2, g }; }
+    if (!liga && this.crMotor) { this.crMotor.g.gain.setTargetAtTime(0, a.currentTime, 0.1); const m = this.crMotor; setTimeout(() => { try { m.o.stop(); m.o2.stop(); } catch (e) {} }, 400); this.crMotor = null; }
+  },
+  passoCorrida(dt) {
+    const r = this.cr; if (r.fim) return;
+    r.t += dt;
+    // direção: mão (girar como volante) ou cabeça (olhar para os lados)
+    let dir = 0, turbo = false;
+    if (this.maoVisivel()) {
+      const lm = MAO.lm, dx = lm[9].x - lm[0].x, dy = lm[9].y - lm[0].y;
+      dir = Math.max(-1, Math.min(1, Math.atan2(dx, -dy) / 0.6)); // mão inclinada para a direita = vira para a direita
+      dir += Math.max(-0.6, Math.min(0.6, (lm[9].x - 0.5) * 1.2)); // mão mais para um lado também ajuda
+      turbo = MAO.pinca || MAO.fechada;
+    } else {
+      const d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d);
+      const rel = Math.atan2(Math.sin(Math.atan2(d.x, d.z) - this.cyaw0), Math.cos(Math.atan2(d.x, d.z) - this.cyaw0));
+      dir = Math.max(-1, Math.min(1, -rel / 0.45));
+    }
+    dir = Math.max(-1, Math.min(1, dir));
+    r.direcao += (dir - r.direcao) * Math.min(1, dt * 8);
+    r.volante.rotation.z = -r.direcao * 1.6; // o volante 3D gira junto
+    r.vx += (r.direcao * 7 - r.vx) * Math.min(1, dt * 5);
+    r.x = Math.max(-3.6, Math.min(3.6, r.x + r.vx * dt));
+    // velocidade
+    if (turbo && r.turbo <= 0 && r.turboPronto !== false) { r.turbo = 2.5; r.turboPronto = false; som('abre'); }
+    if (!turbo) r.turboPronto = true;
+    r.turbo -= dt;
+    const alvo = (22 + Math.min(18, r.t * 0.35)) * (r.turbo > 0 ? 1.45 : 1) * (r.batida > 0 ? 0.4 : 1);
+    r.v += (alvo - r.v) * Math.min(1, dt * 1.5);
+    r.batida -= dt; r.dist += r.v * dt;
+    // o mundo anda na sua direção
+    r.pistaTex.offset.y += r.v * dt / 10;
+    r.cenario.forEach(o => { o.position.z += r.v * dt; if (o.position.z > 12) o.position.z -= 26 * 11.5; });
+    r.cab.position.x = r.x;
+    r.cab.rotation.z = -r.vx * 0.012;
+    this.rig.object3D.position.set(Math.cos(this.cyaw0) * r.x, -0.35 + (r.batida > 0 ? Math.sin(r.t * 60) * 0.03 : 0), -Math.sin(this.cyaw0) * r.x);
+    r.carros.forEach(c => {
+      c.g.position.z += (r.v - c.v) * dt;
+      if (c.g.position.z > 15) this.reposCarro(c, -150 - Math.random() * 60);
+      if (c.g.position.z < -220) this.reposCarro(c, -150);
+      if (Math.abs(c.g.position.z - 0) < 2.6 && Math.abs(c.g.position.x - r.x) < 1.6 && r.batida <= 0) {
+        r.vidas--; r.batida = 1.2; c.g.position.z = 6; this.somBatida(); try { navigator.vibrate && navigator.vibrate([60, 40, 60]); } catch (e) {}
+        this.aviso(r.vidas > 0 ? 'Batida! Cuidado!' : 'Fim da corrida!'); this.hudCorrida();
+        if (r.vidas <= 0) return this.fimCorrida();
+      }
+    });
+    if (r.fim) return;
+    r.moedas.forEach(m => {
+      m.m.position.z += r.v * dt; m.m.rotation.z += dt * 4;
+      if (m.m.visible && Math.abs(m.m.position.z) < 1.2 && Math.abs(m.m.position.x - r.x) < 1.3) { m.m.visible = false; r.pegas++; som('hover'); som('clique'); }
+      if (m.m.position.z > 8) this.reposMoeda(m, -140 - Math.random() * 40);
+    });
+    if (this.crMotor && actx) { const f = 50 + r.v * 2.2; this.crMotor.o.frequency.setTargetAtTime(f, actx.currentTime, 0.05); this.crMotor.o2.frequency.setTargetAtTime(f * 0.5, actx.currentTime, 0.05); }
+    if (Math.floor(r.t * 4) !== r.hudPasso) { r.hudPasso = Math.floor(r.t * 4); this.hudCorrida(); }
+    if (r.t >= 90) this.fimCorrida();
+  },
+  fimCorrida() {
+    const r = this.cr; if (r.fim) return; r.fim = true; this.motor(false);
+    const pontos = Math.round(r.dist / 10) + r.pegas * 10;
+    let rec = 0; try { rec = +localStorage.getItem('ryanvr-corrida-recorde') || 0; } catch (e) {}
+    this.bNovoRec = pontos > rec; if (this.bNovoRec) try { localStorage.setItem('ryanvr-corrida-recorde', pontos); } catch (e) {}
+    this.bRec = Math.max(rec, pontos); this.bpontos = pontos; this.fimDe = 'corrida';
+    this.crHud.visible = false; this.estado = 'baloes-fim';
+    const d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d);
+    if (!this.pFim) this.pFim = new Painel('fim', { larg: 0.9, alt: 0.56, ang: 0, y: 1.55, raio: 1.3, ppm: 1000, desenhar: (g, p) => this.desenhaFim(g, p) });
+    this.pFim.el.object3D.rotation.y = Math.atan2(d.x, d.z); this.pFim.el.object3D.position.y = this.cam.object3D.getWorldPosition(new THREE.Vector3()).y - 0.05;
+    this.pFim.visivel = true; this.pFim.render(); som('abre');
+  },
+  sairCorrida() {
+    this.transicao(() => {
+      if (this.cr) this.cr.grupo.visible = false; if (this.crHud) this.crHud.visible = false; if (this.pFim) this.pFim.visivel = false;
+      this.motor(false); this.rig.object3D.position.set(0, 0, 0);
+      if (this.camSo) { this.desligaCamera(); this.camSo = false; }
+      this.estado = 'saguao'; this.fimDe = null; this.atualizaFundo(); if (this.luzes) this.luzes.visible = true;
       [this.pMenu, this.pCentro, this.pLado, this.pDock].forEach(p => p.visivel = true);
       this.secao = 'jogos'; this.detalhe = null; this.renderTudo(); tocaTrilha('saguao');
     });
@@ -1227,7 +1425,7 @@ AFRAME.registerComponent('ryan-vr', {
     }
     // apontador: a mão (Modo Casa) tem prioridade; sem mão, vale o olhar
     let atual = null; this.fonte = 'olhar';
-    const raio = this.estado !== 'baloes' ? this.raioDoDedo() : null;
+    const raio = this.estado !== 'baloes' && this.estado !== 'corrida' ? this.raioDoDedo() : null;
     if (this.estado !== 'baloes') this.pontoDedo = null;
     if (raio) {
       this.fonte = 'mao';
@@ -1258,6 +1456,7 @@ AFRAME.registerComponent('ryan-vr', {
     if (this.avisoMesh && this.avisoMesh.visible && performance.now() > this.avisoAte) this.avisoMesh.visible = false;
     if (this.camPlano && !AJ.camFov) this.ajustaPlano(); // acompanha a troca de tela/olhos
     if (this.estado === 'baloes') this.passoBaloes(dt);
+    if (this.estado === 'corrida') this.passoCorrida(dt);
     this.desenhaMao();
     if (this.orbes && this.saguao.visible) this.orbes.forEach(o => { o.position.y = 3.6 + Math.sin(time / 900 + o.userData.f) * 0.35; });
     // experiência rodando
@@ -1336,7 +1535,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 1.4' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 1.5' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 

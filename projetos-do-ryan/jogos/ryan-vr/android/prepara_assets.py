@@ -18,12 +18,12 @@ TROCAS = {
     'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/': '../lib/mediapipe/',
     'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task': '../lib/mediapipe/hand_landmarker.task',
 }
-for pasta, extras in [('ryan-vr', ['icon-192.png']), ('blocos-vr', []), ('turbo-noturno', [])]:
+for pasta, arquivo, extras in [('ryan-vr', 'index.html', ['icon-192.png']), ('blocos-vr', 'index.html', []), ('turbo-noturno', 'index.html', []), ('comum', 'maos-vr.js', [])]:
     os.makedirs(os.path.join(A, pasta))
-    html = open(os.path.join(JOGOS, pasta, 'index.html'), encoding='utf-8').read()
+    html = open(os.path.join(JOGOS, pasta, arquivo), encoding='utf-8').read()
     for de, para in TROCAS.items():
         html = html.replace(de, para)
-    open(os.path.join(A, pasta, 'index.html'), 'w', encoding='utf-8').write(html)
+    open(os.path.join(A, pasta, arquivo), 'w', encoding='utf-8').write(html)
     for e in extras:
         shutil.copy(os.path.join(JOGOS, pasta, e), os.path.join(A, pasta, e))
 print('assets prontos')

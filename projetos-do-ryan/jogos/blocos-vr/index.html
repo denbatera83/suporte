@@ -44,6 +44,8 @@
   button.sec { background: var(--panel); color: var(--fg); box-shadow: 0 4px 0 #0a101c; border: 1px solid var(--line); }
   button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
   .nota { font-size: 13px; }
+  #btn-mao { display: grid; gap: 2px; }
+  #btn-mao small { font: 700 13px var(--body); color: #3a2410; }
   #toque-vr { position: fixed; inset: 0; z-index: 25; display: grid; place-items: center; background: var(--bg); text-align: center; font: 800 26px var(--display); padding: 24px; cursor: pointer; }
   #toque-vr small { display: block; font: 600 15px var(--body); color: var(--muted); margin-top: 8px; }
   .baixar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -68,6 +70,7 @@
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/aframe@1.6.0/dist/aframe-v1.6.0.min.js"></script>
+<script src="../comum/maos-vr.js"></script>
 </head>
 <body>
 
@@ -77,12 +80,14 @@
     <h1>Blocos <em>VR</em></h1>
     <p>Pegue os blocos coloridos com a mão e entregue cada um na caixa da mesma cor. São 3 níveis, cada vez com mais blocos.</p>
     <ul class="passos">
+      <li><span class="ic">✋</span><span><b>Com a mão de verdade:</b> feche a mão em cima de um bloco para pegar e abra em cima da caixa da mesma cor para soltar.</span></li>
       <li><span class="ic">👀</span><span><b>Olhe para um bloco</b> e segure o olhar até o anel encher. A mão pega o bloco.</span></li>
       <li><span class="ic">🖐️</span><span><b>Vire a cabeça até a caixa da mesma cor</b> (ela fica dos lados) e segure o olhar para soltar.</span></li>
       <li><span class="ic">🔘</span><span>Com pressa? <b>Aperte o botão do Cardboard</b> (ou toque na tela) para pegar e soltar na hora.</span></li>
     </ul>
     <div class="botoes">
-      <button id="btn-vr">🥽 Jogar com Cardboard</button>
+      <button id="btn-mao">✋ Jogar com a mão de verdade <small>Cardboard + câmera escaneando a mão</small></button>
+      <button id="btn-vr" class="sec">🥽 Jogar com Cardboard (olhar)</button>
       <button id="btn-tela" class="sec">📱 Jogar sem óculos</button>
       <button id="btn-ryanvr" class="sec" hidden>🏠 Voltar ao Ryan VR</button>
     </div>
@@ -520,7 +525,7 @@ AFRAME.registerComponent('blocos-jogo', {
     if (acao === 'proximo') this.novoNivel(this.nivel + 1);
     if (acao === 'repetir') this.novoNivel(this.nivel);
     if (acao === 'reiniciar') { this.pontos = 0; this.novoNivel(0); }
-    if (acao === 'menu') { const vr = this.el.components.cardboard && this.el.components.cardboard.ativo; location.href = '../ryan-vr/index.html?secao=jogos' + (vr ? '&vr=1' : ''); }
+    if (acao === 'menu') { const vr = this.el.components.cardboard && this.el.components.cardboard.ativo; location.href = '../ryan-vr/index.html?secao=jogos' + (vr ? '&vr=1' : '') + (window.MaosVR && window.MaosVR.ligada() ? '&mao=1' : ''); }
   },
 
   anelProgresso(p) {
@@ -569,8 +574,62 @@ AFRAME.registerComponent('blocos-jogo', {
 
   mostraMsg(t, dur) { this.msg.userData.troca(t); this.msg.visible = true; this.msgAte = performance.now() + dur * 1000; },
 
+  // ---------- mão de verdade (câmera escaneando a mão; a imagem da câmera não aparece) ----------
+  maoReal(dt) {
+    const MV = window.MaosVR;
+    if (!this.maoBase) this.maoBase = { p: this.mao.g.position.clone(), r: this.mao.g.rotation.clone() };
+    const volta = () => { this.mao.g.position.lerp(this.maoBase.p, Math.min(1, dt * 6)); this.mao.g.rotation.z += (this.maoBase.r.z - this.mao.g.rotation.z) * Math.min(1, dt * 6); };
+    if (!MV || !MV.ligada()) { this.maoAtiva = false; return; }
+    MV.atualizar();
+    const ativa = MV.visivel();
+    if (ativa !== this.maoAtiva) { this.maoAtiva = ativa; this.cursor.setAttribute('cursor', 'fuse', !ativa); if (!ativa && this.alvoMao) { this.brilho(this.alvoMao, false); this.alvoMao = null; } }
+    if (!ativa) {
+      volta();
+      if (MV.soltou && this.segurando) this.devolve();
+      if (this.estado === 'jogando' && performance.now() - (this.avisoMaoT || 0) > 6000) { this.avisoMaoT = performance.now(); this.mostraMsg('Mostre a mão para a câmera ✋', 1.5); }
+      return;
+    }
+    const camObj = this.cam.object3D, camera = this.el.camera;
+    // a mão do jogo vai para onde está a sua mão (palma a 50 cm do olho)
+    const w = MV.pontoNoMundo(camObj, camera, MV.lm[9].x, MV.lm[9].y, 0.5);
+    this.mao.g.position.lerp(camObj.worldToLocal(w), Math.min(1, dt * 14));
+    const dx = MV.lm[9].x - MV.lm[0].x, dy = MV.lm[9].y - MV.lm[0].y;
+    this.mao.g.rotation.z += (-Math.atan2(dx, -dy) * 0.8 - this.mao.g.rotation.z) * Math.min(1, dt * 10);
+    // os dedos imitam os seus
+    const curva = MV.curva ? (MV.curva[0] + MV.curva[1] + MV.curva[2] + MV.curva[3]) / 4 : 0;
+    this.mao.poseAlvo = this.segurando ? 1 : Math.max(curva, MV.pinca ? 0.7 : 0); this.mao.apontaAlvo = 0;
+    // o que está embaixo da mão?
+    const raio = MV.raio(camObj, camera, 9);
+    let alvo = null;
+    if (!this.segurando) {
+      let melhor = 0.13;
+      this.blocos.forEach(b => { if (b.voando) return; const dd = raio.distanceToPoint(b.el.object3D.position); if (dd < melhor) { melhor = dd; alvo = b; } });
+    } else {
+      if (!this.rcMao) this.rcMao = new THREE.Raycaster();
+      this.rcMao.ray.copy(raio);
+      const h = this.rcMao.intersectObjects(this.cestas.map(c => c.g), true)[0];
+      if (h) alvo = this.cestas.find(c => { let o = h.object; while (o) { if (o === c.g) return true; o = o.parent; } return false; });
+    }
+    if (alvo !== this.alvoMao) { if (this.alvoMao) this.brilho(this.alvoMao, false); this.alvoMao = alvo; if (alvo) { this.brilho(alvo, true); som('mira'); } }
+    if (this.estado !== 'jogando') return;
+    if (MV.agarrou && !this.segurando && alvo && alvo.cor && alvo.el) this.acao(alvo.el);
+    else if (MV.soltou && this.segurando) { if (alvo && alvo.g && alvo.el) this.acao(alvo.el); else this.devolve(); }
+  },
+  brilho(o, liga) {
+    const m = o.mesh ? o.mesh.material : null;
+    if (m && m.emissive) { if (liga) { o.emissivoAntes = m.emissive.getHex(); m.emissive.setHex(0x554400); } else m.emissive.setHex(o.emissivoAntes || 0); }
+    if (o.g && !o.mesh) o.g.scale.setScalar(liga ? 1.08 : 1);
+  },
+  devolve() { // soltou o bloco fora de uma caixa: ele volta para a mesa
+    const b = this.segurando; if (!b) return;
+    this.segurando = null; this.mao.poseAlvo = 0; b.voando = true;
+    this.voa(b, b.lugar, 0.5, () => { b.voando = false; this.refreshAlvos(); }, true);
+    this.refreshAlvos();
+  },
+
   tick(time, dtMs) {
     const dt = Math.min(0.05, (dtMs || 16) / 1000);
+    this.maoReal(dt);
     poseMao(this.mao, dt);
     if (this.estado === 'jogando') { this.tempo += dt; if (Math.floor(this.tempo) !== this.hudSeg) this.atualizaHud(); }
     if (this.msg.visible && performance.now() > this.msgAte) this.msg.visible = false;
@@ -810,12 +869,18 @@ window.addEventListener('DOMContentLoaded', () => {
   // vindo do Ryan VR já no Cardboard: no app entra direto; no navegador espera um toque (botão do Cardboard)
   if (new URLSearchParams(location.search).get('vr') === '1') {
     const go = () => {
-      if (/\bwv\b/.test(navigator.userAgent)) { document.getElementById('btn-vr').click(); return; }
+      const qual = new URLSearchParams(location.search).get('mao') === '1' && window.MaosVR ? 'btn-mao' : 'btn-vr';
+      if (/\bwv\b/.test(navigator.userAgent)) { document.getElementById(qual).click(); return; }
       const t = document.getElementById('toque-vr'); inicio.hidden = true; t.hidden = false;
-      t.onclick = () => { t.hidden = true; document.getElementById('btn-vr').click(); };
+      t.onclick = () => { t.hidden = true; document.getElementById(qual).click(); };
     };
     if (sc.hasLoaded) setTimeout(go, 0); else sc.addEventListener('loaded', () => setTimeout(go, 0));
   }
+  if (!window.MaosVR || !(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) document.getElementById('btn-mao').hidden = true; // sem câmera: só o olhar
+  document.getElementById('btn-mao').onclick = async () => {
+    document.getElementById('btn-vr').click();
+    if (window.MaosVR) window.MaosVR.ligar(t => jogo() && jogo().mostraMsg(t, 2.5));
+  };
   document.getElementById('btn-vr').onclick = async () => {
     await pedeSensor();
     inicio.hidden = true; document.getElementById('vr-ui').hidden = false;

@@ -17,12 +17,16 @@ Saguão de realidade virtual para **Cardboard**, feito com A-Frame: um deque de 
 ## 📺 Modo TV
 Na tela de entrada, **📺 Modo TV** entra no Cardboard, liga a câmera (você vê a sua casa) e liga a mão como controle, num toque só. A TV aparece flutuando na sala, com moldura e brilho; os vídeos 360° e os vídeos do celular passam **dentro da TV**. No controle do vídeo, **🌐** coloca você dentro do vídeo (360°) continuando de onde parou.
 
+**Distância da TV:** no Modo TV a TV fica a 2,2 m (mais fácil de apontar com a mão); ajuste em Ajustes → Distância da TV (1,4 a 3,2 m).
+
 **📍 Colocar a TV na casa:** toque em 📍 na barra; a TV passa a seguir o seu olhar. Vire para onde quer (uma parede, mais alto ou mais baixo) e aperte (botão do Cardboard, pinça ou toque) para fixar.
 
 ## Modo Casa (câmera) e a mão como controle
 - Aperte **📷** na barra de baixo (ou em Ajustes). A câmera de trás do celular mostra a sua casa dentro do Cardboard e os painéis flutuam na frente, como uma TV de realidade virtual. Nos vídeos 360° a câmera some para a imersão ser total.
 - **Mão de verdade:** com o Modo Casa ligado, mostre a mão para a câmera. Aparecem bolinhas de luz nos dedos. Aponte o indicador para um botão e **junte o dedão com o indicador (pinça)** para apertar, ou deixe o dedo parado no botão por 0,8 s. O olhar continua funcionando.
 - O reconhecimento da mão usa o MediaPipe (Google). No app ele vai dentro do APK e funciona sem internet. Nada da câmera é gravado ou enviado.
+- **Corrida VR** (em Jogos): você está dentro do carro numa estrada (a câmera só escaneia a mão; a imagem da casa não aparece). **Gire a mão como um volante** para virar e **feche a mão (ou faça a pinça) para o turbo**. Desvie dos carros, pegue moedas; 3 vidas, 90 segundos e recorde. Sem câmera, vire a cabeça para dirigir.
+- **Blocos VR com a mão de verdade:** no Blocos, toque em **✋ Jogar com a mão de verdade**. A mão do jogo acompanha a sua; **feche a mão em cima de um bloco** para pegar e **abra em cima da caixa** da mesma cor para soltar. A câmera só escaneia a mão: você continua na ilha do jogo.
 - **Estoura Balões** (em Jogos): balões aparecem na sua frente por 60 segundos; estoure com o dedo de verdade. Combo, balão dourado (+5) e recorde. Sem câmera, dá para estourar olhando.
 - Ajustes: ligar/desligar a mão e o tamanho da imagem da câmera (Automático enche a vista).
 - O Cardboard precisa ter o furo da câmera aberto (a maioria tem).
