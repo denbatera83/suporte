@@ -39,6 +39,26 @@ public class MainActivity extends Activity {
     private View telaCheia;
     private WebChromeClient.CustomViewCallback avisoSaida;
     private ValueCallback<Uri[]> escolha;
+    private NavegadorVR navVR; // Google (ou outro site) dentro do VR, nas duas telas
+
+    /** A página do Ryan VR chama window.RyanApp.abrirNavegadorVR(url) para abrir um site sem sair do óculos. */
+    public class Ponte {
+        @android.webkit.JavascriptInterface public void abrirNavegadorVR(final String url) {
+            runOnUiThread(new Runnable() { public void run() { abreNavegadorVR(url); } });
+        }
+        @android.webkit.JavascriptInterface public boolean temNavegadorVR() { return true; }
+    }
+    private void abreNavegadorVR(String url) {
+        if (navVR != null || url == null || !(url.startsWith("https://") || url.startsWith("http://"))) return;
+        web.evaluateJavascript("window.__pausaCena && window.__pausaCena(true)", null);
+        navVR = new NavegadorVR(this, url, new NavegadorVR.AoFechar() { public void fechou() {
+            if (navVR != null) { raiz.removeView(navVR); navVR = null; }
+            web.evaluateJavascript("window.__pausaCena && window.__pausaCena(false)", null);
+            esconderBarras();
+        }});
+        raiz.addView(navVR, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        esconderBarras();
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -120,6 +140,7 @@ public class MainActivity extends Activity {
                 return true;
             }
         });
+        web.addJavascriptInterface(new Ponte(), "RyanApp");
         raiz.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(raiz);
         esconderBarras();
@@ -176,6 +197,7 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
+        if (navVR != null) { if (!navVR.voltar()) navVR.fechar(); return; } // no navegador VR: volta a página; na primeira, volta ao Ryan VR
         if (telaCheia != null) { raiz.removeView(telaCheia); telaCheia = null; if (avisoSaida != null) avisoSaida.onCustomViewHidden(); return; }
         // dentro de um jogo do Ryan VR, o voltar abre a pausa (e, de novo, sai do jogo)
         web.evaluateJavascript("(window.__voltar && window.__voltar()) ? 1 : 0", new android.webkit.ValueCallback<String>() {

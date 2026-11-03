@@ -82,7 +82,7 @@
       <button id="btn-tela" class="sec">📱 Ver sem óculos</button>
     </div>
     <p class="nota">Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 1.8</p>
+    <p class="nota" id="versao">Ryan VR 1.9</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -215,13 +215,13 @@ AFRAME.registerComponent('cardboard', {
   },
   suave() { return (() => { try { const v = localStorage.getItem('ryanvr-suave'); return v === null ? true : JSON.parse(v); } catch (e) { return true; } })(); },
   // ajuste ⚡ Suave / ✨ Bonito: troca a resolução na hora
-  qualidade() { if (!this.r) return; if (this.ativo) this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 1.4 : 1.75)); if (this.rt) { this.rt.dispose(); this.rt = null; } },
+  qualidade() { if (!this.r) return; if (this.ativo) this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 2.2 : 3)); if (this.rt) { this.rt.dispose(); this.rt = null; } },
   lenteLigada(v) { this.lenteOn = !!v; if (this.lente) this.lente.uniforms.ligada.value = v ? 1 : 0; },
   entrar() {
     this.prepara();
     this.ativo = true;
     this.pixelAntes = this.r.getPixelRatio();
-    this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 1.4 : 1.75));
+    this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 2.2 : 3));
     document.body.classList.add('modo-vr');
     const app = /\bwv\b/.test(navigator.userAgent);   // dentro do APK já está em tela cheia e deitado
     if (!app && document.documentElement.requestFullscreen) {
@@ -850,12 +850,20 @@ AFRAME.registerComponent('ryan-vr', {
   pesquisar() {
     const q = (this.busca || '').trim(); if (!q) return this.aviso('Digite alguma coisa primeiro');
     const vr = this.el.components.cardboard.ativo;
+    const url = 'https://www.google.com/search?safe=active&hl=pt-BR&q=' + encodeURIComponent(q);
+    try { localStorage.setItem('ryanvr-busca', q); } catch (e) {}
+    // no app: o Google abre DENTRO do óculos, nas duas telas (sem sair do VR)
+    if (vr && window.RyanApp && window.RyanApp.abrirNavegadorVR) {
+      som('abre'); this.aviso('Abrindo o Google no VR…');
+      setTimeout(() => window.RyanApp.abrirNavegadorVR(url), 400);
+      return;
+    }
     // ao voltar (botão voltar), o Ryan VR abre de novo no Google
     try { history.replaceState(null, '', location.pathname + '?secao=google' + (vr ? '&vr=1' : '')); } catch (e) {}
     try { localStorage.setItem('ryanvr-busca', q); } catch (e) {}
     this.aviso('Abrindo o Google… tire o celular do óculos');
     som('abre');
-    setTimeout(() => { if (vr) this.el.components.cardboard.sair(); location.href = 'https://www.google.com/search?safe=active&hl=pt-BR&q=' + encodeURIComponent(q); }, 1200);
+    setTimeout(() => { if (vr) this.el.components.cardboard.sair(); location.href = url; }, 1200);
   },
 
   desenhaDetalhe(g, p, it) {
@@ -1051,8 +1059,11 @@ AFRAME.registerComponent('ryan-vr', {
   },
   // distância da TV: no Modo TV fica mais longe (mais fácil de apontar com a mão); o tamanho real não muda
   aplicaDistancia() {
-    const r = this.casa ? AJ.distTV : 1.55;
-    if (this.raioAtual === r) return; this.raioAtual = r;
+    const R0 = this.casa ? AJ.distTV : 1.55;
+    if (this.raioAtual === R0) return; this.raioAtual = R0;
+    // TV longe = painéis maiores na mesma proporção: as letras continuam do mesmo tamanho na vista (nítidas)
+    const f = this.casa ? Math.max(1, R0 / 1.55 * 0.95) : 1, r = R0 / f;
+    this.uiRaiz.object3D.scale.setScalar(f);
     this.pCentro.setRaio(r); this.pMenu.setRaio(r); this.pLado.setRaio(r); this.pDock.setRaio(r - 0.05);
     const lado = (1.56 / 2 + 0.06 + 0.62 / 2) / r;
     this.pMenu.el.object3D.rotation.y = lado; this.pLado.el.object3D.rotation.y = -lado;
@@ -2281,6 +2292,8 @@ AFRAME.registerComponent('ryan-vr', {
 });
 
 
+// enquanto o navegador VR do app está aberto, a cena 3D para de desenhar (o celular fica livre para a página)
+window.__pausaCena = parar => { const s = document.querySelector('a-scene'); if (!s || !s.renderer) return; s.renderer.setAnimationLoop(parar ? null : s.render); if (!parar) { const c = s.components['ryan-vr']; c && c.aviso('De volta ao Ryan VR'); } };
 // botão voltar do celular: no jogo abre a pausa; com a pausa aberta, sai do jogo
 window.__voltar = () => {
   const s = document.querySelector('a-scene'), c = s && s.components['ryan-vr']; if (!c) return false;
@@ -2347,7 +2360,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 1.8' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 1.9' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 
