@@ -1,0 +1,26 @@
+"""Copia as páginas para assets/ e troca as bibliotecas da internet por cópias locais (funciona sem internet)."""
+import os, shutil, sys
+AQUI = os.path.dirname(os.path.abspath(__file__))
+JOGOS = os.path.normpath(os.path.join(AQUI, '..', '..'))
+LIBS = sys.argv[1]  # pasta com: aframe-v1.6.0.min.js, three/ (three.min.js + examples/js), peerjs.min.js
+A = os.path.join(AQUI, 'assets')
+shutil.rmtree(A, ignore_errors=True)
+os.makedirs(os.path.join(A, 'lib'))
+shutil.copy(os.path.join(LIBS, 'aframe-v1.6.0.min.js'), os.path.join(A, 'lib'))
+shutil.copytree(os.path.join(LIBS, 'three'), os.path.join(A, 'lib', 'three'))
+shutil.copy(os.path.join(LIBS, 'peerjs.min.js'), os.path.join(A, 'lib'))
+TROCAS = {
+    'https://cdn.jsdelivr.net/npm/aframe@1.6.0/dist/aframe-v1.6.0.min.js': '../lib/aframe-v1.6.0.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js': '../lib/three/three.min.js',
+    'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/': '../lib/three/examples/js/',
+    'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js': '../lib/peerjs.min.js',
+}
+for pasta, extras in [('ryan-vr', ['icon-192.png']), ('blocos-vr', []), ('turbo-noturno', [])]:
+    os.makedirs(os.path.join(A, pasta))
+    html = open(os.path.join(JOGOS, pasta, 'index.html'), encoding='utf-8').read()
+    for de, para in TROCAS.items():
+        html = html.replace(de, para)
+    open(os.path.join(A, pasta, 'index.html'), 'w', encoding='utf-8').write(html)
+    for e in extras:
+        shutil.copy(os.path.join(JOGOS, pasta, e), os.path.join(A, pasta, e))
+print('assets prontos')

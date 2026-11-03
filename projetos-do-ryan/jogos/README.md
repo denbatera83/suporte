@@ -11,3 +11,7 @@ Jogos do Ryan.
 ## Blocos VR
 
 - [Blocos VR](blocos-vr/): jogo de realidade virtual para Cardboard, feito com A-Frame. Pegue os blocos com a mão e entregue na caixa da mesma cor.
+
+## Ryan VR
+
+- [Ryan VR](ryan-vr/): saguão de realidade virtual para Cardboard com vídeos 360°, cinema com vídeos do celular e os jogos (Blocos VR e Turbo Noturno). Tem APK para Android.

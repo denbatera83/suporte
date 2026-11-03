@@ -44,6 +44,8 @@
   button.sec { background: var(--panel); color: var(--fg); box-shadow: 0 4px 0 #0a101c; border: 1px solid var(--line); }
   button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
   .nota { font-size: 13px; }
+  #toque-vr { position: fixed; inset: 0; z-index: 25; display: grid; place-items: center; background: var(--bg); text-align: center; font: 800 26px var(--display); padding: 24px; cursor: pointer; }
+  #toque-vr small { display: block; font: 600 15px var(--body); color: var(--muted); margin-top: 8px; }
   .baixar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .baixar a, .baixar button { display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font: 800 16px var(--display); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; box-shadow: 0 4px 0 #0a101c; }
   @media (max-width: 420px) { .baixar { grid-template-columns: 1fr; } }
@@ -82,6 +84,7 @@
     <div class="botoes">
       <button id="btn-vr">🥽 Jogar com Cardboard</button>
       <button id="btn-tela" class="sec">📱 Jogar sem óculos</button>
+      <button id="btn-ryanvr" class="sec" hidden>🏠 Voltar ao Ryan VR</button>
     </div>
     <div class="baixar" id="baixar" hidden>
       <button id="btn-instalar" type="button" hidden>📲 Instalar no celular</button>
@@ -92,6 +95,7 @@
   </div>
 </div>
 <button id="sair" class="sec" hidden>☰ Menu</button>
+<div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para começar<small>(ou toque na tela)</small></div></div>
 <button id="som" class="sec" hidden aria-label="Música">🔊</button>
 <div id="vr-ui" hidden><div class="linha"></div><button id="vr-sair" aria-label="Sair do modo Cardboard">✕</button><p id="vr-modo" class="vr-aviso" hidden></p><p id="vr-erro" class="vr-aviso erro" hidden></p></div>
 <div id="girar"><div><span class="tel">📱</span>Gire o celular de lado<br><small style="font: 600 15px var(--body); color: var(--muted)">e encaixe no Cardboard com a linha branca no meio</small></div></div>
@@ -270,6 +274,12 @@ AFRAME.registerComponent('blocos-jogo', {
     this.hud = rotulo('', { largura: 0.42, w: 512, h: 96, fs: 46 }); this.hud.position.set(0, 0.22, -0.75); this.hud.visible = false; this.cam.object3D.add(this.hud);
     this.msg = rotulo('', { largura: 0.5, w: 640, h: 200, fs: 64 }); this.msg.position.set(0, 0.05, -0.74); this.msg.visible = false; this.cam.object3D.add(this.msg);
     this.msgAte = 0;
+    if (!/claude|anthropic|usercontent/.test(location.hostname)) {
+      const casa = document.createElement('a-entity'); casa.classList.add('alvo'); casa.dataset.tipo = 'botao'; casa.dataset.acao = 'menu';
+      const placa = rotulo('🏠 Voltar ao Ryan VR', { largura: 0.5, w: 640, h: 128, fs: 50, fundo: 'rgba(58,51,99,.92)', borda: '#8f7bff' });
+      casa.setObject3D('mesh', placa); casa.object3D.position.set(0, 0.3, -0.42); casa.object3D.rotation.x = -1.05;
+      this.el.appendChild(casa);
+    }
     // seta que aponta para a caixa certa enquanto você segura um bloco
     const seta = new THREE.Group();
     const corpo = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.08, 16), new THREE.MeshBasicMaterial({ color: '#ffffff', depthTest: false, transparent: true }));
@@ -488,7 +498,8 @@ AFRAME.registerComponent('blocos-jogo', {
     const titulo = rotulo(`${ultimo ? '🏆 VOCÊ ZEROU!' : 'NÍVEL ' + (this.nivel + 1) + ' COMPLETO!'}\n${'★'.repeat(estrelas)}${'☆'.repeat(3 - estrelas)}\nTempo ${fmt(t)}${novo ? ' · RECORDE!' : ''}\n${this.pontos} pontos · olhe um botão`, { largura: 0.8, w: 900, h: 400, fs: 62 });
     const b1 = rotulo(ultimo ? '🔁 JOGAR DE NOVO' : '▶ PRÓXIMO NÍVEL', { largura: 0.62, w: 680, h: 128, fs: 60, fundo: '#ff8a3d', cor: '#1a0e02' });
     const b2 = rotulo('↺ REPETIR NÍVEL', { largura: 0.5, w: 600, h: 128, fs: 54, fundo: '#2b3a57' });
-    this.painel = [fazPainel(titulo, centro.y + 0.24), fazPainel(b1, centro.y - 0.1, ultimo ? 'reiniciar' : 'proximo'), fazPainel(b2, centro.y - 0.27, 'repetir')];
+    const b3 = rotulo('🏠 RYAN VR', { largura: 0.42, w: 520, h: 128, fs: 54, fundo: '#3a3363' });
+    this.painel = [fazPainel(titulo, centro.y + 0.24), fazPainel(b1, centro.y - 0.1, ultimo ? 'reiniciar' : 'proximo'), fazPainel(b2, centro.y - 0.27, 'repetir'), fazPainel(b3, centro.y - 0.42, 'menu')];
     this.refreshAlvos();
     this.msg.visible = false;
   },
@@ -498,6 +509,7 @@ AFRAME.registerComponent('blocos-jogo', {
     if (acao === 'proximo') this.novoNivel(this.nivel + 1);
     if (acao === 'repetir') this.novoNivel(this.nivel);
     if (acao === 'reiniciar') { this.pontos = 0; this.novoNivel(0); }
+    if (acao === 'menu') { const vr = this.el.components.cardboard && this.el.components.cardboard.ativo; location.href = '../ryan-vr/index.html?secao=jogos' + (vr ? '&vr=1' : ''); }
   },
 
   anelProgresso(p) {
@@ -633,7 +645,9 @@ const LENTE_FRAG = `
 AFRAME.registerComponent('cardboard', {
   init() {
     this.ativo = false;
-    this.distancia = 0.064;           // distância entre os olhos (m)
+    const lerAj = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
+    this.distancia = lerAj('ryanvr-ipd', 0.064);   // distância entre os olhos (m), ajustável no Ryan VR
+    this.lenteOn = lerAj('ryanvr-lente', true);
     const liga = () => this.prepara();
     if (this.el.renderer) liga(); else this.el.addEventListener('renderstart', liga, { once: true });
   },
@@ -645,6 +659,7 @@ AFRAME.registerComponent('cardboard', {
     this.quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     this.lente = new THREE.ShaderMaterial({ vertexShader: LENTE_VERT, fragmentShader: LENTE_FRAG, depthTest: false, depthWrite: false,
       uniforms: { tDiffuse: { value: null }, k1: { value: 0.18 }, k2: { value: 0.06 }, escala: { value: 0.84 }, aspecto: { value: 1 }, ligada: { value: 1 } } });
+    this.lente.uniforms.ligada.value = this.lenteOn ? 1 : 0;
     this.quadCena = new THREE.Scene();
     const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.lente); q.frustumCulled = false; this.quadCena.add(q);
     this.tam = new THREE.Vector2();
@@ -724,6 +739,7 @@ AFRAME.registerComponent('cardboard', {
     r.setViewport(meio, 0, meio, h); r.setScissor(meio, 0, meio, h); this.orig(cena, this.estereo.cameraR);
     r.setScissorTest(false); r.setViewport(0, 0, w, h); r.setScissor(0, 0, w, h);
   },
+  lenteLigada(v) { this.lenteOn = !!v; if (this.lente) this.lente.uniforms.ligada.value = v ? 1 : 0; },
   entrar() {
     this.prepara();
     this.ativo = true;
@@ -765,6 +781,16 @@ window.addEventListener('DOMContentLoaded', () => {
     try { if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission(); } catch (e) {}
   };
   document.getElementById('btn-tela').onclick = async () => { await pedeSensor(); comecar(); };
+  if (!/claude|anthropic|usercontent/.test(location.hostname)) { const bv = document.getElementById('btn-ryanvr'); bv.hidden = false; bv.onclick = () => { location.href = '../ryan-vr/index.html?secao=jogos'; }; }
+  // vindo do Ryan VR já no Cardboard: no app entra direto; no navegador espera um toque (botão do Cardboard)
+  if (new URLSearchParams(location.search).get('vr') === '1') {
+    const go = () => {
+      if (/\bwv\b/.test(navigator.userAgent)) { document.getElementById('btn-vr').click(); return; }
+      const t = document.getElementById('toque-vr'); inicio.hidden = true; t.hidden = false;
+      t.onclick = () => { t.hidden = true; document.getElementById('btn-vr').click(); };
+    };
+    if (sc.hasLoaded) setTimeout(go, 0); else sc.addEventListener('loaded', () => setTimeout(go, 0));
+  }
   document.getElementById('btn-vr').onclick = async () => {
     await pedeSensor();
     inicio.hidden = true; document.getElementById('vr-ui').hidden = false;
