@@ -83,7 +83,7 @@
       <button id="btn-pc" class="sec">🖥️ Modo Computador <small>mouse e teclado</small></button>
     </div>
     <p class="nota">Computador: arraste o mouse para olhar, clique para apertar; no Google digite no teclado; Esc pausa os jogos; na Corrida use ← → (ou A e D) e espaço para o turbo. Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 2.6</p>
+    <p class="nota" id="versao">Ryan VR 2.7</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -1053,6 +1053,7 @@ AFRAME.registerComponent('ryan-vr', {
       const pit = Math.asin(Math.max(-1, Math.min(1, dir.y))), alvoY = Math.max(-0.9, Math.min(0.9, Math.tan(pit) * (this.raioAtual || 1.55))) / f;
       po.position.y += (alvoY - po.position.y) * k; P.movida = true;
       this.anelProgresso(0);
+      if (this.posicionando.porPinca && !MAO.pinca && performance.now() - this.posicionando.t0 > 250) { this.posicionando.t0 = -1e9; this.fixaPosicao(); return; } // soltou os dedos: a janela fica aí
       if (performance.now() - this.posicionando.t0 > 15000) this.fixaPosicao();
       return;
     }
@@ -1246,8 +1247,20 @@ AFRAME.registerComponent('ryan-vr', {
   // =====================================================================
   // MODO CASA: a câmera de trás mostra a sua casa; os painéis flutuam como uma TV
   // =====================================================================
-  async ligarCasa(ligar, escondida) {
-    if (!ligar) { this.desligaCamera(); this.casa = false; this.aplicaDistancia(); this.atualizaFundo(); this.renderTudo(); this.aviso('Modo Casa desligado'); return; }
+  // pedidos de câmera em fila (a câmera das mãos e a da casa nunca ligam ao mesmo tempo)
+  ligarCasa(ligar, escondida) {
+    const pr = (this.camPromessa || Promise.resolve()).catch(() => {}).then(() => this.ligarCasaAgora(ligar, escondida));
+    this.camPromessa = pr; return pr;
+  },
+  async ligarCasaAgora(ligar, escondida) {
+    if (!ligar) {
+      this.desligaCamera(); this.casa = false; this.aplicaDistancia(); this.atualizaFundo(); this.renderTudo(); this.aviso('Modo Casa desligado');
+      if (this.camSempre && AJ.maos) setTimeout(() => this.ligarCasa(true, true), 300); // as mãos continuam funcionando
+      return;
+    }
+    // já tem a câmera escondida das mãos: troca para a câmera da casa (imagem melhor)
+    if (!escondida && this.camVideo) { this.desligaCamera(); this.camSo = false; }
+    if (escondida && this.camVideo) return;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { this.aviso('Este navegador não deixa usar a câmera'); return; }
     this.aviso('Permita a câmera na tela do celular');
     try {
@@ -1671,7 +1684,7 @@ AFRAME.registerComponent('ryan-vr', {
     this.transicao(() => {
       if (this.cr) this.cr.grupo.visible = false; if (this.crHud) this.crHud.visible = false; if (this.pFim) this.pFim.visivel = false;
       this.motor(false); this.rig.object3D.position.set(0, 0, 0);
-      if (this.camSo) { this.desligaCamera(); this.camSo = false; }
+      if (this.camSo && !this.camSempre) { this.desligaCamera(); this.camSo = false; }
       this.estado = 'saguao'; this.fimDe = null; this.atualizaFundo(); if (this.luzes) this.luzes.visible = true;
       [this.pMenu, this.pCentro, this.pLado, this.pDock].forEach(p => p.visivel = true);
       this.secao = 'jogos'; this.detalhe = null; this.renderTudo(); tocaTrilha('saguao');
@@ -1699,7 +1712,7 @@ AFRAME.registerComponent('ryan-vr', {
     this.transicao(() => {
       limpa(); if (this.pFim) this.pFim.visivel = false;
       this.batida(false); this.limpaFx();
-      if (this.camSo) { this.desligaCamera(); this.camSo = false; }
+      if (this.camSo && !this.camSempre) { this.desligaCamera(); this.camSo = false; }
       this.estado = 'saguao'; this.fimDe = null; this.atualizaFundo(); if (this.luzes) this.luzes.visible = true;
       [this.pMenu, this.pCentro, this.pLado, this.pDock].forEach(p => p.visivel = true);
       this.secao = 'jogos'; this.detalhe = null; this.renderTudo(); tocaTrilha('saguao');
@@ -2310,7 +2323,7 @@ AFRAME.registerComponent('ryan-vr', {
     if (!quer) {
       if (this.pTeclado && this.pTeclado.el.object3D.visible) this.pTeclado.visivel = false;
       // saiu do Google: desliga a câmera escondida que ele ligou
-      if (this.camTeclado && this.camSo && this.estado === 'saguao') { this.desligaCamera(); this.camSo = false; }
+      if (this.camTeclado && this.camSo && !this.camSempre && this.estado === 'saguao') { this.desligaCamera(); this.camSo = false; }
       this.camTeclado = false;
       return;
     }
@@ -2471,7 +2484,7 @@ AFRAME.registerComponent('ryan-vr', {
     [['menos', '−', 0], ['mover', '✥ mover', 1], ['mais', '+', 2]].forEach(([id, rot, i]) => {
       const x = [6, 90, W - 84][i], w = i === 1 ? W - 180 : 78;
       const hv = p.botao('j-' + id, x, 5, w, H - 10, () => {
-        if (id === 'mover') { this.posicionando = { t0: performance.now(), painel: P }; this.aviso('Aponte para onde quer a janela e aperte'); return; }
+        if (id === 'mover') { const pinca = this.fonte === 'mao'; this.posicionando = { t0: performance.now(), painel: P, porPinca: pinca }; this.aviso(pinca ? 'Segure a pinça, arraste e solte os dedos' : 'Aponte para onde quer a janela e aperte'); return; }
         P.esc = Math.max(0.6, Math.min(1.8, +(P.esc + (id === 'mais' ? 0.15 : -0.15)).toFixed(2))); this.raioAtual = 0; this.aplicaDistancia();
       });
       caixa(g, x, 5, w, H - 10, (H - 10) / 2, hv ? 'rgba(255,255,255,.9)' : 'rgba(255,255,255,.12)');
@@ -2507,6 +2520,20 @@ AFRAME.registerComponent('ryan-vr', {
     this.bloqueioAte = performance.now() + 500;
   },
   fechaCentral() { if (!this.centralAberta) return; this.centralAberta = false; this.pCentral.visivel = false; },
+  gestosMaos(dt) {
+    const [esq, dir] = MAO.r.maos;
+    // pinça com a mão esquerda apontando para o nada = abre/fecha a Central de controle
+    if (this.estado === 'saguao' && !this.posicionando && this.maoVisivel(esq) && esq.pincou) {
+      const ray = this.raioDaMao(esq, 8); if (!this.rcGesto) this.rcGesto = new THREE.Raycaster();
+      this.rcGesto.ray.copy(ray);
+      const nada = !this.rcGesto.intersectObjects(PAINEIS.filter(p => p.el.object3D.visible).map(p => p.mesh), false).length;
+      if (nada) { MAO.pincou = false; if (this.centralAberta) this.fechaCentral(); else this.abreCentral(false); }
+    }
+    // duas mãos fechadas, juntinhas, na frente do rosto = pausa o jogo
+    if (this.emJogo() && !this.pausaAberta && this.maoVisivel(esq) && this.maoVisivel(dir) && esq.fechada && dir.fechada && Math.hypot(esq.lm[9].x - dir.lm[9].x, esq.lm[9].y - dir.lm[9].y) < 0.2) {
+      this.punhosT = (this.punhosT || 0) + dt; if (this.punhosT > 0.6) { this.punhosT = 0; this.abrePausa(); }
+    } else this.punhosT = 0;
+  },
   passoCentral(dt) {
     if (this.estado !== 'saguao' || this.posicionando) { if (this.centralAberta) this.fechaCentral(); return; }
     const d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d);
@@ -2771,7 +2798,7 @@ AFRAME.registerComponent('ryan-vr', {
     this.passoPausa(dt);
     this.passoTeclado(dt);
     if (!this.ambIni && this.cam) { this.ambIni = true; if (AJ.ambiente && AJ.ambiente !== 'saguao') this.trocaAmbiente(AJ.ambiente); }
-    this.passoAmbiente(dt, time); this.passoCentral(dt); this.sincBarras();
+    this.gestosMaos(dt); this.passoAmbiente(dt, time); this.passoCentral(dt); this.sincBarras();
     if (this.pMusica && this.pMusica.el.object3D.visible !== (this.estado === 'saguao' && this.musicaAtual !== null && this.musicaAtual !== undefined)) this.pMusica.visivel = this.estado === 'saguao' && this.musicaAtual !== null && this.musicaAtual !== undefined;
     if (this.audioMusica && this.pMusica && this.pMusica.el.object3D.visible && Math.floor(time / 1000) !== this.tocSeg) { this.tocSeg = Math.floor(time / 1000); this.pMusica.render(); }
     const raio = (!this.emJogo() || this.pausaAberta) ? this.raioDoDedo() : null;
@@ -2872,20 +2899,23 @@ window.addEventListener('DOMContentLoaded', () => {
   const prontoVR = () => { // depois que o sensor responder, centraliza a visão nos painéis
     let n = 0; const tenta = () => { const a = app(); if ((a && a.recentrar()) || ++n > 40) return; setTimeout(tenta, 120); }; setTimeout(tenta, 300);
   };
+  // as mãos funcionam em tudo: a câmera de trás liga escondida (só lê as mãos) ao entrar
+  const ligaMaosSempre = () => { const a = app(); if (!a || !AJ.maos) return; a.camSempre = true; if (!a.camVideo) a.ligarCasa(true, true); };
   const entrarVR = async () => {
     await pedeSensor(); audio(); tocaTrilha('saguao');
     entrada.hidden = true; document.getElementById('toque-vr').hidden = true; document.getElementById('vr-ui').hidden = false;
     const cb = sc.components.cardboard; cb.distancia = AJ.ipd; cb.lenteLigada(AJ.lente); cb.entrar();
     prontoVR(); verificaSensor(t => app() && app().aviso(t));
+    ligaMaosSempre();
   };
-  const semOculos = async () => { await pedeSensor(); audio(); tocaTrilha('saguao'); entrada.hidden = true; document.getElementById('menu2d').hidden = false; prontoVR(); verificaSensor(t => app() && app().aviso(t)); };
+  const semOculos = async () => { await pedeSensor(); audio(); tocaTrilha('saguao'); entrada.hidden = true; document.getElementById('menu2d').hidden = false; prontoVR(); verificaSensor(t => app() && app().aviso(t)); ligaMaosSempre(); };
   const sair = () => { sc.components.cardboard.sair(); document.getElementById('vr-ui').hidden = true; entrada.hidden = false; document.getElementById('menu2d').hidden = true; };
   document.getElementById('btn-vr').onclick = entrarVR;
   // Modo TV: Cardboard + câmera (sua casa) + mão como controle, num toque só
   document.getElementById('btn-tv').onclick = async () => {
     AJ.maos = true; salva();
     await entrarVR();
-    const a = app(); if (a) a.ligarCasa(true);
+    const a = app(); if (a) { a.camSempre = true; a.ligarCasa(true); }
   };
   document.getElementById('btn-tela').onclick = semOculos;
   // Modo Computador: sem giroscópio; arrasta o mouse para olhar, clica para apertar, teclado de verdade
@@ -2936,7 +2966,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 2.6' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 2.7' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 

@@ -35,6 +35,11 @@ Na tela de entrada, **📺 Modo TV** entra no Cardboard, liga a câmera (você v
 - **Janelas de vidro no Modo Casa**: os painéis ficam transparentes, claros e com borda de luz, flutuando na sua sala (a moldura da TV só aparece com vídeo passando).
 - **Imagem da casa sempre encaixada**: no Modo Casa/TV a câmera é desenhada no fundo de cada olho, então não fica torta nem escorrega quando você vira a cabeça.
 - **Pausar e sair do jogo**: em qualquer jogo, **olhe para baixo** e aparece o menu ⏸ com **▶ Continuar** e **🏠 Sair do jogo** (o jogo fica parado; olhe para cima para continuar). No app, o **botão voltar** do celular também pausa; apertando de novo, sai do jogo.
+- **✋ Mãos em tudo**: ao entrar nos modos VR, Celular ou TV a câmera de trás liga sozinha (escondida, só para ler as mãos) e continua ligada em todo o app: menus, Modo Casa, vídeos, jogos, Google, Fotos e Música. Gestos:
+  - apontar com o indicador + **pinça** = apertar (qualquer mão);
+  - **pinça no ✥** da barrinha, arrastar e **soltar os dedos** = mudar a janela de lugar;
+  - **pinça com a mão esquerda no ar** (sem apontar para nada) = abrir/fechar a Central de controle;
+  - **duas mãos fechadas juntinhas** na frente do rosto = pausar o jogo.
 - **🏞️ Ambientes** (app no Início, e na Central de controle): Sala Ryan, Praia, Montanhas, Lua, Espaço e Floresta em volta de você. No Modo Casa, a **🌗 Imersão** (0%, 25%, 50%, 75%, 100%) mistura o ambiente com a sua casa de verdade.
 - **Janelas que mudam de lugar e de tamanho**: embaixo de cada janela há uma barrinha com **−**, **✥ mover** e **+**. Em "mover", a janela vai para onde você aponta (mão) ou olha; aperte para soltar.
 - **🎛️ Central de controle**: olhe para cima (ou toque em 🎛️ na barra de baixo): hora, data, bateria, música, Modo Casa, ambiente, 📸 foto da tela, centralizar, Início, volume e imersão.
