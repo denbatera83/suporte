@@ -697,7 +697,7 @@ const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2,
 const LENTE_VERT = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
 const LENTE_FRAG = `
   varying vec2 vUv;
-  uniform sampler2D tDiffuse; uniform float k1, k2, escala, aspecto, ligada;
+  uniform sampler2D tDiffuse; uniform float k1, k2, escala, aspecto, ligada, nitidez; uniform vec2 px;
   void main() {
     float olho = step(0.5, vUv.x);
     vec2 local = vec2((vUv.x - olho * 0.5) * 2.0, vUv.y);
@@ -709,7 +709,12 @@ const LENTE_FRAG = `
     vec2 uv = d * 0.5 + 0.5;
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
     float borda = smoothstep(0.0, 0.03, min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y)));
-    gl_FragColor = texture2D(tDiffuse, vec2(uv.x * 0.5 + olho * 0.5, uv.y)) * vec4(vec3(borda), 1.0);
+    vec2 q = vec2(uv.x * 0.5 + olho * 0.5, uv.y);
+    vec4 c = texture2D(tDiffuse, q);
+    // nitidez: realça as bordas (letras mais definidas depois de esticar a imagem na lente)
+    vec4 viz = (texture2D(tDiffuse, q + vec2(px.x, 0.0)) + texture2D(tDiffuse, q - vec2(px.x, 0.0)) + texture2D(tDiffuse, q + vec2(0.0, px.y)) + texture2D(tDiffuse, q - vec2(0.0, px.y))) * 0.25;
+    c.rgb = clamp(c.rgb + (c.rgb - viz.rgb) * nitidez, 0.0, 1.0);
+    gl_FragColor = c * vec4(vec3(borda), 1.0);
     #include <colorspace_fragment>
   }`;
 AFRAME.registerComponent('cardboard', {
@@ -728,7 +733,7 @@ AFRAME.registerComponent('cardboard', {
     this.estereo = new THREE.StereoCamera();
     this.quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     this.lente = new THREE.ShaderMaterial({ vertexShader: LENTE_VERT, fragmentShader: LENTE_FRAG, depthTest: false, depthWrite: false,
-      uniforms: { tDiffuse: { value: null }, k1: { value: 0.18 }, k2: { value: 0.06 }, escala: { value: 0.84 }, aspecto: { value: 1 }, ligada: { value: 1 } } });
+      uniforms: { tDiffuse: { value: null }, k1: { value: 0.18 }, k2: { value: 0.06 }, escala: { value: 0.84 }, aspecto: { value: 1 }, ligada: { value: 1 }, nitidez: { value: 0.7 }, px: { value: new THREE.Vector2(0.001, 0.001) } } });
     this.lente.uniforms.ligada.value = this.lenteOn ? 1 : 0;
     this.quadCena = new THREE.Scene();
     const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.lente); q.frustumCulled = false; this.quadCena.add(q);
@@ -758,7 +763,7 @@ AFRAME.registerComponent('cardboard', {
     const ms = this.somaT / this.nT; this.somaT = 0; this.nT = 0; this.tAjuste = t;
     const r = this.r, pr = r.getPixelRatio(); let novo = pr;
     if (this.limite === undefined || t - (this.limiteEm || 0) > 20000) { this.limite = this.teto(); this.limiteEm = t; }
-    if (ms > 21) { novo = Math.max(1, pr - (ms > 30 ? 0.3 : 0.15)); this.limite = Math.max(1, pr - 0.05); this.limiteEm = t; } // travou: baixa e lembra
+    if (ms > 21) { const piso = Math.min(this.teto(), ms > 40 ? 1 : 1.3); novo = Math.max(piso, pr - (ms > 30 ? 0.25 : 0.12)); this.limite = Math.max(piso, pr - 0.05); this.limiteEm = t; } // travou: baixa e lembra
     else if (ms < 17.8) novo = Math.min(this.limite, pr + 0.1);                                                                 // liso: sobe aos poucos
     if (Math.abs(novo - pr) > 0.01) r.setPixelRatio(novo);
   },
@@ -792,7 +797,7 @@ AFRAME.registerComponent('cardboard', {
       // cor comum (8 bits): todo celular consegue desenhar nela
       const aa = this.modo === 0 && r.capabilities.isWebGL2 ? (r.getPixelRatio() >= 1.9 ? 0 : this.suave() ? 2 : 4) : 0; // resolução alta já é lisa: sem suavização extra (mais leve)
       this.rt = new THREE.WebGLRenderTarget(W, H, { type: THREE.UnsignedByteType, format: THREE.RGBAFormat, samples: aa, depthBuffer: true });
-      this.lente.uniforms.tDiffuse.value = this.rt.texture;
+      this.lente.uniforms.tDiffuse.value = this.rt.texture; this.lente.uniforms.px.value.set(1 / W, 1 / H);
       this.conferir = true;
     }
     const asp = meio / H;
@@ -833,7 +838,7 @@ AFRAME.registerComponent('cardboard', {
     this.prepara();
     this.ativo = true;
     this.pixelAntes = this.r.getPixelRatio();
-    this.limite = undefined; this.r.setPixelRatio(Math.min(this.teto(), this.suave() ? 1.5 : 2)); // começa leve e vai subindo
+    this.limite = undefined; this.r.setPixelRatio(Math.min(this.teto(), this.suave() ? 1.75 : 2.2)); // começa nítido e se ajusta
     document.body.classList.add('modo-vr');
     const app = /\bwv\b/.test(navigator.userAgent);   // dentro do APK já está em tela cheia e deitado
     if (!app && document.documentElement.requestFullscreen) {
