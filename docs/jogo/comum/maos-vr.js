@@ -18,7 +18,7 @@
 
   function novaMao(lado) {
     return { lado, lm: null, alvo: null, vistoEm: 0, vel: 0, tam: 0,
-      pinca: false, fechada: false, segura: false, gatilho: false, curva: [0, 0, 0, 0],
+      pinca: false, fechada: false, segura: false, gatilho: false, curva: [0, 0, 0, 0], dedos: [false, false, false, false], palma3D: 0, certeza: 1,
       // eventos: valem só no quadro em que aconteceram
       pincou: false, agarrou: false, soltou: false, atirou: false };
   }
@@ -52,8 +52,11 @@
     }
 
     processa(r, agora) {
-      const L = (r && r.landmarks || []).slice(0, 2);
-      const atr = [null, null];
+      // cada mão vem com os pontos na imagem, os pontos em 3D (em metros) e a certeza do reconhecimento
+      const W3 = (r && r.worldLandmarks) || [], H = (r && (r.handedness || r.handednesses)) || [];
+      const todas = ((r && r.landmarks) || []).map((lm, i) => ({ lm, w: W3[i] || null, c: H[i] && H[i][0] ? H[i][0].score : 1 }))
+        .filter(h => h.c >= 0.5).slice(0, 2); // sem certeza = não é mão (menos "mãos fantasmas")
+      const L = todas.map(h => h.lm), atr = [null, null], extra = new Map(todas.map(h => [h.lm, h]));
       // a câmera de trás não espelha: a mão mais à esquerda da imagem é a sua mão esquerda
       if (L.length === 2) { const a = L[0][0].x <= L[1][0].x ? 0 : 1; atr[0] = L[a]; atr[1] = L[1 - a]; }
       else if (L.length === 1) {
@@ -65,7 +68,7 @@
         else i = p.x < 0.5 ? 0 : 1;
         atr[i] = L[0];
       }
-      atr.forEach((lm, i) => { if (lm) this.atualizaMao(this.maos[i], lm, agora); });
+      atr.forEach((lm, i) => { if (lm) { const h = extra.get(lm); this.atualizaMao(this.maos[i], lm, agora, h && h.w, h ? h.c : 1); } });
       this.confereSumico(agora);
     }
 
@@ -84,7 +87,8 @@
       }
     }
 
-    atualizaMao(m, lm, agora) {
+    atualizaMao(m, lm, agora, w3, certeza) {
+      m.certeza = certeza === undefined ? 1 : certeza;
       if (!m.alvo) { m.alvo = lm.map(p => ({ x: p.x, y: p.y })); m.lm = lm.map(p => ({ x: p.x, y: p.y })); m.vel = 0; }
       else {
         // filtro adaptativo: parada = bem lisa (sem tremer); rápida = acompanha sem atraso
@@ -96,23 +100,30 @@
       }
       m.vistoEm = agora;
       const d = (a, b) => Math.hypot(lm[a].x - lm[b].x, lm[a].y - lm[b].y);
+      // em 3D (metros): não engana com a mão de lado, girada ou longe
+      const d3 = w3 ? (a, b) => Math.hypot(w3[a].x - w3[b].x, w3[a].y - w3[b].y, w3[a].z - w3[b].z) : null;
       const tam = Math.max(1e-3, d(0, 9));
       m.tam = m.tam ? m.tam * 0.75 + tam * 0.25 : tam;
-      // pinça: dedão encostado no indicador
-      const pz = d(4, 8) / tam, antesP = m.pinca;
-      if (!m.pinca && pz < 0.32) m.pinca = true; else if (m.pinca && pz > 0.5) m.pinca = false;
+      if (d3) { const p3 = d3(0, 9); m.palma3D = m.palma3D ? m.palma3D * 0.9 + p3 * 0.1 : p3; }
+      // pinça: dedão encostado no indicador (em centímetros, quando tem 3D)
+      const antesP = m.pinca;
+      if (d3) { const cm = d3(4, 8) * 100; if (!m.pinca && cm < 2.8) m.pinca = true; else if (m.pinca && cm > 4.5) m.pinca = false; }
+      else { const pz = d(4, 8) / tam; if (!m.pinca && pz < 0.32) m.pinca = true; else if (m.pinca && pz > 0.5) m.pinca = false; }
       if (m.pinca && !antesP) { m.pincou = true; this.pincou = true; }
       // mão fechada: pelo menos 3 pontas de dedo perto da palma
-      let dobrados = 0; [[8, 5], [12, 9], [16, 13], [20, 17]].forEach(([ponta, base]) => { if (d(ponta, 0) < d(base, 0) * 1.15) dobrados++; });
+      const dd = d3 || d, DEDOS = [[8, 6, 5], [12, 10, 9], [16, 14, 13], [20, 18, 17]];
+      let dobrados = 0; DEDOS.forEach(([ponta, , base]) => { if (dd(ponta, 0) < dd(base, 0) * 1.15) dobrados++; });
       m.fechada = dobrados >= 3;
-      m.curva = [[8, 5], [12, 9], [16, 13], [20, 17]].map(([p, b]) => Math.max(0, Math.min(1, 1.6 - d(p, 0) / Math.max(1e-3, d(b, 0)))));
+      m.curva = DEDOS.map(([p, , b]) => Math.max(0, Math.min(1, 1.6 - dd(p, 0) / Math.max(1e-4, dd(b, 0)))));
+      // quais dedos estão esticados (indicador, médio, anelar, mindinho): a ponta longe do pulso e o dedo reto
+      m.dedos = DEDOS.map(([p, j, b]) => dd(p, 0) > dd(j, 0) * 1.08 && dd(p, 0) > dd(b, 0) * 1.45);
       const segura = m.pinca || m.fechada;
       if (segura && !m.segura) m.agarrou = true;
       if (!segura && m.segura) m.soltou = true;
       m.segura = segura;
       // gatilho (mão de "arminha"): pinça, mão fechada ou dedão abaixado encostando no indicador
-      const pol = d(4, 5) / tam, antesG = m.gatilho;
-      const baixo = m.gatilho ? pol < 0.45 : pol < 0.3;
+      const antesG = m.gatilho;
+      const baixo = d3 ? (m.gatilho ? d3(4, 5) * 100 < 4.5 : d3(4, 5) * 100 < 3) : (m.gatilho ? d(4, 5) / tam < 0.45 : d(4, 5) / tam < 0.3);
       m.gatilho = m.pinca || m.fechada || baixo;
       if (m.gatilho && !antesG) m.atirou = true;
     }
@@ -124,7 +135,20 @@
     }
 
     // distância da mão até o olho, pelo tamanho dela na imagem (mão mais perto da câmera = maior)
-    profundidade(m, base = 0.45) { return Math.max(0.3, Math.min(0.68, base * Math.sqrt(0.17 / Math.max(0.05, m.tam || 0.17)))); }
+    // distância da mão até o olho: tamanho na imagem + tamanho real da mão (mão de criança é menor e não parece mais longe)
+    profundidade(m, base = 0.45) {
+      const real = m.palma3D ? Math.max(0.6, Math.min(1.4, m.palma3D / 0.085)) : 1;
+      return Math.max(0.28, Math.min(0.7, base * Math.sqrt((0.17 / Math.max(0.05, m.tam || 0.17)) * real)));
+    }
+    // gesto da mão: 'pedra' (fechada), 'papel' (aberta), 'tesoura' (dois dedos) ou null
+    gesto(m) {
+      if (!this.visivel(m)) return null;
+      const [i, me, a, mi] = m.dedos, n = m.dedos.filter(Boolean).length;
+      if (n === 0 || (m.fechada && n <= 1)) return 'pedra';
+      if (n === 4) return 'papel';
+      if (i && me && !a && !mi) return 'tesoura';
+      return null;
+    }
   }
   window.RastreioMaos = RastreioMaos;
 
@@ -160,7 +184,7 @@
       try {
         const mp = await import(MP_BASE + 'vision_bundle.mjs');
         const fs = await mp.FilesetResolver.forVisionTasks(MP_BASE + 'wasm');
-        const cria = delegate => mp.HandLandmarker.createFromOptions(fs, { baseOptions: { modelAssetPath: MP_MODELO, delegate }, runningMode: 'VIDEO', numHands: 2, minHandDetectionConfidence: 0.55, minHandPresenceConfidence: 0.5, minTrackingConfidence: 0.5 });
+        const cria = delegate => mp.HandLandmarker.createFromOptions(fs, { baseOptions: { modelAssetPath: MP_MODELO, delegate }, runningMode: 'VIDEO', numHands: 2, minHandDetectionConfidence: 0.6, minHandPresenceConfidence: 0.55, minTrackingConfidence: 0.5 });
         try { this.hl = await cria('GPU'); } catch (e) { this.hl = await cria('CPU'); }
         aviso('Pronto! Mostre as mãos para a câmera');
       } catch (e) { this.erro = String(e && e.message || e); aviso('Não deu para ligar o reconhecimento da mão'); }
