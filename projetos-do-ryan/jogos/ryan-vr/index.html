@@ -82,7 +82,7 @@
       <button id="btn-tela" class="sec">📱 Ver sem óculos</button>
     </div>
     <p class="nota">Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 2.0</p>
+    <p class="nota" id="versao">Ryan VR 2.1</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -841,7 +841,7 @@ AFRAME.registerComponent('ryan-vr', {
     const W = p.W, b = this.busca || '';
     // logo colorido
     let x = 48; [['G', '#4285f4'], ['o', '#ea4335'], ['o', '#fbbc05'], ['g', '#4285f4'], ['l', '#34a853'], ['e', '#ea4335']].forEach(([l, c]) => { texto(g, l, x, 98, FONTE_T(72), c); x += g.measureText(l).width + 2; });
-    texto(g, 'Pesquise com o teclado · Busca Segura ligada', x + 24, 92, FONTE(700, 28), UI.sub);
+    texto(g, 'Digite no teclado de luz embaixo (com os dedos) ou aqui · Busca Segura ligada', x + 24, 92, FONTE(700, 26), UI.sub);
     // barra de pesquisa (fora do óculos, toque nela para usar o teclado do celular)
     const hvb = p.botao('k-barra', 48, 132, W - 96, 104, () => { if (!this.el.components.cardboard.ativo) { const t = window.prompt('Pesquisar no Google', b); if (t !== null) { this.busca = t.slice(0, 60); this.renderTudo(); } } });
     caixa(g, 48, 132, W - 96, 104, 52, '#ffffff', hvb ? UI.acc : '#dadce0', 4);
@@ -993,7 +993,7 @@ AFRAME.registerComponent('ryan-vr', {
     if (this.posicionando) return this.fixaPosicao();
     const k = this.hoverAtual; if (!k) return;
     if (performance.now() < (this.bloqueioAte || 0)) return;
-    this.doToque = doToque; som('clique'); this.bloqueioAte = performance.now() + (k.b.id.startsWith('k-') ? 250 : 900);
+    this.doToque = doToque; som('clique'); this.bloqueioAte = performance.now() + (k.b.id.startsWith('k-') || k.b.id.startsWith('tm-') ? 250 : 900);
     // depois de escolher, o olhar só volta a valer quando a cabeça se mexer um pouco
     this.dirTrava = new THREE.Vector3(); this.cam.object3D.getWorldDirection(this.dirTrava);
     k.b.acao(); this.doToque = false; this.disparado = true; this.anelProgresso(0);
@@ -1294,7 +1294,7 @@ AFRAME.registerComponent('ryan-vr', {
       if (m === MAO.r.principal) P.push(Q);
     });
     // anel na ponta do dedo que aponta (só nos menus e nos balões)
-    const pv = P.length && !fraca && this.estado !== 'corrida';
+    const pv = P.length && !fraca && this.estado !== 'corrida' && !(this.hoverAtual && this.hoverAtual.p.id === 'teclado'); // no teclado a própria tecla acende
     this.maoPonta.visible = !!pv; if (!pv) return;
     this.maoPonta.position.copy(this.pontoDedo || P[0][8]);
     this.maoPonta.quaternion.copy(this.cam.object3D.getWorldQuaternion(new THREE.Quaternion()));
@@ -2172,6 +2172,89 @@ AFRAME.registerComponent('ryan-vr', {
     });
   },
 
+  // ---------- teclado de mesa: teclado de luz deitado na sua frente (digite com os dedos) ----------
+  teclaAcao(id) {
+    const b = this.busca || '';
+    if (id === 'apaga') this.busca = b.slice(0, -1);
+    else if (id === 'espaco') { if (b.length < 60) this.busca = b + ' '; }
+    else if (id === 'vai') { this.pesquisar(); return; }
+    else if (id.length === 1 && b.length < 60) this.busca = b + id;
+    this.teclaFlash = this.teclaFlash || {}; this.teclaFlash[id] = performance.now();
+    som('hover'); this.vibra(10);
+    if (this.secao === 'google') this.pCentro.render();
+    this.pTeclado.render();
+  },
+  montaTeclado() {
+    if (this.pTeclado) return;
+    this.pTeclado = new Painel('teclado', { larg: 0.86, alt: 0.27, ang: 0, y: 0, raio: 1, ppm: 1600, desenhar: (g, p) => this.desenhaTeclado(g, p) });
+    const m = this.pTeclado.mesh; m.geometry.dispose(); m.geometry = new THREE.PlaneGeometry(0.86, 0.27); // reto, deitado como numa mesa
+    m.renderOrder = 8; this.pTeclado.visivel = false; this.teclaMaos = [[], []];
+  },
+  desenhaTeclado(g, p) {
+    const W = p.W, H = p.H, agora = performance.now(), hov = this.teclaHover || new Set(); g.clearRect(0, 0, W, H);
+    const linha = (x, y, w, h, r, aceso) => {
+      g.save(); g.shadowColor = 'rgba(255,255,255,.95)'; g.shadowBlur = aceso ? 26 : 12;
+      if (aceso) { g.fillStyle = 'rgba(255,255,255,.95)'; caixa(g, x, y, w, h, r, 'rgba(255,255,255,.95)'); }
+      else { g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.92)'; g.beginPath(); g.roundRect(x, y, w, h, r); g.stroke(); }
+      g.restore();
+    };
+    const KW = 1000, kx0 = 40, ky0 = 40, kh = (H - 80 - 4 * 14) / 5, kw = (KW - 9 * 12) / 10;
+    // contorno do teclado
+    g.save(); g.shadowColor = '#fff'; g.shadowBlur = 18; g.lineWidth = 5; g.strokeStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.roundRect(14, 14, KW + 52, H - 28, 34); g.stroke(); g.restore();
+    const tecla = (id, rot, x, y, w) => {
+      p.botao('tm-' + id, x, y, w, kh, () => this.teclaAcao(id));
+      const aceso = hov.has(id) || p.hover === 'tm-' + id || (this.teclaFlash && agora - (this.teclaFlash[id] || 0) < 180);
+      linha(x, y, w, kh, 14, aceso);
+      texto(g, rot, x + w / 2, y + kh / 2 + 12, FONTE(800, rot.length > 2 ? 26 : 34), aceso ? '#15131f' : '#ffffff', 'center');
+    };
+    ['1234567890', 'qwertyuiop', 'asdfghjklç', 'zxcvbnm,.'].forEach((l, r) => [...l].forEach((c, i) => tecla(c, c, kx0 + i * (kw + 12) + (r === 2 ? kw * 0.25 : r === 3 ? kw * 0.5 : 0), ky0 + r * (kh + 14), kw)));
+    tecla('apaga', '⌫', kx0 + 9 * (kw + 12) + kw * 0.5, ky0 + 3 * (kh + 14), kw * 0.5 + 0);
+    const y5 = ky0 + 4 * (kh + 14);
+    tecla('espaco', 'espaço', kx0 + 2 * (kw + 12), y5, kw * 5 + 48);
+    tecla('vai', 'pesquisar', kx0 + 7 * (kw + 12), y5, kw * 3 + 24);
+    // touchpad ao lado (só o desenho, como num teclado de verdade)
+    g.save(); g.shadowColor = '#fff'; g.shadowBlur = 18; g.lineWidth = 5; g.strokeStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.roundRect(KW + 100, 14, W - KW - 114, H - 28, 34); g.stroke(); g.restore();
+  },
+  passoTeclado(dt) {
+    const quer = this.secao === 'google' && this.estado === 'saguao' && !this.detalhe && !this.posicionando && this.pCentro.el.object3D.visible;
+    if (!quer) {
+      if (this.pTeclado && this.pTeclado.el.object3D.visible) this.pTeclado.visivel = false;
+      // saiu do Google: desliga a câmera escondida que ele ligou
+      if (this.camTeclado && this.camSo && this.estado === 'saguao') { this.desligaCamera(); this.camSo = false; }
+      this.camTeclado = false;
+      return;
+    }
+    // o teclado de mesa usa os seus dedos: liga a câmera escondida (só lê as mãos)
+    if (AJ.maos && !this.camVideo && !this.ligandoCam) { this.ligandoCam = true; this.camTeclado = true; this.ligarCasa(true, true).then(() => { this.ligandoCam = false; }); }
+    this.montaTeclado();
+    const P = this.pTeclado, o = P.el.object3D;
+    if (!o.visible) { // aparece na sua frente, deitado, um pouco abaixo dos olhos
+      const ol = this.cam.object3D.getWorldPosition(new THREE.Vector3()), yaw = this.uiRaiz.object3D.rotation.y;
+      o.position.set(ol.x - Math.sin(yaw) * 0.5, ol.y - 0.42, ol.z - Math.cos(yaw) * 0.5); o.rotation.order = 'YXZ'; o.rotation.set(-1.0, yaw, 0);
+      P.visivel = true; P.render();
+    }
+    // as duas mãos: o dedo indicador de cada uma acende a tecla embaixo dele
+    if (!this.rcTec) this.rcTec = new THREE.Raycaster();
+    const hov = new Set(), agora = performance.now();
+    MAO.r.maos.forEach((m, k) => {
+      const hist = this.teclaMaos[k];
+      const ray = this.raioDaMao(m, 8); if (!ray) { hist.length = 0; return; }
+      this.rcTec.ray.copy(ray); const h = this.rcTec.intersectObject(P.mesh, false)[0];
+      const b = h && h.uv ? P.acha(h.uv) : null, id = b ? b.id.slice(3) : null;
+      if (id) hov.add(id);
+      hist.push({ t: agora, y8: m.lm[8].y, y0: m.lm[0].y, id }); while (hist.length && agora - hist[0].t > 260) hist.shift();
+      // pinça com qualquer mão = aperta a tecla
+      if (m.pincou && id) { this.teclaAcao(id); MAO.r.pincou = false; this.ultTecla = agora; return; }
+      // toque com o dedo: a ponta do dedo desce rápido (e a mão quase não mexe)
+      const velho = hist.find(q => agora - q.t > 120);
+      if (velho && velho.id && agora - (m.ultToque || 0) > 320) {
+        const d8 = m.lm[8].y - velho.y8, d0 = m.lm[0].y - velho.y0, tam = Math.max(0.05, m.tam || 0.15);
+        if (d8 > tam * 0.22 && d8 - d0 > tam * 0.16) { m.ultToque = agora; this.teclaAcao(velho.id); hist.length = 0; }
+      }
+    });
+    const chave = [...hov].sort().join(',');
+    if (chave !== this.teclaChave || (this.teclaFlash && Object.values(this.teclaFlash).some(t => agora - t < 260))) { this.teclaChave = chave; this.teclaHover = hov; P.render(); }
+  },
   // ---------- pausa: olhe para baixo durante o jogo (ou aperte voltar) ----------
   emJogo() { return ['baloes', 'corrida', 'cubos', 'alvos'].includes(this.estado); },
   abrePausa() {
@@ -2259,6 +2342,7 @@ AFRAME.registerComponent('ryan-vr', {
     // apontador: a mão (Modo Casa) tem prioridade; sem mão, vale o olhar
     let atual = null; this.fonte = 'olhar';
     this.passoPausa(dt);
+    this.passoTeclado(dt);
     const raio = (!this.emJogo() || this.pausaAberta) ? this.raioDoDedo() : null;
     if (this.estado !== 'baloes' || this.pausaAberta) this.pontoDedo = null;
     if (raio) {
@@ -2283,8 +2367,8 @@ AFRAME.registerComponent('ryan-vr', {
       this.cursor.setAttribute('material', 'color', atual ? '#ffb36b' : '#ffffff');
     }
     if (this.dirTrava) { const d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d); if (d.angleTo(this.dirTrava) > 0.07 || !atual) { this.dirTrava = null; this.fuseT0 = Math.max(performance.now(), this.bloqueioAte || 0); } }
-    if (atual && !this.disparado && !this.dirTrava) {
-      const tec = atual.p.id === 'centro' && atual.b.id.startsWith('k-'); // no teclado as teclas são escolhidas mais rápido
+    if (atual && !this.disparado && !this.dirTrava && !(this.fonte === 'mao' && atual.p.id === 'teclado')) { // no teclado de mesa a mão digita com toque/pinça (não só parando em cima)
+      const tec = (atual.p.id === 'centro' && atual.b.id.startsWith('k-')) || atual.p.id === 'teclado'; // no teclado as teclas são escolhidas mais rápido
       const v = Math.max(0, performance.now() - this.fuseT0) / ((this.fonte === 'mao' ? (tec ? 0.6 : 0.8) : tec ? Math.min(AJ.fuse, 0.75) : AJ.fuse) * 1000);
       if (v >= 1) this.tocar(false); else this.anelProgresso(v);
     } else if (!atual) this.anelProgresso(0);
@@ -2387,7 +2471,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 2.0' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 2.1' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 
