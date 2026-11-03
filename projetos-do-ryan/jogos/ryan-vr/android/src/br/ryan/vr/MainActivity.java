@@ -76,7 +76,7 @@ public class MainActivity extends Activity {
             // se a página principal não abrir pelo endereço seguro, abre a cópia de reserva direto dos arquivos
             @Override
             public void onReceivedError(WebView v, WebResourceRequest req, WebResourceError err) {
-                if (req.isForMainFrame() && !usouReserva) {
+                if (req.isForMainFrame() && !usouReserva && CASA.equals(req.getUrl().getHost())) { // só as páginas do Ryan VR (não o Google)
                     usouReserva = true;
                     String c = req.getUrl().getPath();
                     v.loadUrl("file:///android_asset" + (c == null || c.equals("/") ? "/ryan-vr/index.html" : c));

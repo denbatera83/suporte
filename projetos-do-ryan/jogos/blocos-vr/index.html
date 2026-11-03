@@ -764,7 +764,9 @@ AFRAME.registerComponent('cardboard', {
   erro(msg) { const a = document.getElementById('vr-erro'); if (a) { a.textContent = 'Erro: ' + msg; a.hidden = false; } },
   ajustaCamera(camera, asp) {
     if (Math.abs(camera.aspect - asp) > 1e-3) { camera.aspect = asp; camera.updateProjectionMatrix(); }
-    camera.updateMatrixWorld();
+    // atualiza a cena inteira ANTES de calcular os olhos: senão os olhos usam a cabeça do quadro
+    // anterior e a imagem da câmera / as mãos (presas na cabeça) escorregam quando você vira
+    let raiz = camera; while (raiz.parent) raiz = raiz.parent; raiz.updateMatrixWorld();
     this.estereo.eyeSep = this.distancia;
     this.estereo.update(camera);
   },
@@ -811,13 +813,13 @@ AFRAME.registerComponent('cardboard', {
   },
   suave() { return (() => { try { const v = localStorage.getItem('ryanvr-suave'); return v === null ? true : JSON.parse(v); } catch (e) { return true; } })(); },
   // ajuste ⚡ Suave / ✨ Bonito: troca a resolução na hora
-  qualidade() { if (!this.r) return; if (this.ativo) this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 1.15 : 1.6)); if (this.rt) { this.rt.dispose(); this.rt = null; } },
+  qualidade() { if (!this.r) return; if (this.ativo) this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 1.4 : 1.75)); if (this.rt) { this.rt.dispose(); this.rt = null; } },
   lenteLigada(v) { this.lenteOn = !!v; if (this.lente) this.lente.uniforms.ligada.value = v ? 1 : 0; },
   entrar() {
     this.prepara();
     this.ativo = true;
     this.pixelAntes = this.r.getPixelRatio();
-    this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 1.15 : 1.6));
+    this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 1.4 : 1.75));
     document.body.classList.add('modo-vr');
     const app = /\bwv\b/.test(navigator.userAgent);   // dentro do APK já está em tela cheia e deitado
     if (!app && document.documentElement.requestFullscreen) {

@@ -82,7 +82,7 @@
       <button id="btn-tela" class="sec">📱 Ver sem óculos</button>
     </div>
     <p class="nota">Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 1.7</p>
+    <p class="nota" id="versao">Ryan VR 1.8</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -166,7 +166,9 @@ AFRAME.registerComponent('cardboard', {
   erro(msg) { const a = document.getElementById('vr-erro'); if (a) { a.textContent = 'Erro: ' + msg; a.hidden = false; } },
   ajustaCamera(camera, asp) {
     if (Math.abs(camera.aspect - asp) > 1e-3) { camera.aspect = asp; camera.updateProjectionMatrix(); }
-    camera.updateMatrixWorld();
+    // atualiza a cena inteira ANTES de calcular os olhos: senão os olhos usam a cabeça do quadro
+    // anterior e a imagem da câmera / as mãos (presas na cabeça) escorregam quando você vira
+    let raiz = camera; while (raiz.parent) raiz = raiz.parent; raiz.updateMatrixWorld();
     this.estereo.eyeSep = this.distancia;
     this.estereo.update(camera);
   },
@@ -213,13 +215,13 @@ AFRAME.registerComponent('cardboard', {
   },
   suave() { return (() => { try { const v = localStorage.getItem('ryanvr-suave'); return v === null ? true : JSON.parse(v); } catch (e) { return true; } })(); },
   // ajuste ⚡ Suave / ✨ Bonito: troca a resolução na hora
-  qualidade() { if (!this.r) return; if (this.ativo) this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 1.15 : 1.6)); if (this.rt) { this.rt.dispose(); this.rt = null; } },
+  qualidade() { if (!this.r) return; if (this.ativo) this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 1.4 : 1.75)); if (this.rt) { this.rt.dispose(); this.rt = null; } },
   lenteLigada(v) { this.lenteOn = !!v; if (this.lente) this.lente.uniforms.ligada.value = v ? 1 : 0; },
   entrar() {
     this.prepara();
     this.ativo = true;
     this.pixelAntes = this.r.getPixelRatio();
-    this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 1.15 : 1.6));
+    this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 1.4 : 1.75));
     document.body.classList.add('modo-vr');
     const app = /\bwv\b/.test(navigator.userAgent);   // dentro do APK já está em tela cheia e deitado
     if (!app && document.documentElement.requestFullscreen) {
@@ -470,7 +472,7 @@ class Painel {
     this.id = id; this.ppm = o.ppm || 1000;
     this.W = Math.round(o.larg * this.ppm); this.H = Math.round(o.alt * this.ppm);
     this.c = document.createElement('canvas'); this.c.width = this.W; this.c.height = this.H; this.g = this.c.getContext('2d');
-    this.t = new THREE.CanvasTexture(this.c); this.t.colorSpace = THREE.SRGBColorSpace; this.t.generateMipmaps = false; this.t.minFilter = THREE.LinearFilter; this.t.anisotropy = 4;
+    this.t = new THREE.CanvasTexture(this.c); this.t.colorSpace = THREE.SRGBColorSpace; this.t.generateMipmaps = true; this.t.minFilter = THREE.LinearMipmapLinearFilter; this.t.anisotropy = 8; // letras lisas mesmo de longe
     this.mesh = new THREE.Mesh(geoCurva(o.larg, o.alt, o.raio || 1.8), new THREE.MeshBasicMaterial({ map: this.t, transparent: true, side: THREE.DoubleSide, toneMapped: false, depthWrite: false }));
     this.mesh.userData.painel = this; this.mesh.renderOrder = 5;
     this.el = document.createElement('a-entity'); this.el.classList.add('alvo'); this.el.setObject3D('mesh', this.mesh);
@@ -650,6 +652,7 @@ AFRAME.registerComponent('ryan-vr', {
   init() {
     const sc = this.el;
     this.secao = Q.get('secao') || 'videos'; this.detalhe = null; this.estado = 'saguao';
+    try { this.busca = localStorage.getItem('ryanvr-busca') || ''; } catch (e) { this.busca = ''; }
     this.rig = document.getElementById('rig'); this.centro = document.getElementById('centro'); this.cam = document.getElementById('cam');
     this.cursor = document.getElementById('cursor'); this.anel = document.getElementById('anel');
     this.hoverKey = ''; this.fuseT0 = 0; this.disparado = false; this.meuVideo = null; this.modoVideo = 'cinema';
@@ -728,11 +731,11 @@ AFRAME.registerComponent('ryan-vr', {
     caixa(g, 0, 0, p.W, p.H, 36, UI.fundo);
     texto(g, 'Ryan', 40, 92, FONTE_T(64), UI.txt); texto(g, 'VR', 40 + g.measureText('Ryan ').width, 92, FONTE_T(64), UI.acc2);
     texto(g, 'MENU', 42, 150, FONTE(800, 22), UI.sub);
-    const itens = [['videos', '🎬', 'Vídeos 360°'], ['jogos', '🎮', 'Jogos'], ['meus', '📁', 'Meus vídeos'], ['ajustes', '⚙️', 'Ajustes']];
+    const itens = [['videos', '🎬', 'Vídeos 360°'], ['jogos', '🎮', 'Jogos'], ['meus', '📁', 'Meus vídeos'], ['google', '🔎', 'Google'], ['ajustes', '⚙️', 'Ajustes']];
     itens.forEach(([id, ic, nome], i) => {
-      const y = 180 + i * 116, sel = this.secao === id;
-      const hv = p.botao('m-' + id, 24, y, p.W - 48, 100, () => { this.secao = id; this.detalhe = null; this.renderTudo(); });
-      caixa(g, 24, y, p.W - 48, 100, 24, sel ? UI.acc : hv ? UI.cardHover : 'rgba(255,255,255,.04)', hv && !sel ? UI.acc : null);
+      const y = 172 + i * 112, sel = this.secao === id;
+      const hv = p.botao('m-' + id, 24, y, p.W - 48, 96, () => { this.secao = id; this.detalhe = null; this.renderTudo(); });
+      caixa(g, 24, y, p.W - 48, 96, 24, sel ? UI.acc : hv ? UI.cardHover : 'rgba(255,255,255,.04)', hv && !sel ? UI.acc : null);
       texto(g, ic, 60, y + 66, FONTE(800, 44), UI.txt); texto(g, nome, 128, y + 64, FONTE(800, 40), sel ? '#120d2e' : UI.txt);
     });
     texto(g, 'Olhe e segure, ou aperte', 42, p.H - 74, FONTE(700, 24), UI.sub); texto(g, 'o botão do Cardboard', 42, p.H - 42, FONTE(700, 24), UI.sub);
@@ -781,6 +784,7 @@ AFRAME.registerComponent('ryan-vr', {
       quebra(g, 'Os vídeos não saem do seu celular: nada é enviado para a internet.', 50, 700, W - 100, 30, FONTE(700, 24), UI.sub);
       return;
     }
+    if (this.secao === 'google') return this.desenhaGoogle(g, p);
     if (this.secao === 'ajustes') {
       texto(g, 'Ajustes', 48, 92, FONTE_T(64), UI.txt);
       texto(g, 'Valem também para o Blocos VR', 50, 136, FONTE(700, 28), UI.sub);
@@ -805,6 +809,53 @@ AFRAME.registerComponent('ryan-vr', {
       caixa(g, 812, 840, 330, 90, 22, hvq ? UI.acc : UI.card); texto(g, AJ.suave ? '⚡ Suave' : '✨ Bonito', 977, 898, FONTE(800, 32), hvq ? '#120d2e' : UI.txt, 'center');
       quebra(g, 'Imagem dupla? Mude a distância dos olhos. Travando? Use ⚡ Suave.', 1165, 870, W - 1210, 28, FONTE(700, 22), UI.sub, 3);
     }
+  },
+
+  // ---------- Google: teclado no VR (aponte e faça a pinça, ou olhe) ----------
+  desenhaGoogle(g, p) {
+    const W = p.W, b = this.busca || '';
+    // logo colorido
+    let x = 48; [['G', '#4285f4'], ['o', '#ea4335'], ['o', '#fbbc05'], ['g', '#4285f4'], ['l', '#34a853'], ['e', '#ea4335']].forEach(([l, c]) => { texto(g, l, x, 98, FONTE_T(72), c); x += g.measureText(l).width + 2; });
+    texto(g, 'Pesquise com o teclado · Busca Segura ligada', x + 24, 92, FONTE(700, 28), UI.sub);
+    // barra de pesquisa (fora do óculos, toque nela para usar o teclado do celular)
+    const hvb = p.botao('k-barra', 48, 132, W - 96, 104, () => { if (!this.el.components.cardboard.ativo) { const t = window.prompt('Pesquisar no Google', b); if (t !== null) { this.busca = t.slice(0, 60); this.renderTudo(); } } });
+    caixa(g, 48, 132, W - 96, 104, 52, '#ffffff', hvb ? UI.acc : '#dadce0', 4);
+    texto(g, '🔎', 92, 202, FONTE(800, 44), '#5f6368');
+    g.save(); g.beginPath(); g.rect(160, 140, W - 320, 90); g.clip();
+    const tw = b ? (g.font = FONTE(700, 46), g.measureText(b).width) : 0, tx = Math.min(170, W - 330 - tw);
+    texto(g, b || 'O que você quer procurar?', tx, 200, FONTE(700, 46), b ? '#202124' : '#9aa0a6');
+    if (b && Math.floor(performance.now() / 500) % 2 === 0) { g.fillStyle = '#4285f4'; g.fillRect(tx + tw + 6, 160, 4, 54); }
+    g.restore();
+    // teclas
+    const linhas = ['1234567890', 'qwertyuiop', 'asdfghjklç', 'zxcvbnm,.?'];
+    const kw = (W - 96 - 9 * 10) / 10, kh = 96;
+    const tecla = (id, rot, kx, ky, w, acao, cor, corTxt) => {
+      const hv = p.botao('k-' + id, kx, ky, w, kh, acao);
+      caixa(g, kx, ky, w, kh, 20, hv ? UI.acc : (cor || UI.card), hv ? '#ffffff' : null, 4);
+      texto(g, rot, kx + w / 2, ky + 64, FONTE(800, rot.length > 2 ? 34 : 46), hv ? '#120d2e' : (corTxt || UI.txt), 'center');
+    };
+    const poe = c => () => { if ((this.busca || '').length < 60) this.busca = (this.busca || '') + c; this.renderTudo(); };
+    linhas.forEach((l, r) => [...l].forEach((c, i) => tecla('t' + r + '-' + i, c, 48 + i * (kw + 10), 258 + r * (kh + 12), kw, poe(c))));
+    const y5 = 258 + 4 * (kh + 12);
+    tecla('apaga', '⌫ Apagar', 48, y5, kw * 2 + 10, () => { this.busca = (this.busca || '').slice(0, -1); this.renderTudo(); });
+    tecla('espaco', 'Espaço', 48 + 2 * (kw + 10), y5, kw * 4 + 30, poe(' '));
+    tecla('limpa', 'Limpar', 48 + 6 * (kw + 10), y5, kw * 1.5 + 5, () => { this.busca = ''; this.renderTudo(); });
+    tecla('vai', '🔎 Pesquisar', 48 + 7.5 * (kw + 10), y5, W - 48 - (48 + 7.5 * (kw + 10)), () => this.pesquisar(), '#1a73e8', '#ffffff');
+    // ideias rápidas
+    const ideias = ['dinossauros', 'desenhos para colorir', 'carros esportivos', 'planetas', 'jogos de lógica'];
+    let ix = 48; const iy = y5 + kh + 22;
+    texto(g, 'Ideias:', ix, iy + 44, FONTE(800, 28), UI.sub); ix += 120;
+    ideias.forEach((t, i) => { g.font = FONTE(800, 28); const w = g.measureText(t).width + 44; if (ix + w > W - 48) return; const hv = p.botao('k-i' + i, ix, iy, w, 64, () => { this.busca = t; this.renderTudo(); }); caixa(g, ix, iy, w, 64, 32, hv ? UI.acc : UI.chip); texto(g, t, ix + w / 2, iy + 43, FONTE(800, 28), hv ? '#120d2e' : UI.txt, 'center'); ix += w + 14; });
+  },
+  pesquisar() {
+    const q = (this.busca || '').trim(); if (!q) return this.aviso('Digite alguma coisa primeiro');
+    const vr = this.el.components.cardboard.ativo;
+    // ao voltar (botão voltar), o Ryan VR abre de novo no Google
+    try { history.replaceState(null, '', location.pathname + '?secao=google' + (vr ? '&vr=1' : '')); } catch (e) {}
+    try { localStorage.setItem('ryanvr-busca', q); } catch (e) {}
+    this.aviso('Abrindo o Google… tire o celular do óculos');
+    som('abre');
+    setTimeout(() => { if (vr) this.el.components.cardboard.sair(); location.href = 'https://www.google.com/search?safe=active&hl=pt-BR&q=' + encodeURIComponent(q); }, 1200);
   },
 
   desenhaDetalhe(g, p, it) {
@@ -909,7 +960,7 @@ AFRAME.registerComponent('ryan-vr', {
     if (this.posicionando) return this.fixaPosicao();
     const k = this.hoverAtual; if (!k) return;
     if (performance.now() < (this.bloqueioAte || 0)) return;
-    this.doToque = doToque; som('clique'); this.bloqueioAte = performance.now() + 900;
+    this.doToque = doToque; som('clique'); this.bloqueioAte = performance.now() + (k.b.id.startsWith('k-') ? 250 : 900);
     // depois de escolher, o olhar só volta a valer quando a cabeça se mexer um pouco
     this.dirTrava = new THREE.Vector3(); this.cam.object3D.getWorldDirection(this.dirTrava);
     k.b.acao(); this.doToque = false; this.disparado = true; this.anelProgresso(0);
@@ -1089,6 +1140,9 @@ AFRAME.registerComponent('ryan-vr', {
       const t = new THREE.VideoTexture(v); t.colorSpace = THREE.SRGBColorSpace;
       const plano = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: t, depthTest: false, depthWrite: false, toneMapped: false }));
       plano.renderOrder = -100; plano.frustumCulled = false;
+      // a imagem da casa é desenhada como FUNDO de cada olho (sempre encaixada na tela, nunca torta);
+      // o plano fica só como referência de tamanho para as mãos
+      plano.material.visible = false; this.camTex = t;
       this.camPlano = plano; this.cam.object3D.add(plano);
       this.ajustaPlano();
       v.addEventListener('resize', () => this.ajustaPlano());
@@ -1101,6 +1155,7 @@ AFRAME.registerComponent('ryan-vr', {
   },
   desligaCamera() {
     if (this.camStream) this.camStream.getTracks().forEach(t => t.stop());
+    const sc = this.el.object3D; if (this.camTex && sc.background === this.camTex) sc.background = this.fundoAntes || null; this.camTex = null;
     if (this.camPlano) { this.cam.object3D.remove(this.camPlano); this.camPlano.material.map.dispose(); this.camPlano.material.dispose(); this.camPlano.geometry.dispose(); }
     this.camStream = null; this.camVideo = null; this.camPlano = null; MAO.res = null;
   },
@@ -1116,6 +1171,12 @@ AFRAME.registerComponent('ryan-vr', {
       w = Math.max(hh, hv * asp);
     }
     p.position.set(0, 0, -D); p.scale.set(w, w / asp, 1); this.camD = D; this.camW = w; this.camH = w / asp;
+    // recorte da imagem no fundo do olho: exatamente o pedaço que o plano mostraria (as mãos batem com a imagem)
+    if (this.camTex) {
+      const c = this.el.camera, vis = 2 * D * Math.tan((c ? c.fov : 80) * Math.PI / 360), ea = c ? c.aspect : 1;
+      const rx = Math.min(1, vis * ea / w), ry = Math.min(1, vis * asp / w);
+      this.camTex.repeat.set(rx, ry); this.camTex.offset.set((1 - rx) / 2, (1 - ry) / 2);
+    }
   },
   atualizaFundo() {
     // no Modo Casa some o céu e o deque; nas experiências 360° a câmera fica escondida (imersão total)
@@ -2184,11 +2245,15 @@ AFRAME.registerComponent('ryan-vr', {
     }
     if (this.dirTrava) { const d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d); if (d.angleTo(this.dirTrava) > 0.07 || !atual) { this.dirTrava = null; this.fuseT0 = Math.max(performance.now(), this.bloqueioAte || 0); } }
     if (atual && !this.disparado && !this.dirTrava) {
-      const v = Math.max(0, performance.now() - this.fuseT0) / ((this.fonte === 'mao' ? 0.8 : AJ.fuse) * 1000);
+      const tec = atual.p.id === 'centro' && atual.b.id.startsWith('k-'); // no teclado as teclas são escolhidas mais rápido
+      const v = Math.max(0, performance.now() - this.fuseT0) / ((this.fonte === 'mao' ? (tec ? 0.6 : 0.8) : tec ? Math.min(AJ.fuse, 0.75) : AJ.fuse) * 1000);
       if (v >= 1) this.tocar(false); else this.anelProgresso(v);
     } else if (!atual) this.anelProgresso(0);
     if (this.avisoMesh && this.avisoMesh.visible && performance.now() > this.avisoAte) this.avisoMesh.visible = false;
     if (this.camPlano && !AJ.camFov) this.ajustaPlano(); // acompanha a troca de tela/olhos
+    { const sc = this.el.object3D, quer = this.camTex && this.camPlano && this.camPlano.visible; // casa no fundo
+      if (quer && sc.background !== this.camTex) { this.fundoAntes = sc.background; sc.background = this.camTex; }
+      else if (!quer && this.camTex && sc.background === this.camTex) sc.background = this.fundoAntes || null; }
     if (!this.pausaAberta) {
       if (this.estado === 'baloes') this.passoBaloes(dt);
       if (this.estado === 'corrida') this.passoCorrida(dt);
@@ -2196,6 +2261,7 @@ AFRAME.registerComponent('ryan-vr', {
       if (this.estado === 'alvos') this.passoAlvos(dt);
     }
     this.passoFx(dt);
+    if (this.secao === 'google' && this.estado === 'saguao' && !this.detalhe && this.pCentro.el.object3D.visible) { const f = Math.floor(performance.now() / 500); if (f !== this.piscaBusca) { this.piscaBusca = f; this.pCentro.render(); } } // cursor piscando
     this.desenhaMao();
     if (this.orbes && this.saguao.visible) this.orbes.forEach(o => { o.position.y = 3.6 + Math.sin(time / 900 + o.userData.f) * 0.35; });
     // experiência rodando
@@ -2281,7 +2347,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 1.7' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 1.8' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 
