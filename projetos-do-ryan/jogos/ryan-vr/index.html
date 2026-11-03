@@ -83,7 +83,7 @@
       <button id="btn-pc" class="sec">🖥️ Modo Computador <small>mouse e teclado</small></button>
     </div>
     <p class="nota">Computador: arraste o mouse para olhar, clique para apertar; no Google digite no teclado; Esc pausa os jogos; na Corrida use ← → (ou A e D) e espaço para o turbo. Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 2.7</p>
+    <p class="nota" id="versao">Ryan VR 2.8</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -138,7 +138,7 @@ AFRAME.registerComponent('cardboard', {
     this.estereo = new THREE.StereoCamera();
     this.quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     this.lente = new THREE.ShaderMaterial({ vertexShader: LENTE_VERT, fragmentShader: LENTE_FRAG, depthTest: false, depthWrite: false,
-      uniforms: { tDiffuse: { value: null }, k1: { value: 0.18 }, k2: { value: 0.06 }, escala: { value: 0.84 }, aspecto: { value: 1 }, ligada: { value: 1 }, nitidez: { value: 0.7 }, px: { value: new THREE.Vector2(0.001, 0.001) } } });
+      uniforms: { tDiffuse: { value: null }, k1: { value: 0.18 }, k2: { value: 0.06 }, escala: { value: 0.84 }, aspecto: { value: 1 }, ligada: { value: 1 }, nitidez: { value: (() => { try { const v = localStorage.getItem('ryanvr-miopia'); return v === null || JSON.parse(v) ? 1.1 : 0.7; } catch (e) { return 1.1; } })() }, px: { value: new THREE.Vector2(0.001, 0.001) } } });
     this.lente.uniforms.ligada.value = this.lenteOn ? 1 : 0;
     this.quadCena = new THREE.Scene();
     const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.lente); q.frustumCulled = false; this.quadCena.add(q);
@@ -275,9 +275,9 @@ const APP = /\bwv\b/.test(navigator.userAgent);
 const Q = new URLSearchParams(location.search);
 const AJ = (() => { // ajustes guardados no celular (valem também para o Blocos VR)
   const g = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
-  return { ipd: g('ryanvr-ipd', 0.064), lente: g('ryanvr-lente', true), fuse: g('ryanvr-fuse', 1.2), musica: g('ryanvr-musica', true), maos: g('ryanvr-maos', true), camFov: g('ryanvr-camfov2', 0), distTV: g('ryanvr-disttv', 2.2), suave: g('ryanvr-suave2', false), ambiente: g('ryanvr-ambiente', 'saguao'), imersao: g('ryanvr-imersao', 1), volume: g('ryanvr-volume', 0.8) };
+  return { ipd: g('ryanvr-ipd', 0.064), lente: g('ryanvr-lente', true), fuse: g('ryanvr-fuse', 1.2), musica: g('ryanvr-musica', true), maos: g('ryanvr-maos', true), camFov: g('ryanvr-camfov2', 0), distTV: g('ryanvr-disttv', 2.2), suave: g('ryanvr-suave2', false), ambiente: g('ryanvr-ambiente', 'saguao'), imersao: g('ryanvr-imersao', 1), volume: g('ryanvr-volume', 0.8), miopia: g('ryanvr-miopia', true) };
 })();
-const salva = () => { try { localStorage.setItem('ryanvr-ipd', JSON.stringify(AJ.ipd)); localStorage.setItem('ryanvr-lente', JSON.stringify(AJ.lente)); localStorage.setItem('ryanvr-fuse', JSON.stringify(AJ.fuse)); localStorage.setItem('ryanvr-musica', JSON.stringify(AJ.musica)); localStorage.setItem('ryanvr-maos', JSON.stringify(AJ.maos)); localStorage.setItem('ryanvr-camfov2', JSON.stringify(AJ.camFov)); localStorage.setItem('ryanvr-disttv', JSON.stringify(AJ.distTV)); localStorage.setItem('ryanvr-suave2', JSON.stringify(AJ.suave)); localStorage.setItem('ryanvr-ambiente', JSON.stringify(AJ.ambiente)); localStorage.setItem('ryanvr-imersao', JSON.stringify(AJ.imersao)); localStorage.setItem('ryanvr-volume', JSON.stringify(AJ.volume)); } catch (e) {} };
+const salva = () => { try { localStorage.setItem('ryanvr-ipd', JSON.stringify(AJ.ipd)); localStorage.setItem('ryanvr-lente', JSON.stringify(AJ.lente)); localStorage.setItem('ryanvr-fuse', JSON.stringify(AJ.fuse)); localStorage.setItem('ryanvr-musica', JSON.stringify(AJ.musica)); localStorage.setItem('ryanvr-maos', JSON.stringify(AJ.maos)); localStorage.setItem('ryanvr-camfov2', JSON.stringify(AJ.camFov)); localStorage.setItem('ryanvr-disttv', JSON.stringify(AJ.distTV)); localStorage.setItem('ryanvr-suave2', JSON.stringify(AJ.suave)); localStorage.setItem('ryanvr-ambiente', JSON.stringify(AJ.ambiente)); localStorage.setItem('ryanvr-imersao', JSON.stringify(AJ.imersao)); localStorage.setItem('ryanvr-volume', JSON.stringify(AJ.volume)); localStorage.setItem('ryanvr-miopia', JSON.stringify(AJ.miopia)); } catch (e) {} };
 // reconhecimento da mão (MediaPipe, do Google): no app vem de dentro do APK
 const MP_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/';
 const MP_MODELO = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
@@ -542,7 +542,7 @@ class Painel {
 const UI = { fundo: 'rgba(22,19,40,.94)', card: '#2a2450', cardHover: '#3a3270', linha: 'rgba(255,255,255,.08)', txt: '#f4f2ff', sub: '#b3acd6', acc: '#8f7bff', acc2: '#ffb36b', chip: 'rgba(255,255,255,.1)' };
 const UI_ROXO = Object.assign({}, UI);
 // Modo Casa: janelas de vidro claras flutuando na sua sala (a casa aparece através delas)
-const UI_VIDRO = { fundo: 'rgba(30,32,42,.74)', card: 'rgba(255,255,255,.13)', cardHover: 'rgba(255,255,255,.27)', linha: 'rgba(255,255,255,.16)', txt: '#ffffff', sub: 'rgba(240,240,248,.72)', acc: '#f5f5fa', acc2: '#ffffff', chip: 'rgba(255,255,255,.16)' };
+const UI_VIDRO = { fundo: 'rgba(30,32,42,.74)', fundoMiopia: 'rgba(18,19,28,.9)', card: 'rgba(255,255,255,.13)', cardHover: 'rgba(255,255,255,.27)', linha: 'rgba(255,255,255,.16)', txt: '#ffffff', sub: 'rgba(240,240,248,.72)', acc: '#f5f5fa', acc2: '#ffffff', chip: 'rgba(255,255,255,.16)' };
 
 // ---------- experiências 360° (desenhadas ao vivo) ----------
 const EXP = {};
@@ -781,6 +781,7 @@ AFRAME.registerComponent('ryan-vr', {
     this.pPlayer = new Painel('player', { larg: 1.0, alt: 0.2, ang: 0, y: 0.98, raio: 1.4, ppm: 1000, pai: this.rig, desenhar: (g, p) => self.desenhaPlayer(g, p) });
     this.pPlayer.visivel = false;
     this.montaBarras();
+    this.raioAtual = 0; this.aplicaDistancia(); // tamanho das janelas (Modo Miopia) já ao abrir
   },
   renderTudo() { PAINEIS.forEach(p => p.render()); },
 
@@ -868,7 +869,8 @@ AFRAME.registerComponent('ryan-vr', {
       caixa(g, 490, 840, 300, 90, 22, hvm ? UI.acc : UI.card); texto(g, AJ.musica ? '🔊 Música' : '🔇 Música', 640, 898, FONTE(800, 32), hvm ? '#120d2e' : UI.txt, 'center');
       const hvq = p.botao('qualidade', 812, 840, 330, 90, () => { muda('suave', !AJ.suave); this.el.components.cardboard.qualidade(); this.qualidadeTela(); this.aviso(AJ.suave ? '⚡ Suave: mais leve e liso' : '✨ Bonito: mais detalhes'); });
       caixa(g, 812, 840, 330, 90, 22, hvq ? UI.acc : UI.card); texto(g, AJ.suave ? '⚡ Suave' : '✨ Bonito', 977, 898, FONTE(800, 32), hvq ? '#120d2e' : UI.txt, 'center');
-      quebra(g, 'Imagem dupla? Mude a distância dos olhos. Travando? Use ⚡ Suave.', 1165, 870, W - 1210, 28, FONTE(700, 22), UI.sub, 3);
+      const hvo = p.botao('miopia', 1165, 840, W - 1213, 90, () => { muda('miopia', !AJ.miopia); this.raioAtual = 0; this.aplicaDistancia(); this.atualizaFundo(); const cb = this.el.components.cardboard; if (cb && cb.lente) cb.lente.uniforms.nitidez.value = AJ.miopia ? 1.1 : 0.7; this.aviso(AJ.miopia ? '👓 Modo Miopia: letras grandes e fortes' : 'Letras no tamanho normal'); });
+      caixa(g, 1165, 840, W - 1213, 90, 22, hvo ? UI.acc : AJ.miopia ? 'rgba(143,123,255,.55)' : UI.card); texto(g, AJ.miopia ? '👓 Miopia: ligado' : '👓 Miopia: desligado', 1165 + (W - 1213) / 2, 898, FONTE(800, 28), hvo ? '#120d2e' : UI.txt, 'center');
     }
   },
 
@@ -1084,6 +1086,8 @@ AFRAME.registerComponent('ryan-vr', {
       this.avisoTex = tex(800, 120, () => {}); this.avisoMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.075), new THREE.MeshBasicMaterial({ map: this.avisoTex, transparent: true, depthTest: false, toneMapped: false }));
       this.avisoMesh.position.set(0, -0.16, -0.7); this.avisoMesh.renderOrder = 20; this.cam.object3D.add(this.avisoMesh);
     }
+    if (this.avisoMesh.userData.mio !== AJ.miopia) { this.avisoMesh.userData.mio = AJ.miopia; this.avisoMesh.scale.setScalar(AJ.miopia ? 1.3 : 1);
+    }
     const c = this.avisoTex.image, g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); caixa(g, 4, 4, c.width - 8, c.height - 8, 50, 'rgba(14,12,26,.88)'); g.font = FONTE(800, 46); const fs = Math.min(46, Math.floor(46 * (c.width - 70) / Math.max(1, g.measureText(this.avisoT).width))); texto(g, this.avisoT, c.width / 2, 60 + fs * 0.38, FONTE(800, fs), '#fff', 'center');
     this.avisoTex.needsUpdate = true; this.avisoMesh.visible = true;
   },
@@ -1160,6 +1164,8 @@ AFRAME.registerComponent('ryan-vr', {
     this.aplicaDistancia();
   },
   // distância da TV: no Modo TV fica mais longe (mais fácil de apontar com a mão); o tamanho real não muda
+  // 👓 Modo Miopia: tudo 25% maior na vista (sem chegar mais perto)
+  escJ(P) { return (P.esc || 1) * (AJ.miopia ? 1.25 : 1); },
   aplicaDistancia() {
     const R0 = this.casa ? AJ.distTV : 1.55;
     if (this.raioAtual === R0) return; this.raioAtual = R0;
@@ -1168,11 +1174,12 @@ AFRAME.registerComponent('ryan-vr', {
     this.uiRaiz.object3D.scale.setScalar(f);
     this.raioJanela = r;
     // cada janela tem o seu tamanho (− / + na barrinha): cresce sem chegar mais perto
-    [this.pCentro, this.pMenu, this.pLado, this.pMusica].forEach(P => { if (!P) return; const e = P.esc || 1; P.setRaio(r / e); P.el.object3D.scale.setScalar(e); });
-    this.pDock.setRaio(r - 0.05);
-    const ec = this.pCentro.esc || 1, lado = (1.56 * ec / 2 + 0.06 + 0.62 * (this.pMenu.esc || 1) / 2) / r, lado2 = (1.56 * ec / 2 + 0.06 + 0.62 * (this.pLado.esc || 1) / 2) / r;
+    [this.pCentro, this.pMenu, this.pLado, this.pMusica].forEach(P => { if (!P) return; const e = this.escJ(P); P.setRaio(r / e); P.el.object3D.scale.setScalar(e); });
+    this.pDock.setRaio(r - 0.05); this.pDock.el.object3D.position.y = -0.7 - (this.escJ(this.pCentro) - 1) * 0.5;
+    const ec = this.escJ(this.pCentro), lado = (1.56 * ec / 2 + 0.06 + 0.62 * this.escJ(this.pMenu) / 2) / r, lado2 = (1.56 * ec / 2 + 0.06 + 0.62 * this.escJ(this.pLado) / 2) / r;
     if (!this.pMenu.movida) this.pMenu.el.object3D.rotation.y = lado; if (!this.pLado.movida) this.pLado.el.object3D.rotation.y = -lado2;
     if (this.pMusica && !this.pMusica.movida) this.pMusica.el.object3D.rotation.y = -lado2;
+    if (this.pMusica && !this.pMusica.movida) this.pMusica.el.object3D.position.y = -0.66 - (this.escJ(this.pLado) - 1) * 0.5;
     if (this.barras) this.barras.forEach(B => { B.raioFeito = 0; });
     if (this.tv) {
       this.tvMoldura.geometry.dispose(); this.tvMoldura.geometry = geoCurva(1.66, 1.06, r + 0.02, 36);
@@ -1310,7 +1317,7 @@ AFRAME.registerComponent('ryan-vr', {
     }
   },
   atualizaFundo() {
-    if (!UI.vidro) { Object.assign(UI, UI_VIDRO); UI.vidro = true; if (this.pCentro) setTimeout(() => this.renderTudo(), 0); } // janelas de vidro em todos os modos
+    if (!UI.vidro || UI.miopia !== AJ.miopia) { Object.assign(UI, UI_VIDRO); if (AJ.miopia) Object.assign(UI, { fundo: UI_VIDRO.fundoMiopia, sub: 'rgba(250,250,255,.9)', card: 'rgba(255,255,255,.16)' }); UI.vidro = true; UI.miopia = AJ.miopia; if (this.pCentro) setTimeout(() => this.renderTudo(), 0); } // janelas de vidro em todos os modos
     // no Modo Casa some o céu e o deque; nas experiências 360° a câmera fica escondida (imersão total)
     const midia = this.estado === 'midia' && !this.naTV, jogo = ['corrida', 'cubos', 'alvos'].includes(this.estado);
     if (this.camPlano) this.camPlano.visible = this.casa && !midia && !jogo;
@@ -2498,7 +2505,7 @@ AFRAME.registerComponent('ryan-vr', {
     this.barras.forEach(B => {
       const P = B.janela, o = B.el.object3D, po = P.el.object3D;
       if (B.raioFeito !== r) { B.setRaio(r - 0.01); B.raioFeito = r; }
-      o.rotation.y = po.rotation.y; o.position.y = po.position.y - (P.o.alt / 2) * P.esc - 0.045;
+      o.rotation.y = po.rotation.y; o.position.y = po.position.y - (P.o.alt / 2) * this.escJ(P) - 0.045;
       const quer = po.visible && this.estado === 'saguao'; if (B.el.object3D.visible !== quer) B.visivel = quer; // aparece junto com a janela
     });
   },
@@ -2966,7 +2973,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 2.7' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 2.8' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 

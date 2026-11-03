@@ -35,6 +35,7 @@ Na tela de entrada, **📺 Modo TV** entra no Cardboard, liga a câmera (você v
 - **Janelas de vidro no Modo Casa**: os painéis ficam transparentes, claros e com borda de luz, flutuando na sua sala (a moldura da TV só aparece com vídeo passando).
 - **Imagem da casa sempre encaixada**: no Modo Casa/TV a câmera é desenhada no fundo de cada olho, então não fica torta nem escorrega quando você vira a cabeça.
 - **Pausar e sair do jogo**: em qualquer jogo, **olhe para baixo** e aparece o menu ⏸ com **▶ Continuar** e **🏠 Sair do jogo** (o jogo fica parado; olhe para cima para continuar). No app, o **botão voltar** do celular também pausa; apertando de novo, sai do jogo.
+- **👓 Modo Miopia** (ligado por padrão; em Ajustes): janelas e letras 25% maiores na vista (sem chegar mais perto), vidro mais escuro com letras mais fortes, bordas mais nítidas na lente e avisos maiores. O app não muda o foco da lente do óculos: se o Cardboard deixar, use os óculos de grau dentro dele.
 - **✋ Mãos em tudo**: ao entrar nos modos VR, Celular ou TV a câmera de trás liga sozinha (escondida, só para ler as mãos) e continua ligada em todo o app: menus, Modo Casa, vídeos, jogos, Google, Fotos e Música. Gestos:
   - apontar com o indicador + **pinça** = apertar (qualquer mão);
   - **pinça no ✥** da barrinha, arrastar e **soltar os dedos** = mudar a janela de lugar;

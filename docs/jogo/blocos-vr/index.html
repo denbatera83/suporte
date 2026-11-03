@@ -733,7 +733,7 @@ AFRAME.registerComponent('cardboard', {
     this.estereo = new THREE.StereoCamera();
     this.quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
     this.lente = new THREE.ShaderMaterial({ vertexShader: LENTE_VERT, fragmentShader: LENTE_FRAG, depthTest: false, depthWrite: false,
-      uniforms: { tDiffuse: { value: null }, k1: { value: 0.18 }, k2: { value: 0.06 }, escala: { value: 0.84 }, aspecto: { value: 1 }, ligada: { value: 1 }, nitidez: { value: 0.7 }, px: { value: new THREE.Vector2(0.001, 0.001) } } });
+      uniforms: { tDiffuse: { value: null }, k1: { value: 0.18 }, k2: { value: 0.06 }, escala: { value: 0.84 }, aspecto: { value: 1 }, ligada: { value: 1 }, nitidez: { value: (() => { try { const v = localStorage.getItem('ryanvr-miopia'); return v === null || JSON.parse(v) ? 1.1 : 0.7; } catch (e) { return 1.1; } })() }, px: { value: new THREE.Vector2(0.001, 0.001) } } });
     this.lente.uniforms.ligada.value = this.lenteOn ? 1 : 0;
     this.quadCena = new THREE.Scene();
     const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.lente); q.frustumCulled = false; this.quadCena.add(q);
