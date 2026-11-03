@@ -61,7 +61,7 @@
   #erros b { font: 800 16px var(--display); color: #fff; }
   #erros span { white-space: pre-wrap; word-break: break-word; }
   #erros button { justify-self: start; font-size: 15px; padding: 6px 14px; }
-  #arquivo { position: fixed; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  #arquivo, #arq-fotos, #arq-musica { position: fixed; left: -9999px; width: 1px; height: 1px; opacity: 0; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/aframe@1.6.0/dist/aframe-v1.6.0.min.js"></script>
@@ -83,7 +83,7 @@
       <button id="btn-pc" class="sec">🖥️ Modo Computador <small>mouse e teclado</small></button>
     </div>
     <p class="nota">Computador: arraste o mouse para olhar, clique para apertar; no Google digite no teclado; Esc pausa os jogos; na Corrida use ← → (ou A e D) e espaço para o turbo. Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 2.5</p>
+    <p class="nota" id="versao">Ryan VR 2.6</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -91,6 +91,8 @@
 <div id="vr-ui" hidden><div class="linha"></div><button id="vr-sair" aria-label="Sair do modo Cardboard">✕</button><p id="vr-modo" class="vr-aviso" hidden></p><p id="vr-erro" class="vr-aviso erro" hidden></p></div>
 <div id="girar"><div><span class="tel">📱</span>Gire o celular de lado<br><small style="font: 600 15px var(--body); color: var(--muted)">e encaixe no Cardboard com a linha branca no meio</small></div></div>
 <input type="file" id="arquivo" accept="video/*">
+<input type="file" id="arq-fotos" accept="image/*" multiple>
+<input type="file" id="arq-musica" accept="audio/*" multiple>
 <div id="erros" hidden><b>⚠️ Algo deu errado</b><span id="erros-txt"></span><button id="erros-ok" class="sec">Fechar</button></div>
 
 <script>
@@ -273,9 +275,9 @@ const APP = /\bwv\b/.test(navigator.userAgent);
 const Q = new URLSearchParams(location.search);
 const AJ = (() => { // ajustes guardados no celular (valem também para o Blocos VR)
   const g = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
-  return { ipd: g('ryanvr-ipd', 0.064), lente: g('ryanvr-lente', true), fuse: g('ryanvr-fuse', 1.2), musica: g('ryanvr-musica', true), maos: g('ryanvr-maos', true), camFov: g('ryanvr-camfov2', 0), distTV: g('ryanvr-disttv', 2.2), suave: g('ryanvr-suave2', false) };
+  return { ipd: g('ryanvr-ipd', 0.064), lente: g('ryanvr-lente', true), fuse: g('ryanvr-fuse', 1.2), musica: g('ryanvr-musica', true), maos: g('ryanvr-maos', true), camFov: g('ryanvr-camfov2', 0), distTV: g('ryanvr-disttv', 2.2), suave: g('ryanvr-suave2', false), ambiente: g('ryanvr-ambiente', 'saguao'), imersao: g('ryanvr-imersao', 1), volume: g('ryanvr-volume', 0.8) };
 })();
-const salva = () => { try { localStorage.setItem('ryanvr-ipd', JSON.stringify(AJ.ipd)); localStorage.setItem('ryanvr-lente', JSON.stringify(AJ.lente)); localStorage.setItem('ryanvr-fuse', JSON.stringify(AJ.fuse)); localStorage.setItem('ryanvr-musica', JSON.stringify(AJ.musica)); localStorage.setItem('ryanvr-maos', JSON.stringify(AJ.maos)); localStorage.setItem('ryanvr-camfov2', JSON.stringify(AJ.camFov)); localStorage.setItem('ryanvr-disttv', JSON.stringify(AJ.distTV)); localStorage.setItem('ryanvr-suave2', JSON.stringify(AJ.suave)); } catch (e) {} };
+const salva = () => { try { localStorage.setItem('ryanvr-ipd', JSON.stringify(AJ.ipd)); localStorage.setItem('ryanvr-lente', JSON.stringify(AJ.lente)); localStorage.setItem('ryanvr-fuse', JSON.stringify(AJ.fuse)); localStorage.setItem('ryanvr-musica', JSON.stringify(AJ.musica)); localStorage.setItem('ryanvr-maos', JSON.stringify(AJ.maos)); localStorage.setItem('ryanvr-camfov2', JSON.stringify(AJ.camFov)); localStorage.setItem('ryanvr-disttv', JSON.stringify(AJ.distTV)); localStorage.setItem('ryanvr-suave2', JSON.stringify(AJ.suave)); localStorage.setItem('ryanvr-ambiente', JSON.stringify(AJ.ambiente)); localStorage.setItem('ryanvr-imersao', JSON.stringify(AJ.imersao)); localStorage.setItem('ryanvr-volume', JSON.stringify(AJ.volume)); } catch (e) {} };
 // reconhecimento da mão (MediaPipe, do Google): no app vem de dentro do APK
 const MP_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/';
 const MP_MODELO = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
@@ -291,7 +293,24 @@ window.__MAO = MAO; // usado nos testes automáticos
 
 // ---------- som ----------
 let actx = null, musica = null;
-function audio() { try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) {} return actx; }
+function audio() {
+  try {
+    if (!actx) {
+      actx = new (window.AudioContext || window.webkitAudioContext)();
+      // volume geral (Central de controle): todos os sons passam por aqui
+      const real = actx.destination, mestre = actx.createGain(); mestre.gain.value = AJ.volume; mestre.connect(real);
+      try { Object.defineProperty(actx, 'destination', { value: mestre }); actx.mestre = mestre; } catch (e) {}
+    }
+    if (actx.state === 'suspended') actx.resume();
+  } catch (e) {}
+  return actx;
+}
+function aplicaVolume() {
+  if (actx && actx.mestre) actx.mestre.gain.setTargetAtTime(AJ.volume, actx.currentTime, 0.05);
+  const c = document.querySelector('a-scene'), a = c && c.components['ryan-vr']; if (a && a.audioMusica) a.audioMusica.volume = AJ.volume;
+}
+const AMBIENTES = [{ id: 'saguao', nome: 'Sala Ryan', ic: '🏠' }, { id: 'praia', nome: 'Praia', ic: '🏖️' }, { id: 'montanhas', nome: 'Montanhas', ic: '🏔️' }, { id: 'lua', nome: 'Lua', ic: '🌙' }, { id: 'espaco', nome: 'Espaço', ic: '🌌' }, { id: 'floresta', nome: 'Floresta', ic: '🌲' }];
+const RADIO = [{ id: 'saguao', nome: 'Sala calma', ic: '🌙' }, { id: 'montanha', nome: 'Aventura', ic: '⛰️' }, { id: 'mar', nome: 'Oceano', ic: '🌊' }, { id: 'espaco', nome: 'Galáxia', ic: '🪐' }, { id: 'aurora', nome: 'Aurora', ic: '✨' }];
 function som(tipo) {
   const a = audio(); if (!a) return;
   const t = a.currentTime;
@@ -523,7 +542,7 @@ class Painel {
 const UI = { fundo: 'rgba(22,19,40,.94)', card: '#2a2450', cardHover: '#3a3270', linha: 'rgba(255,255,255,.08)', txt: '#f4f2ff', sub: '#b3acd6', acc: '#8f7bff', acc2: '#ffb36b', chip: 'rgba(255,255,255,.1)' };
 const UI_ROXO = Object.assign({}, UI);
 // Modo Casa: janelas de vidro claras flutuando na sua sala (a casa aparece através delas)
-const UI_VIDRO = { fundo: 'rgba(34,36,46,.6)', card: 'rgba(255,255,255,.13)', cardHover: 'rgba(255,255,255,.27)', linha: 'rgba(255,255,255,.16)', txt: '#ffffff', sub: 'rgba(240,240,248,.72)', acc: '#f5f5fa', acc2: '#ffffff', chip: 'rgba(255,255,255,.16)' };
+const UI_VIDRO = { fundo: 'rgba(30,32,42,.74)', card: 'rgba(255,255,255,.13)', cardHover: 'rgba(255,255,255,.27)', linha: 'rgba(255,255,255,.16)', txt: '#ffffff', sub: 'rgba(240,240,248,.72)', acc: '#f5f5fa', acc2: '#ffffff', chip: 'rgba(255,255,255,.16)' };
 
 // ---------- experiências 360° (desenhadas ao vivo) ----------
 const EXP = {};
@@ -717,6 +736,8 @@ AFRAME.registerComponent('ryan-vr', {
       this.meuVideo = { nome: f.name.replace(/\.[^.]+$/, ''), url: URL.createObjectURL(f) };
       this.renderTudo(); this.aviso('Vídeo escolhido: olhe para Assistir');
     });
+    document.getElementById('arq-fotos').addEventListener('change', e => { const l = e.target.files; if (l && l.length) this.recebeFotos(l); e.target.value = ''; });
+    document.getElementById('arq-musica').addEventListener('change', e => { const l = e.target.files; if (l && l.length) this.recebeMusicas(l); e.target.value = ''; });
     this.relogio = setInterval(() => { if (this.estado === 'saguao') this.pDock.render(); }, 20000);
   },
 
@@ -754,11 +775,12 @@ AFRAME.registerComponent('ryan-vr', {
     this.pMenu = new Painel('menu', { larg: 0.62, alt: 0.92, ang: -0.75, y: 0, raio: 1.55, ppm: 1000, pai, desenhar: (g, p) => self.desenhaMenu(g, p) });
     this.pCentro = new Painel('centro', { larg: 1.56, alt: 0.98, ang: 0, y: 0, raio: 1.55, ppm: 1000, pai, desenhar: (g, p) => self.desenhaCentro(g, p) });
     this.pLado = new Painel('lado', { larg: 0.62, alt: 0.92, ang: 0.75, y: 0, raio: 1.55, ppm: 1000, pai, desenhar: (g, p) => self.desenhaLado(g, p) });
-    this.pDock = new Painel('dock', { larg: 0.88, alt: 0.11, ang: 0, y: -0.6, raio: 1.5, ppm: 1000, pai, desenhar: (g, p) => self.desenhaDock(g, p) });
+    this.pDock = new Painel('dock', { larg: 0.88, alt: 0.11, ang: 0, y: -0.7, raio: 1.5, ppm: 1000, pai, desenhar: (g, p) => self.desenhaDock(g, p) });
     this.pDock.mesh.material.depthTest = false; this.pDock.mesh.renderOrder = 20; // a barra fica sempre visível (o chão da sala não a cobre)
     // controles do vídeo: presos no "carrinho" (rig), embaixo da vista
     this.pPlayer = new Painel('player', { larg: 1.0, alt: 0.2, ang: 0, y: 0.98, raio: 1.4, ppm: 1000, pai: this.rig, desenhar: (g, p) => self.desenhaPlayer(g, p) });
     this.pPlayer.visivel = false;
+    this.montaBarras();
   },
   renderTudo() { PAINEIS.forEach(p => p.render()); },
 
@@ -820,6 +842,9 @@ AFRAME.registerComponent('ryan-vr', {
       return;
     }
     if (this.secao === 'inicio') return this.desenhaInicio(g, p);
+    if (this.secao === 'ambientes') return this.desenhaAmbientes(g, p);
+    if (this.secao === 'fotos') return this.desenhaFotos(g, p);
+    if (this.secao === 'musica') return this.desenhaMusica(g, p);
     if (this.secao === 'google') return this.desenhaGoogle(g, p);
     if (this.secao === 'ajustes') {
       texto(g, 'Ajustes', 48, 92, FONTE_T(64), UI.txt);
@@ -854,12 +879,13 @@ AFRAME.registerComponent('ryan-vr', {
     texto(g, 'Toque, olhe ou faça a pinça num app para abrir', 58, 138, FONTE(700, 27), UI.sub);
     const CURTO = { corrida: 'Corrida', cubos: 'Corta Cubos', alvos: 'Tiro ao Alvo', baloes: 'Balões', blocos: 'Blocos', turbo: 'Turbo', montanha: 'Montanha', mar: 'Fundo do Mar', espaco: 'Espaço', aurora: 'Aurora' };
     const apps = [...JOGOS.map(j => ({ it: j, nome: CURTO[j.id] || j.titulo })), ...VIDEOS.map(v => ({ it: v, nome: CURTO[v.id] || v.titulo })),
+      { id: 'ambientes', nome: 'Ambientes', ic: '🏞️', cor: ['#5fd0a0', '#1f7a6a'] }, { id: 'fotos', nome: 'Fotos', ic: '🖼️', cor: ['#ff9ac4', '#c2367a'] }, { id: 'musica', nome: 'Música', ic: '🎵', cor: ['#ff7a6b', '#b8322a'] }, { id: 'central', nome: 'Controle', ic: '🎛️', cor: ['#7b86ff', '#3a3fb8'] },
       { id: 'google', nome: 'Google', ic: '🔎', cor: ['#4f8df7', '#1a56c4'] }, { id: 'meus', nome: 'Meus vídeos', ic: '📁', cor: ['#ffb36b', '#d9762b'] }, { id: 'ajustes', nome: 'Ajustes', ic: '⚙️', cor: ['#9aa0b5', '#5a6075'] }];
-    const cols = 7, R = 82, dx = (W - 112) / cols;
+    const cols = 9, R = 66, dx = (W - 112) / cols;
     apps.forEach((a, i) => {
-      const c = i % cols, l = Math.floor(i / cols), cx = 56 + dx * (c + 0.5), cy = 285 + l * 320;
+      const c = i % cols, l = Math.floor(i / cols), cx = 56 + dx * (c + 0.5), cy = 270 + l * 280;
       const id = a.it ? a.it.id : a.id, hv = p.botao('app-' + id, cx - R - 10, cy - R - 10, 2 * R + 20, 2 * R + 80, () => {
-        if (a.it) { this.detalhe = a.it; this.renderTudo(); } else { this.secao = a.id; this.detalhe = null; this.renderTudo(); }
+        if (a.it) { this.detalhe = a.it; this.renderTudo(); } else if (a.id === 'central') this.abreCentral(false); else { this.secao = a.id; this.detalhe = null; this.renderTudo(); }
       });
       const r = hv ? R * 1.1 : R; // o ícone cresce quando você aponta
       g.save(); g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = hv ? 30 : 18; g.shadowOffsetY = 8;
@@ -970,7 +996,7 @@ AFRAME.registerComponent('ryan-vr', {
 
   desenhaDock(g, p) {
     caixa(g, 0, 0, p.W, p.H, 30, 'rgba(14,12,26,.92)');
-    const itens = [['inicio', '🏠', () => { this.secao = 'inicio'; this.detalhe = null; this.renderTudo(); }], ['centro', '🎯', () => { this.recentrar(); this.aviso('Visão centralizada'); }], ['som', AJ.musica ? '🔊' : '🔇', () => { AJ.musica = !AJ.musica; salva(); volumeMusica(); this.renderTudo(); }], ['casa', '📷', () => this.ligarCasa(!this.casa)], ['colocar', '📍', () => this.comecaPosicionar()], ['ajustes', '⚙️', () => { this.secao = 'ajustes'; this.detalhe = null; this.renderTudo(); }]];
+    const itens = [['inicio', '🏠', () => { this.secao = 'inicio'; this.detalhe = null; this.renderTudo(); }], ['centro', '🎯', () => { this.recentrar(); this.aviso('Visão centralizada'); }], ['som', AJ.musica ? '🔊' : '🔇', () => { AJ.musica = !AJ.musica; salva(); volumeMusica(); this.renderTudo(); }], ['casa', '📷', () => this.ligarCasa(!this.casa)], ['colocar', '📍', () => this.comecaPosicionar()], ['ajustes', '⚙️', () => { this.secao = 'ajustes'; this.detalhe = null; this.renderTudo(); }], ['central', '🎛️', () => this.abreCentral(false)]];
     itens.forEach(([id, ic, f], i) => { const x = 20 + i * 104; const hv = p.botao('d-' + id, x, 12, 86, 86, f); caixa(g, x, 12, 86, 86, 22, hv ? UI.acc : id === 'casa' && this.casa ? 'rgba(46,212,122,.45)' : 'rgba(255,255,255,.06)'); texto(g, ic, x + 43, 72, FONTE(800, 42), UI.txt, 'center'); });
     const d = new Date(); texto(g, `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`, p.W - 40, 72, FONTE(800, 40), UI.txt, 'right');
   },
@@ -1015,11 +1041,21 @@ AFRAME.registerComponent('ryan-vr', {
   },
   fixaPosicao() {
     if (!this.posicionando || performance.now() - this.posicionando.t0 < 700) return;
-    this.posicionando = null; som('abre'); this.aviso('TV colocada aqui!');
+    const eraJanela = !!this.posicionando.painel; this.posicionando = null; som('abre'); this.aviso(eraJanela ? 'Janela colocada aqui!' : 'TV colocada aqui!');
     this.bloqueioAte = performance.now() + 900; this.dirTrava = new THREE.Vector3(); this.cam.object3D.getWorldDirection(this.dirTrava);
   },
   passoPosicionar(dt) {
     const d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d);
+    if (this.posicionando.painel) { // ✥ mover uma janela: ela vai para onde você aponta (mão) ou olha
+      const P = this.posicionando.painel, R = this.raioDoDedo(), dir = R ? R.direction.clone() : d.clone().negate();
+      const U = this.uiRaiz.object3D, f = U.scale.x || 1, phi = Math.atan2(-dir.x, -dir.z) - U.rotation.y, po = P.el.object3D, k = Math.min(1, dt * 8);
+      po.rotation.y += Math.atan2(Math.sin(phi - po.rotation.y), Math.cos(phi - po.rotation.y)) * k;
+      const pit = Math.asin(Math.max(-1, Math.min(1, dir.y))), alvoY = Math.max(-0.9, Math.min(0.9, Math.tan(pit) * (this.raioAtual || 1.55))) / f;
+      po.position.y += (alvoY - po.position.y) * k; P.movida = true;
+      this.anelProgresso(0);
+      if (performance.now() - this.posicionando.t0 > 15000) this.fixaPosicao();
+      return;
+    }
     const yaw = Math.atan2(d.x, d.z), pitch = Math.asin(Math.max(-1, Math.min(1, -d.y)));
     const o = this.uiRaiz.object3D, olho = this.cam.object3D.getWorldPosition(new THREE.Vector3()).y;
     const k = Math.min(1, dt * 6);
@@ -1129,9 +1165,14 @@ AFRAME.registerComponent('ryan-vr', {
     // TV longe = painéis maiores na mesma proporção: as letras continuam do mesmo tamanho na vista (nítidas)
     const f = this.casa ? Math.max(1, R0 / 1.55 * 0.95) : 1, r = R0 / f;
     this.uiRaiz.object3D.scale.setScalar(f);
-    this.pCentro.setRaio(r); this.pMenu.setRaio(r); this.pLado.setRaio(r); this.pDock.setRaio(r - 0.05);
-    const lado = (1.56 / 2 + 0.06 + 0.62 / 2) / r;
-    this.pMenu.el.object3D.rotation.y = lado; this.pLado.el.object3D.rotation.y = -lado;
+    this.raioJanela = r;
+    // cada janela tem o seu tamanho (− / + na barrinha): cresce sem chegar mais perto
+    [this.pCentro, this.pMenu, this.pLado, this.pMusica].forEach(P => { if (!P) return; const e = P.esc || 1; P.setRaio(r / e); P.el.object3D.scale.setScalar(e); });
+    this.pDock.setRaio(r - 0.05);
+    const ec = this.pCentro.esc || 1, lado = (1.56 * ec / 2 + 0.06 + 0.62 * (this.pMenu.esc || 1) / 2) / r, lado2 = (1.56 * ec / 2 + 0.06 + 0.62 * (this.pLado.esc || 1) / 2) / r;
+    if (!this.pMenu.movida) this.pMenu.el.object3D.rotation.y = lado; if (!this.pLado.movida) this.pLado.el.object3D.rotation.y = -lado2;
+    if (this.pMusica && !this.pMusica.movida) this.pMusica.el.object3D.rotation.y = -lado2;
+    if (this.barras) this.barras.forEach(B => { B.raioFeito = 0; });
     if (this.tv) {
       this.tvMoldura.geometry.dispose(); this.tvMoldura.geometry = geoCurva(1.66, 1.06, r + 0.02, 36);
       this.tvAura.geometry.dispose(); this.tvAura.geometry = geoCurva(2.1, 1.45, r + 0.05, 24);
@@ -1262,7 +1303,7 @@ AFRAME.registerComponent('ryan-vr', {
     if (this.camPlano) this.camPlano.visible = this.casa && !midia && !jogo;
     if (this.tv) this.tv.visible = this.casa && !midia && (this.estado === 'saguao' || this.naTV);
     if (this.luzes) this.luzes.visible = !midia; // as experiências têm a própria luz
-    this.saguao.visible = !midia && !jogo && !this.casa && this.estado !== 'baloes-casa';
+    this.saguao.visible = !midia && !jogo && !this.casa && !this.amb && !this.pano && this.estado !== 'baloes-casa';
   },
 
   // ---------- reconhecimento da mão (MediaPipe) ----------
@@ -2304,6 +2345,339 @@ AFRAME.registerComponent('ryan-vr', {
     const chave = [...hov].sort().join(',');
     if (chave !== this.teclaChave || (this.teclaFlash && Object.values(this.teclaFlash).some(t => agora - t < 260))) { this.teclaChave = chave; this.teclaHover = hov; P.render(); }
   },
+  // =====================================================================
+  // AMBIENTES: troque a sua casa (ou a sala) por outro lugar; a imersão mistura os dois
+  // =====================================================================
+  montaAmbiente(id) {
+    const G = new THREE.Group();
+    const luz = (c1, c2, i) => { G.add(new THREE.HemisphereLight(c1, c2, i)); const s = new THREE.DirectionalLight(0xffffff, 0.9); s.position.set(3, 8, 2); G.add(s); };
+    const solo = (r, cor, extra) => { const m = new THREE.Mesh(new THREE.CircleGeometry(r, 64), materialPadrao(cor, extra)); m.rotation.x = -Math.PI / 2; G.add(m); return m; };
+    const RND = (() => { let s = 7; return () => { s = (s * 9301 + 49297) % 233280; return s / 233280; }; })();
+    if (id === 'praia') {
+      G.add(ceuGradiente([[0, '#2f7fd6'], [0.42, '#8fd0ff'], [0.5, '#fff2d6'], [0.52, '#3aa6c9'], [1, '#1d5f86']], 300));
+      luz(0xfff3dc, 0x4a90b0, 1.2);
+      const mar = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshStandardMaterial({ color: 0x1f8fc4, roughness: 0.25, metalness: 0.1 })); mar.rotation.x = -Math.PI / 2; mar.position.y = -0.05; G.add(mar);
+      const areia = new THREE.Mesh(new THREE.CircleGeometry(14, 64), materialPadrao(0xf1d9a6)); areia.rotation.x = -Math.PI / 2; areia.position.z = 6; G.add(areia);
+      const espuma = new THREE.Mesh(new THREE.RingGeometry(13.6, 14.4, 64), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 })); espuma.rotation.x = -Math.PI / 2; espuma.position.set(0, 0.01, 6); G.add(espuma); this.ambOnda = espuma;
+      const sol = new THREE.Mesh(new THREE.SphereGeometry(10, 24, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.9, 1.3), toneMapped: false, fog: false })); sol.position.set(-60, 45, -230); G.add(sol);
+      const tronco = materialPadrao(0x8a6a44), folha = materialPadrao(0x2e9a4a, { flatShading: true });
+      [[-6, 3], [7, 5], [-9, 10], [10, 12]].forEach(([x, z]) => { const p = new THREE.Group(); const t = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.25, 5, 8), tronco); t.position.y = 2.5; t.rotation.z = 0.15; p.add(t); for (let k = 0; k < 6; k++) { const f = new THREE.Mesh(new THREE.ConeGeometry(0.5, 3, 4), folha); f.position.set(0.4, 5, 0); f.rotation.set(0, k / 6 * Math.PI * 2, 1.9); const h = new THREE.Group(); h.rotation.y = k / 6 * Math.PI * 2; h.add(f); p.add(h); } p.position.set(x, 0, z); G.add(p); });
+    } else if (id === 'montanhas') {
+      G.add(ceuGradiente([[0, '#3d6fc4'], [0.45, '#b9d8f5'], [0.52, '#e8f0f2'], [1, '#4f6b3a']], 300));
+      luz(0xe8f2ff, 0x55663f, 1.2);
+      solo(260, 0x6f9f4f);
+      const lago = new THREE.Mesh(new THREE.CircleGeometry(9, 48), new THREE.MeshStandardMaterial({ color: 0x3f86b8, roughness: 0.1, metalness: 0.3 })); lago.rotation.x = -Math.PI / 2; lago.position.set(0, 0.02, -16); G.add(lago);
+      const pedra = materialPadrao(0x7c8496, { flatShading: true }), neve = materialPadrao(0xffffff, { flatShading: true });
+      for (let i = 0; i < 16; i++) { const a = i / 16 * Math.PI * 2, d = 90 + RND() * 60, h = 40 + RND() * 50, r = 20 + RND() * 22; const m = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7), pedra); m.position.set(Math.sin(a) * d, h / 2 - 2, -Math.cos(a) * d); G.add(m); const n = new THREE.Mesh(new THREE.ConeGeometry(r * 0.32, h * 0.3, 7), neve); n.position.set(m.position.x, h - 2 - h * 0.15 + 0.5, m.position.z); G.add(n); }
+      const pinho = materialPadrao(0x2a6b3a, { flatShading: true });
+      for (let i = 0; i < 40; i++) { const a = RND() * Math.PI * 2, d = 8 + RND() * 40; const t = new THREE.Mesh(new THREE.ConeGeometry(0.9, 3.5, 6), pinho); t.position.set(Math.sin(a) * d, 1.75, -Math.cos(a) * d); G.add(t); }
+    } else if (id === 'lua') {
+      G.add(ceuGradiente([[0, '#000004'], [1, '#05040c']], 300)); G.add(estrelas(1500, 280, 1.1));
+      luz(0xdfe6ff, 0x222230, 0.9);
+      const crateras = tex(512, 512, (g, w, h) => { g.fillStyle = '#9a9aa2'; g.fillRect(0, 0, w, h); for (let i = 0; i < 160; i++) { const x = Math.random() * w, y = Math.random() * h, r = 4 + Math.random() * 28; const gr = g.createRadialGradient(x, y, r * 0.2, x, y, r); gr.addColorStop(0, 'rgba(70,70,80,.55)'); gr.addColorStop(0.8, 'rgba(120,120,128,.25)'); gr.addColorStop(1, 'rgba(200,200,210,.25)'); g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); } });
+      crateras.wrapS = crateras.wrapT = THREE.RepeatWrapping; crateras.repeat.set(10, 10);
+      solo(200, 0xffffff, { map: crateras, roughness: 1 });
+      const terraTex = tex(256, 256, (g, w, h) => { const gr = g.createRadialGradient(w * 0.4, h * 0.4, 10, w / 2, h / 2, w / 2); gr.addColorStop(0, '#6fb8ff'); gr.addColorStop(0.7, '#1f5fb0'); gr.addColorStop(1, '#0a2a5a'); g.fillStyle = gr; g.fillRect(0, 0, w, h); g.fillStyle = '#3f9a4a'; for (let i = 0; i < 9; i++) { g.beginPath(); g.ellipse(Math.random() * w, Math.random() * h, 20 + Math.random() * 30, 10 + Math.random() * 20, Math.random() * 3, 0, 7); g.fill(); } g.fillStyle = 'rgba(255,255,255,.6)'; for (let i = 0; i < 12; i++) { g.beginPath(); g.ellipse(Math.random() * w, Math.random() * h, 25, 6, Math.random() * 3, 0, 7); g.fill(); } });
+      const terra = new THREE.Mesh(new THREE.SphereGeometry(18, 40, 30), new THREE.MeshStandardMaterial({ map: terraTex, emissive: 0x112244, emissiveIntensity: 0.4 })); terra.position.set(60, 70, -200); G.add(terra); this.ambGira = terra;
+    } else if (id === 'espaco') {
+      G.add(ceuGradiente([[0, '#05030f'], [0.5, '#140a2e'], [1, '#05030f']], 300)); G.add(estrelas(2500, 280, 1.2));
+      luz(0xc8c0ff, 0x10081f, 0.9);
+      const neb = tex(256, 256, (g, w, h) => { for (let i = 0; i < 5; i++) { const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, ['rgba(255,80,200,.35)', 'rgba(80,160,255,.3)', 'rgba(160,90,255,.3)'][i % 3]); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); } });
+      for (let i = 0; i < 6; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: neb, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); const a = i / 6 * Math.PI * 2; s.position.set(Math.sin(a) * 180, (RND() - 0.3) * 120, -Math.cos(a) * 180); s.scale.setScalar(140 + RND() * 80); G.add(s); }
+      const pl = new THREE.Mesh(new THREE.SphereGeometry(26, 48, 32), new THREE.MeshStandardMaterial({ color: 0xe0a060, roughness: 0.8 })); pl.position.set(-70, 20, -170); G.add(pl); this.ambGira = pl;
+      const anel = new THREE.Mesh(new THREE.RingGeometry(34, 52, 64), new THREE.MeshBasicMaterial({ color: 0xf3d3a0, side: THREE.DoubleSide, transparent: true, opacity: 0.6 })); anel.position.copy(pl.position); anel.rotation.set(1.2, 0.3, 0); G.add(anel);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(3, 3, 0.1, 48), new THREE.MeshStandardMaterial({ color: 0x9fb8ff, transparent: true, opacity: 0.25, metalness: 0.6, roughness: 0.2 })); base.position.y = -0.05; G.add(base);
+    } else if (id === 'floresta') {
+      G.add(ceuGradiente([[0, '#0d1b3a'], [0.45, '#2e4a6e'], [0.52, '#57775a'], [1, '#132413']], 300)); G.add(estrelas(600, 280, 1));
+      luz(0x9fb8d8, 0x1d2f1a, 0.8);
+      solo(200, 0x2b4a2a);
+      const pinho = materialPadrao(0x1f4a2a, { flatShading: true }), tronco = materialPadrao(0x4a3424);
+      for (let i = 0; i < 90; i++) { const a = RND() * Math.PI * 2, d = 5 + RND() * 60, e = 0.7 + RND() * 0.9; const t = new THREE.Group(); const c = new THREE.Mesh(new THREE.ConeGeometry(1.3 * e, 5 * e, 7), pinho); c.position.y = 3.5 * e; const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.15 * e, 0.2 * e, 1.5 * e, 6), tronco); tr.position.y = 0.75 * e; t.add(c, tr); t.position.set(Math.sin(a) * d, 0, -Math.cos(a) * d); G.add(t); }
+      const vg = new THREE.BufferGeometry(), P = []; for (let i = 0; i < 160; i++) P.push((RND() - 0.5) * 30, 0.4 + RND() * 3, (RND() - 0.5) * 30);
+      vg.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+      const vaga = new THREE.Points(vg, new THREE.PointsMaterial({ color: 0xfff27a, size: 0.08, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false })); G.add(vaga); this.ambVaga = vaga;
+    }
+    // guarda a opacidade original de cada material (para a imersão misturar com a casa)
+    G.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { if (m.userData.op0 === undefined) { m.userData.op0 = m.opacity; m.userData.tr0 = m.transparent; } }); });
+    return G;
+  },
+  trocaAmbiente(id) {
+    if (this.amb) { this.el.object3D.remove(this.amb.g); this.amb.g.traverse(o => { if (o.geometry) o.geometry.dispose(); }); this.amb = null; }
+    this.ambOnda = this.ambGira = this.ambVaga = null;
+    AJ.ambiente = id; salva();
+    if (id && id !== 'saguao') {
+      const g = this.montaAmbiente(id), o = this.cam.object3D.getWorldPosition(new THREE.Vector3());
+      g.position.set(o.x, 0, o.z); this.el.object3D.add(g); this.amb = { id, g, k: -1 };
+    }
+    this.atualizaFundo(); this.renderTudo();
+    const a = AMBIENTES.find(a => a.id === id); this.aviso((a ? a.ic + ' ' + a.nome : 'Sala Ryan'));
+  },
+  passoAmbiente(dt, t) {
+    if (!this.amb) return;
+    const ok = this.estado === 'saguao' || this.estado === 'baloes' || (this.estado === 'baloes-fim' && this.fimDe === 'baloes');
+    this.amb.g.visible = ok && !this.pano;
+    // imersão: com a câmera ligada (Modo Casa), o ambiente se mistura com a sua casa
+    const k = this.casa ? AJ.imersao : 1;
+    if (k !== this.amb.k) {
+      this.amb.k = k;
+      this.amb.g.traverse(o => { if (o.material) [].concat(o.material).forEach(m => { const tr = k < 0.999 || m.userData.tr0; if (m.transparent !== tr) { m.transparent = tr; m.needsUpdate = true; } m.opacity = m.userData.op0 * k; }); });
+    }
+    if (this.ambOnda) this.ambOnda.scale.setScalar(1 + Math.sin(t / 1300) * 0.012);
+    if (this.ambGira) this.ambGira.rotation.y += dt * 0.03;
+    if (this.ambVaga) this.ambVaga.material.opacity = (0.6 + 0.4 * Math.sin(t / 500)) * (this.casa ? AJ.imersao : 1);
+  },
+  desenhaAmbientes(g, p) {
+    const W = p.W;
+    texto(g, 'Ambientes', 56, 96, FONTE_T(60), UI.txt);
+    texto(g, 'Troque o lugar em volta de você. No Modo Casa, a imersão mistura o ambiente com a sua casa.', 58, 138, FONTE(700, 26), UI.sub);
+    const cores = { saguao: ['#b6a6ec', '#6f63c9'], praia: ['#8fd0ff', '#1f8fc4'], montanhas: ['#b9d8f5', '#4f6b3a'], lua: ['#55555f', '#101018'], espaco: ['#3a1a6e', '#05030f'], floresta: ['#2e4a6e', '#132413'] };
+    const cw = (W - 112 - 5 * 20) / 6;
+    AMBIENTES.forEach((a, i) => {
+      const x = 56 + i * (cw + 20), y = 180, h = 300, sel = (AJ.ambiente || 'saguao') === a.id;
+      const hv = p.botao('amb-' + a.id, x, y, cw, h, () => this.trocaAmbiente(a.id));
+      const gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, cores[a.id][0]); gr.addColorStop(1, cores[a.id][1]);
+      caixa(g, x, y, cw, h, 30, gr, sel ? '#ffffff' : hv ? 'rgba(255,255,255,.7)' : null, sel ? 6 : 4);
+      g.font = '96px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(a.ic, x + cw / 2, y + 120);
+      texto(g, a.nome, x + cw / 2, y + h - 40, FONTE(800, 30), '#ffffff', 'center');
+    });
+    this.linhaImersao(g, p, 56, 540, W - 112);
+    quebra(g, this.casa ? 'Imersão 0% = só a sua casa · 100% = só o ambiente.' : 'Ligue o Modo Casa (📷) para misturar o ambiente com a sua casa de verdade.', 58, 720, W - 116, 34, FONTE(700, 26), UI.sub, 2);
+  },
+  linhaImersao(g, p, x, y, w) {
+    caixa(g, x, y, w, 130, 30, UI.card);
+    texto(g, '🌗 Imersão', x + 32, y + 80, FONTE(800, 36), UI.txt);
+    [0, 0.25, 0.5, 0.75, 1].forEach((v, i) => {
+      const bw = (w - 340 - 4 * 14) / 5, bx = x + 310 + i * (bw + 14), sel = Math.abs(AJ.imersao - v) < 0.01;
+      const hv = p.botao('imer-' + i, bx, y + 20, bw, 90, () => { AJ.imersao = v; salva(); this.renderTudo(); this.aviso('Imersão ' + Math.round(v * 100) + '%'); });
+      caixa(g, bx, y + 20, bw, 90, 22, sel ? UI.acc : hv ? UI.cardHover : 'rgba(255,255,255,.06)');
+      texto(g, Math.round(v * 100) + '%', bx + bw / 2, y + 78, FONTE(800, 32), sel ? '#120d2e' : UI.txt, 'center');
+    });
+  },
+
+  // =====================================================================
+  // JANELAS: mova (✥) e mude o tamanho (− / +) de cada janela pela barrinha embaixo dela
+  // =====================================================================
+  montaBarras() {
+    this.barras = [this.pMenu, this.pCentro, this.pLado].map(P => {
+      P.esc = P.esc || 1;
+      const B = new Painel('barra-' + P.id, { larg: 0.34, alt: 0.055, ang: P.o.ang, y: 0, raio: 1.55, ppm: 1000, pai: this.uiRaiz, desenhar: (g, p) => this.desenhaBarra(g, p, P) });
+      B.mesh.renderOrder = 21; B.mesh.material.depthTest = false; B.janela = P; P.barra = B; B.render(); return B;
+    });
+    this.sincBarras();
+  },
+  desenhaBarra(g, p, P) {
+    const W = p.W, H = p.H;
+    caixa(g, 0, 0, W, H, H / 2, 'rgba(20,20,28,.55)', 'rgba(255,255,255,.35)', 2);
+    [['menos', '−', 0], ['mover', '✥ mover', 1], ['mais', '+', 2]].forEach(([id, rot, i]) => {
+      const x = [6, 90, W - 84][i], w = i === 1 ? W - 180 : 78;
+      const hv = p.botao('j-' + id, x, 5, w, H - 10, () => {
+        if (id === 'mover') { this.posicionando = { t0: performance.now(), painel: P }; this.aviso('Aponte para onde quer a janela e aperte'); return; }
+        P.esc = Math.max(0.6, Math.min(1.8, +(P.esc + (id === 'mais' ? 0.15 : -0.15)).toFixed(2))); this.raioAtual = 0; this.aplicaDistancia();
+      });
+      caixa(g, x, 5, w, H - 10, (H - 10) / 2, hv ? 'rgba(255,255,255,.9)' : 'rgba(255,255,255,.12)');
+      texto(g, rot, x + w / 2, H / 2 + 12, FONTE(800, 34), hv ? '#15131f' : '#ffffff', 'center');
+    });
+  },
+  // a barrinha acompanha a janela (posição, ângulo e tamanho)
+  sincBarras() {
+    if (!this.barras) return;
+    const r = this.raioJanela || 1.55;
+    this.barras.forEach(B => {
+      const P = B.janela, o = B.el.object3D, po = P.el.object3D;
+      if (B.raioFeito !== r) { B.setRaio(r - 0.01); B.raioFeito = r; }
+      o.rotation.y = po.rotation.y; o.position.y = po.position.y - (P.o.alt / 2) * P.esc - 0.045;
+      const quer = po.visible && this.estado === 'saguao'; if (B.el.object3D.visible !== quer) B.visivel = quer; // aparece junto com a janela
+    });
+  },
+
+  // =====================================================================
+  // CENTRAL DE CONTROLE: olhe para cima (ou toque em 🎛️ na barra)
+  // =====================================================================
+  abreCentral(emCima) {
+    if (!this.pCentral) {
+      this.centralRaiz = document.createElement('a-entity'); this.el.appendChild(this.centralRaiz);
+      this.pCentral = new Painel('central', { larg: 0.9, alt: 0.52, ang: 0, y: 0, raio: 1.1, ppm: 1000, pai: this.centralRaiz, desenhar: (g, p) => this.desenhaCentral(g, p) });
+      this.pCentral.mesh.renderOrder = 25; this.pCentral.mesh.material.depthTest = false;
+      try { navigator.getBattery && navigator.getBattery().then(b => { this.bateria = b; b.addEventListener('levelchange', () => this.pCentral.visivel && this.pCentral.render()); }); } catch (e) {}
+    }
+    const o = this.cam.object3D.getWorldPosition(new THREE.Vector3()), d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d);
+    const r = this.centralRaiz.object3D; r.position.set(o.x, 0, o.z); r.rotation.y = Math.atan2(d.x, d.z);
+    this.pCentral.el.object3D.position.y = o.y; this.pCentral.el.object3D.rotation.x = emCima ? 0.62 : 0;
+    this.centralAberta = true; this.centralCima = !!emCima; this.centralT = 0; this.pCentral.visivel = true; this.pCentral.render(); som('abre');
+    this.bloqueioAte = performance.now() + 500;
+  },
+  fechaCentral() { if (!this.centralAberta) return; this.centralAberta = false; this.pCentral.visivel = false; },
+  passoCentral(dt) {
+    if (this.estado !== 'saguao' || this.posicionando) { if (this.centralAberta) this.fechaCentral(); return; }
+    const d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d);
+    const sobe = Math.asin(Math.max(-1, Math.min(1, -d.y))); // olhando para cima = positivo
+    if (!this.centralAberta) { this.olhaCimaT = sobe > 0.85 ? (this.olhaCimaT || 0) + dt : 0; if (this.olhaCimaT > 0.5) { this.olhaCimaT = 0; this.abreCentral(true); } }
+    else if (this.centralCima) { this.centralT += dt; this.olhaBaixoT = sobe < 0.25 ? (this.olhaBaixoT || 0) + dt : 0; if (this.olhaBaixoT > 1.2 && this.centralT > 1) this.fechaCentral(); }
+    if (this.centralAberta && Math.floor(performance.now() / 15000) !== this.centralMin) { this.centralMin = Math.floor(performance.now() / 15000); this.pCentral.render(); }
+  },
+  desenhaCentral(g, p) {
+    const W = p.W, H = p.H;
+    caixa(g, 0, 0, W, H, 44, 'rgba(30,32,42,.78)');
+    const agora = new Date(), hh = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
+    texto(g, hh, 40, 78, FONTE_T(56), '#ffffff');
+    texto(g, agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }), 200, 72, FONTE(700, 26), 'rgba(240,240,248,.75)');
+    if (this.bateria) texto(g, (this.bateria.charging ? '⚡ ' : '🔋 ') + Math.round(this.bateria.level * 100) + '%', W - 120, 72, FONTE(800, 28), '#ffffff', 'right');
+    const hvX = p.botao('c-fechar', W - 92, 24, 64, 64, () => this.fechaCentral()); caixa(g, W - 92, 24, 64, 64, 32, hvX ? '#ffffff' : 'rgba(255,255,255,.14)'); texto(g, '✕', W - 60, 68, FONTE(800, 32), hvX ? '#15131f' : '#fff', 'center');
+    // botões grandes
+    const amb = AMBIENTES.find(a => a.id === (AJ.ambiente || 'saguao')) || AMBIENTES[0];
+    const tiles = [
+      ['musica', AJ.musica ? '🔊' : '🔇', 'Música', AJ.musica, () => { AJ.musica = !AJ.musica; salva(); volumeMusica(); }],
+      ['casa', '📷', 'Casa', this.casa, () => this.ligarCasa(!this.casa)],
+      ['amb', amb.ic, amb.nome, AJ.ambiente && AJ.ambiente !== 'saguao', () => { const i = AMBIENTES.findIndex(a => a.id === (AJ.ambiente || 'saguao')); this.trocaAmbiente(AMBIENTES[(i + 1) % AMBIENTES.length].id); }],
+      ['foto', '📸', 'Foto da tela', false, () => { this.fechaCentral(); setTimeout(() => this.fotoDaTela(), 250); }],
+      ['centro', '🎯', 'Centralizar', false, () => { this.recentrar(); this.aviso('Visão centralizada'); }],
+      ['inicio', '🏠', 'Início', false, () => { this.secao = 'inicio'; this.detalhe = null; this.fechaCentral(); this.renderTudo(); }]
+    ];
+    const tw = (W - 80 - 5 * 14) / 6;
+    tiles.forEach(([id, ic, nome, on, f], i) => {
+      const x = 40 + i * (tw + 14), y = 112;
+      const hv = p.botao('c-' + id, x, y, tw, 150, () => { f(); if (this.pCentral.visivel) this.pCentral.render(); });
+      caixa(g, x, y, tw, 150, 30, hv ? '#ffffff' : on ? 'rgba(143,123,255,.75)' : 'rgba(255,255,255,.12)');
+      g.font = '54px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(ic, x + tw / 2, y + 62);
+      g.font = FONTE(800, 22); const fs = Math.min(22, Math.floor(22 * (tw - 12) / Math.max(1, g.measureText(nome).width)));
+      texto(g, nome, x + tw / 2, y + 126, FONTE(800, fs), hv ? '#15131f' : '#ffffff', 'center');
+    });
+    // volume e imersão
+    const linha = (y, ic, nome, v, menos, mais) => {
+      caixa(g, 40, y, W - 80, 92, 26, 'rgba(255,255,255,.08)');
+      texto(g, ic + ' ' + nome, 70, y + 58, FONTE(800, 28), '#ffffff');
+      const bx = 330, bw = W - 80 - 330 - 180; caixa(g, bx, y + 38, bw, 16, 8, 'rgba(255,255,255,.18)'); caixa(g, bx, y + 38, Math.max(16, bw * v), 16, 8, '#ffffff');
+      [['−', menos, W - 220], ['+', mais, W - 130]].forEach(([s, f, x]) => { const hv = p.botao('c-' + nome + s, x, y + 10, 80, 72, () => { f(); this.pCentral.render(); }); caixa(g, x, y + 10, 80, 72, 36, hv ? '#ffffff' : 'rgba(255,255,255,.14)'); texto(g, s, x + 40, y + 60, FONTE(800, 40), hv ? '#15131f' : '#fff', 'center'); });
+    };
+    linha(290, '🔉', 'Volume', AJ.volume, () => { AJ.volume = Math.max(0, +(AJ.volume - 0.1).toFixed(1)); salva(); aplicaVolume(); }, () => { AJ.volume = Math.min(1, +(AJ.volume + 0.1).toFixed(1)); salva(); aplicaVolume(); som('hover'); });
+    linha(396, '🌗', 'Imersão', AJ.imersao, () => { AJ.imersao = Math.max(0, +(AJ.imersao - 0.25).toFixed(2)); salva(); this.renderTudo(); }, () => { AJ.imersao = Math.min(1, +(AJ.imersao + 0.25).toFixed(2)); salva(); this.renderTudo(); });
+  },
+  // 📸 foto da tela: guarda no app Fotos e salva no celular
+  fotoDaTela() {
+    const r = this.el.renderer; r.render(this.el.object3D, this.el.camera);
+    let url; try { url = r.domElement.toDataURL('image/jpeg', 0.9); } catch (e) { this.aviso('Não deu para tirar a foto'); return; }
+    som('abre');
+    const im = new Image(); im.src = url; this.fotos = this.fotos || []; this.fotos.unshift({ nome: 'Foto da tela ' + new Date().toLocaleTimeString('pt-BR').slice(0, 5), url, img: im, tela: true });
+    if (window.RyanApp && window.RyanApp.salvarFoto) { let ok = false; try { ok = window.RyanApp.salvarFoto(url); } catch (e) {} this.aviso(ok ? '📸 Foto salva na galeria e em Fotos' : '📸 Foto guardada no app Fotos'); }
+    else { try { const a = document.createElement('a'); a.href = url; a.download = 'RyanVR-' + Date.now() + '.jpg'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) {} this.aviso('📸 Foto guardada em Fotos'); }
+    this.renderTudo();
+  },
+
+  // =====================================================================
+  // FOTOS: as fotos do celular em tela gigante (panorâmicas em volta de você)
+  // =====================================================================
+  escolherFotos() { if (!this.doToque) { this.aviso('Tire do óculos e toque na tela'); return; } try { document.getElementById('arq-fotos').click(); } catch (e) {} },
+  recebeFotos(lista) {
+    this.fotos = this.fotos || [];
+    [...lista].slice(0, 40).forEach(f => { const url = URL.createObjectURL(f), im = new Image(); im.onload = () => this.renderTudo(); im.src = url; this.fotos.push({ nome: f.name.replace(/\.[^.]+$/, ''), url, img: im }); });
+    this.secao = 'fotos'; this.fotoAberta = null; this.renderTudo(); this.aviso(lista.length + (lista.length > 1 ? ' fotos' : ' foto') + ' no app Fotos');
+  },
+  desenhaFotos(g, p) {
+    const W = p.W, H = p.H, F = this.fotos || [];
+    if (this.fotoAberta !== null && this.fotoAberta !== undefined && F[this.fotoAberta]) {
+      const f = F[this.fotoAberta], im = f.img;
+      caixa(g, 24, 24, W - 48, H - 170, 30, '#000000');
+      if (im.complete && im.naturalWidth) { const s = Math.min((W - 64) / im.naturalWidth, (H - 190) / im.naturalHeight), w = im.naturalWidth * s, h = im.naturalHeight * s; g.save(); g.beginPath(); g.roundRect(24, 24, W - 48, H - 170, 30); g.clip(); g.drawImage(im, (W - w) / 2, 34 + (H - 190 - h) / 2, w, h); g.restore(); }
+      const pano = im.naturalWidth / Math.max(1, im.naturalHeight) >= 1.9;
+      const bts = [['ant', '◀', () => { this.fotoAberta = (this.fotoAberta + F.length - 1) % F.length; this.fechaPano(); this.renderTudo(); }], ['prox', '▶', () => { this.fotoAberta = (this.fotoAberta + 1) % F.length; this.fechaPano(); this.renderTudo(); }]];
+      if (pano) bts.push(['pano', this.pano ? '🖼 Sair do 360°' : '🌐 Ver em volta', () => { this.pano ? this.fechaPano() : this.abrePano(im); this.renderTudo(); }]);
+      bts.push(['voltar', '▦ Todas', () => { this.fotoAberta = null; this.fechaPano(); this.renderTudo(); }]);
+      let x = 40; bts.forEach(([id, rot, f2]) => { g.font = FONTE(800, 34); const w = Math.max(120, g.measureText(rot).width + 60); const hv = p.botao('f-' + id, x, H - 126, w, 96, f2); caixa(g, x, H - 126, w, 96, 28, hv ? UI.acc : UI.card); texto(g, rot, x + w / 2, H - 64, FONTE(800, 34), hv ? '#120d2e' : UI.txt, 'center'); x += w + 16; });
+      texto(g, `${this.fotoAberta + 1} / ${F.length}  ·  ${f.nome.slice(0, 30)}`, W - 50, H - 64, FONTE(700, 28), UI.sub, 'right');
+      return;
+    }
+    texto(g, 'Fotos', 56, 96, FONTE_T(60), UI.txt);
+    texto(g, F.length ? F.length + (F.length > 1 ? ' fotos' : ' foto') + ' · olhe ou aponte para abrir' : 'As fotos ficam só no seu celular (nada vai para a internet)', 58, 138, FONTE(700, 26), UI.sub);
+    const hvE = p.botao('f-escolher', W - 470, 52, 420, 96, () => this.escolherFotos());
+    caixa(g, W - 470, 52, 420, 96, 28, hvE ? '#ffc58a' : UI.acc2); texto(g, '📁 Escolher fotos', W - 260, 113, FONTE(800, 34), '#120d2e', 'center');
+    if (!F.length) { quebra(g, 'Tire o celular do óculos, toque em Escolher fotos e pegue fotos da galeria. Fotos panorâmicas podem ser vistas em volta de você (360°). As fotos da tela (📸 na Central de controle) aparecem aqui também.', 60, 260, W - 120, 46, FONTE(700, 32), UI.sub, 6); return; }
+    const cols = 5, gw = (W - 112 - 4 * 18) / cols, gh = gw * 0.66;
+    F.slice(0, 10).forEach((f, i) => {
+      const x = 56 + (i % cols) * (gw + 18), y = 180 + Math.floor(i / cols) * (gh + 24);
+      const hv = p.botao('f-' + i, x, y, gw, gh, () => { this.fotoAberta = i; this.renderTudo(); });
+      caixa(g, x - 4, y - 4, gw + 8, gh + 8, 22, hv ? '#ffffff' : 'rgba(255,255,255,.1)');
+      g.save(); g.beginPath(); g.roundRect(x, y, gw, gh, 18); g.clip(); g.fillStyle = '#000'; g.fillRect(x, y, gw, gh);
+      const im = f.img; if (im.complete && im.naturalWidth) { const s = Math.max(gw / im.naturalWidth, gh / im.naturalHeight); g.drawImage(im, x + (gw - im.naturalWidth * s) / 2, y + (gh - im.naturalHeight * s) / 2, im.naturalWidth * s, im.naturalHeight * s); }
+      g.restore();
+    });
+  },
+  abrePano(im) {
+    this.fechaPano();
+    const t = new THREE.Texture(im); t.colorSpace = THREE.SRGBColorSpace; t.needsUpdate = true;
+    const asp = im.naturalWidth / im.naturalHeight, arco = Math.min(Math.PI * 2, asp * 0.9), alt = 2 * Math.PI * 12 / (Math.PI * 2) * arco / asp;
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(12, 12, alt, 96, 1, true, Math.PI - arco / 2, arco), new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide, toneMapped: false }));
+    m.scale.x = -1; // a imagem não fica espelhada por dentro
+    const o = this.cam.object3D.getWorldPosition(new THREE.Vector3()), d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d);
+    m.position.set(o.x, o.y, o.z); m.rotation.y = Math.atan2(d.x, d.z); // o meio da foto fica na sua frente
+    this.el.object3D.add(m); this.pano = m; this.atualizaFundo();
+  },
+  fechaPano() { if (!this.pano) return; this.el.object3D.remove(this.pano); this.pano.material.map.dispose(); this.pano.geometry.dispose(); this.pano = null; this.atualizaFundo(); },
+
+  // =====================================================================
+  // MÚSICA: rádio do Ryan (músicas do jogo) ou músicas do celular, num tocador que flutua
+  // =====================================================================
+  escolherMusicas() { if (!this.doToque) { this.aviso('Tire do óculos e toque na tela'); return; } try { document.getElementById('arq-musica').click(); } catch (e) {} },
+  recebeMusicas(lista) {
+    this.musicas = this.musicas || [];
+    [...lista].slice(0, 60).forEach(f => this.musicas.push({ nome: f.name.replace(/\.[^.]+$/, ''), url: URL.createObjectURL(f) }));
+    this.secao = 'musica'; this.renderTudo(); this.aviso(lista.length + (lista.length > 1 ? ' músicas' : ' música') + ' no app Música');
+  },
+  listaMusica() { return [...RADIO.map(r => ({ nome: r.nome, radio: r.id, ic: r.ic })), ...(this.musicas || []).map(m => ({ nome: m.nome, url: m.url, ic: '🎵' }))]; },
+  tocaMusica(i) {
+    const L = this.listaMusica(); if (!L.length) return; i = (i + L.length) % L.length; const m = L[i];
+    this.paraMusica(true); this.musicaAtual = i;
+    if (m.radio) { AJ.musica = true; salva(); tocaTrilha(m.radio); this.radioTocando = true; }
+    else { tocaTrilha(null); const a = new Audio(m.url); a.volume = AJ.volume; a.play().catch(() => {}); a.onended = () => this.tocaMusica(i + 1); this.audioMusica = a; }
+    this.mostraTocador(); this.renderTudo();
+  },
+  paraMusica(semVoltar) {
+    if (this.audioMusica) { this.audioMusica.pause(); this.audioMusica = null; }
+    if (this.radioTocando) this.radioTocando = false;
+    if (!semVoltar) { this.musicaAtual = null; tocaTrilha('saguao'); if (this.pMusica) this.pMusica.visivel = false; this.renderTudo(); }
+  },
+  pausaMusica() {
+    if (this.audioMusica) { if (this.audioMusica.paused) this.audioMusica.play().catch(() => {}); else this.audioMusica.pause(); }
+    else if (this.radioTocando) { this.radioTocando = false; tocaTrilha(null); } else if (this.musicaAtual !== null && this.musicaAtual !== undefined) this.tocaMusica(this.musicaAtual);
+    this.pMusica && this.pMusica.render();
+  },
+  mostraTocador() {
+    if (!this.pMusica) {
+      this.pMusica = new Painel('tocador', { larg: 0.62, alt: 0.2, ang: 0.75, y: -0.66, raio: this.raioJanela || 1.55, ppm: 1000, pai: this.uiRaiz, desenhar: (g, p) => this.desenhaTocador(g, p) });
+      this.pMusica.mesh.renderOrder = 21; this.pMusica.mesh.material.depthTest = false;
+      this.pMusica.esc = 1; this.raioAtual = 0; this.aplicaDistancia();
+    }
+    this.pMusica.visivel = this.estado === 'saguao'; this.pMusica.render();
+  },
+  desenhaTocador(g, p) {
+    const W = p.W, H = p.H, L = this.listaMusica(), m = L[this.musicaAtual] || { nome: '—', ic: '🎵' };
+    caixa(g, 0, 0, W, H, 40, 'rgba(30,32,42,.8)', 'rgba(255,255,255,.3)', 2);
+    caixa(g, 20, 20, H - 40, H - 40, 26, 'rgba(255,255,255,.12)'); g.font = '80px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(m.ic, 20 + (H - 40) / 2, H / 2 + 4);
+    texto(g, m.nome.slice(0, 22), H + 4, 74, FONTE(800, 32), '#ffffff');
+    const tocando = this.audioMusica ? !this.audioMusica.paused : this.radioTocando;
+    texto(g, m.radio ? 'Rádio do Ryan' : 'Do seu celular', H + 4, 112, FONTE(700, 24), 'rgba(240,240,248,.7)');
+    if (this.audioMusica && this.audioMusica.duration) { const v = this.audioMusica.currentTime / this.audioMusica.duration; caixa(g, H + 4, 140, 250, 10, 5, 'rgba(255,255,255,.2)'); caixa(g, H + 4, 140, Math.max(10, 250 * v), 10, 5, '#ffffff'); }
+    [['ant', '⏮', () => this.tocaMusica(this.musicaAtual - 1)], ['pp', tocando ? '⏸' : '▶', () => this.pausaMusica()], ['prox', '⏭', () => this.tocaMusica(this.musicaAtual + 1)], ['parar', '✕', () => this.paraMusica()]].forEach(([id, rot, f], i) => {
+      const x = W - 4 * 96 - 10 + i * 96, hv = p.botao('m-' + id, x, 50, 84, 100, () => { f(); this.pMusica && this.pMusica.render(); });
+      caixa(g, x, 50, 84, 100, 42, hv ? '#ffffff' : 'rgba(255,255,255,.12)'); texto(g, rot, x + 42, 116, FONTE(800, 40), hv ? '#15131f' : '#ffffff', 'center');
+    });
+  },
+  desenhaMusica(g, p) {
+    const W = p.W, L = this.listaMusica();
+    texto(g, 'Música', 56, 96, FONTE_T(60), UI.txt);
+    texto(g, 'Escolha uma música: o tocador flutua do lado e você continua usando o Ryan VR', 58, 138, FONTE(700, 26), UI.sub);
+    const hvE = p.botao('mu-escolher', W - 500, 52, 450, 96, () => this.escolherMusicas());
+    caixa(g, W - 500, 52, 450, 96, 28, hvE ? '#ffc58a' : UI.acc2); texto(g, '📁 Músicas do celular', W - 275, 113, FONTE(800, 32), '#120d2e', 'center');
+    const cols = 2, gw = (W - 112 - 20) / cols, gh = 96;
+    L.slice(0, 12).forEach((m, i) => {
+      const x = 56 + (i % cols) * (gw + 20), y = 180 + Math.floor(i / cols) * (gh + 14), atual = i === this.musicaAtual;
+      const hv = p.botao('mu-' + i, x, y, gw, gh, () => this.tocaMusica(i));
+      caixa(g, x, y, gw, gh, 26, atual ? UI.acc : hv ? UI.cardHover : UI.card);
+      g.font = '54px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(m.ic, x + 60, y + gh / 2 + 3);
+      texto(g, m.nome.slice(0, 34), x + 118, y + 60, FONTE(800, 32), atual ? '#120d2e' : UI.txt);
+      if (atual) texto(g, '♪ tocando', x + gw - 30, y + 60, FONTE(800, 26), '#120d2e', 'right');
+    });
+  },
+
   // ---------- pausa: olhe para baixo durante o jogo (ou aperte voltar) ----------
   emJogo() { return ['baloes', 'corrida', 'cubos', 'alvos'].includes(this.estado); },
   abrePausa() {
@@ -2396,6 +2770,10 @@ AFRAME.registerComponent('ryan-vr', {
     let atual = null; this.fonte = 'olhar';
     this.passoPausa(dt);
     this.passoTeclado(dt);
+    if (!this.ambIni && this.cam) { this.ambIni = true; if (AJ.ambiente && AJ.ambiente !== 'saguao') this.trocaAmbiente(AJ.ambiente); }
+    this.passoAmbiente(dt, time); this.passoCentral(dt); this.sincBarras();
+    if (this.pMusica && this.pMusica.el.object3D.visible !== (this.estado === 'saguao' && this.musicaAtual !== null && this.musicaAtual !== undefined)) this.pMusica.visivel = this.estado === 'saguao' && this.musicaAtual !== null && this.musicaAtual !== undefined;
+    if (this.audioMusica && this.pMusica && this.pMusica.el.object3D.visible && Math.floor(time / 1000) !== this.tocSeg) { this.tocSeg = Math.floor(time / 1000); this.pMusica.render(); }
     const raio = (!this.emJogo() || this.pausaAberta) ? this.raioDoDedo() : null;
     if (this.estado !== 'baloes' || this.pausaAberta) this.pontoDedo = null;
     if (raio) {
@@ -2558,7 +2936,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 2.5' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 2.6' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 

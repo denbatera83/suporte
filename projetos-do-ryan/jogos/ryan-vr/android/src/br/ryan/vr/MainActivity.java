@@ -47,6 +47,14 @@ public class MainActivity extends Activity {
             runOnUiThread(new Runnable() { public void run() { abreNavegadorVR(url); } });
         }
         @android.webkit.JavascriptInterface public boolean temNavegadorVR() { return true; }
+        /** 📸 Foto da tela: a página manda a imagem (data:image/jpeg;base64,...) e o app guarda na galeria. */
+        @android.webkit.JavascriptInterface public boolean salvarFoto(String dataUrl) {
+            try {
+                int v = dataUrl.indexOf(','); byte[] b = android.util.Base64.decode(dataUrl.substring(v + 1), android.util.Base64.DEFAULT);
+                android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeByteArray(b, 0, b.length);
+                return android.provider.MediaStore.Images.Media.insertImage(getContentResolver(), bmp, "RyanVR-" + System.currentTimeMillis(), "Foto do Ryan VR") != null;
+            } catch (Exception e) { return false; } /* sem permissão de galeria: a foto fica no app Fotos do Ryan VR */
+        }
     }
     private void abreNavegadorVR(String url) {
         if (navVR != null || url == null || !(url.startsWith("https://") || url.startsWith("http://"))) return;
@@ -134,8 +142,14 @@ public class MainActivity extends Activity {
                 escolha = cb;
                 Intent i = new Intent(Intent.ACTION_GET_CONTENT);
                 i.addCategory(Intent.CATEGORY_OPENABLE);
-                i.setType("video/*");
-                try { startActivityForResult(Intent.createChooser(i, "Escolha um vídeo"), ESCOLHER_VIDEO); }
+                // o tipo vem da página: vídeo, fotos ou músicas (e várias de uma vez, quando ela pede)
+                String tipo = "video/*";
+                String[] aceita = p.getAcceptTypes();
+                if (aceita != null && aceita.length > 0 && aceita[0] != null && aceita[0].length() > 0) tipo = aceita[0];
+                i.setType(tipo);
+                if (p.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE) i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                String titulo = tipo.startsWith("image") ? "Escolha as fotos" : tipo.startsWith("audio") ? "Escolha as músicas" : "Escolha um vídeo";
+                try { startActivityForResult(Intent.createChooser(i, titulo), ESCOLHER_VIDEO); }
                 catch (Exception e) { escolha = null; return false; }
                 return true;
             }
@@ -152,7 +166,12 @@ public class MainActivity extends Activity {
         super.onActivityResult(req, res, data);
         if (req != ESCOLHER_VIDEO || escolha == null) return;
         Uri[] r = null;
-        if (res == RESULT_OK && data != null && data.getData() != null) r = new Uri[]{ data.getData() };
+        if (res == RESULT_OK && data != null) {
+            if (data.getClipData() != null) { // vários arquivos
+                int n = data.getClipData().getItemCount(); r = new Uri[n];
+                for (int k = 0; k < n; k++) r[k] = data.getClipData().getItemAt(k).getUri();
+            } else if (data.getData() != null) r = new Uri[]{ data.getData() };
+        }
         escolha.onReceiveValue(r);
         escolha = null;
         esconderBarras();
