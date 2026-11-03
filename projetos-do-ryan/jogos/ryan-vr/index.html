@@ -82,7 +82,7 @@
       <button id="btn-tela" class="sec">📱 Ver sem óculos</button>
     </div>
     <p class="nota">Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 1.9</p>
+    <p class="nota" id="versao">Ryan VR 2.0</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -150,8 +150,22 @@ AFRAME.registerComponent('cardboard', {
     };
   },
   // modos, do melhor para o mais simples: lente com suavização → lente sem suavização → direto na tela
+  // resolução automática: mede a velocidade e ajusta sozinho (liso primeiro; nítido quando o celular aguenta)
+  teto() { return Math.min(window.devicePixelRatio || 1, this.suave() ? 2.2 : 3); },
+  mede() {
+    const t = performance.now();
+    if (this.tUlt) { const d = t - this.tUlt; if (d < 250) { this.somaT = (this.somaT || 0) + d; this.nT = (this.nT || 0) + 1; } }
+    this.tUlt = t;
+    if (t - (this.tAjuste || 0) < 1500 || (this.nT || 0) < 25) return;
+    const ms = this.somaT / this.nT; this.somaT = 0; this.nT = 0; this.tAjuste = t;
+    const r = this.r, pr = r.getPixelRatio(); let novo = pr;
+    if (this.limite === undefined || t - (this.limiteEm || 0) > 20000) { this.limite = this.teto(); this.limiteEm = t; }
+    if (ms > 21) { novo = Math.max(1, pr - (ms > 30 ? 0.3 : 0.15)); this.limite = Math.max(1, pr - 0.05); this.limiteEm = t; } // travou: baixa e lembra
+    else if (ms < 17.8) novo = Math.min(this.limite, pr + 0.1);                                                                 // liso: sobe aos poucos
+    if (Math.abs(novo - pr) > 0.01) r.setPixelRatio(novo);
+  },
   desenha(cena, camera) {
-    const r = this.r;
+    const r = this.r; this.mede();
     if (this.modo === undefined) this.modo = 0;
     try {
       if (this.modo < 2) { if (this.desenhaLente(cena, camera)) return; }
@@ -178,7 +192,7 @@ AFRAME.registerComponent('cardboard', {
     if (!this.rt || this.rt.width !== W || this.rt.height !== H) {
       if (this.rt) this.rt.dispose();
       // cor comum (8 bits): todo celular consegue desenhar nela
-      const aa = this.modo === 0 && r.capabilities.isWebGL2 ? (this.suave() ? 2 : 4) : 0; // modo Suave: menos peso por quadro
+      const aa = this.modo === 0 && r.capabilities.isWebGL2 ? (r.getPixelRatio() >= 1.9 ? 0 : this.suave() ? 2 : 4) : 0; // resolução alta já é lisa: sem suavização extra (mais leve)
       this.rt = new THREE.WebGLRenderTarget(W, H, { type: THREE.UnsignedByteType, format: THREE.RGBAFormat, samples: aa, depthBuffer: true });
       this.lente.uniforms.tDiffuse.value = this.rt.texture;
       this.conferir = true;
@@ -215,13 +229,13 @@ AFRAME.registerComponent('cardboard', {
   },
   suave() { return (() => { try { const v = localStorage.getItem('ryanvr-suave'); return v === null ? true : JSON.parse(v); } catch (e) { return true; } })(); },
   // ajuste ⚡ Suave / ✨ Bonito: troca a resolução na hora
-  qualidade() { if (!this.r) return; if (this.ativo) this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 2.2 : 3)); if (this.rt) { this.rt.dispose(); this.rt = null; } },
+  qualidade() { if (!this.r) return; if (this.ativo) { this.limite = this.teto(); this.r.setPixelRatio(Math.min(this.teto(), this.suave() ? 1.5 : 2)); } if (this.rt) { this.rt.dispose(); this.rt = null; } },
   lenteLigada(v) { this.lenteOn = !!v; if (this.lente) this.lente.uniforms.ligada.value = v ? 1 : 0; },
   entrar() {
     this.prepara();
     this.ativo = true;
     this.pixelAntes = this.r.getPixelRatio();
-    this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 2.2 : 3));
+    this.limite = undefined; this.r.setPixelRatio(Math.min(this.teto(), this.suave() ? 1.5 : 2)); // começa leve e vai subindo
     document.body.classList.add('modo-vr');
     const app = /\bwv\b/.test(navigator.userAgent);   // dentro do APK já está em tela cheia e deitado
     if (!app && document.documentElement.requestFullscreen) {
@@ -472,7 +486,7 @@ class Painel {
     this.id = id; this.ppm = o.ppm || 1000;
     this.W = Math.round(o.larg * this.ppm); this.H = Math.round(o.alt * this.ppm);
     this.c = document.createElement('canvas'); this.c.width = this.W; this.c.height = this.H; this.g = this.c.getContext('2d');
-    this.t = new THREE.CanvasTexture(this.c); this.t.colorSpace = THREE.SRGBColorSpace; this.t.generateMipmaps = true; this.t.minFilter = THREE.LinearMipmapLinearFilter; this.t.anisotropy = 8; // letras lisas mesmo de longe
+    this.t = new THREE.CanvasTexture(this.c); this.t.colorSpace = THREE.SRGBColorSpace; this.t.generateMipmaps = false; this.t.minFilter = THREE.LinearFilter; this.t.anisotropy = 4; // sem mipmaps: redesenhar um painel não engasga
     this.mesh = new THREE.Mesh(geoCurva(o.larg, o.alt, o.raio || 1.8), new THREE.MeshBasicMaterial({ map: this.t, transparent: true, side: THREE.DoubleSide, toneMapped: false, depthWrite: false }));
     this.mesh.userData.painel = this; this.mesh.renderOrder = 5;
     this.el = document.createElement('a-entity'); this.el.classList.add('alvo'); this.el.setObject3D('mesh', this.mesh);
@@ -482,7 +496,15 @@ class Painel {
     this.botoes = []; this.hover = null; this.desenhar = o.desenhar; PAINEIS.push(this); this.o = o;
   }
   setRaio(r) { this.mesh.geometry.dispose(); this.mesh.geometry = geoCurva(this.o.larg, this.o.alt, r); this.o.raio = r; }
-  render() { const g = this.g; g.clearRect(0, 0, this.W, this.H); this.botoes = []; this.desenhar(g, this); this.t.needsUpdate = true; }
+  render() {
+    const g = this.g; g.clearRect(0, 0, this.W, this.H); this.botoes = []; this.desenhar(g, this);
+    if (UI.vidro) { // brilho do vidro: luz suave em cima e borda clara
+      const gr = g.createLinearGradient(0, 0, 0, this.H * 0.5); gr.addColorStop(0, 'rgba(255,255,255,.10)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.save(); g.beginPath(); g.roundRect(2, 2, this.W - 4, this.H - 4, 40); g.clip(); g.fillStyle = gr; g.fillRect(0, 0, this.W, this.H * 0.5); g.restore();
+      g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.32)'; g.beginPath(); g.roundRect(1.5, 1.5, this.W - 3, this.H - 3, 40); g.stroke();
+    }
+    this.t.needsUpdate = true;
+  }
   botao(id, x, y, w, h, acao) { this.botoes.push({ id, x, y, w, h, acao }); return this.hover === id; }
   acha(uv) { const px = uv.x * this.W, py = (1 - uv.y) * this.H; return this.botoes.find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h) || null; }
   set visivel(v) { this.el.object3D.visible = v; this.el.classList.toggle('alvo', v); }
@@ -490,6 +512,9 @@ class Painel {
 
 // ---------- cores da interface ----------
 const UI = { fundo: 'rgba(22,19,40,.94)', card: '#2a2450', cardHover: '#3a3270', linha: 'rgba(255,255,255,.08)', txt: '#f4f2ff', sub: '#b3acd6', acc: '#8f7bff', acc2: '#ffb36b', chip: 'rgba(255,255,255,.1)' };
+const UI_ROXO = Object.assign({}, UI);
+// Modo Casa: janelas de vidro claras flutuando na sua sala (a casa aparece através delas)
+const UI_VIDRO = { fundo: 'rgba(34,36,46,.6)', card: 'rgba(255,255,255,.13)', cardHover: 'rgba(255,255,255,.27)', linha: 'rgba(255,255,255,.16)', txt: '#ffffff', sub: 'rgba(240,240,248,.72)', acc: '#f5f5fa', acc2: '#ffffff', chip: 'rgba(255,255,255,.16)' };
 
 // ---------- experiências 360° (desenhadas ao vivo) ----------
 const EXP = {};
@@ -824,7 +849,7 @@ AFRAME.registerComponent('ryan-vr', {
     g.save(); g.beginPath(); g.rect(160, 140, W - 320, 90); g.clip();
     const tw = b ? (g.font = FONTE(700, 46), g.measureText(b).width) : 0, tx = Math.min(170, W - 330 - tw);
     texto(g, b || 'O que você quer procurar?', tx, 200, FONTE(700, 46), b ? '#202124' : '#9aa0a6');
-    if (b && Math.floor(performance.now() / 500) % 2 === 0) { g.fillStyle = '#4285f4'; g.fillRect(tx + tw + 6, 160, 4, 54); }
+    if (b) { g.fillStyle = '#4285f4'; g.fillRect(tx + tw + 6, 160, 4, 54); }
     g.restore();
     // teclas
     const linhas = ['1234567890', 'qwertyuiop', 'asdfghjklç', 'zxcvbnm,.?'];
@@ -1055,6 +1080,7 @@ AFRAME.registerComponent('ryan-vr', {
     const tela = new THREE.Mesh(geoCurva(1.56, 0.8775, 1.545, 36), new THREE.MeshBasicMaterial({ map: this.tvRT.texture, toneMapped: false, side: THREE.DoubleSide }));
     tela.renderOrder = 6; tela.visible = false; g.add(tela);
     this.tv = g; this.tvTela = tela; this.tvMoldura = moldura; this.tvAura = aura; this.tvLed = led;
+    moldura.visible = aura.visible = led.visible = false; // a moldura só aparece com vídeo passando
     this.aplicaDistancia();
   },
   // distância da TV: no Modo TV fica mais longe (mais fácil de apontar com a mão); o tamanho real não muda
@@ -1078,6 +1104,7 @@ AFRAME.registerComponent('ryan-vr', {
     this.montaTV();
     this.tv.visible = this.casa;
     this.tvTela.visible = !!passando;
+    this.tvMoldura.visible = this.tvAura.visible = this.tvLed.visible = !!passando; // sem vídeo: só as janelas de vidro
     this.tvTela.material.map = mapa || this.tvRT.texture; this.tvTela.material.needsUpdate = true;
   },
   abrirVideo() { if (this.meuVideo) this.transicao(() => this.abrirVideoAgora()); },
@@ -1190,6 +1217,7 @@ AFRAME.registerComponent('ryan-vr', {
     }
   },
   atualizaFundo() {
+    if (!!UI.vidro !== !!this.casa) { Object.assign(UI, this.casa ? UI_VIDRO : UI_ROXO); UI.vidro = !!this.casa; if (this.pCentro) setTimeout(() => this.renderTudo(), 0); } // tema de vidro no Modo Casa
     // no Modo Casa some o céu e o deque; nas experiências 360° a câmera fica escondida (imersão total)
     const midia = this.estado === 'midia' && !this.naTV, jogo = ['corrida', 'cubos', 'alvos'].includes(this.estado);
     if (this.camPlano) this.camPlano.visible = this.casa && !midia && !jogo;
@@ -2272,7 +2300,6 @@ AFRAME.registerComponent('ryan-vr', {
       if (this.estado === 'alvos') this.passoAlvos(dt);
     }
     this.passoFx(dt);
-    if (this.secao === 'google' && this.estado === 'saguao' && !this.detalhe && this.pCentro.el.object3D.visible) { const f = Math.floor(performance.now() / 500); if (f !== this.piscaBusca) { this.piscaBusca = f; this.pCentro.render(); } } // cursor piscando
     this.desenhaMao();
     if (this.orbes && this.saguao.visible) this.orbes.forEach(o => { o.position.y = 3.6 + Math.sin(time / 900 + o.userData.f) * 0.35; });
     // experiência rodando
@@ -2360,7 +2387,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 1.9' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 2.0' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 

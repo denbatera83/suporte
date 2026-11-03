@@ -748,8 +748,22 @@ AFRAME.registerComponent('cardboard', {
     };
   },
   // modos, do melhor para o mais simples: lente com suavização → lente sem suavização → direto na tela
+  // resolução automática: mede a velocidade e ajusta sozinho (liso primeiro; nítido quando o celular aguenta)
+  teto() { return Math.min(window.devicePixelRatio || 1, this.suave() ? 2.2 : 3); },
+  mede() {
+    const t = performance.now();
+    if (this.tUlt) { const d = t - this.tUlt; if (d < 250) { this.somaT = (this.somaT || 0) + d; this.nT = (this.nT || 0) + 1; } }
+    this.tUlt = t;
+    if (t - (this.tAjuste || 0) < 1500 || (this.nT || 0) < 25) return;
+    const ms = this.somaT / this.nT; this.somaT = 0; this.nT = 0; this.tAjuste = t;
+    const r = this.r, pr = r.getPixelRatio(); let novo = pr;
+    if (this.limite === undefined || t - (this.limiteEm || 0) > 20000) { this.limite = this.teto(); this.limiteEm = t; }
+    if (ms > 21) { novo = Math.max(1, pr - (ms > 30 ? 0.3 : 0.15)); this.limite = Math.max(1, pr - 0.05); this.limiteEm = t; } // travou: baixa e lembra
+    else if (ms < 17.8) novo = Math.min(this.limite, pr + 0.1);                                                                 // liso: sobe aos poucos
+    if (Math.abs(novo - pr) > 0.01) r.setPixelRatio(novo);
+  },
   desenha(cena, camera) {
-    const r = this.r;
+    const r = this.r; this.mede();
     if (this.modo === undefined) this.modo = 0;
     try {
       if (this.modo < 2) { if (this.desenhaLente(cena, camera)) return; }
@@ -776,7 +790,7 @@ AFRAME.registerComponent('cardboard', {
     if (!this.rt || this.rt.width !== W || this.rt.height !== H) {
       if (this.rt) this.rt.dispose();
       // cor comum (8 bits): todo celular consegue desenhar nela
-      const aa = this.modo === 0 && r.capabilities.isWebGL2 ? (this.suave() ? 2 : 4) : 0; // modo Suave: menos peso por quadro
+      const aa = this.modo === 0 && r.capabilities.isWebGL2 ? (r.getPixelRatio() >= 1.9 ? 0 : this.suave() ? 2 : 4) : 0; // resolução alta já é lisa: sem suavização extra (mais leve)
       this.rt = new THREE.WebGLRenderTarget(W, H, { type: THREE.UnsignedByteType, format: THREE.RGBAFormat, samples: aa, depthBuffer: true });
       this.lente.uniforms.tDiffuse.value = this.rt.texture;
       this.conferir = true;
@@ -813,13 +827,13 @@ AFRAME.registerComponent('cardboard', {
   },
   suave() { return (() => { try { const v = localStorage.getItem('ryanvr-suave'); return v === null ? true : JSON.parse(v); } catch (e) { return true; } })(); },
   // ajuste ⚡ Suave / ✨ Bonito: troca a resolução na hora
-  qualidade() { if (!this.r) return; if (this.ativo) this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 2.2 : 3)); if (this.rt) { this.rt.dispose(); this.rt = null; } },
+  qualidade() { if (!this.r) return; if (this.ativo) { this.limite = this.teto(); this.r.setPixelRatio(Math.min(this.teto(), this.suave() ? 1.5 : 2)); } if (this.rt) { this.rt.dispose(); this.rt = null; } },
   lenteLigada(v) { this.lenteOn = !!v; if (this.lente) this.lente.uniforms.ligada.value = v ? 1 : 0; },
   entrar() {
     this.prepara();
     this.ativo = true;
     this.pixelAntes = this.r.getPixelRatio();
-    this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 2.2 : 3));
+    this.limite = undefined; this.r.setPixelRatio(Math.min(this.teto(), this.suave() ? 1.5 : 2)); // começa leve e vai subindo
     document.body.classList.add('modo-vr');
     const app = /\bwv\b/.test(navigator.userAgent);   // dentro do APK já está em tela cheia e deitado
     if (!app && document.documentElement.requestFullscreen) {
