@@ -78,11 +78,12 @@
     </div>
     <div class="botoes">
       <button id="btn-tv">📺 Modo TV <small>sua casa + controle com a mão</small></button>
-      <button id="btn-vr" class="sec">🥽 Entrar no Cardboard</button>
-      <button id="btn-tela" class="sec">📱 Ver sem óculos</button>
+      <button id="btn-vr" class="sec">🥽 Modo VR <small>celular no óculos (Cardboard)</small></button>
+      <button id="btn-tela" class="sec">📱 Modo Celular <small>sem óculos: toque na tela</small></button>
+      <button id="btn-pc" class="sec">🖥️ Modo Computador <small>mouse e teclado</small></button>
     </div>
-    <p class="nota">Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 2.3</p>
+    <p class="nota">Computador: arraste o mouse para olhar, clique para apertar; no Google digite no teclado; Esc pausa os jogos; na Corrida use ← → (ou A e D) e espaço para o turbo. Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
+    <p class="nota" id="versao">Ryan VR 2.4</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -445,6 +446,8 @@ function geoCurva(larg, alt, raio, seg = 36) {
   return g;
 }
 const PAINEIS = [];
+const TECLAS = new Set(); // teclas apertadas (Modo Computador)
+let MOUSE = null;          // posição do mouse na tela (Modo Computador)
 // ---------- corta uma caixa (lado s, centro na origem) por um plano que passa pelo centro ----------
 // devolve as duas metades de verdade; a "tampa" do corte é o grupo 1 da geometria (material de dentro)
 function cortaCaixa(s, n) {
@@ -705,7 +708,7 @@ AFRAME.registerComponent('ryan-vr', {
       cv.addEventListener('mouseup', e => { if (performance.now() - t0 < 400 && Math.hypot(e.clientX - x0, e.clientY - y0) < 6) this.toque(e.clientX, e.clientY); });
     };
     if (sc.canvas) liga(); else sc.addEventListener('renderstart', liga);
-    window.addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); this.tocar(true); } });
+    window.addEventListener('keydown', e => { if ((e.code === 'Space' || e.code === 'Enter') && !(this.secao === 'google' && this.estado === 'saguao' && !this.detalhe) && !this.emJogo()) { e.preventDefault(); this.tocar(true); } }); // espaço/Enter = botão do óculos (controle Bluetooth); não atrapalha digitar nem o turbo
     if (document.fonts) document.fonts.ready.then(() => this.renderTudo());
     // escolher vídeo do celular
     document.getElementById('arquivo').addEventListener('change', e => {
@@ -1429,7 +1432,7 @@ AFRAME.registerComponent('ryan-vr', {
   // =====================================================================
   async iniciarCorrida() {
     // a câmera escaneia a mão sem aparecer (você fica na estrada, não na sua casa)
-    if (AJ.maos && !this.camVideo) await this.ligarCasa(true, true);
+    if (AJ.maos && !this.modoPC && !this.camVideo) await this.ligarCasa(true, true);
     this.transicao(() => {
       this.estado = 'corrida'; this.saguao.visible = false; if (this.luzes) this.luzes.visible = false;
       if (this.camPlano) this.camPlano.visible = false; if (this.tv) this.tv.visible = false;
@@ -1535,6 +1538,9 @@ AFRAME.registerComponent('ryan-vr', {
       dir = Math.max(-1, Math.min(1, Math.atan2(dx, -dy) / 0.6)); // mão inclinada para a direita = vira para a direita
       dir += Math.max(-0.6, Math.min(0.6, (lm[9].x - 0.5) * 1.2)); // mão mais para um lado também ajuda
       turbo = vis[0].pinca || vis[0].fechada;
+    } else if (TECLAS.size) { // computador: ← → ou A/D; espaço = turbo
+      dir = (TECLAS.has('arrowright') || TECLAS.has('d') ? 1 : 0) - (TECLAS.has('arrowleft') || TECLAS.has('a') ? 1 : 0);
+      turbo = TECLAS.has(' ');
     } else {
       const d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d);
       const rel = Math.atan2(Math.sin(Math.atan2(d.x, d.z) - this.cyaw0), Math.cos(Math.atan2(d.x, d.z) - this.cyaw0));
@@ -1606,7 +1612,7 @@ AFRAME.registerComponent('ryan-vr', {
   // =====================================================================
   async entraJogo(estado, comeca) {
     // a câmera escaneia as mãos sem aparecer (você fica dentro do jogo, não na sua casa)
-    if (AJ.maos && !this.camVideo) await this.ligarCasa(true, true);
+    if (AJ.maos && !this.modoPC && !this.camVideo) await this.ligarCasa(true, true);
     this.transicao(() => {
       this.estado = estado; this.saguao.visible = false; if (this.luzes) this.luzes.visible = false;
       if (this.camPlano) this.camPlano.visible = false; if (this.tv) this.tv.visible = false;
@@ -2195,7 +2201,7 @@ AFRAME.registerComponent('ryan-vr', {
     this.teclaFlash = this.teclaFlash || {}; this.teclaFlash[id] = performance.now();
     som('hover'); this.vibra(10);
     if (this.secao === 'google') this.pCentro.render();
-    this.pTeclado.render();
+    if (this.pTeclado) this.pTeclado.render();
   },
   montaTeclado() {
     if (this.pTeclado) return;
@@ -2238,7 +2244,7 @@ AFRAME.registerComponent('ryan-vr', {
       return;
     }
     // o teclado de mesa usa os seus dedos: liga a câmera escondida (só lê as mãos)
-    if (AJ.maos && !this.camVideo && !this.ligandoCam) { this.ligandoCam = true; this.camTeclado = true; this.ligarCasa(true, true).then(() => { this.ligandoCam = false; }); }
+    if (AJ.maos && !this.modoPC && !this.camVideo && !this.ligandoCam) { this.ligandoCam = true; this.camTeclado = true; this.ligarCasa(true, true).then(() => { this.ligandoCam = false; }); }
     this.montaTeclado();
     const P = this.pTeclado, o = P.el.object3D;
     if (!o.visible) { // aparece na sua frente, deitado, um pouco abaixo dos olhos
@@ -2366,6 +2372,13 @@ AFRAME.registerComponent('ryan-vr', {
       if (h && h.uv) { const p = h.object.userData.painel, b = p.acha(h.uv); if (b) atual = { p, b }; this.pontoDedo = h.point; }
       if (MAO.pincou) { MAO.pincou = false; if (atual && performance.now() > (this.bloqueioAte || 0)) { this.hoverAtual = atual; this.tocar(false); } }
       this.dirTrava = null;
+    } else if (this.modoPC && MOUSE && this.el.camera) {
+      MAO.pincou = false; this.fonte = 'mouse';
+      if (!this.rcMouse) this.rcMouse = new THREE.Raycaster();
+      this.rcMouse.setFromCamera(new THREE.Vector2(MOUSE.x / window.innerWidth * 2 - 1, -(MOUSE.y / window.innerHeight) * 2 + 1), this.el.camera);
+      const h = this.rcMouse.intersectObjects(PAINEIS.filter(p => p.el.object3D.visible).map(p => p.mesh), false)[0];
+      if (h && h.uv) { const p = h.object.userData.painel, b = p.acha(h.uv); if (b) atual = { p, b }; }
+      this.el.canvas.style.cursor = atual ? 'pointer' : MOUSE.solto ? 'grab' : 'grabbing';
     } else {
       MAO.pincou = false;
       const rc = this.cursor.components.raycaster;
@@ -2380,7 +2393,7 @@ AFRAME.registerComponent('ryan-vr', {
       this.cursor.setAttribute('material', 'color', atual ? '#ffb36b' : '#ffffff');
     }
     if (this.dirTrava) { const d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d); if (d.angleTo(this.dirTrava) > 0.07 || !atual) { this.dirTrava = null; this.fuseT0 = Math.max(performance.now(), this.bloqueioAte || 0); } }
-    if (atual && !this.disparado && !this.dirTrava && !(this.fonte === 'mao' && atual.p.id === 'teclado')) { // no teclado de mesa a mão digita com toque/pinça (não só parando em cima)
+    if (atual && !this.disparado && !this.dirTrava && this.fonte !== 'mouse' && !(this.fonte === 'mao' && atual.p.id === 'teclado')) { // no teclado de mesa a mão digita com toque/pinça (não só parando em cima)
       const tec = (atual.p.id === 'centro' && atual.b.id.startsWith('k-')) || atual.p.id === 'teclado'; // no teclado as teclas são escolhidas mais rápido
       const v = Math.max(0, performance.now() - this.fuseT0) / ((this.fonte === 'mao' ? (tec ? 0.6 : 0.8) : tec ? Math.min(AJ.fuse, 0.75) : AJ.fuse) * 1000);
       if (v >= 1) this.tocar(false); else this.anelProgresso(v);
@@ -2462,6 +2475,32 @@ window.addEventListener('DOMContentLoaded', () => {
     const a = app(); if (a) a.ligarCasa(true);
   };
   document.getElementById('btn-tela').onclick = semOculos;
+  // Modo Computador: sem giroscópio; arrasta o mouse para olhar, clica para apertar, teclado de verdade
+  document.getElementById('btn-pc').onclick = () => {
+    audio(); tocaTrilha('saguao'); entrada.hidden = true; document.getElementById('menu2d').hidden = false;
+    const cam = document.getElementById('cam'); cam.setAttribute('look-controls', 'magicWindowTrackingEnabled', false); cam.setAttribute('look-controls', 'reverseMouseDrag', false);
+    const a = app(); if (a) { a.modoPC = true; a.cursor.object3D.visible = false; a.anelProgresso(0); a.aviso('Arraste o mouse para olhar · clique para apertar'); }
+  };
+  const cv = () => sc.canvas;
+  window.addEventListener('mousemove', e => { MOUSE = { x: e.clientX, y: e.clientY, solto: !(e.buttons & 1) }; });
+  window.addEventListener('mouseleave', () => { MOUSE = null; });
+  window.addEventListener('keyup', e => TECLAS.delete(e.key.toLowerCase()));
+  window.addEventListener('blur', () => TECLAS.clear());
+  window.addEventListener('keydown', e => {
+    const a = app(); if (!a || !entrada.hidden) return;
+    const k = e.key.toLowerCase();
+    if (k === 'escape') { if (window.__voltar && !window.__voltar() && a.detalhe) { a.detalhe = null; a.renderTudo(); } e.preventDefault(); return; }
+    // Google: o teclado do computador digita na busca
+    if (a.secao === 'google' && a.estado === 'saguao' && !a.detalhe) {
+      if (k === 'enter') a.teclaAcao('vai');
+      else if (k === 'backspace') a.teclaAcao('apaga');
+      else if (k === ' ') a.teclaAcao('espaco');
+      else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) a.teclaAcao(k);
+      else return;
+      e.preventDefault(); return;
+    }
+    if (a.emJogo && a.emJogo()) { TECLAS.add(k); if ([' ', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'].includes(k)) e.preventDefault(); }
+  });
   document.getElementById('vr-sair').onclick = sair;
   document.getElementById('menu2d').onclick = sair;
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && sc.components.cardboard.ativo && !APP) sair(); });
@@ -2484,7 +2523,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 2.3' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 2.4' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 
