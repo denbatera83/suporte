@@ -16,6 +16,16 @@ Jogo de realidade virtual para **Cardboard** no celular, feito com [A-Frame](htt
 
 No Chrome, os três pontinhos (⋮) mostram **Instalar app** / **Adicionar à tela inicial**: o jogo vira um ícone no celular e abre em tela cheia, até sem internet. Na tela de início do jogo também há o botão **Baixar APK**.
 
+## Modo Cardboard
+
+O jogo desenha o próprio modo Cardboard (não depende do WebXR, que a maioria dos celulares não aceita mais para Cardboard):
+- duas imagens lado a lado, uma para cada olho (6,4 cm entre os olhos), com correção da curva das lentes;
+- a cabeça vem do giroscópio do celular;
+- contagem de 5 segundos para encaixar o celular, e a visão se centraliza sozinha nas mesas;
+- toque longo na tela (ou no botão do Cardboard) recentraliza a visão;
+- uma seta colorida mostra para que lado está a caixa certa quando você segura um bloco;
+- se o celular estiver em pé, aparece o aviso para virar de lado.
+
 ## Como abrir no Cardboard
 O modo Cardboard precisa do sensor de movimento do celular, que só funciona quando o jogo é aberto direto no navegador (o link de página do Claude bloqueia o sensor):
 1. Abra o `index.html` no **Chrome do Android** (ou Safari do iPhone) por um endereço `https://` (por exemplo, GitHub Pages).

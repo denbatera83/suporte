@@ -50,6 +50,16 @@
   #aviso { color: var(--yellow); font-weight: 700; }
   #sair { position: fixed; z-index: 15; top: max(12px, env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); font-size: 15px; padding: 8px 14px; }
   #toque { position: fixed; z-index: 14; left: 50%; transform: translateX(-50%); bottom: max(14px, env(safe-area-inset-bottom, 0px)); font-size: 13px; color: var(--muted); background: rgba(16,24,38,.7); padding: 6px 12px; border-radius: 999px; pointer-events: none; text-align: center; max-width: calc(100% - 32px); }
+  #vr-ui { position: fixed; inset: 0; z-index: 16; pointer-events: none; }
+  #vr-ui .linha { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; background: rgba(255,255,255,.35); }
+  #vr-ui .linha::after { content: ""; position: absolute; bottom: 10%; left: -6px; width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,.35); }
+  #vr-sair { position: absolute; pointer-events: auto; top: max(10px, env(safe-area-inset-top, 0px)); left: max(10px, env(safe-area-inset-left, 0px)); width: 44px; height: 44px; padding: 0; font-size: 20px; border-radius: 50%; background: rgba(16,24,38,.75); color: var(--fg); box-shadow: none; border: 1px solid var(--line); }
+  #girar { position: fixed; inset: 0; z-index: 18; display: none; place-items: center; text-align: center; background: var(--bg); padding: 24px; font: 800 24px var(--display); }
+  #girar .tel { font-size: 64px; display: block; margin-bottom: 12px; animation: gira 1.6s ease-in-out infinite; }
+  @keyframes gira { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+  @media (orientation: portrait) { body.modo-vr #girar { display: grid; } }
+  body.modo-vr #sair, body.modo-vr #toque, body.modo-vr #som { display: none !important; }
+  #som { position: fixed; z-index: 15; top: max(12px, env(safe-area-inset-top, 0px)); left: calc(max(12px, env(safe-area-inset-left, 0px)) + 112px); font-size: 15px; padding: 8px 12px; }
   .a-enter-vr { bottom: max(20px, env(safe-area-inset-bottom, 0px)) !important; right: max(20px, env(safe-area-inset-right, 0px)) !important; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
@@ -80,6 +90,9 @@
   </div>
 </div>
 <button id="sair" class="sec" hidden>☰ Menu</button>
+<button id="som" class="sec" hidden aria-label="Música">🔊</button>
+<div id="vr-ui" hidden><div class="linha"></div><button id="vr-sair" aria-label="Sair do modo Cardboard">✕</button></div>
+<div id="girar"><div><span class="tel">📱</span>Gire o celular de lado<br><small style="font: 600 15px var(--body); color: var(--muted)">e encaixe no Cardboard com a linha branca no meio</small></div></div>
 <div id="toque" hidden>Olhe para um bloco e segure, ou toque na tela para pegar</div>
 
 <script>
@@ -119,6 +132,35 @@ function som(tipo) {
     if (tipo === 'nivel') { [523, 659, 784, 1046, 784, 1046].forEach((f, i) => nota(f, 0.3, i * 0.12)); }
     if (tipo === 'mira') nota(1200, 0.05, 0, 'sine', 0.05);
   } catch (e) {}
+}
+let musica = null, musicaLigada = true;
+try { musicaLigada = localStorage.getItem('blocosvr-musica') !== '0'; } catch (e) {}
+function ligaMusica() { // acordes suaves em loop, bem baixinho
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (musica) return;
+    const out = actx.createGain(); out.gain.value = musicaLigada ? 0.05 : 0; out.connect(actx.destination);
+    const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1200; lp.connect(out);
+    const ACORDES = [[261.6, 329.6, 392], [220, 261.6, 329.6], [174.6, 220, 261.6], [196, 246.9, 293.7]];
+    let k = 0;
+    const toca = () => {
+      const t = actx.currentTime;
+      ACORDES[k % 4].forEach((f, i) => {
+        const o = actx.createOscillator(), g = actx.createGain(); o.type = i ? 'sine' : 'triangle'; o.frequency.value = f; o.detune.value = (i - 1) * 6;
+        g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.33, t + 1.2); g.gain.linearRampToValueAtTime(0, t + 4.2);
+        o.connect(g); g.connect(lp); o.start(t); o.stop(t + 4.3);
+      });
+      k++;
+    };
+    toca(); const id = setInterval(toca, 4000);
+    musica = { out, id };
+  } catch (e) {}
+}
+function musicaOnOff() {
+  musicaLigada = !musicaLigada;
+  try { localStorage.setItem('blocosvr-musica', musicaLigada ? '1' : '0'); } catch (e) {}
+  if (musica) musica.out.gain.setTargetAtTime(musicaLigada ? 0.05 : 0, actx.currentTime, 0.2);
+  document.getElementById('som').textContent = musicaLigada ? '🔊' : '🔇';
 }
 const vibrar = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
 
@@ -160,6 +202,13 @@ function rotulo(texto, opt = {}) {
   return m;
 }
 
+// sombra redonda e suave (barata, sem luz de sombra)
+let TEX_SOMBRA = null;
+function sombra(raio, forca = 0.45) {
+  if (!TEX_SOMBRA) TEX_SOMBRA = tex(64, 64, (g, w, h) => { const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(raio * 2, raio * 2), new THREE.MeshBasicMaterial({ map: TEX_SOMBRA, transparent: true, opacity: forca, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2; return m;
+}
 // ---------- mão 3D (presa na câmera) ----------
 function criaMao() {
   const pele = new THREE.MeshStandardMaterial({ color: 0xf1c27d, roughness: 0.7 });
@@ -182,7 +231,7 @@ function criaMao() {
   };
   fazDedo(-0.03, -0.045, 0.06, 0.05, false); fazDedo(-0.01, -0.047, 0.068, 0, false);
   fazDedo(0.012, -0.046, 0.064, -0.03, false); fazDedo(0.032, -0.042, 0.05, -0.08, false);
-  fazDedo(0.05, 0.0, 0.05, -0.9, true); // polegar
+  fazDedo(0.044, -0.012, 0.042, -0.55, true); // polegar
   const pegada = new THREE.Group(); pegada.position.set(0, -0.06, -0.075); g.add(pegada); // onde o bloco fica
   return { g, dedos, pegada, pose: 0, poseAlvo: 0, aponta: 0, apontaAlvo: 0 };
 }
@@ -216,9 +265,14 @@ AFRAME.registerComponent('blocos-jogo', {
     this.mao.g.position.set(0.15, -0.17, -0.5); this.mao.g.rotation.set(0.55, -0.4, 0.2);
     this.cam.object3D.add(this.mao.g);
     // placar e mensagens presos na visão
-    this.hud = rotulo('', { largura: 0.42, w: 512, h: 96, fs: 46 }); this.hud.position.set(0, 0.22, -0.75); this.cam.object3D.add(this.hud);
+    this.hud = rotulo('', { largura: 0.42, w: 512, h: 96, fs: 46 }); this.hud.position.set(0, 0.22, -0.75); this.hud.visible = false; this.cam.object3D.add(this.hud);
     this.msg = rotulo('', { largura: 0.5, w: 640, h: 200, fs: 64 }); this.msg.position.set(0, 0.05, -0.74); this.msg.visible = false; this.cam.object3D.add(this.msg);
     this.msgAte = 0;
+    // seta que aponta para a caixa certa enquanto você segura um bloco
+    const seta = new THREE.Group();
+    const corpo = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.08, 16), new THREE.MeshBasicMaterial({ color: '#ffffff', depthTest: false, transparent: true }));
+    corpo.rotation.z = -Math.PI / 2; seta.add(corpo); seta.position.set(0, -0.12, -0.7); seta.renderOrder = 10; corpo.renderOrder = 10;
+    this.seta = seta; this.setaCorpo = corpo; seta.visible = false; this.cam.object3D.add(seta);
     // mira olhando: o cursor emite eventos
     this.cursor.addEventListener('mouseenter', e => { this.mira = e.detail.intersectedEl; this.fuseT0 = 0; this.atualizaMaoMira(); });
     this.cursor.addEventListener('mouseleave', () => { this.mira = null; this.fuseT0 = 0; this.atualizaMaoMira(); this.anelProgresso(0); });
@@ -230,7 +284,11 @@ AFRAME.registerComponent('blocos-jogo', {
     const ligaToque = () => {
       const cv = sc.canvas; if (!cv || cv.__ligado) return; cv.__ligado = true;
       cv.addEventListener('touchstart', e => { t0 = performance.now(); x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
-      cv.addEventListener('touchend', e => { const t = e.changedTouches[0]; if (performance.now() - t0 < 350 && Math.hypot(t.clientX - x0, t.clientY - y0) < 14) canvasToque(); });
+      cv.addEventListener('touchend', e => {
+        const t = e.changedTouches[0], dur = performance.now() - t0, parado = Math.hypot(t.clientX - x0, t.clientY - y0) < 14;
+        if (parado && dur > 800) { this.recentrar(); this.mostraMsg('Visão centralizada', 1); som('mira'); return; }
+        if (parado && dur < 350) canvasToque();
+      });
       cv.addEventListener('mousedown', e => { x0 = e.clientX; y0 = e.clientY; t0 = performance.now(); });
       cv.addEventListener('mouseup', e => { if (performance.now() - t0 < 350 && Math.hypot(e.clientX - x0, e.clientY - y0) < 6) canvasToque(); });
     };
@@ -277,7 +335,7 @@ AFRAME.registerComponent('blocos-jogo', {
       const g = new THREE.Group(); g.position.set(Math.sin(a) * d, 0, -Math.cos(a) * d);
       const tampo = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 32), madeira); tampo.position.y = 0.78;
       const perna = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.78, 12), pe); perna.position.y = 0.39;
-      g.add(tampo, perna); M.add(g);
+      const sm = sombra(0.5, 0.4); sm.position.y = 0.012; g.add(tampo, perna, sm); M.add(g);
       return g;
     });
     // caixas coloridas dos lados (gire a cabeça para entregar)
@@ -297,11 +355,12 @@ AFRAME.registerComponent('blocos-jogo', {
     const parede = (w, h, dd, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, dd), mat); m.position.set(x, y, z); g.add(m); };
     parede(W, T, W, 0, 0.5, 0); parede(W, H, T, 0, 0.5 + H / 2, W / 2); parede(W, H, T, 0, 0.5 + H / 2, -W / 2); parede(T, H, W, W / 2, 0.5 + H / 2, 0); parede(T, H, W, -W / 2, 0.5 + H / 2, 0);
     const pe = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 0.5, 10), new THREE.MeshStandardMaterial({ color: 0x2a3247 })); pe.position.y = 0.25; g.add(pe);
+    const sc0 = sombra(0.36, 0.45); sc0.position.y = 0.012; g.add(sc0);
     const placa = rotulo(`${cor.simbolo} ${cor.nome}`, { largura: 0.52, fs: 60, borda: cor.hex });
     placa.position.set(0, 1.15, 0); g.add(placa);
     // área de mira maior que a caixa (fácil de acertar com o olhar)
-    const hit = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.9, 0.62), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
-    hit.position.y = 0.85; g.add(hit);
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(0.66, 1.3, 0.66), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+    hit.position.y = 1.05; g.add(hit); // vai de 0,4 m até 1,7 m: pega o olhar reto e o olhar para baixo
     el.setObject3D('mesh', g);
     el.object3D.position.set(Math.sin(a) * d, 0, -Math.cos(a) * d);
     el.object3D.lookAt(0, 0, 0);
@@ -336,13 +395,14 @@ AFRAME.registerComponent('blocos-jogo', {
     el.setObject3D('mesh', m);
     el.object3D.position.copy(lugar); el.object3D.rotation.y = Math.random() * Math.PI;
     this.el.appendChild(el);
-    const b = { el, cor, ouro, lugar: lugar.clone(), mesh: m, giro: Math.random() * 6 };
+    const sb = sombra(0.11, 0.5); sb.position.set(lugar.x, 0.808, lugar.z); this.mundo.add(sb);
+    const b = { el, cor, ouro, lugar: lugar.clone(), mesh: m, giro: Math.random() * 6, sombra: sb };
     el.__bloco = b; this.blocos.push(b);
     this.refreshAlvos();
   },
 
   limpaBlocos() {
-    this.blocos.forEach(b => b.el.parentNode && b.el.parentNode.removeChild(b.el));
+    this.blocos.forEach(b => { b.el.parentNode && b.el.parentNode.removeChild(b.el); if (b.sombra) this.mundo.remove(b.sombra); });
     this.blocos = []; this.segurando = null; this.voos = [];
     if (this.painel) { this.painel.forEach(p => p.parentNode && p.parentNode.removeChild(p)); this.painel = null; }
     this.refreshAlvos();
@@ -377,7 +437,7 @@ AFRAME.registerComponent('blocos-jogo', {
           this.combo++; const ganho = (b.ouro ? 50 : 10) + Math.min(5, this.combo - 1) * 2;
           this.pontos += ganho; this.entregues++;
           cesta.pula = 1; this.solta(dentro, b.ouro ? '#ffb300' : b.cor.hex, b.ouro ? 40 : 22);
-          b.el.parentNode && b.el.parentNode.removeChild(b.el); this.blocos.splice(this.blocos.indexOf(b), 1);
+          b.el.parentNode && b.el.parentNode.removeChild(b.el); if (b.sombra) this.mundo.remove(b.sombra); this.blocos.splice(this.blocos.indexOf(b), 1);
           som(b.ouro ? 'ouro' : 'acerto'); vibrar(40);
           this.mostraMsg(b.ouro ? `OURO! +${ganho}` : this.combo > 2 ? `COMBO x${this.combo}! +${ganho}` : `+${ganho}`, 0.9);
           this.atualizaHud(); this.refreshAlvos();
@@ -453,8 +513,33 @@ AFRAME.registerComponent('blocos-jogo', {
 
   atualizaHud() {
     const falta = (this.total || 0) - (this.entregues || 0);
+    this.hud.visible = true;
     this.hud.userData.troca(`⭐ ${this.pontos}   ⏱ ${fmt(this.tempo)}   📦 ${falta}`);
     this.hudSeg = Math.floor(this.tempo);
+  },
+
+  recentrar() {
+    // vira o "mundo" para que a direção em que você está olhando vire a frente (mesas)
+    const rig = document.getElementById('rig').object3D, d = new THREE.Vector3();
+    this.cam.object3D.getWorldDirection(d);
+    if (Math.hypot(d.x, d.z) < 0.35) return false; // olhando para o chão ou o céu: não dá para saber a frente
+    const olhar = Math.atan2(d.x, d.z); // ângulo da cabeça (0 = olhando para as mesas)
+    rig.rotation.y -= olhar;
+    return true;
+  },
+
+  preparaVR() {
+    // contagem para dar tempo de colocar o celular no óculos
+    this.estadoAntes = this.estado; this.estado = 'preparo';
+    let n = 5;
+    const passo = () => {
+      if (this.estado !== 'preparo') return;
+      if (n > 0) { this.mostraMsg(`Coloque o celular\nno Cardboard · ${n}`, 1.2); som('mira'); n--; this.contagem = setTimeout(passo, 1000); return; }
+      if (!this.recentrar()) { let tent = 0; const de = () => { if (this.recentrar() || ++tent > 30) return; setTimeout(de, 100); }; setTimeout(de, 100); }
+      if (this.estadoAntes === 'espera' || !this.total) { this.pontos = 0; this.novoNivel(0); }
+      else { this.estado = this.estadoAntes === 'preparo' ? 'jogando' : this.estadoAntes; this.mostraMsg('Pronto!', 1); }
+    };
+    clearTimeout(this.contagem); passo();
   },
 
   mostraMsg(t, dur) { this.msg.userData.troca(t); this.msg.visible = true; this.msgAte = performance.now() + dur * 1000; },
@@ -468,7 +553,7 @@ AFRAME.registerComponent('blocos-jogo', {
     if (this.fuseT0) this.anelProgresso((performance.now() - this.fuseT0) / FUSE_MS);
     // bloco na mão
     const naMao = new THREE.Vector3(); this.mao.pegada.getWorldPosition(naMao);
-    if (this.segurando && !this.segurando.voando) { this.segurando.el.object3D.position.copy(naMao); this.segurando.el.object3D.rotation.y += dt * 1.5; }
+    if (this.segurando && !this.segurando.voando) { const o = this.segurando.el.object3D; o.position.copy(naMao); o.rotation.y += dt * 1.5; o.scale.setScalar(0.6); }
     // voos (pegar, entregar, voltar para a mesa)
     for (let i = this.voos.length - 1; i >= 0; i--) {
       const v = this.voos[i]; v.t += dt / v.dur;
@@ -476,11 +561,13 @@ AFRAME.registerComponent('blocos-jogo', {
       const p = v.b.el.object3D.position; p.lerpVectors(v.de, alvo, e);
       if (v.arco) p.y += Math.sin(k * Math.PI) * 0.35;
       v.b.el.object3D.rotation.x += dt * 8 * (1 - k);
-      if (v.destino && this.voos[i].fim && v.arco && v.destino !== v.b.lugar) v.b.el.object3D.scale.setScalar(1 - Math.max(0, k - 0.75) * 3);
+      if (v.destino && v.arco && v.destino !== v.b.lugar) v.b.el.object3D.scale.setScalar(Math.max(0.05, (0.6 + 0.4 * Math.min(1, k * 2)) * (1 - Math.max(0, k - 0.75) * 3.6)));
+      else if (v.destino === v.b.lugar) v.b.el.object3D.scale.setScalar(0.6 + 0.4 * k);
+      else v.b.el.object3D.scale.setScalar(1 - 0.4 * k);
       if (k >= 1) { this.voos.splice(i, 1); if (v.destino === v.b.lugar) { v.b.el.object3D.rotation.x = 0; v.b.el.object3D.scale.setScalar(1); } v.fim && v.fim(); }
     }
     // blocos na mesa flutuam de leve; ouro brilha
-    this.blocos.forEach(b => { if (b === this.segurando || b.voando) return; b.giro += dt; b.el.object3D.position.y = b.lugar.y + Math.sin(b.giro * 2) * 0.012; if (b.ouro) b.el.object3D.rotation.y += dt; });
+    this.blocos.forEach(b => { if (b.sombra) b.sombra.visible = b !== this.segurando && !b.voando; if (b === this.segurando || b.voando) return; b.giro += dt; b.el.object3D.position.y = b.lugar.y + Math.sin(b.giro * 2) * 0.012; if (b.ouro) b.el.object3D.rotation.y += dt; });
     // caixas: pulo ao acertar, tremida ao errar; no nível 3 elas giram devagar
     const gira = this.estado === 'jogando' ? NIVEIS[this.nivel].gira : 0;
     this.cestas.forEach(c => {
@@ -494,10 +581,123 @@ AFRAME.registerComponent('blocos-jogo', {
       const c = this.confete[i]; c.vida -= dt; c.v.y -= 4 * dt; c.m.position.addScaledVector(c.v, dt); c.m.rotation.x += dt * 9; c.m.rotation.y += dt * 7;
       if (c.vida <= 0) { this.mundo.remove(c.m); c.m.geometry.dispose(); this.confete.splice(i, 1); }
     }
+    // seta-guia: aponta para a caixa certa quando ela está fora da vista
+    let mostraSeta = false;
+    if (this.segurando && this.estado === 'jogando') {
+      const alvoC = this.segurando.ouro ? null : this.cestas.find(c => c.cor.id === this.segurando.cor.id);
+      if (alvoC) {
+        const pc = new THREE.Vector3(); alvoC.g.getWorldPosition(pc);
+        const cp = new THREE.Vector3(); this.cam.object3D.getWorldPosition(cp);
+        const d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d);
+        // ângulos medidos como a rotação da cabeça: positivo = para a esquerda
+        const olhar = Math.atan2(d.x, d.z), para = Math.atan2(-(pc.x - cp.x), -(pc.z - cp.z));
+        const dif = Math.atan2(Math.sin(para - olhar), Math.cos(para - olhar));
+        if (Math.abs(dif) > 0.45) {
+          mostraSeta = true;
+          const esquerda = dif > 0;
+          this.seta.rotation.z = esquerda ? Math.PI : 0;
+          this.seta.position.x = (esquerda ? -1 : 1) * (0.16 + Math.sin(time / 180) * 0.015);
+          this.setaCorpo.material.color.set(alvoC.cor.hex);
+        }
+      }
+    }
+    this.seta.visible = mostraSeta;
     if (this.ilhas) this.ilhas.forEach(il => { il.position.y += Math.sin(time / 1000 + il.userData.f) * 0.002; });
   }
 });
 const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+// ---------- modo Cardboard próprio: duas imagens lado a lado + correção da lente ----------
+// Não depende de WebXR (que quase nenhum celular aceita mais para Cardboard): funciona no Chrome,
+// no Safari do iPhone e dentro do app (WebView). A cabeça vem do giroscópio (look-controls).
+const LENTE_VERT = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
+const LENTE_FRAG = `
+  varying vec2 vUv;
+  uniform sampler2D tDiffuse; uniform float k1, k2, escala, aspecto, ligada;
+  void main() {
+    float olho = step(0.5, vUv.x);
+    vec2 local = vec2((vUv.x - olho * 0.5) * 2.0, vUv.y);
+    vec2 p = (local - 0.5) * 2.0;
+    p.x *= aspecto;
+    float r2 = dot(p, p);
+    vec2 d = mix(p, p * (1.0 + k1 * r2 + k2 * r2 * r2) * escala, ligada);
+    d.x /= aspecto;
+    vec2 uv = d * 0.5 + 0.5;
+    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
+    float borda = smoothstep(0.0, 0.03, min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y)));
+    gl_FragColor = texture2D(tDiffuse, vec2(uv.x * 0.5 + olho * 0.5, uv.y)) * vec4(vec3(borda), 1.0);
+    #include <colorspace_fragment>
+  }`;
+AFRAME.registerComponent('cardboard', {
+  init() {
+    this.ativo = false;
+    this.distancia = 0.064;           // distância entre os olhos (m)
+    const liga = () => this.prepara();
+    if (this.el.renderer) liga(); else this.el.addEventListener('renderstart', liga, { once: true });
+  },
+  prepara() {
+    if (this.r) return;
+    const r = this.r = this.el.renderer, orig = r.render.bind(r), self = this;
+    this.orig = orig;
+    this.estereo = new THREE.StereoCamera();
+    this.quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    this.lente = new THREE.ShaderMaterial({ vertexShader: LENTE_VERT, fragmentShader: LENTE_FRAG, depthTest: false, depthWrite: false,
+      uniforms: { tDiffuse: { value: null }, k1: { value: 0.18 }, k2: { value: 0.06 }, escala: { value: 0.84 }, aspecto: { value: 1 }, ligada: { value: 1 } } });
+    this.quadCena = new THREE.Scene();
+    const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.lente); q.frustumCulled = false; this.quadCena.add(q);
+    this.tam = new THREE.Vector2();
+    r.render = function (cena, camera) {
+      if (!self.ativo || cena === self.quadCena || r.xr.isPresenting || r.getRenderTarget()) return orig(cena, camera);
+      self.desenha(cena, camera);
+    };
+  },
+  desenha(cena, camera) {
+    const r = this.r; r.getDrawingBufferSize(this.tam);
+    const W = Math.max(2, Math.floor(this.tam.x)), H = Math.max(2, Math.floor(this.tam.y)), meio = Math.floor(W / 2);
+    if (!this.rt || this.rt.width !== W || this.rt.height !== H) {
+      if (this.rt) this.rt.dispose();
+      const gl2 = r.capabilities.isWebGL2;
+      this.rt = new THREE.WebGLRenderTarget(W, H, { type: gl2 ? THREE.HalfFloatType : THREE.UnsignedByteType, samples: gl2 ? 4 : 0 });
+      this.lente.uniforms.tDiffuse.value = this.rt.texture;
+    }
+    const asp = meio / H;
+    if (Math.abs(camera.aspect - asp) > 1e-3) { camera.aspect = asp; camera.updateProjectionMatrix(); }
+    this.lente.uniforms.aspecto.value = asp;
+    camera.updateMatrixWorld();
+    this.estereo.eyeSep = this.distancia;
+    this.estereo.update(camera);
+    const rt = this.rt;
+    rt.scissorTest = true;
+    rt.viewport.set(0, 0, meio, H); rt.scissor.set(0, 0, meio, H); r.setRenderTarget(rt); this.orig(cena, this.estereo.cameraL);
+    rt.viewport.set(meio, 0, W - meio, H); rt.scissor.set(meio, 0, W - meio, H); r.setRenderTarget(rt); this.orig(cena, this.estereo.cameraR);
+    rt.scissorTest = false; rt.viewport.set(0, 0, W, H); rt.scissor.set(0, 0, W, H);
+    r.setRenderTarget(null);
+    this.orig(this.quadCena, this.quadCam);
+  },
+  entrar() {
+    this.prepara();
+    this.ativo = true;
+    this.pixelAntes = this.r.getPixelRatio();
+    this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+    document.body.classList.add('modo-vr');
+    const app = /\bwv\b/.test(navigator.userAgent);   // dentro do APK já está em tela cheia e deitado
+    if (!app && document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen({ navigationUI: 'hide' }).then(() => {
+        try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) {}
+      }).catch(() => {});
+    }
+    this.el.emit('cardboard-entrou');
+  },
+  sair() {
+    if (!this.ativo) return;
+    this.ativo = false;
+    this.r.setPixelRatio(this.pixelAntes || window.devicePixelRatio || 1);
+    document.body.classList.remove('modo-vr');
+    const cam = this.el.camera; if (cam) { cam.aspect = window.innerWidth / window.innerHeight; cam.updateProjectionMatrix(); }
+    if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+    this.el.emit('cardboard-saiu');
+  }
+});
 
 // ---------- tela de início ----------
 window.addEventListener('DOMContentLoaded', () => {
@@ -505,7 +705,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const inicio = document.getElementById('inicio'), aviso = document.getElementById('aviso');
   const jogo = () => sc.components['blocos-jogo'];
   const comecar = () => {
-    inicio.hidden = true; document.getElementById('sair').hidden = false; document.getElementById('toque').hidden = false;
+    inicio.hidden = true; document.getElementById('sair').hidden = false; document.getElementById('som').hidden = false; document.getElementById('toque').hidden = false; ligaMusica();
     setTimeout(() => { document.getElementById('toque').hidden = true; }, 7000);
     som('pega');
     const j = jogo(); if (j && j.estado === 'espera') { j.pontos = 0; j.novoNivel(0); }
@@ -516,9 +716,20 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-tela').onclick = async () => { await pedeSensor(); comecar(); };
   document.getElementById('btn-vr').onclick = async () => {
     await pedeSensor();
-    try { await sc.enterVR(); comecar(); }
-    catch (e) { aviso.textContent = 'O modo Cardboard não abriu neste navegador. Abra o arquivo do jogo no Chrome do celular. Por enquanto, jogue sem óculos.'; }
+    inicio.hidden = true; document.getElementById('vr-ui').hidden = false;
+    som('pega'); ligaMusica();
+    sc.components.cardboard.entrar();
+    const j = jogo(); if (j) j.preparaVR();
   };
+  const sairVR = () => {
+    sc.components.cardboard.sair(); document.getElementById('vr-ui').hidden = true; inicio.hidden = false; aviso.textContent = '';
+    const j = jogo(); if (j && j.estado === 'preparo') { clearTimeout(j.contagem); j.estado = j.total ? 'jogando' : 'espera'; j.msg.visible = false; }
+  };
+  document.getElementById('vr-sair').onclick = sairVR;
+  // botão "voltar" do Android tira da tela cheia: volta para o menu
+  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && sc.components.cardboard.ativo && !/\bwv\b/.test(navigator.userAgent)) sairVR(); });
+  document.getElementById('som').onclick = musicaOnOff;
+  document.getElementById('som').textContent = musicaLigada ? '🔊' : '🔇';
   // site de verdade (https): oferece instalar pelo navegador e baixar o APK; dentro do app ou do Claude, não
   const site = location.protocol === 'https:' && !/claude|anthropic|usercontent/.test(location.hostname);
   if (site) {
@@ -528,12 +739,12 @@ window.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedido = e; document.getElementById('btn-instalar').hidden = false; });
     document.getElementById('btn-instalar').onclick = async () => { if (!pedido) return; pedido.prompt(); await pedido.userChoice; pedido = null; document.getElementById('btn-instalar').hidden = true; };
   }
-  document.getElementById('sair').onclick = () => { if (sc.is('vr-mode')) sc.exitVR(); inicio.hidden = false; aviso.textContent = ''; };
+  document.getElementById('sair').onclick = sairVR;
 });
 })();
 </script>
 
-<a-scene blocos-jogo vr-mode-ui="enabled: true; cardboardModeEnabled: true" renderer="antialias: true; colorManagement: true; foveationLevel: 0" loading-screen="dotsColor: #ff8a3d; backgroundColor: #101826" device-orientation-permission-ui="enabled: true" light="defaultLightsEnabled: false" background="color: #101826">
+<a-scene blocos-jogo cardboard xr-mode-ui="enabled: false" renderer="antialias: true; colorManagement: true; foveationLevel: 0" loading-screen="dotsColor: #ff8a3d; backgroundColor: #101826" device-orientation-permission-ui="enabled: true" light="defaultLightsEnabled: false" background="color: #101826">
   <a-entity id="rig" position="0 0 0">
     <a-entity id="cam" camera position="0 1.5 0" look-controls="magicWindowTrackingEnabled: true; touchEnabled: true; mouseEnabled: true" wasd-controls="enabled: false">
       <a-entity id="cursor" cursor="fuse: true; fuseTimeout: 1100; downEvents: semclique; upEvents: semclique" raycaster="objects: .alvo; far: 6"
