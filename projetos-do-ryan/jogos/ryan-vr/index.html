@@ -37,6 +37,8 @@
   .menu-prev div { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; font: 700 13px var(--body); color: var(--fg); display: grid; gap: 4px; }
   .menu-prev b { font-size: 22px; }
   .botoes { display: grid; gap: 10px; }
+  #btn-tv { display: grid; gap: 2px; font-size: 24px; background: linear-gradient(100deg, var(--accent-2), #ffd08f); }
+  #btn-tv small { font: 700 14px var(--body); color: #3a2410; }
   button { font: 800 20px var(--display); border: 0; border-radius: 14px; padding: 14px 18px; cursor: pointer; color: #120d2e; background: var(--accent-2); box-shadow: 0 4px 0 #b06a2c; transition: transform .1s; }
   button:active { transform: translateY(3px); box-shadow: 0 1px 0 #b06a2c; }
   button.sec { background: var(--panel); color: var(--fg); box-shadow: 0 4px 0 #0e0b1f; border: 1px solid var(--line); }
@@ -69,16 +71,17 @@
 <div id="entrada">
   <div class="cartao">
     <div class="marca"><div class="oculos" aria-hidden="true"></div><h1>Ryan <em>VR</em></h1></div>
-    <p>Seu mundo de realidade virtual: assista vídeos 360°, veja vídeos do celular numa tela de cinema gigante e jogue. Tudo pelo olhar.</p>
+    <p>Uma TV de realidade virtual na sua casa: a câmera mostra o seu quarto, a TV flutua na sua frente e você aperta os botões com a mão. Também tem vídeos 360° e jogos.</p>
     <div class="menu-prev" aria-hidden="true">
-      <div><b>🎬</b>Vídeos 360°</div><div><b>🎮</b>Jogos</div><div><b>📁</b>Meus vídeos</div>
+      <div><b>📺</b>TV na sua casa</div><div><b>✋</b>Controle com a mão</div><div><b>🎮</b>Jogos e vídeos 360°</div>
     </div>
     <div class="botoes">
-      <button id="btn-vr">🥽 Entrar no Cardboard</button>
+      <button id="btn-tv">📺 Modo TV <small>sua casa + controle com a mão</small></button>
+      <button id="btn-vr" class="sec">🥽 Entrar no Cardboard</button>
       <button id="btn-tela" class="sec">📱 Ver sem óculos</button>
     </div>
     <p class="nota">Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 1.2</p>
+    <p class="nota" id="versao">Ryan VR 1.3</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -631,7 +634,7 @@ AFRAME.registerComponent('ryan-vr', {
     this.pLado = new Painel('lado', { larg: 0.62, alt: 0.92, ang: 0.75, y: 1.6, raio: 1.55, ppm: 1000, desenhar: (g, p) => self.desenhaLado(g, p) });
     this.pDock = new Painel('dock', { larg: 0.88, alt: 0.11, ang: 0, y: 1.0, raio: 1.5, ppm: 1000, desenhar: (g, p) => self.desenhaDock(g, p) });
     // controles do vídeo: presos no "carrinho" (rig), embaixo da vista
-    this.pPlayer = new Painel('player', { larg: 1.0, alt: 0.2, ang: 0, y: 1.08, raio: 1.4, ppm: 1000, pai: this.rig, desenhar: (g, p) => self.desenhaPlayer(g, p) });
+    this.pPlayer = new Painel('player', { larg: 1.0, alt: 0.2, ang: 0, y: 0.98, raio: 1.4, ppm: 1000, pai: this.rig, desenhar: (g, p) => self.desenhaPlayer(g, p) });
     this.pPlayer.visivel = false;
   },
   renderTudo() { PAINEIS.forEach(p => p.render()); },
@@ -770,8 +773,10 @@ AFRAME.registerComponent('ryan-vr', {
     g.fillStyle = hv1 ? '#120d2e' : '#fff';
     if (tocando) { g.fillRect(72, 62, 20, 76); g.fillRect(108, 62, 20, 76); } else { g.beginPath(); g.moveTo(80, 60); g.lineTo(136, 100); g.lineTo(80, 140); g.fill(); }
     const [t, d] = this.tempoMidia();
-    texto(g, this.tituloMidia || '', 220, 70, FONTE(800, 36), UI.txt);
-    caixa(g, 220, 110, p.W - 520, 18, 9, 'rgba(255,255,255,.15)'); caixa(g, 220, 110, Math.max(18, (p.W - 520) * Math.min(1, d ? t / d : 0)), 18, 9, UI.acc2);
+    const tvExp = this.naTV && !this.video, larg = tvExp ? p.W - 690 : p.W - 520;
+    texto(g, (this.tituloMidia || '').slice(0, tvExp ? 22 : 34), 220, 70, FONTE(800, 36), UI.txt);
+    caixa(g, 220, 110, larg, 18, 9, 'rgba(255,255,255,.15)'); caixa(g, 220, 110, Math.max(18, larg * Math.min(1, d ? t / d : 0)), 18, 9, UI.acc2);
+    if (tvExp) { const hv3 = p.botao('entrar', p.W - 440, 40, 150, 120, () => this.entrarNoVideo()); caixa(g, p.W - 440, 40, 150, 120, 30, hv3 ? UI.acc : 'rgba(255,255,255,.1)'); texto(g, '🌐', p.W - 365, 118, FONTE(800, 54), UI.txt, 'center'); }
     texto(g, `${fmt(t)} / ${d ? fmt(d) : '--:--'}`, 220, 172, FONTE(700, 26), UI.sub);
     const hv2 = p.botao('sair', p.W - 270, 40, 240, 120, () => this.fecharMidia());
     caixa(g, p.W - 270, 40, 240, 120, 30, hv2 ? '#ff7b7b' : 'rgba(255,255,255,.1)'); texto(g, '✕ Sair', p.W - 150, 115, FONTE(800, 38), hv2 ? '#120d2e' : UI.txt, 'center');
@@ -834,18 +839,57 @@ AFRAME.registerComponent('ryan-vr', {
     try { inp.click(); } catch (e) {}
   },
   abrirExperiencia(it) { this.transicao(() => this.abrirExperienciaAgora(it)); },
-  abrirExperienciaAgora(it) {
+  abrirExperienciaAgora(it, imersivo) {
     som('abre');
-    this.estado = 'midia'; this.tituloMidia = it.titulo; this.duracao = it.dur; this.t = 0; this.pausado = false;
+    this.itemAtual = it;
+    this.naTV = this.casa && !imersivo; // no Modo TV o vídeo passa na TV da sua sala
+    this.estado = 'midia'; this.tituloMidia = it.titulo; this.duracao = it.dur; this.t = imersivo && this.tAntes ? this.tAntes : 0; this.pausado = false;
     [this.pMenu, this.pCentro, this.pLado, this.pDock].forEach(p => p.visivel = false); this.atualizaFundo();
-    this.exp = new THREE.Group(); this.el.object3D.add(this.exp);
-    this.fogAntes = this.el.object3D.fog; this.el.object3D.fog = null;
-    this.expCtl = EXP[it.id](this.exp, this.el.object3D);
-    if (this.expCtl.carro) this.rig.object3D.add(this.expCtl.carro);
-    this.expCtl.comeco(this.rig.object3D);
+    this.exp = new THREE.Group();
+    if (this.naTV) {
+      // a experiência é desenhada numa cena separada e vira a imagem da TV
+      this.tvCena = new THREE.Scene(); this.tvCena.add(this.exp);
+      this.expRig = new THREE.Object3D(); this.tvCena.add(this.expRig);
+      this.tvCam = new THREE.PerspectiveCamera(72, 16 / 9, 0.05, 3000); this.tvCam.position.set(0, 1.6, 0); this.expRig.add(this.tvCam);
+      this.expCtl = EXP[it.id](this.exp, this.tvCena);
+      if (this.expCtl.carro) this.expRig.add(this.expCtl.carro);
+      this.mostraTV(true);
+    } else {
+      this.el.object3D.add(this.exp); this.expRig = this.rig.object3D;
+      this.fogAntes = this.el.object3D.fog; this.el.object3D.fog = null;
+      this.expCtl = EXP[it.id](this.exp, this.el.object3D);
+      if (this.expCtl.carro) this.rig.object3D.add(this.expCtl.carro);
+    }
+    this.expCtl.comeco(this.expRig);
+    if (imersivo && this.t) for (let k = 0; k < this.t / 0.05; k++) this.expCtl.passo(0.05, k * 0.05, this.expRig); // continua de onde parou
     this.pPlayer.visivel = true; this.pPlayer.render();
     tocaTrilha(it.id);
-    this.aviso('Olhe em volta! Olhe para baixo para pausar');
+    this.aviso(this.naTV ? 'Passando na TV! Toque em 🌐 para entrar no vídeo' : 'Olhe em volta! Olhe para baixo para pausar');
+  },
+  entrarNoVideo() { // da TV para dentro do vídeo (360°)
+    const it = this.itemAtual; if (!it || !this.naTV) return;
+    this.tAntes = this.t;
+    this.transicao(() => { this.fecharMidiaAgora(true); this.abrirExperienciaAgora(it, true); this.tAntes = 0; });
+  },
+  // ---------- a TV na sala (moldura, brilho e tela) ----------
+  montaTV() {
+    if (this.tv) return;
+    const g = new THREE.Group(); g.position.y = 1.6; this.el.object3D.add(g);
+    const moldura = new THREE.Mesh(geoCurva(1.66, 1.06, 1.57, 36), new THREE.MeshStandardMaterial({ color: 0x0c0c10, roughness: 0.35, metalness: 0.6, side: THREE.DoubleSide }));
+    g.add(moldura);
+    const aura = new THREE.Mesh(geoCurva(2.1, 1.45, 1.6, 24), new THREE.MeshBasicMaterial({ map: tex(64, 64, (c, w, h) => { const gr = c.createRadialGradient(w / 2, h / 2, 4, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(143,123,255,.55)'); gr.addColorStop(1, 'rgba(143,123,255,0)'); c.fillStyle = gr; c.fillRect(0, 0, w, h); }), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+    aura.renderOrder = -5; g.add(aura);
+    const led = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.012, 0.01), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.3, 2, 0.6), toneMapped: false })); led.position.set(0.6, -0.515, -1.565); g.add(led);
+    this.tvRT = new THREE.WebGLRenderTarget(960, 540, { samples: this.el.renderer.capabilities.isWebGL2 ? 2 : 0 });
+    const tela = new THREE.Mesh(geoCurva(1.56, 0.8775, 1.545, 36), new THREE.MeshBasicMaterial({ map: this.tvRT.texture, toneMapped: false, side: THREE.DoubleSide }));
+    tela.renderOrder = 6; tela.visible = false; g.add(tela);
+    this.tv = g; this.tvTela = tela; this.tvMoldura = moldura;
+  },
+  mostraTV(passando, mapa) {
+    this.montaTV();
+    this.tv.visible = this.casa;
+    this.tvTela.visible = !!passando;
+    this.tvTela.material.map = mapa || this.tvRT.texture; this.tvTela.material.needsUpdate = true;
   },
   abrirVideo() { if (this.meuVideo) this.transicao(() => this.abrirVideoAgora()); },
   abrirVideoAgora() {
@@ -856,7 +900,11 @@ AFRAME.registerComponent('ryan-vr', {
     [this.pMenu, this.pCentro, this.pLado, this.pDock].forEach(p => p.visivel = false); this.atualizaFundo();
     this.exp = new THREE.Group(); this.el.object3D.add(this.exp);
     const vt = new THREE.VideoTexture(v); vt.colorSpace = THREE.SRGBColorSpace;
-    if (this.modoVideo === '360') {
+    this.naTV = this.casa && this.modoVideo !== '360';
+    if (this.naTV) {
+      this.mostraTV(true, vt);
+      v.addEventListener('loadedmetadata', () => { const r = v.videoWidth / Math.max(1, v.videoHeight); if (r && Math.abs(r - 16 / 9) > 0.05) this.tvTela.scale.y = (16 / 9) / r; else this.tvTela.scale.y = 1; });
+    } else if (this.modoVideo === '360') {
       const esf = new THREE.Mesh(new THREE.SphereGeometry(20, 64, 32), new THREE.MeshBasicMaterial({ map: vt })); esf.scale.x = -1; esf.position.y = 1.6; this.exp.add(esf);
     } else {
       // sala de cinema escura com tela curva gigante
@@ -884,13 +932,17 @@ AFRAME.registerComponent('ryan-vr', {
     this.pPlayer.render();
   },
   fecharMidia(rapido) { if (rapido) return this.fecharMidiaAgora(); if (this.fechando) return; this.fechando = true; this.transicao(() => { this.fechando = false; this.fecharMidiaAgora(); }); },
-  fecharMidiaAgora() {
+  fecharMidiaAgora(semPaineis) {
     if (this.video) { this.video.pause(); this.video.removeAttribute('src'); this.video.load(); this.video = null; }
-    if (this.expCtl && this.expCtl.carro) this.rig.object3D.remove(this.expCtl.carro);
-    if (this.exp) { this.el.object3D.remove(this.exp); this.exp.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) [].concat(o.material).forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); }); this.exp = null; }
+    if (this.expCtl && this.expCtl.carro && this.expCtl.carro.parent) this.expCtl.carro.parent.remove(this.expCtl.carro);
+    if (this.tvCena) { this.tvCena = null; this.tvCam = null; }
+    if (this.tv) this.mostraTV(false);
+    this.naTV = false;
+    if (this.exp) { if (this.exp.parent) this.exp.parent.remove(this.exp); this.exp.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) [].concat(o.material).forEach(m => { if (m.map) m.map.dispose(); m.dispose(); }); }); this.exp = null; }
     this.el.object3D.fog = this.fogAntes || null; this.expCtl = null;
     this.rig.object3D.position.set(0, 0, 0); this.rig.object3D.rotation.y = 0;
     [this.pMenu, this.pCentro, this.pLado, this.pDock].forEach(p => p.visivel = true); this.pPlayer.visivel = false;
+    if (semPaineis) return;
     this.estado = 'saguao'; this.atualizaFundo(); this.renderTudo(); tocaTrilha('saguao');
     this.bloqueioAte = performance.now() + 900; this.dirTrava = new THREE.Vector3(); this.cam.object3D.getWorldDirection(this.dirTrava); // não reabre sozinho
   },
@@ -913,7 +965,7 @@ AFRAME.registerComponent('ryan-vr', {
       this.camPlano = plano; this.cam.object3D.add(plano);
       this.ajustaPlano();
       v.addEventListener('resize', () => this.ajustaPlano());
-      this.casa = true; this.atualizaFundo(); this.renderTudo();
+      this.casa = true; this.montaTV(); this.atualizaFundo(); this.renderTudo();
       this.aviso(AJ.maos ? 'Modo Casa! Mostre a mão para a câmera' : 'Modo Casa ligado');
       if (AJ.maos) this.ligaMaos();
     } catch (e) {
@@ -940,8 +992,9 @@ AFRAME.registerComponent('ryan-vr', {
   },
   atualizaFundo() {
     // no Modo Casa some o céu e o deque; nas experiências 360° a câmera fica escondida (imersão total)
-    const midia = this.estado === 'midia';
+    const midia = this.estado === 'midia' && !this.naTV;
     if (this.camPlano) this.camPlano.visible = this.casa && !midia;
+    if (this.tv) this.tv.visible = this.casa && !midia && (this.estado === 'saguao' || this.naTV);
     if (this.luzes) this.luzes.visible = !midia; // as experiências têm a própria luz
     this.saguao.visible = !midia && !this.casa && this.estado !== 'baloes-casa';
   },
@@ -1178,7 +1231,11 @@ AFRAME.registerComponent('ryan-vr', {
     // experiência rodando
     if (this.estado === 'midia') {
       if (this.expCtl && !this.pausado) {
-        this.t += dt; this.expCtl.passo(dt, this.t, this.rig.object3D);
+        this.t += dt; this.expCtl.passo(dt, this.t, this.expRig || this.rig.object3D);
+        if (this.naTV && this.tvCena) { // a câmera da TV passeia devagar, como num programa de TV
+          this.tvCam.rotation.set(Math.sin(this.t * 0.11) * 0.08, Math.sin(this.t * 0.17) * 0.55, 0);
+          const r = this.el.renderer, antes = r.getRenderTarget(); r.setRenderTarget(this.tvRT); r.render(this.tvCena, this.tvCam); r.setRenderTarget(antes);
+        }
         if (this.t >= this.duracao) { this.fecharMidia(); this.aviso('Fim! Escolha outro vídeo'); return; }
       }
       if (this.video && this.video.ended) { this.fecharMidia(); return; }
@@ -1218,6 +1275,12 @@ window.addEventListener('DOMContentLoaded', () => {
   const semOculos = async () => { await pedeSensor(); audio(); tocaTrilha('saguao'); entrada.hidden = true; document.getElementById('menu2d').hidden = false; prontoVR(); verificaSensor(t => app() && app().aviso(t)); };
   const sair = () => { sc.components.cardboard.sair(); document.getElementById('vr-ui').hidden = true; entrada.hidden = false; document.getElementById('menu2d').hidden = true; };
   document.getElementById('btn-vr').onclick = entrarVR;
+  // Modo TV: Cardboard + câmera (sua casa) + mão como controle, num toque só
+  document.getElementById('btn-tv').onclick = async () => {
+    AJ.maos = true; salva();
+    await entrarVR();
+    const a = app(); if (a) a.ligarCasa(true);
+  };
   document.getElementById('btn-tela').onclick = semOculos;
   document.getElementById('vr-sair').onclick = sair;
   document.getElementById('menu2d').onclick = sair;
@@ -1241,7 +1304,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 1.2' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 1.3' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 

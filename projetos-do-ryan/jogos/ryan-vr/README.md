@@ -14,6 +14,9 @@ Saguão de realidade virtual para **Cardboard**, feito com A-Frame: um deque de 
 - **Ajustes:** distância entre os olhos, correção da lente, tempo do olhar e música (valem também no Blocos VR).
 - Toque longo na tela centraliza a visão.
 
+## 📺 Modo TV
+Na tela de entrada, **📺 Modo TV** entra no Cardboard, liga a câmera (você vê a sua casa) e liga a mão como controle, num toque só. A TV aparece flutuando na sala, com moldura e brilho; os vídeos 360° e os vídeos do celular passam **dentro da TV**. No controle do vídeo, **🌐** coloca você dentro do vídeo (360°) continuando de onde parou.
+
 ## Modo Casa (câmera) e a mão como controle
 - Aperte **📷** na barra de baixo (ou em Ajustes). A câmera de trás do celular mostra a sua casa dentro do Cardboard e os painéis flutuam na frente, como uma TV de realidade virtual. Nos vídeos 360° a câmera some para a imersão ser total.
 - **Mão de verdade:** com o Modo Casa ligado, mostre a mão para a câmera. Aparecem bolinhas de luz nos dedos. Aponte o indicador para um botão e **junte o dedão com o indicador (pinça)** para apertar, ou deixe o dedo parado no botão por 0,8 s. O olhar continua funcionando.
