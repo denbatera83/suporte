@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://denbatera83.github.io/suporte/sitemap.xml

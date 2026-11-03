@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ryan VR – jogo de realidade virtual grátis para celular e PC</title>
+<meta name="description" content="Baixe grátis o Ryan VR: jogos de realidade virtual com as mãos (Corta Cubos, Tiro ao Alvo, Corrida, Balões), vídeos 360° e Modo TV. App para celular Android (Cardboard) e versão para computador no navegador.">
+<meta name="keywords" content="Ryan VR, jogo VR, realidade virtual, Cardboard, jogo grátis, APK, Android, jogo para PC, jogo no navegador, controle com as mãos">
+<link rel="canonical" href="https://denbatera83.github.io/suporte/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Ryan VR – realidade virtual com as suas mãos">
+<meta property="og:description" content="Baixe para o celular Android ou jogue no computador. Grátis.">
+<meta property="og:url" content="https://denbatera83.github.io/suporte/">
+<meta property="og:image" content="https://denbatera83.github.io/suporte/jogo/ryan-vr/icon-512.png">
+<meta name="theme-color" content="#15122b">
+<link rel="icon" href="jogo/ryan-vr/icon-192.png">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"VideoGame","name":"Ryan VR","url":"https://denbatera83.github.io/suporte/","description":"Jogos de realidade virtual com as mãos, vídeos 360° e Modo TV, para Android e computador.","genre":["Realidade virtual","Ação","Ritmo"],"gamePlatform":["Android","Web browser"],"applicationCategory":"Game","operatingSystem":"Android, Windows, macOS, Linux","inLanguage":"pt-BR","offers":{"@type":"Offer","price":"0","priceCurrency":"BRL"}}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@500;700;800&display=swap">
+<style>
+  /* Layout: céu noturno do Ryan VR; um título curto e duas portas de entrada (celular / computador), lado a lado ou empilhadas */
+  :root {
+    --ceu: #15122b; --ceu2: #221c45; --vidro: rgba(255,255,255,.06); --linha: rgba(255,255,255,.12);
+    --txt: #f5f3ff; --sub: #b9b2dc; --roxo: #8f7bff; --laranja: #ffb36b; --tinta: #1a1230;
+    --titulo: "Baloo 2", "Nunito", system-ui, sans-serif; --corpo: "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--txt); font: 500 17px/1.55 var(--corpo);
+    background: radial-gradient(1200px 600px at 80% -10%, #3b2b78 0%, transparent 60%), radial-gradient(900px 500px at -10% 110%, #4a2a4f 0%, transparent 55%), var(--ceu);
+    background-color: var(--ceu);
+  }
+  .pagina { max-width: 1040px; margin: 0 auto; padding-block: 48px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 40px; }
+  canvas#estrelas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+  header { display: grid; gap: 14px; }
+  .marca { display: flex; align-items: center; gap: 14px; }
+  .oculos { width: 56px; height: 34px; border-radius: 12px; background: var(--roxo); position: relative; box-shadow: 0 8px 24px rgba(143,123,255,.45); flex: none; }
+  .oculos::before, .oculos::after { content: ""; position: absolute; top: 9px; width: 15px; height: 15px; border-radius: 50%; background: var(--tinta); }
+  .oculos::before { left: 9px; } .oculos::after { right: 9px; }
+  h1 { font: 800 clamp(40px, 7vw, 64px)/1 var(--titulo); margin: 0; letter-spacing: -.5px; }
+  h1 em { font-style: normal; color: var(--laranja); }
+  .lead { margin: 0; max-width: 60ch; color: var(--sub); font-size: 19px; text-wrap: pretty; }
+  .versao { font: 800 13px var(--corpo); letter-spacing: 1.2px; text-transform: uppercase; color: var(--roxo); }
+  .portas { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 20px; }
+  .porta { position: relative; display: grid; gap: 18px; align-content: start; padding: 28px; border-radius: 28px; background: var(--vidro); border: 1px solid var(--linha); min-width: 0; }
+  .porta.indicada { border-color: var(--laranja); box-shadow: 0 0 0 1px var(--laranja), 0 24px 60px rgba(0,0,0,.35); }
+  .selo { position: absolute; top: -13px; right: 24px; background: var(--laranja); color: var(--tinta); font: 800 13px var(--corpo); padding: 4px 12px; border-radius: 99px; }
+  .selo[hidden] { display: none; }
+  .topo { display: flex; align-items: center; gap: 16px; }
+  .icone { width: 64px; height: 64px; border-radius: 20px; display: grid; place-items: center; font-size: 34px; background: var(--ceu2); border: 1px solid var(--linha); flex: none; }
+  h2 { font: 800 30px/1.1 var(--titulo); margin: 0; text-wrap: balance; }
+  .para { margin: 2px 0 0; color: var(--sub); font-size: 15px; }
+  .botao { display: flex; align-items: center; justify-content: space-between; gap: 12px; text-decoration: none; font: 800 19px var(--corpo); padding: 18px 22px; border-radius: 18px; transition: transform .12s ease, filter .12s ease; }
+  .botao small { font: 700 14px var(--corpo); opacity: .75; white-space: nowrap; }
+  .botao.forte { background: var(--laranja); color: var(--tinta); box-shadow: 0 5px 0 #b06a2c; }
+  .botao.leve { background: var(--ceu2); color: var(--txt); border: 1px solid var(--linha); }
+  .botao:hover { filter: brightness(1.06); transform: translateY(-1px); }
+  .botao:active { transform: translateY(3px); }
+  .botao:focus-visible { outline: 3px solid var(--roxo); outline-offset: 3px; }
+  ol { margin: 0; padding-left: 22px; display: grid; gap: 6px; color: var(--sub); font-size: 15.5px; }
+  ol b { color: var(--txt); }
+  .aviso { margin: 0; font-size: 14px; color: var(--sub); border-top: 1px solid var(--linha); padding-top: 14px; }
+  .modos { display: flex; flex-wrap: wrap; gap: 8px; }
+  .modos span { font: 700 14px var(--corpo); padding: 6px 12px; border-radius: 99px; background: var(--ceu2); border: 1px solid var(--linha); }
+  footer { color: var(--sub); font-size: 14px; display: grid; gap: 6px; }
+  @media (prefers-reduced-motion: reduce) { .botao { transition: none; } }
+</style>
+</head>
+<body>
+<canvas id="estrelas" aria-hidden="true"></canvas>
+<main class="pagina">
+  <header>
+    <div class="marca"><div class="oculos" aria-hidden="true"></div><h1>Ryan <em>VR</em></h1></div>
+    <p class="lead">Realidade virtual com as suas mãos: jogos (Corta Cubos, Tiro ao Alvo, Corrida, Balões, Blocos), vídeos 360°, a TV na sua casa e o Google com teclado de luz.</p>
+    <div class="modos" aria-label="Modos do jogo"><span>🥽 Modo VR</span><span>📱 Modo Celular</span><span>📺 Modo TV</span><span>🖥️ Modo Computador</span></div>
+    <span class="versao">Versão 2.4</span>
+  </header>
+
+  <section class="portas">
+    <article class="porta" id="porta-celular">
+      <span class="selo" id="selo-celular" hidden>Indicado para este aparelho</span>
+      <div class="topo"><div class="icone" aria-hidden="true">📱</div><div><h2>Celular Android</h2><p class="para">App com VR (Cardboard), câmera e mãos</p></div></div>
+      <a class="botao forte" id="link-apk" href="RyanVR.apk" download>⬇ Baixar o app <small>APK · 12,5 MB</small></a>
+      <ol>
+        <li>Toque em <b>Baixar o app</b> e espere terminar.</li>
+        <li>Abra o arquivo <b>RyanVR.apk</b>. Se o celular perguntar, permita <b>instalar apps desta fonte</b>.</li>
+        <li>Toque em <b>Instalar</b> (ou <b>Atualizar</b>, se já tiver o Ryan VR).</li>
+        <li>Abra o app e <b>permita a câmera</b> para usar as mãos.</li>
+      </ol>
+      <p class="aviso">iPhone não instala APK: use o botão <b>Jogar no navegador</b> no Safari.</p>
+    </article>
+
+    <article class="porta" id="porta-pc">
+      <span class="selo" id="selo-pc" hidden>Indicado para este aparelho</span>
+      <div class="topo"><div class="icone" aria-hidden="true">🖥️</div><div><h2>Computador</h2><p class="para">Mouse para olhar, clique para apertar, teclado para digitar</p></div></div>
+      <a class="botao forte" href="jogo/ryan-vr/index.html">▶ Jogar no navegador <small>sem instalar</small></a>
+      <a class="botao leve" href="RyanVR-Computador.zip" download>⬇ Baixar para o computador <small>.zip · 0,2 MB</small></a>
+      <ol>
+        <li>Na tela de entrada, escolha <b>🖥️ Modo Computador</b>.</li>
+        <li><b>Arraste o mouse</b> para olhar em volta e <b>clique</b> para apertar.</li>
+        <li>No Google, digite no teclado. <b>Esc</b> pausa e sai dos jogos; na Corrida use <b>← →</b> e <b>espaço</b>.</li>
+        <li>Baixou o .zip? Descompacte e abra <b>Abrir Ryan VR.html</b> no Chrome.</li>
+      </ol>
+      <p class="aviso">Precisa de internet. Funciona melhor no Google Chrome ou no Microsoft Edge.</p>
+    </article>
+  </section>
+
+  <footer>
+    <span>Feito para o Ryan · os jogos e vídeos não enviam nada seu para a internet.</span>
+  </footer>
+</main>
+
+<script>
+  // indica o melhor botão para o aparelho de quem abriu a página
+  (function () {
+    const ua = navigator.userAgent || '';
+    const android = /Android/i.test(ua), iphone = /iPhone|iPad|iPod/i.test(ua);
+    const id = android ? 'celular' : iphone ? null : 'pc';
+    if (id) {
+      document.getElementById('selo-' + id).hidden = false;
+      document.getElementById('porta-' + id).classList.add('indicada');
+      if (android) document.querySelector('.portas').prepend(document.getElementById('porta-celular'));
+    }
+  })();
+  // céu estrelado bem leve
+  (function () {
+    const c = document.getElementById('estrelas'), g = c.getContext('2d');
+    const parar = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let E = [];
+    const mede = () => { const d = Math.min(2, devicePixelRatio || 1); c.width = innerWidth * d; c.height = innerHeight * d; g.setTransform(d, 0, 0, d, 0, 0); E = Array.from({ length: Math.round(innerWidth * innerHeight / 9000) }, () => ({ x: Math.random() * innerWidth, y: Math.random() * innerHeight, r: Math.random() * 1.3 + 0.3, f: Math.random() * 6 })); };
+    const desenha = t => { g.clearRect(0, 0, innerWidth, innerHeight); E.forEach(s => { g.globalAlpha = 0.35 + 0.45 * (0.5 + 0.5 * Math.sin(t / 900 + s.f)); g.fillStyle = '#ffffff'; g.beginPath(); g.arc(s.x, s.y, s.r, 0, 7); g.fill(); }); if (!parar) requestAnimationFrame(desenha); };
+    addEventListener('resize', mede); mede(); requestAnimationFrame(desenha);
+  })();
+</script>
+
+</body>
+</html>
