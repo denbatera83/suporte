@@ -55,6 +55,10 @@
   @media (orientation: portrait) { body.modo-vr #girar { display: grid; } }
   #menu2d { position: fixed; z-index: 15; top: max(12px, env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); font-size: 15px; padding: 8px 14px; }
   body.modo-vr #menu2d { display: none !important; }
+  #erros { position: fixed; z-index: 30; left: max(12px, env(safe-area-inset-left, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); bottom: max(12px, env(safe-area-inset-bottom, 0px)); display: grid; gap: 6px; padding: 12px 14px; border-radius: 14px; background: #3a1020; border: 1px solid #ff7b7b; color: #ffd6d6; font: 600 13px var(--body); max-height: 40vh; overflow: auto; }
+  #erros b { font: 800 16px var(--display); color: #fff; }
+  #erros span { white-space: pre-wrap; word-break: break-word; }
+  #erros button { justify-self: start; font-size: 15px; padding: 6px 14px; }
   #arquivo { position: fixed; left: -9999px; width: 1px; height: 1px; opacity: 0; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
@@ -73,7 +77,8 @@
       <button id="btn-vr">🥽 Entrar no Cardboard</button>
       <button id="btn-tela" class="sec">📱 Ver sem óculos</button>
     </div>
-    <p class="nota">Para escolher: olhe para um botão e segure o olhar até o anel encher, ou aperte o botão do Cardboard. Toque longo na tela centraliza a visão.</p>
+    <p class="nota">Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
+    <p class="nota" id="versao">Ryan VR 1.2</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -81,6 +86,7 @@
 <div id="vr-ui" hidden><div class="linha"></div><button id="vr-sair" aria-label="Sair do modo Cardboard">✕</button><p id="vr-modo" class="vr-aviso" hidden></p><p id="vr-erro" class="vr-aviso erro" hidden></p></div>
 <div id="girar"><div><span class="tel">📱</span>Gire o celular de lado<br><small style="font: 600 15px var(--body); color: var(--muted)">e encaixe no Cardboard com a linha branca no meio</small></div></div>
 <input type="file" id="arquivo" accept="video/*">
+<div id="erros" hidden><b>⚠️ Algo deu errado</b><span id="erros-txt"></span><button id="erros-ok" class="sec">Fechar</button></div>
 
 <script>
 // ---------- modo Cardboard próprio: duas imagens lado a lado + correção da lente ----------
@@ -574,10 +580,10 @@ AFRAME.registerComponent('ryan-vr', {
       cv.addEventListener('touchend', e => {
         const t = e.changedTouches[0], dur = performance.now() - t0, parado = Math.hypot(t.clientX - x0, t.clientY - y0) < 14;
         if (parado && dur > 800) { this.recentrar(); this.aviso('Visão centralizada'); return; }
-        if (parado && dur < 400) this.tocar(true);
+        if (parado && dur < 400) { e.preventDefault(); this.toque(t.clientX, t.clientY); }
       });
       cv.addEventListener('mousedown', e => { x0 = e.clientX; y0 = e.clientY; t0 = performance.now(); });
-      cv.addEventListener('mouseup', e => { if (performance.now() - t0 < 400 && Math.hypot(e.clientX - x0, e.clientY - y0) < 6) this.tocar(true); });
+      cv.addEventListener('mouseup', e => { if (performance.now() - t0 < 400 && Math.hypot(e.clientX - x0, e.clientY - y0) < 6) this.toque(e.clientX, e.clientY); });
     };
     if (sc.canvas) liga(); else sc.addEventListener('renderstart', liga);
     window.addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); this.tocar(true); } });
@@ -772,6 +778,17 @@ AFRAME.registerComponent('ryan-vr', {
   },
 
   // ---------- olhar e toque ----------
+  // toque na tela: no Cardboard vale o centro da vista (botão do óculos); sem óculos, vale o que está embaixo do dedo
+  toque(x, y) {
+    if (this.el.components.cardboard.ativo) return this.tocar(true);
+    const c = this.el.camera; if (!c) return;
+    const r = new THREE.Raycaster(); r.setFromCamera(new THREE.Vector2(x / window.innerWidth * 2 - 1, -(y / window.innerHeight) * 2 + 1), c);
+    if (this.estado === 'baloes') { const b = this.baloes.find(b => r.ray.distanceToPoint(b.g.position) < b.r); if (b) this.estoura(b, true); return; }
+    const h = r.intersectObjects(PAINEIS.filter(p => p.el.object3D.visible).map(p => p.mesh), false)[0];
+    if (!h || !h.uv) return;
+    const p = h.object.userData.painel, b = p.acha(h.uv); if (!b) return;
+    this.bloqueioAte = 0; this.hoverAtual = { p, b }; this.tocar(true);
+  },
   tocar(doToque) {
     const k = this.hoverAtual; if (!k) return;
     if (performance.now() < (this.bloqueioAte || 0)) return;
@@ -790,7 +807,7 @@ AFRAME.registerComponent('ryan-vr', {
       this.avisoTex = tex(800, 120, () => {}); this.avisoMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.075), new THREE.MeshBasicMaterial({ map: this.avisoTex, transparent: true, depthTest: false, toneMapped: false }));
       this.avisoMesh.position.set(0, -0.16, -0.7); this.avisoMesh.renderOrder = 20; this.cam.object3D.add(this.avisoMesh);
     }
-    const c = this.avisoTex.image, g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); caixa(g, 4, 4, c.width - 8, c.height - 8, 50, 'rgba(14,12,26,.88)'); texto(g, this.avisoT, c.width / 2, 78, FONTE(800, 46), '#fff', 'center');
+    const c = this.avisoTex.image, g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); caixa(g, 4, 4, c.width - 8, c.height - 8, 50, 'rgba(14,12,26,.88)'); g.font = FONTE(800, 46); const fs = Math.min(46, Math.floor(46 * (c.width - 70) / Math.max(1, g.measureText(this.avisoT).width))); texto(g, this.avisoT, c.width / 2, 60 + fs * 0.38, FONTE(800, fs), '#fff', 'center');
     this.avisoTex.needsUpdate = true; this.avisoMesh.visible = true;
   },
   recentrar() {
@@ -1170,6 +1187,19 @@ AFRAME.registerComponent('ryan-vr', {
   }
 });
 
+
+// sem giroscópio (ou sensor que não responde): a vista não pode ficar presa olhando o chão
+let sensorOk = false;
+window.addEventListener('deviceorientation', e => { if (e.alpha !== null || e.beta !== null || e.gamma !== null) sensorOk = true; });
+function verificaSensor(avisar) {
+  setTimeout(() => {
+    if (sensorOk) return;
+    const cam = document.getElementById('cam'); if (!cam) return;
+    cam.setAttribute('look-controls', 'magicWindowTrackingEnabled', false);
+    const lc = cam.components['look-controls']; if (lc) { lc.pitchObject.rotation.x = 0; lc.yawObject.rotation.y = 0; }
+    avisar && avisar('Sem sensor de movimento: arraste o dedo para olhar');
+  }, 1500);
+}
 // ---------- tela de entrada ----------
 window.addEventListener('DOMContentLoaded', () => {
   const sc = document.querySelector('a-scene');
@@ -1183,9 +1213,9 @@ window.addEventListener('DOMContentLoaded', () => {
     await pedeSensor(); audio(); tocaTrilha('saguao');
     entrada.hidden = true; document.getElementById('toque-vr').hidden = true; document.getElementById('vr-ui').hidden = false;
     const cb = sc.components.cardboard; cb.distancia = AJ.ipd; cb.lenteLigada(AJ.lente); cb.entrar();
-    prontoVR();
+    prontoVR(); verificaSensor(t => app() && app().aviso(t));
   };
-  const semOculos = async () => { await pedeSensor(); audio(); tocaTrilha('saguao'); entrada.hidden = true; document.getElementById('menu2d').hidden = false; prontoVR(); };
+  const semOculos = async () => { await pedeSensor(); audio(); tocaTrilha('saguao'); entrada.hidden = true; document.getElementById('menu2d').hidden = false; prontoVR(); verificaSensor(t => app() && app().aviso(t)); };
   const sair = () => { sc.components.cardboard.sair(); document.getElementById('vr-ui').hidden = true; entrada.hidden = false; document.getElementById('menu2d').hidden = true; };
   document.getElementById('btn-vr').onclick = entrarVR;
   document.getElementById('btn-tela').onclick = semOculos;
@@ -1198,7 +1228,20 @@ window.addEventListener('DOMContentLoaded', () => {
     if (sc.hasLoaded) setTimeout(go, 0); else sc.addEventListener('loaded', () => setTimeout(go, 0));
   }
   // site de verdade: guarda para abrir sem internet
-  if (location.protocol === 'https:' && !/claude|anthropic|usercontent/.test(location.hostname) && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (location.protocol === 'https:' && !APP && !/claude|anthropic|usercontent/.test(location.hostname) && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+});
+const ERROS = [];
+function mostraErro(msg) {
+  msg = String(msg || 'erro desconhecido').slice(0, 300); if (ERROS.includes(msg)) return; ERROS.push(msg);
+  const box = document.getElementById('erros'); if (!box) return;
+  document.getElementById('erros-txt').textContent = ERROS.slice(-4).join('\n') + '\n(' + navigator.userAgent.replace(/.*(Android [^;]*).*(Chrome\/[0-9]+).*/, '$1 · $2') + ')';
+  if (!document.body.classList.contains('modo-vr')) box.hidden = false;
+}
+window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.filename ? ' · ' + e.filename.split('/').pop() + ':' + e.lineno : '')));
+window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
+document.addEventListener('DOMContentLoaded', () => {
+  const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 1.2' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 

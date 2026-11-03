@@ -22,6 +22,12 @@ Saguão de realidade virtual para **Cardboard**, feito com A-Frame: um deque de 
 - Ajustes: ligar/desligar a mão e o tamanho da imagem da câmera (Automático enche a vista).
 - O Cardboard precisa ter o furo da câmera aberto (a maioria tem).
 
+## Se algo der errado
+- **Sem óculos**, toque direto nos botões, cartões, blocos e balões (como num app normal). No Cardboard, o botão do óculos escolhe o que está no centro da vista.
+- Se o celular não tiver sensor de movimento, o app percebe e passa a usar o dedo para olhar em volta.
+- Qualquer erro aparece numa caixa vermelha na tela, com a versão do Android e do navegador: tire uma foto e mande para o Claude.
+- A versão aparece na tela de entrada (ex.: Ryan VR 1.2 · Chrome 120 · WebGL2).
+
 ## Como usar
 - **App Android:** instale o `RyanVR.apk` (permita "instalar apps desconhecidos"). Tudo funciona sem internet, inclusive o Turbo Noturno e o reconhecimento da mão; o botão voltar do Android sai do jogo e volta para o Ryan VR. Na primeira vez que ligar o Modo Casa, o celular pede a permissão da câmera.
 - **Navegador:** https://raw.githack.com/denbatera83/suporte/ccr-ac78b9fc-ev2jcd/projetos-do-ryan/jogos/ryan-vr/index.html (ou, com o GitHub Pages ligado: https://denbatera83.github.io/suporte/projetos-do-ryan/jogos/ryan-vr/). No Chrome, os três pontinhos mostram **Instalar app**.

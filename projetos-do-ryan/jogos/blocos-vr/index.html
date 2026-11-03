@@ -91,7 +91,7 @@
       <a id="btn-apk" href="BlocosVR.apk" download="BlocosVR.apk">⬇ Baixar APK (Android)</a>
     </div>
     <p id="aviso" role="status"></p>
-    <p class="nota">Cardboard: coloque o celular deitado no óculos depois de tocar no botão. Use uma cadeira que gira para virar até as caixas. Sem óculos: mexa o celular ou arraste o dedo para olhar em volta.</p>
+    <p class="nota">Sem óculos: toque direto nos blocos e nas caixas. Cardboard: coloque o celular deitado no óculos depois de tocar no botão. Use uma cadeira que gira para virar até as caixas. Sem óculos: mexa o celular ou arraste o dedo para olhar em volta.</p>
   </div>
 </div>
 <button id="sair" class="sec" hidden>☰ Menu</button>
@@ -299,10 +299,10 @@ AFRAME.registerComponent('blocos-jogo', {
       cv.addEventListener('touchend', e => {
         const t = e.changedTouches[0], dur = performance.now() - t0, parado = Math.hypot(t.clientX - x0, t.clientY - y0) < 14;
         if (parado && dur > 800) { this.recentrar(); this.mostraMsg('Visão centralizada', 1); som('mira'); return; }
-        if (parado && dur < 350) canvasToque();
+        if (parado && dur < 350) { e.preventDefault(); this.toqueTela(t.clientX, t.clientY) || canvasToque(); }
       });
       cv.addEventListener('mousedown', e => { x0 = e.clientX; y0 = e.clientY; t0 = performance.now(); });
-      cv.addEventListener('mouseup', e => { if (performance.now() - t0 < 350 && Math.hypot(e.clientX - x0, e.clientY - y0) < 6) canvasToque(); });
+      cv.addEventListener('mouseup', e => { if (performance.now() - t0 < 350 && Math.hypot(e.clientX - x0, e.clientY - y0) < 6) this.toqueTela(e.clientX, e.clientY) || canvasToque(); });
     };
     if (sc.canvas) ligaToque(); else sc.addEventListener('renderstart', ligaToque);
     window.addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); canvasToque(); } });
@@ -465,6 +465,17 @@ AFRAME.registerComponent('blocos-jogo', {
     }
   },
 
+  // sem óculos: o toque escolhe o que está embaixo do dedo (no Cardboard, vale o centro da vista)
+  toqueTela(x, y) {
+    if (this.el.components.cardboard && this.el.components.cardboard.ativo) return false;
+    const c = this.el.camera; if (!c) return false;
+    const r = new THREE.Raycaster(); r.setFromCamera(new THREE.Vector2(x / window.innerWidth * 2 - 1, -(y / window.innerHeight) * 2 + 1), c);
+    const alvos = [...this.el.querySelectorAll('.alvo')].map(e => e.object3D);
+    const h = r.intersectObjects(alvos, true)[0]; if (!h) return false;
+    let o = h.object; while (o && !o.el) o = o.parent;
+    if (!o || !o.el) return false;
+    this.acao(o.el); return true;
+  },
   voa(b, destino, dur, fim, arco) {
     const de = b.el.object3D.position.clone();
     this.voos.push({ b, de, destino, dur, t: 0, fim, arco });
@@ -766,6 +777,19 @@ AFRAME.registerComponent('cardboard', {
 });
 
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
+
+// sem giroscópio (ou sensor que não responde): a vista não pode ficar presa olhando o chão
+let sensorOk = false;
+window.addEventListener('deviceorientation', e => { if (e.alpha !== null || e.beta !== null || e.gamma !== null) sensorOk = true; });
+function verificaSensor(avisar) {
+  setTimeout(() => {
+    if (sensorOk) return;
+    const cam = document.getElementById('cam'); if (!cam) return;
+    cam.setAttribute('look-controls', 'magicWindowTrackingEnabled', false);
+    const lc = cam.components['look-controls']; if (lc) { lc.pitchObject.rotation.x = 0; lc.yawObject.rotation.y = 0; }
+    avisar && avisar('Sem sensor de movimento: arraste o dedo para olhar');
+  }, 1500);
+}
 // ---------- tela de início ----------
 window.addEventListener('DOMContentLoaded', () => {
   const sc = document.querySelector('a-scene');
@@ -776,6 +800,7 @@ window.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { document.getElementById('toque').hidden = true; }, 7000);
     som('pega');
     const j = jogo(); if (j && j.estado === 'espera') { j.pontos = 0; j.novoNivel(0); }
+    verificaSensor(t => jogo() && jogo().mostraMsg(t, 3));
   };
   const pedeSensor = async () => { // iPhone pede permissão para usar o giroscópio
     try { if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission(); } catch (e) {}
@@ -797,6 +822,7 @@ window.addEventListener('DOMContentLoaded', () => {
     som('pega'); ligaMusica();
     sc.components.cardboard.entrar();
     const j = jogo(); if (j) j.preparaVR();
+    verificaSensor(t => jogo() && jogo().mostraMsg(t, 3));
   };
   const sairVR = () => {
     sc.components.cardboard.sair(); document.getElementById('vr-ui').hidden = true; inicio.hidden = false; aviso.textContent = '';
@@ -808,7 +834,7 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('som').onclick = musicaOnOff;
   document.getElementById('som').textContent = musicaLigada ? '🔊' : '🔇';
   // site de verdade (https): oferece instalar pelo navegador e baixar o APK; dentro do app ou do Claude, não
-  const site = location.protocol === 'https:' && !/claude|anthropic|usercontent/.test(location.hostname);
+  const site = location.protocol === 'https:' && !/claude|anthropic|usercontent/.test(location.hostname) && !/\bwv\b/.test(navigator.userAgent); // no app não mostra baixar/instalar
   if (site) {
     document.getElementById('baixar').hidden = false;
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

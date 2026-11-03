@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.webkit.PermissionRequest;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import java.io.InputStream;
@@ -29,7 +30,9 @@ public class MainActivity extends Activity {
     private static final int ESCOLHER_VIDEO = 42, PEDIR_CAMERA = 7;
     // as páginas abrem num endereço seguro interno (https://ryan.vr/...) entregue de dentro do app:
     // assim a câmera e o reconhecimento da mão funcionam, sem precisar de internet
-    private static final String CASA = "ryan.vr";
+    // endereço reservado pelo Android para páginas de dentro do app (o mesmo do WebViewAssetLoader oficial)
+    private static final String CASA = "appassets.androidplatform.net";
+    private boolean usouReserva = false;
     private PermissionRequest pedidoCamera;
     private WebView web;
     private FrameLayout raiz;
@@ -68,6 +71,15 @@ public class MainActivity extends Activity {
                     return new WebResourceResponse(tipo(caminho), "UTF-8", 200, "OK", cab, in);
                 } catch (Exception e) {
                     return new WebResourceResponse("text/plain", "UTF-8", 404, "Not Found", new HashMap<String, String>(), null);
+                }
+            }
+            // se a página principal não abrir pelo endereço seguro, abre a cópia de reserva direto dos arquivos
+            @Override
+            public void onReceivedError(WebView v, WebResourceRequest req, WebResourceError err) {
+                if (req.isForMainFrame() && !usouReserva) {
+                    usouReserva = true;
+                    String c = req.getUrl().getPath();
+                    v.loadUrl("file:///android_asset" + (c == null || c.equals("/") ? "/ryan-vr/index.html" : c));
                 }
             }
         });
