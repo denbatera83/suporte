@@ -1,0 +1,17 @@
+{
+  "name": "Blocos VR",
+  "short_name": "Blocos VR",
+  "description": "Jogo de realidade virtual para Cardboard: pegue os blocos com a mão e entregue na caixa da mesma cor.",
+  "lang": "pt-BR",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#101826",
+  "theme_color": "#101826",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

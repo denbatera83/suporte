@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Blocos VR</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#101826">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700&display=swap">
 <style>
@@ -38,6 +44,9 @@
   button.sec { background: var(--panel); color: var(--fg); box-shadow: 0 4px 0 #0a101c; border: 1px solid var(--line); }
   button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
   .nota { font-size: 13px; }
+  .baixar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .baixar a, .baixar button { display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; font: 800 16px var(--display); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; box-shadow: 0 4px 0 #0a101c; }
+  @media (max-width: 420px) { .baixar { grid-template-columns: 1fr; } }
   #aviso { color: var(--yellow); font-weight: 700; }
   #sair { position: fixed; z-index: 15; top: max(12px, env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); font-size: 15px; padding: 8px 14px; }
   #toque { position: fixed; z-index: 14; left: 50%; transform: translateX(-50%); bottom: max(14px, env(safe-area-inset-bottom, 0px)); font-size: 13px; color: var(--muted); background: rgba(16,24,38,.7); padding: 6px 12px; border-radius: 999px; pointer-events: none; text-align: center; max-width: calc(100% - 32px); }
@@ -61,6 +70,10 @@
     <div class="botoes">
       <button id="btn-vr">🥽 Jogar com Cardboard</button>
       <button id="btn-tela" class="sec">📱 Jogar sem óculos</button>
+    </div>
+    <div class="baixar" id="baixar" hidden>
+      <button id="btn-instalar" type="button" hidden>📲 Instalar no celular</button>
+      <a id="btn-apk" href="BlocosVR.apk" download="BlocosVR.apk">⬇ Baixar APK (Android)</a>
     </div>
     <p id="aviso" role="status"></p>
     <p class="nota">Cardboard: coloque o celular deitado no óculos depois de tocar no botão. Use uma cadeira que gira para virar até as caixas. Sem óculos: mexa o celular ou arraste o dedo para olhar em volta.</p>
@@ -506,6 +519,15 @@ window.addEventListener('DOMContentLoaded', () => {
     try { await sc.enterVR(); comecar(); }
     catch (e) { aviso.textContent = 'O modo Cardboard não abriu neste navegador. Abra o arquivo do jogo no Chrome do celular. Por enquanto, jogue sem óculos.'; }
   };
+  // site de verdade (https): oferece instalar pelo navegador e baixar o APK; dentro do app ou do Claude, não
+  const site = location.protocol === 'https:' && !/claude|anthropic|usercontent/.test(location.hostname);
+  if (site) {
+    document.getElementById('baixar').hidden = false;
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+    let pedido = null;
+    window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); pedido = e; document.getElementById('btn-instalar').hidden = false; });
+    document.getElementById('btn-instalar').onclick = async () => { if (!pedido) return; pedido.prompt(); await pedido.userChoice; pedido = null; document.getElementById('btn-instalar').hidden = true; };
+  }
   document.getElementById('sair').onclick = () => { if (sc.is('vr-mode')) sc.exitVR(); inicio.hidden = false; aviso.textContent = ''; };
 });
 })();

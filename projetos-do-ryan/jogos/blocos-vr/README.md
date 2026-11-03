@@ -9,6 +9,13 @@ Jogo de realidade virtual para **Cardboard** no celular, feito com [A-Frame](htt
 - Bloco na caixa errada volta para a mesa. Acertos seguidos dão combo.
 - 3 níveis: 8 blocos; 12 blocos + 1 de ouro (vale em qualquer caixa); 16 blocos + 2 de ouro com as caixas balançando. Estrelas pelo tempo e recorde salvo no celular.
 
+## Link para abrir no navegador
+
+- Na hora: https://raw.githack.com/denbatera83/suporte/ccr-ac78b9fc-ev2jcd/projetos-do-ryan/jogos/blocos-vr/index.html
+- Fixo (depois de ligar o GitHub Pages neste repositório): https://denbatera83.github.io/suporte/projetos-do-ryan/jogos/blocos-vr/
+
+No Chrome, os três pontinhos (⋮) mostram **Instalar app** / **Adicionar à tela inicial**: o jogo vira um ícone no celular e abre em tela cheia, até sem internet. Na tela de início do jogo também há o botão **Baixar APK**.
+
 ## Como abrir no Cardboard
 O modo Cardboard precisa do sensor de movimento do celular, que só funciona quando o jogo é aberto direto no navegador (o link de página do Claude bloqueia o sensor):
 1. Abra o `index.html` no **Chrome do Android** (ou Safari do iPhone) por um endereço `https://` (por exemplo, GitHub Pages).
