@@ -54,6 +54,8 @@
   #vr-ui .linha { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; margin-left: -1px; background: rgba(255,255,255,.35); }
   #vr-ui .linha::after { content: ""; position: absolute; bottom: 10%; left: -6px; width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,.35); }
   #vr-sair { position: absolute; pointer-events: auto; top: max(10px, env(safe-area-inset-top, 0px)); left: max(10px, env(safe-area-inset-left, 0px)); width: 44px; height: 44px; padding: 0; font-size: 20px; border-radius: 50%; background: rgba(16,24,38,.75); color: var(--fg); box-shadow: none; border: 1px solid var(--line); }
+  .vr-aviso { position: absolute; left: 50%; transform: translateX(-50%); bottom: max(10px, env(safe-area-inset-bottom, 0px)); margin: 0; font: 700 12px var(--body); color: var(--muted); background: rgba(16,24,38,.8); padding: 4px 10px; border-radius: 999px; max-width: 90%; text-align: center; }
+  .vr-aviso.erro { bottom: auto; top: max(14px, env(safe-area-inset-top, 0px)); color: #ffb4b4; }
   #girar { position: fixed; inset: 0; z-index: 18; display: none; place-items: center; text-align: center; background: var(--bg); padding: 24px; font: 800 24px var(--display); }
   #girar .tel { font-size: 64px; display: block; margin-bottom: 12px; animation: gira 1.6s ease-in-out infinite; }
   @keyframes gira { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
@@ -91,7 +93,7 @@
 </div>
 <button id="sair" class="sec" hidden>☰ Menu</button>
 <button id="som" class="sec" hidden aria-label="Música">🔊</button>
-<div id="vr-ui" hidden><div class="linha"></div><button id="vr-sair" aria-label="Sair do modo Cardboard">✕</button></div>
+<div id="vr-ui" hidden><div class="linha"></div><button id="vr-sair" aria-label="Sair do modo Cardboard">✕</button><p id="vr-modo" class="vr-aviso" hidden></p><p id="vr-erro" class="vr-aviso erro" hidden></p></div>
 <div id="girar"><div><span class="tel">📱</span>Gire o celular de lado<br><small style="font: 600 15px var(--body); color: var(--muted)">e encaixe no Cardboard com a linha branca no meio</small></div></div>
 <div id="toque" hidden>Olhe para um bloco e segure, ou toque na tela para pegar</div>
 
@@ -646,33 +648,81 @@ AFRAME.registerComponent('cardboard', {
     this.quadCena = new THREE.Scene();
     const q = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.lente); q.frustumCulled = false; this.quadCena.add(q);
     this.tam = new THREE.Vector2();
+    // se o celular não conseguir montar o efeito da lente, cai no modo simples em vez de ficar preto
+    const avisoOrig = r.debug.onShaderError;
+    r.debug.checkShaderErrors = true;
+    r.debug.onShaderError = (gl, programa, vs, fs) => {
+      self.erro('o celular não montou o efeito da lente; usando o modo simples');
+      self.modo = 2; if (self.rt) { self.rt.dispose(); self.rt = null; }
+      const m = document.getElementById('vr-modo'); if (m) { m.textContent = 'Modo simples (sem correção da lente)'; m.hidden = false; }
+      if (avisoOrig) try { avisoOrig(gl, programa, vs, fs); } catch (e) {}
+    };
     r.render = function (cena, camera) {
       if (!self.ativo || cena === self.quadCena || r.xr.isPresenting || r.getRenderTarget()) return orig(cena, camera);
       self.desenha(cena, camera);
     };
   },
+  // modos, do melhor para o mais simples: lente com suavização → lente sem suavização → direto na tela
   desenha(cena, camera) {
+    const r = this.r;
+    if (this.modo === undefined) this.modo = 0;
+    try {
+      if (this.modo < 2) { if (this.desenhaLente(cena, camera)) return; }
+    } catch (e) { this.erro('lente: ' + e.message); this.rebaixa(); }
+    this.desenhaDireto(cena, camera);
+  },
+  rebaixa() {
+    if (this.rt) { this.rt.dispose(); this.rt = null; }
+    this.modo = Math.min(2, (this.modo || 0) + 1); this.conferir = true;
+    if (this.modo === 2) { const a = document.getElementById('vr-modo'); if (a) { a.textContent = 'Modo simples (sem correção da lente)'; a.hidden = false; } }
+  },
+  erro(msg) { const a = document.getElementById('vr-erro'); if (a) { a.textContent = 'Erro: ' + msg; a.hidden = false; } },
+  ajustaCamera(camera, asp) {
+    if (Math.abs(camera.aspect - asp) > 1e-3) { camera.aspect = asp; camera.updateProjectionMatrix(); }
+    camera.updateMatrixWorld();
+    this.estereo.eyeSep = this.distancia;
+    this.estereo.update(camera);
+  },
+  desenhaLente(cena, camera) {
     const r = this.r; r.getDrawingBufferSize(this.tam);
     const W = Math.max(2, Math.floor(this.tam.x)), H = Math.max(2, Math.floor(this.tam.y)), meio = Math.floor(W / 2);
     if (!this.rt || this.rt.width !== W || this.rt.height !== H) {
       if (this.rt) this.rt.dispose();
-      const gl2 = r.capabilities.isWebGL2;
-      this.rt = new THREE.WebGLRenderTarget(W, H, { type: gl2 ? THREE.HalfFloatType : THREE.UnsignedByteType, samples: gl2 ? 4 : 0 });
+      // cor comum (8 bits): todo celular consegue desenhar nela
+      const aa = this.modo === 0 && r.capabilities.isWebGL2 ? 4 : 0;
+      this.rt = new THREE.WebGLRenderTarget(W, H, { type: THREE.UnsignedByteType, format: THREE.RGBAFormat, samples: aa, depthBuffer: true });
       this.lente.uniforms.tDiffuse.value = this.rt.texture;
+      this.conferir = true;
     }
     const asp = meio / H;
-    if (Math.abs(camera.aspect - asp) > 1e-3) { camera.aspect = asp; camera.updateProjectionMatrix(); }
+    this.ajustaCamera(camera, asp);
     this.lente.uniforms.aspecto.value = asp;
-    camera.updateMatrixWorld();
-    this.estereo.eyeSep = this.distancia;
-    this.estereo.update(camera);
     const rt = this.rt;
     rt.scissorTest = true;
     rt.viewport.set(0, 0, meio, H); rt.scissor.set(0, 0, meio, H); r.setRenderTarget(rt); this.orig(cena, this.estereo.cameraL);
     rt.viewport.set(meio, 0, W - meio, H); rt.scissor.set(meio, 0, W - meio, H); r.setRenderTarget(rt); this.orig(cena, this.estereo.cameraR);
     rt.scissorTest = false; rt.viewport.set(0, 0, W, H); rt.scissor.set(0, 0, W, H);
+    // no primeiro quadro, confere se a imagem saiu de verdade (em alguns celulares sai preta)
+    if (this.conferir) {
+      this.conferir = false;
+      const px = new Uint8Array(4);
+      r.readRenderTargetPixels(rt, Math.floor(meio / 2), Math.floor(H / 2), 1, 1, px);
+      const gl = r.getContext(), st = gl.checkFramebufferStatus ? gl.checkFramebufferStatus(gl.FRAMEBUFFER) : gl.FRAMEBUFFER_COMPLETE;
+      if (px[3] === 0 || (st && st !== gl.FRAMEBUFFER_COMPLETE)) { r.setRenderTarget(null); this.rebaixa(); return false; }
+    }
     r.setRenderTarget(null);
     this.orig(this.quadCena, this.quadCam);
+    return true;
+  },
+  desenhaDireto(cena, camera) {
+    // sem imagem escondida: cada olho desenhado direto na sua metade da tela
+    const r = this.r, sz = r.getSize(this.tam), w = sz.x, h = sz.y, meio = w / 2;
+    this.ajustaCamera(camera, meio / h);
+    r.setRenderTarget(null);
+    r.setScissorTest(true);
+    r.setViewport(0, 0, meio, h); r.setScissor(0, 0, meio, h); this.orig(cena, this.estereo.cameraL);
+    r.setViewport(meio, 0, meio, h); r.setScissor(meio, 0, meio, h); this.orig(cena, this.estereo.cameraR);
+    r.setScissorTest(false); r.setViewport(0, 0, w, h); r.setScissor(0, 0, w, h);
   },
   entrar() {
     this.prepara();
@@ -699,6 +749,7 @@ AFRAME.registerComponent('cardboard', {
   }
 });
 
+window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 // ---------- tela de início ----------
 window.addEventListener('DOMContentLoaded', () => {
   const sc = document.querySelector('a-scene');

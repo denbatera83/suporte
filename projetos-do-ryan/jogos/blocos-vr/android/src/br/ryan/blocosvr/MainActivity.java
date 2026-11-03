@@ -26,6 +26,7 @@ public class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         raiz = new FrameLayout(this);
         raiz.setBackgroundColor(Color.rgb(16, 24, 38));
+        WebView.setWebContentsDebuggingEnabled(true); // permite ver erros pelo chrome://inspect no computador
         web = new WebView(this);
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
