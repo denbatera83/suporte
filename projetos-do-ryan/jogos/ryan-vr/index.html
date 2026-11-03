@@ -81,7 +81,7 @@
       <button id="btn-tela" class="sec">📱 Ver sem óculos</button>
     </div>
     <p class="nota">Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 1.3</p>
+    <p class="nota" id="versao">Ryan VR 1.4</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -629,10 +629,13 @@ AFRAME.registerComponent('ryan-vr', {
   // ---------- painéis ----------
   montaPaineis() {
     const self = this;
-    this.pMenu = new Painel('menu', { larg: 0.62, alt: 0.92, ang: -0.75, y: 1.6, raio: 1.55, ppm: 1000, desenhar: (g, p) => self.desenhaMenu(g, p) });
-    this.pCentro = new Painel('centro', { larg: 1.56, alt: 0.98, ang: 0, y: 1.6, raio: 1.55, ppm: 1000, desenhar: (g, p) => self.desenhaCentro(g, p) });
-    this.pLado = new Painel('lado', { larg: 0.62, alt: 0.92, ang: 0.75, y: 1.6, raio: 1.55, ppm: 1000, desenhar: (g, p) => self.desenhaLado(g, p) });
-    this.pDock = new Painel('dock', { larg: 0.88, alt: 0.11, ang: 0, y: 1.0, raio: 1.5, ppm: 1000, desenhar: (g, p) => self.desenhaDock(g, p) });
+    // tudo da "TV" (painéis, barra e moldura) fica num grupo só: dá para colocar a TV em qualquer lugar da casa
+    this.uiRaiz = document.createElement('a-entity'); this.uiRaiz.object3D.position.y = 1.6; this.el.appendChild(this.uiRaiz);
+    const pai = this.uiRaiz;
+    this.pMenu = new Painel('menu', { larg: 0.62, alt: 0.92, ang: -0.75, y: 0, raio: 1.55, ppm: 1000, pai, desenhar: (g, p) => self.desenhaMenu(g, p) });
+    this.pCentro = new Painel('centro', { larg: 1.56, alt: 0.98, ang: 0, y: 0, raio: 1.55, ppm: 1000, pai, desenhar: (g, p) => self.desenhaCentro(g, p) });
+    this.pLado = new Painel('lado', { larg: 0.62, alt: 0.92, ang: 0.75, y: 0, raio: 1.55, ppm: 1000, pai, desenhar: (g, p) => self.desenhaLado(g, p) });
+    this.pDock = new Painel('dock', { larg: 0.88, alt: 0.11, ang: 0, y: -0.6, raio: 1.5, ppm: 1000, pai, desenhar: (g, p) => self.desenhaDock(g, p) });
     // controles do vídeo: presos no "carrinho" (rig), embaixo da vista
     this.pPlayer = new Painel('player', { larg: 1.0, alt: 0.2, ang: 0, y: 0.98, raio: 1.4, ppm: 1000, pai: this.rig, desenhar: (g, p) => self.desenhaPlayer(g, p) });
     this.pPlayer.visivel = false;
@@ -760,7 +763,7 @@ AFRAME.registerComponent('ryan-vr', {
 
   desenhaDock(g, p) {
     caixa(g, 0, 0, p.W, p.H, 30, 'rgba(14,12,26,.92)');
-    const itens = [['inicio', '🏠', () => { this.secao = 'videos'; this.detalhe = null; this.renderTudo(); }], ['centro', '🎯', () => { this.recentrar(); this.aviso('Visão centralizada'); }], ['som', AJ.musica ? '🔊' : '🔇', () => { AJ.musica = !AJ.musica; salva(); volumeMusica(); this.renderTudo(); }], ['casa', '📷', () => this.ligarCasa(!this.casa)], ['ajustes', '⚙️', () => { this.secao = 'ajustes'; this.detalhe = null; this.renderTudo(); }]];
+    const itens = [['inicio', '🏠', () => { this.secao = 'videos'; this.detalhe = null; this.renderTudo(); }], ['centro', '🎯', () => { this.recentrar(); this.aviso('Visão centralizada'); }], ['som', AJ.musica ? '🔊' : '🔇', () => { AJ.musica = !AJ.musica; salva(); volumeMusica(); this.renderTudo(); }], ['casa', '📷', () => this.ligarCasa(!this.casa)], ['colocar', '📍', () => this.comecaPosicionar()], ['ajustes', '⚙️', () => { this.secao = 'ajustes'; this.detalhe = null; this.renderTudo(); }]];
     itens.forEach(([id, ic, f], i) => { const x = 20 + i * 104; const hv = p.botao('d-' + id, x, 12, 86, 86, f); caixa(g, x, 12, 86, 86, 22, hv ? UI.acc : id === 'casa' && this.casa ? 'rgba(46,212,122,.45)' : 'rgba(255,255,255,.06)'); texto(g, ic, x + 43, 72, FONTE(800, 42), UI.txt, 'center'); });
     const d = new Date(); texto(g, `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`, p.W - 40, 72, FONTE(800, 40), UI.txt, 'right');
   },
@@ -785,6 +788,7 @@ AFRAME.registerComponent('ryan-vr', {
   // ---------- olhar e toque ----------
   // toque na tela: no Cardboard vale o centro da vista (botão do óculos); sem óculos, vale o que está embaixo do dedo
   toque(x, y) {
+    if (this.posicionando) return this.fixaPosicao();
     if (this.el.components.cardboard.ativo) return this.tocar(true);
     const c = this.el.camera; if (!c) return;
     const r = new THREE.Raycaster(); r.setFromCamera(new THREE.Vector2(x / window.innerWidth * 2 - 1, -(y / window.innerHeight) * 2 + 1), c);
@@ -794,7 +798,28 @@ AFRAME.registerComponent('ryan-vr', {
     const p = h.object.userData.painel, b = p.acha(h.uv); if (!b) return;
     this.bloqueioAte = 0; this.hoverAtual = { p, b }; this.tocar(true);
   },
+  // ---------- colocar a TV onde você quiser na casa ----------
+  comecaPosicionar() {
+    this.posicionando = { t0: performance.now() };
+    this.aviso('Vire para onde quer a TV e aperte (ou faça a pinça)');
+  },
+  fixaPosicao() {
+    if (!this.posicionando || performance.now() - this.posicionando.t0 < 700) return;
+    this.posicionando = null; som('abre'); this.aviso('TV colocada aqui!');
+    this.bloqueioAte = performance.now() + 900; this.dirTrava = new THREE.Vector3(); this.cam.object3D.getWorldDirection(this.dirTrava);
+  },
+  passoPosicionar(dt) {
+    const d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d);
+    const yaw = Math.atan2(d.x, d.z), pitch = Math.asin(Math.max(-1, Math.min(1, -d.y)));
+    const o = this.uiRaiz.object3D, olho = this.cam.object3D.getWorldPosition(new THREE.Vector3()).y;
+    const k = Math.min(1, dt * 6);
+    o.rotation.y += Math.atan2(Math.sin(yaw - o.rotation.y), Math.cos(yaw - o.rotation.y)) * k;
+    o.position.y += (olho + Math.max(-0.7, Math.min(0.9, Math.tan(pitch) * 1.55)) - o.position.y) * k;
+    this.anelProgresso(0);
+    if (performance.now() - this.posicionando.t0 > 15000) this.fixaPosicao(); // fixa sozinho depois de 15 s
+  },
   tocar(doToque) {
+    if (this.posicionando) return this.fixaPosicao();
     const k = this.hoverAtual; if (!k) return;
     if (performance.now() < (this.bloqueioAte || 0)) return;
     this.doToque = doToque; som('clique'); this.bloqueioAte = performance.now() + 900;
@@ -874,7 +899,7 @@ AFRAME.registerComponent('ryan-vr', {
   // ---------- a TV na sala (moldura, brilho e tela) ----------
   montaTV() {
     if (this.tv) return;
-    const g = new THREE.Group(); g.position.y = 1.6; this.el.object3D.add(g);
+    const g = new THREE.Group(); this.uiRaiz.object3D.add(g); // moldura acompanha a TV quando você muda ela de lugar
     const moldura = new THREE.Mesh(geoCurva(1.66, 1.06, 1.57, 36), new THREE.MeshStandardMaterial({ color: 0x0c0c10, roughness: 0.35, metalness: 0.6, side: THREE.DoubleSide }));
     g.add(moldura);
     const aura = new THREE.Mesh(geoCurva(2.1, 1.45, 1.6, 24), new THREE.MeshBasicMaterial({ map: tex(64, 64, (c, w, h) => { const gr = c.createRadialGradient(w / 2, h / 2, 4, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(143,123,255,.55)'); gr.addColorStop(1, 'rgba(143,123,255,0)'); c.fillStyle = gr; c.fillRect(0, 0, w, h); }), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
@@ -1193,6 +1218,13 @@ AFRAME.registerComponent('ryan-vr', {
     const dt = Math.min(0.05, (dtMs || 16) / 1000);
     this.passoVeu(dt);
     this.detectaMao();
+    if (this.posicionando) { // enquanto coloca a TV, nada é apertado sem querer
+      this.passoPosicionar(dt);
+      if (MAO.pincou) { MAO.pincou = false; this.fixaPosicao(); }
+      this.desenhaMao();
+      if (this.avisoMesh && this.avisoMesh.visible && performance.now() > this.avisoAte) this.avisoMesh.visible = false;
+      return;
+    }
     // apontador: a mão (Modo Casa) tem prioridade; sem mão, vale o olhar
     let atual = null; this.fonte = 'olhar';
     const raio = this.estado !== 'baloes' ? this.raioDoDedo() : null;
@@ -1304,7 +1336,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 1.3' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 1.4' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 
