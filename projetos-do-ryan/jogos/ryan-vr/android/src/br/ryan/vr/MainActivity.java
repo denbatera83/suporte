@@ -177,7 +177,13 @@ public class MainActivity extends Activity {
     @Override
     public void onBackPressed() {
         if (telaCheia != null) { raiz.removeView(telaCheia); telaCheia = null; if (avisoSaida != null) avisoSaida.onCustomViewHidden(); return; }
-        if (web.canGoBack()) { web.goBack(); return; } // volta do jogo para o Ryan VR
-        super.onBackPressed();
+        // dentro de um jogo do Ryan VR, o voltar abre a pausa (e, de novo, sai do jogo)
+        web.evaluateJavascript("(window.__voltar && window.__voltar()) ? 1 : 0", new android.webkit.ValueCallback<String>() {
+            @Override public void onReceiveValue(String v) {
+                if ("1".equals(v)) return;
+                if (web.canGoBack()) { web.goBack(); return; } // volta do jogo para o Ryan VR
+                finish();
+            }
+        });
     }
 }

@@ -82,7 +82,7 @@
       <button id="btn-tela" class="sec">📱 Ver sem óculos</button>
     </div>
     <p class="nota">Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 1.6</p>
+    <p class="nota" id="versao">Ryan VR 1.7</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -873,12 +873,13 @@ AFRAME.registerComponent('ryan-vr', {
   // toque na tela: no Cardboard vale o centro da vista (botão do óculos); sem óculos, vale o que está embaixo do dedo
   toque(x, y) {
     if (this.posicionando) return this.fixaPosicao();
-    if (this.estado === 'alvos') return this.atiraOlhar(x, y);
-    if (this.estado === 'cubos') return;
+    if (this.pausaAberta && this.el.components.cardboard.ativo) return this.tocar(true);
+    if (!this.pausaAberta && this.estado === 'alvos') return this.atiraOlhar(x, y);
+    if (!this.pausaAberta && this.estado === 'cubos') return;
     if (this.el.components.cardboard.ativo) return this.tocar(true);
     const c = this.el.camera; if (!c) return;
     const r = new THREE.Raycaster(); r.setFromCamera(new THREE.Vector2(x / window.innerWidth * 2 - 1, -(y / window.innerHeight) * 2 + 1), c);
-    if (this.estado === 'baloes') { const b = this.baloes.find(b => r.ray.distanceToPoint(b.g.position) < b.r); if (b) this.estoura(b, true); return; }
+    if (this.estado === 'baloes' && !this.pausaAberta) { const b = this.baloes.find(b => r.ray.distanceToPoint(b.g.position) < b.r); if (b) this.estoura(b, true); return; }
     const h = r.intersectObjects(PAINEIS.filter(p => p.el.object3D.visible).map(p => p.mesh), false)[0];
     if (!h || !h.uv) return;
     const p = h.object.userData.painel, b = p.acha(h.uv); if (!b) return;
@@ -2071,6 +2072,58 @@ AFRAME.registerComponent('ryan-vr', {
     });
   },
 
+  // ---------- pausa: olhe para baixo durante o jogo (ou aperte voltar) ----------
+  emJogo() { return ['baloes', 'corrida', 'cubos', 'alvos'].includes(this.estado); },
+  abrePausa() {
+    if (!this.emJogo() || this.pausaAberta) return;
+    if (!this.pPausa) {
+      this.pausaRaiz = document.createElement('a-entity'); this.el.appendChild(this.pausaRaiz);
+      this.pPausa = new Painel('pausa', { larg: 0.86, alt: 0.4, ang: 0, y: 0, raio: 1.0, ppm: 1000, inclina: -0.75, pai: this.pausaRaiz, desenhar: (g, p) => this.desenhaPausa(g, p) });
+      this.pPausa.visivel = false;
+    }
+    const o = this.cam.object3D.getWorldPosition(new THREE.Vector3()), d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d);
+    const r = this.pausaRaiz.object3D; r.position.set(o.x, 0, o.z); r.rotation.y = Math.atan2(d.x, d.z);
+    this.pPausa.el.object3D.position.y = o.y;
+    this.pausaAberta = true; this.pausaT = 0; this.pPausa.visivel = true; this.pPausa.render();
+    this.bloqueioAte = performance.now() + 500;
+    // o placar, as espadas e as pistolas saem da frente do menu
+    this.hudsPausa = [this.balHud, this.crHud, this.ctHud, this.alHud].filter(h => h && h.visible); this.hudsPausa.forEach(h => h.visible = false);
+    if (this.estado === 'cubos') this.ct.espadas.forEach(e => { e.g.visible = false; e.rastro.visible = false; });
+    if (this.estado === 'alvos') this.al.armas.forEach(a => { a.g.visible = a.laser.visible = a.anel.visible = false; });
+    if (this.estado === 'corrida') this.motor(false);
+    if (this.estado === 'cubos') this.batida(false);
+    som('clique');
+  },
+  fechaPausa() {
+    if (!this.pausaAberta) return;
+    this.pausaAberta = false; if (this.pPausa) this.pPausa.visivel = false;
+    (this.hudsPausa || []).forEach(h => h.visible = true); this.hudsPausa = null;
+    if (this.estado === 'corrida' && !this.cr.fim) this.motor(true);
+    if (this.estado === 'cubos' && !this.ct.fim) { this.batida(true, 112); this.ct.ultBat = -1; } // a música recomeça; os cubos voltam depois de um compasso
+  },
+  sairDoJogo() {
+    const e = this.estado; this.fechaPausa(); this.olhaBaixo = -2; // não reabre durante a saída
+    if (e === 'corrida') this.motor(false);
+    ({ baloes: () => this.sairBaloes(), corrida: () => this.sairCorrida(), cubos: () => this.sairCubos(), alvos: () => this.sairAlvos() })[e]();
+  },
+  desenhaPausa(g, p) {
+    caixa(g, 0, 0, p.W, p.H, 36, UI.fundo);
+    texto(g, '⏸ Jogo pausado', p.W / 2, 72, FONTE_T(50), UI.txt, 'center');
+    const hv1 = p.botao('continuar', 40, 120, 370, 230, () => this.fechaPausa());
+    caixa(g, 40, 120, 370, 230, 30, hv1 ? '#ffc58a' : UI.acc2); texto(g, '▶ Continuar', 225, 250, FONTE(800, 40), '#120d2e', 'center');
+    const hv2 = p.botao('sairjogo', 450, 120, 370, 230, () => this.sairDoJogo());
+    caixa(g, 450, 120, 370, 230, 30, hv2 ? '#ff8a9a' : '#e5485f'); texto(g, '🏠 Sair do jogo', 635, 250, FONTE(800, 40), '#fff', 'center');
+  },
+  passoPausa(dt) {
+    // dica no começo de cada jogo
+    if (this.emJogo() && this.estado !== this.estadoDica) { this.estadoDica = this.estado; this.dicaEm = performance.now() + 4500; }
+    if (!this.emJogo()) { this.estadoDica = null; if (this.pausaAberta) this.fechaPausa(); return; }
+    if (this.dicaEm && performance.now() > this.dicaEm) { this.dicaEm = 0; this.aviso('⏸ Olhe para baixo para pausar ou sair'); }
+    const d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d);
+    const desce = Math.asin(Math.max(-1, Math.min(1, d.y))); // olhando para baixo = positivo
+    if (!this.pausaAberta) { this.olhaBaixo = desce > 0.78 ? (this.olhaBaixo || 0) + dt : 0; if (this.olhaBaixo > 0.4) this.abrePausa(); }
+    else { this.pausaT += dt; this.olhaCima = desce < 0.3 ? (this.olhaCima || 0) + dt : 0; if (this.olhaCima > 1.2 && this.pausaT > 1) this.fechaPausa(); }
+  },
   // ---------- transição suave (escurece e clareia) ----------
   transicao(meio) {
     if (!this.veu) {
@@ -2105,8 +2158,9 @@ AFRAME.registerComponent('ryan-vr', {
     }
     // apontador: a mão (Modo Casa) tem prioridade; sem mão, vale o olhar
     let atual = null; this.fonte = 'olhar';
-    const raio = !['baloes', 'corrida', 'cubos', 'alvos'].includes(this.estado) ? this.raioDoDedo() : null;
-    if (this.estado !== 'baloes') this.pontoDedo = null;
+    this.passoPausa(dt);
+    const raio = (!this.emJogo() || this.pausaAberta) ? this.raioDoDedo() : null;
+    if (this.estado !== 'baloes' || this.pausaAberta) this.pontoDedo = null;
     if (raio) {
       this.fonte = 'mao';
       if (!this.rcMao) this.rcMao = new THREE.Raycaster();
@@ -2135,10 +2189,12 @@ AFRAME.registerComponent('ryan-vr', {
     } else if (!atual) this.anelProgresso(0);
     if (this.avisoMesh && this.avisoMesh.visible && performance.now() > this.avisoAte) this.avisoMesh.visible = false;
     if (this.camPlano && !AJ.camFov) this.ajustaPlano(); // acompanha a troca de tela/olhos
-    if (this.estado === 'baloes') this.passoBaloes(dt);
-    if (this.estado === 'corrida') this.passoCorrida(dt);
-    if (this.estado === 'cubos') this.passoCubos(dt);
-    if (this.estado === 'alvos') this.passoAlvos(dt);
+    if (!this.pausaAberta) {
+      if (this.estado === 'baloes') this.passoBaloes(dt);
+      if (this.estado === 'corrida') this.passoCorrida(dt);
+      if (this.estado === 'cubos') this.passoCubos(dt);
+      if (this.estado === 'alvos') this.passoAlvos(dt);
+    }
     this.passoFx(dt);
     this.desenhaMao();
     if (this.orbes && this.saguao.visible) this.orbes.forEach(o => { o.position.y = 3.6 + Math.sin(time / 900 + o.userData.f) * 0.35; });
@@ -2159,6 +2215,13 @@ AFRAME.registerComponent('ryan-vr', {
 });
 
 
+// botão voltar do celular: no jogo abre a pausa; com a pausa aberta, sai do jogo
+window.__voltar = () => {
+  const s = document.querySelector('a-scene'), c = s && s.components['ryan-vr']; if (!c) return false;
+  if (c.emJogo()) { if (c.pausaAberta) c.sairDoJogo(); else c.abrePausa(); return true; }
+  if (c.estado === 'baloes-fim') { ({ corrida: 'sairCorrida', cubos: 'sairCubos', alvos: 'sairAlvos' })[c.fimDe] ? c[({ corrida: 'sairCorrida', cubos: 'sairCubos', alvos: 'sairAlvos' })[c.fimDe]]() : c.sairBaloes(); return true; }
+  return false;
+};
 // sem giroscópio (ou sensor que não responde): a vista não pode ficar presa olhando o chão
 let sensorOk = false;
 window.addEventListener('deviceorientation', e => { if (e.alpha !== null || e.beta !== null || e.gamma !== null) sensorOk = true; });
@@ -2218,7 +2281,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 1.6' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 1.7' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 
