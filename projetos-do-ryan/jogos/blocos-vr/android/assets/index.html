@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Blocos VR</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@500;700&display=swap">
+<style>
+  /* Layout: tela cheia com a cena 3D; um painel de início por cima, centralizado */
+  :root {
+    --bg: #101826; --panel: #182338; --line: #2b3a57; --fg: #f3f6ff; --muted: #a6b3cf;
+    --red: #ff4d4d; --blue: #3d8bff; --yellow: #ffd23d; --green: #2ed47a; --accent: #ff8a3d;
+    --display: "Baloo 2", "Trebuchet MS", system-ui, sans-serif; --body: "Nunito", system-ui, sans-serif;
+    color-scheme: dark;
+  }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); overflow: hidden; }
+  #inicio { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; overflow-y: auto;
+    padding-block: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+    background: radial-gradient(120% 90% at 50% 0%, rgba(61,139,255,.25), rgba(16,24,38,.96) 60%); }
+  .cartao { width: min(520px, 100%); display: grid; gap: 14px; }
+  .blocos { display: flex; gap: 8px; }
+  .blocos i { width: 26px; height: 26px; border-radius: 6px; display: grid; place-items: center; font-style: normal; font-size: 15px; color: #0b1220; font-weight: 800; transform: rotate(-6deg); }
+  .blocos i:nth-child(2) { transform: rotate(5deg) translateY(4px); } .blocos i:nth-child(4) { transform: rotate(8deg); }
+  h1 { font-family: var(--display); font-weight: 800; font-size: clamp(44px, 12vw, 72px); line-height: .9; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+  h1 em { font-style: normal; color: var(--accent); }
+  p { margin: 0; line-height: 1.5; color: var(--muted); }
+  .passos { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .passos li { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; line-height: 1.4; }
+  .passos b { color: var(--fg); }
+  .passos span.ic { font-size: 22px; line-height: 1; }
+  .botoes { display: grid; gap: 10px; }
+  button { font: 800 20px var(--display); border: 0; border-radius: 14px; padding: 14px 18px; cursor: pointer; color: #1a0e02; background: var(--accent); box-shadow: 0 4px 0 #b4561a; transition: transform .1s; }
+  button:active { transform: translateY(3px); box-shadow: 0 1px 0 #b4561a; }
+  button.sec { background: var(--panel); color: var(--fg); box-shadow: 0 4px 0 #0a101c; border: 1px solid var(--line); }
+  button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+  .nota { font-size: 13px; }
+  #aviso { color: var(--yellow); font-weight: 700; }
+  #sair { position: fixed; z-index: 15; top: max(12px, env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); font-size: 15px; padding: 8px 14px; }
+  #toque { position: fixed; z-index: 14; left: 50%; transform: translateX(-50%); bottom: max(14px, env(safe-area-inset-bottom, 0px)); font-size: 13px; color: var(--muted); background: rgba(16,24,38,.7); padding: 6px 12px; border-radius: 999px; pointer-events: none; text-align: center; max-width: calc(100% - 32px); }
+  .a-enter-vr { bottom: max(20px, env(safe-area-inset-bottom, 0px)) !important; right: max(20px, env(safe-area-inset-right, 0px)) !important; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<script src="aframe-v1.6.0.min.js"></script>
+</head>
+<body>
+
+<div id="inicio">
+  <div class="cartao">
+    <div class="blocos" aria-hidden="true"><i style="background:var(--red)">●</i><i style="background:var(--blue)">▲</i><i style="background:var(--yellow)">■</i><i style="background:var(--green)">★</i></div>
+    <h1>Blocos <em>VR</em></h1>
+    <p>Pegue os blocos coloridos com a mão e entregue cada um na caixa da mesma cor. São 3 níveis, cada vez com mais blocos.</p>
+    <ul class="passos">
+      <li><span class="ic">👀</span><span><b>Olhe para um bloco</b> e segure o olhar até o anel encher. A mão pega o bloco.</span></li>
+      <li><span class="ic">🖐️</span><span><b>Vire a cabeça até a caixa da mesma cor</b> (ela fica dos lados) e segure o olhar para soltar.</span></li>
+      <li><span class="ic">🔘</span><span>Com pressa? <b>Aperte o botão do Cardboard</b> (ou toque na tela) para pegar e soltar na hora.</span></li>
+    </ul>
+    <div class="botoes">
+      <button id="btn-vr">🥽 Jogar com Cardboard</button>
+      <button id="btn-tela" class="sec">📱 Jogar sem óculos</button>
+    </div>
+    <p id="aviso" role="status"></p>
+    <p class="nota">Cardboard: coloque o celular deitado no óculos depois de tocar no botão. Use uma cadeira que gira para virar até as caixas. Sem óculos: mexa o celular ou arraste o dedo para olhar em volta.</p>
+  </div>
+</div>
+<button id="sair" class="sec" hidden>☰ Menu</button>
+<div id="toque" hidden>Olhe para um bloco e segure, ou toque na tela para pegar</div>
+
+<script>
+// =====================================================================
+// BLOCOS VR — jogo de realidade virtual para Cardboard (A-Frame)
+// =====================================================================
+(function () {
+const CORES = [
+  { id: 'vermelho', nome: 'VERMELHA', hex: '#ff4d4d', simbolo: '●' },
+  { id: 'azul', nome: 'AZUL', hex: '#3d8bff', simbolo: '▲' },
+  { id: 'amarelo', nome: 'AMARELA', hex: '#ffd23d', simbolo: '■' },
+  { id: 'verde', nome: 'VERDE', hex: '#2ed47a', simbolo: '★' }
+];
+const NIVEIS = [
+  { blocos: 8, ouro: 0, gira: 0, estrelas: [60, 90] },
+  { blocos: 12, ouro: 1, gira: 0, estrelas: [90, 130] },
+  { blocos: 16, ouro: 2, gira: 0.12, estrelas: [130, 180] }
+];
+const FUSE_MS = 1100;
+
+// ---------- som (WebAudio, liga no primeiro toque) ----------
+let actx = null;
+function som(tipo) {
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    const t = actx.currentTime;
+    const nota = (f, d, at, tp = 'triangle', vol = 0.18) => {
+      const o = actx.createOscillator(), g = actx.createGain(); o.type = tp; o.frequency.value = f;
+      g.gain.setValueAtTime(0, t + at); g.gain.linearRampToValueAtTime(vol, t + at + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + at + d);
+      o.connect(g); g.connect(actx.destination); o.start(t + at); o.stop(t + at + d + 0.05);
+    };
+    if (tipo === 'pega') { nota(520, 0.12, 0); nota(780, 0.14, 0.06); }
+    if (tipo === 'acerto') { nota(660, 0.2, 0); nota(880, 0.2, 0.08); nota(1320, 0.3, 0.16); }
+    if (tipo === 'erro') { nota(180, 0.25, 0, 'square', 0.08); nota(150, 0.3, 0.12, 'square', 0.08); }
+    if (tipo === 'ouro') { [660, 830, 990, 1320, 1660].forEach((f, i) => nota(f, 0.25, i * 0.06)); }
+    if (tipo === 'nivel') { [523, 659, 784, 1046, 784, 1046].forEach((f, i) => nota(f, 0.3, i * 0.12)); }
+    if (tipo === 'mira') nota(1200, 0.05, 0, 'sine', 0.05);
+  } catch (e) {}
+}
+const vibrar = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+
+// ---------- texturas desenhadas no canvas ----------
+function tex(w, h, desenha) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  desenha(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  t.userData = { canvas: c, desenha };
+  return t;
+}
+function redesenha(t, desenha) { const c = t.userData.canvas, g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height); desenha(g, c.width, c.height); t.needsUpdate = true; }
+function texBloco(cor, ouro) {
+  const t = tex(128, 128, (g, w, h) => {
+    g.fillStyle = ouro ? '#ffb300' : cor.hex; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(0,0,0,.22)'; g.lineWidth = 10; g.strokeRect(5, 5, w - 10, h - 10);
+    g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(12, 12, w - 24, 14);
+    g.fillStyle = ouro ? '#fff6c8' : 'rgba(10,15,30,.75)'; g.font = '800 64px "Baloo 2", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(ouro ? '★' : cor.simbolo, w / 2, h / 2 + 6);
+  });
+  TEX_BLOCOS.push(() => redesenha(t, t.userData.desenha));
+  return t;
+}
+const ROTULOS = [], TEX_BLOCOS = [];
+if (document.fonts) document.fonts.ready.then(() => { ROTULOS.forEach(f => f()); TEX_BLOCOS.forEach(f => f()); });
+function rotulo(texto, opt = {}) {
+  const w = opt.w || 512, h = opt.h || 128;
+  const desenha = (g, W, H) => {
+    if (opt.fundo !== false) { g.fillStyle = opt.fundo || 'rgba(16,24,38,.86)'; const r = 26; g.beginPath(); g.roundRect(4, 4, W - 8, H - 8, r); g.fill(); if (opt.borda) { g.lineWidth = 8; g.strokeStyle = opt.borda; g.stroke(); } }
+    g.fillStyle = opt.cor || '#f3f6ff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    const linhas = String(texto).split('\n'), fs = opt.fs || 58;
+    g.font = `800 ${fs}px "Baloo 2", sans-serif`;
+    linhas.forEach((l, i) => g.fillText(l, W / 2, H / 2 + (i - (linhas.length - 1) / 2) * fs * 1.05 + 4));
+  };
+  const t = tex(w, h, desenha);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(opt.largura || 0.6, (opt.largura || 0.6) * h / w), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, toneMapped: false }));
+  m.userData.troca = (novo, o2 = {}) => { Object.assign(opt, o2); texto = novo; redesenha(t, desenha); };
+  ROTULOS.push(() => redesenha(t, desenha));
+  return m;
+}
+
+// ---------- mão 3D (presa na câmera) ----------
+function criaMao() {
+  const pele = new THREE.MeshStandardMaterial({ color: 0xf1c27d, roughness: 0.7 });
+  const punho = new THREE.MeshStandardMaterial({ color: 0xff8a3d, roughness: 0.6 });
+  const g = new THREE.Group();
+  const palma = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.026, 0.09), pele); g.add(palma);
+  const manga = new THREE.Mesh(new THREE.CylinderGeometry(0.036, 0.038, 0.035, 16), punho); manga.rotation.x = Math.PI / 2; manga.position.z = 0.06; g.add(manga);
+  const pulso = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.033, 0.03, 12), pele); pulso.rotation.x = Math.PI / 2; pulso.position.z = 0.035; g.add(pulso);
+  const dedos = [];
+  const fazDedo = (x, z, comp, rotY, polegar) => {
+    const base = new THREE.Group(); base.position.set(x, 0, z); base.rotation.y = rotY; g.add(base);
+    const seg = (pai, len) => {
+      const piv = new THREE.Group(); pai.add(piv);
+      const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.0095, len, 4, 8), pele); m.rotation.x = Math.PI / 2; m.position.z = -len / 2 - 0.006; piv.add(m);
+      const ponta = new THREE.Group(); ponta.position.z = -len - 0.008; piv.add(ponta);
+      return { piv, ponta };
+    };
+    const s1 = seg(base, comp * 0.55), s2 = seg(s1.ponta, comp * 0.45);
+    dedos.push({ s1: s1.piv, s2: s2.piv, polegar, base });
+  };
+  fazDedo(-0.03, -0.045, 0.06, 0.05, false); fazDedo(-0.01, -0.047, 0.068, 0, false);
+  fazDedo(0.012, -0.046, 0.064, -0.03, false); fazDedo(0.032, -0.042, 0.05, -0.08, false);
+  fazDedo(0.05, 0.0, 0.05, -0.9, true); // polegar
+  const pegada = new THREE.Group(); pegada.position.set(0, -0.06, -0.075); g.add(pegada); // onde o bloco fica
+  return { g, dedos, pegada, pose: 0, poseAlvo: 0, aponta: 0, apontaAlvo: 0 };
+}
+function poseMao(m, dt) {
+  m.pose += (m.poseAlvo - m.pose) * Math.min(1, dt * 12);
+  m.aponta += (m.apontaAlvo - m.aponta) * Math.min(1, dt * 10);
+  m.dedos.forEach((d, i) => {
+    let c = m.pose;
+    if (i === 1) c = Math.max(c * (1 - m.aponta), 0);                 // indicador aponta
+    else if (!d.polegar) c = Math.max(c, m.aponta * 0.9);              // os outros dobram ao apontar
+    const ang = c * (d.polegar ? 0.9 : 1.35);
+    d.s1.rotation.x = -ang; d.s2.rotation.x = -ang * 0.9;
+    if (d.polegar) d.base.rotation.x = -c * 0.4;
+  });
+}
+
+// ---------- componente principal ----------
+AFRAME.registerComponent('blocos-jogo', {
+  init() {
+    const sc = this.el;
+    this.estado = 'espera';
+    this.nivel = 0; this.pontos = 0; this.combo = 0; this.tempo = 0;
+    this.blocos = []; this.cestas = []; this.voos = []; this.confete = []; this.segurando = null; this.mira = null; this.fuseT0 = 0;
+    this.mundo = new THREE.Group(); sc.object3D.add(this.mundo);
+    this.alvos = new THREE.Group(); // só para organizar
+    this.cam = document.getElementById('cam');
+    this.cursor = document.getElementById('cursor');
+    this.anel = document.getElementById('anel');
+    this.montaCenario();
+    this.mao = criaMao();
+    this.mao.g.position.set(0.15, -0.17, -0.5); this.mao.g.rotation.set(0.55, -0.4, 0.2);
+    this.cam.object3D.add(this.mao.g);
+    // placar e mensagens presos na visão
+    this.hud = rotulo('', { largura: 0.42, w: 512, h: 96, fs: 46 }); this.hud.position.set(0, 0.22, -0.75); this.cam.object3D.add(this.hud);
+    this.msg = rotulo('', { largura: 0.5, w: 640, h: 200, fs: 64 }); this.msg.position.set(0, 0.05, -0.74); this.msg.visible = false; this.cam.object3D.add(this.msg);
+    this.msgAte = 0;
+    // mira olhando: o cursor emite eventos
+    this.cursor.addEventListener('mouseenter', e => { this.mira = e.detail.intersectedEl; this.fuseT0 = 0; this.atualizaMaoMira(); });
+    this.cursor.addEventListener('mouseleave', () => { this.mira = null; this.fuseT0 = 0; this.atualizaMaoMira(); this.anelProgresso(0); });
+    this.cursor.addEventListener('fusing', () => { this.fuseT0 = performance.now(); });
+    this.cursor.addEventListener('click', e => { this.fuseT0 = 0; this.anelProgresso(0); this.acao(e.detail.intersectedEl); });
+    // botão do Cardboard / toque na tela / teclado
+    const canvasToque = () => this.acao(this.mira);
+    let t0 = 0, x0 = 0, y0 = 0;
+    const ligaToque = () => {
+      const cv = sc.canvas; if (!cv || cv.__ligado) return; cv.__ligado = true;
+      cv.addEventListener('touchstart', e => { t0 = performance.now(); x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+      cv.addEventListener('touchend', e => { const t = e.changedTouches[0]; if (performance.now() - t0 < 350 && Math.hypot(t.clientX - x0, t.clientY - y0) < 14) canvasToque(); });
+      cv.addEventListener('mousedown', e => { x0 = e.clientX; y0 = e.clientY; t0 = performance.now(); });
+      cv.addEventListener('mouseup', e => { if (performance.now() - t0 < 350 && Math.hypot(e.clientX - x0, e.clientY - y0) < 6) canvasToque(); });
+    };
+    if (sc.canvas) ligaToque(); else sc.addEventListener('renderstart', ligaToque);
+    window.addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); canvasToque(); } });
+    sc.addEventListener('enter-vr', () => { const s = sc.xrSession; if (s) s.addEventListener('select', canvasToque); });
+  },
+
+  montaCenario() {
+    const M = this.mundo;
+    // céu em degradê e estrelas
+    const ceu = new THREE.Mesh(new THREE.SphereGeometry(60, 32, 16), new THREE.MeshBasicMaterial({ side: THREE.BackSide, map: tex(16, 256, (g, w, h) => {
+      const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, '#0d1b3d'); gr.addColorStop(0.42, '#3a4f9e'); gr.addColorStop(0.5, '#ff9e6b'); gr.addColorStop(0.56, '#40306a'); gr.addColorStop(1, '#0b0f1e');
+      g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    }) }));
+    M.add(ceu);
+    const pos = []; for (let i = 0; i < 500; i++) { const a = Math.random() * Math.PI * 2, y = 0.15 + Math.random() * 0.85, r = 50; pos.push(Math.cos(a) * r * Math.sqrt(1 - y * y), y * r, Math.sin(a) * r * Math.sqrt(1 - y * y)); }
+    const eg = new THREE.BufferGeometry(); eg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    M.add(new THREE.Points(eg, new THREE.PointsMaterial({ color: 0xffffff, size: 0.18, sizeAttenuation: true })));
+    // ilha flutuante com piso quadriculado
+    const piso = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 2.6, 0.5, 48), [
+      new THREE.MeshStandardMaterial({ color: 0x6b4a2f, roughness: 1 }),
+      new THREE.MeshStandardMaterial({ roughness: 0.9, map: tex(512, 512, (g, w, h) => {
+        g.fillStyle = '#3fae5a'; g.fillRect(0, 0, w, h);
+        for (let i = 0; i < 9000; i++) { g.fillStyle = Math.random() < 0.5 ? 'rgba(20,90,40,.35)' : 'rgba(120,220,120,.25)'; g.fillRect(Math.random() * w, Math.random() * h, 3, 3); }
+        g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 3; g.beginPath(); g.arc(w / 2, h / 2, w * 0.17, 0, Math.PI * 2); g.stroke();
+      }) }),
+      new THREE.MeshStandardMaterial({ color: 0x4a3220 })]);
+    piso.position.y = -0.25; M.add(piso);
+    const rocha = new THREE.Mesh(new THREE.ConeGeometry(2.6, 3.2, 10), new THREE.MeshStandardMaterial({ color: 0x5a3e28, roughness: 1, flatShading: true }));
+    rocha.rotation.x = Math.PI; rocha.position.y = -2.1; M.add(rocha);
+    // ilhas pequenas ao longe
+    for (let k = 0; k < 7; k++) {
+      const a = k / 7 * Math.PI * 2 + 0.3, d = 14 + (k % 3) * 5;
+      const ilha = new THREE.Group(); ilha.position.set(Math.cos(a) * d, -2 + (k % 4), Math.sin(a) * d);
+      const topo = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1, 0.3, 12), new THREE.MeshStandardMaterial({ color: 0x3fae5a, flatShading: true }));
+      const base = new THREE.Mesh(new THREE.ConeGeometry(1.2, 1.8, 8), new THREE.MeshStandardMaterial({ color: 0x5a3e28, flatShading: true })); base.rotation.x = Math.PI; base.position.y = -1;
+      ilha.add(topo, base); ilha.userData.f = Math.random() * 6; M.add(ilha); (this.ilhas = this.ilhas || []).push(ilha);
+    }
+    // mesas na frente
+    const madeira = new THREE.MeshStandardMaterial({ color: 0xc98a4b, roughness: 0.7 }), pe = new THREE.MeshStandardMaterial({ color: 0x5b3a1e });
+    this.mesas = [-38, 0, 38].map(deg => {
+      const a = deg * Math.PI / 180, d = 1.15;
+      const g = new THREE.Group(); g.position.set(Math.sin(a) * d, 0, -Math.cos(a) * d);
+      const tampo = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.05, 32), madeira); tampo.position.y = 0.78;
+      const perna = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.78, 12), pe); perna.position.y = 0.39;
+      g.add(tampo, perna); M.add(g);
+      return g;
+    });
+    // caixas coloridas dos lados (gire a cabeça para entregar)
+    [[-78, 0], [78, 1], [-122, 2], [122, 3]].forEach(([deg, ci]) => this.criaCesta(deg, CORES[ci]));
+    // luzes
+    M.add(new THREE.HemisphereLight(0xcfe3ff, 0x3a2a20, 0.9));
+    const sol = new THREE.DirectionalLight(0xffe0c0, 1.6); sol.position.set(3, 6, 2); M.add(sol);
+  },
+
+  criaCesta(deg, cor) {
+    const a = deg * Math.PI / 180, d = 1.45;
+    const el = document.createElement('a-entity');
+    el.classList.add('alvo'); el.dataset.tipo = 'cesta'; el.dataset.cor = cor.id;
+    const g = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color: cor.hex, roughness: 0.5 });
+    const W = 0.46, H = 0.32, T = 0.03;
+    const parede = (w, h, dd, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, dd), mat); m.position.set(x, y, z); g.add(m); };
+    parede(W, T, W, 0, 0.5, 0); parede(W, H, T, 0, 0.5 + H / 2, W / 2); parede(W, H, T, 0, 0.5 + H / 2, -W / 2); parede(T, H, W, W / 2, 0.5 + H / 2, 0); parede(T, H, W, -W / 2, 0.5 + H / 2, 0);
+    const pe = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 0.5, 10), new THREE.MeshStandardMaterial({ color: 0x2a3247 })); pe.position.y = 0.25; g.add(pe);
+    const placa = rotulo(`${cor.simbolo} ${cor.nome}`, { largura: 0.52, fs: 60, borda: cor.hex });
+    placa.position.set(0, 1.15, 0); g.add(placa);
+    // área de mira maior que a caixa (fácil de acertar com o olhar)
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.9, 0.62), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+    hit.position.y = 0.85; g.add(hit);
+    el.setObject3D('mesh', g);
+    el.object3D.position.set(Math.sin(a) * d, 0, -Math.cos(a) * d);
+    el.object3D.lookAt(0, 0, 0);
+    this.el.appendChild(el);
+    this.cestas.push({ el, cor, g, ang: a, base: a, pula: 0, treme: 0 });
+  },
+
+  novoNivel(n) {
+    this.limpaBlocos();
+    this.nivel = n; this.tempo = 0; this.combo = 0; this.entregues = 0;
+    const N = NIVEIS[n];
+    const lista = [];
+    for (let i = 0; i < N.blocos; i++) lista.push({ cor: CORES[i % 4], ouro: false });
+    for (let i = 0; i < N.ouro; i++) lista.push({ cor: CORES[i % 4], ouro: true });
+    lista.sort(() => Math.random() - 0.5);
+    this.total = lista.length;
+    lista.forEach((b, i) => {
+      const mesa = this.mesas[i % 3], k = Math.floor(i / 3), porMesa = Math.ceil(lista.length / 3);
+      const ang = (k / porMesa) * Math.PI * 2 + (i % 3), r = porMesa > 4 ? 0.28 : 0.2;
+      const lugar = new THREE.Vector3(mesa.position.x + Math.cos(ang) * r * (k % 2 ? 0.55 : 1), 0.81 + 0.08, mesa.position.z + Math.sin(ang) * r * (k % 2 ? 0.55 : 1));
+      this.criaBloco(b.cor, b.ouro, lugar);
+    });
+    this.atualizaHud();
+    this.mostraMsg(`NÍVEL ${n + 1}\n${this.total} blocos`, 2.2);
+    this.estado = 'jogando';
+  },
+
+  criaBloco(cor, ouro, lugar) {
+    const el = document.createElement('a-entity');
+    el.classList.add('alvo'); el.dataset.tipo = 'bloco';
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), new THREE.MeshStandardMaterial({ map: texBloco(cor, ouro), roughness: ouro ? 0.25 : 0.5, metalness: ouro ? 0.6 : 0, emissive: ouro ? 0x553300 : 0x000000 }));
+    el.setObject3D('mesh', m);
+    el.object3D.position.copy(lugar); el.object3D.rotation.y = Math.random() * Math.PI;
+    this.el.appendChild(el);
+    const b = { el, cor, ouro, lugar: lugar.clone(), mesh: m, giro: Math.random() * 6 };
+    el.__bloco = b; this.blocos.push(b);
+    this.refreshAlvos();
+  },
+
+  limpaBlocos() {
+    this.blocos.forEach(b => b.el.parentNode && b.el.parentNode.removeChild(b.el));
+    this.blocos = []; this.segurando = null; this.voos = [];
+    if (this.painel) { this.painel.forEach(p => p.parentNode && p.parentNode.removeChild(p)); this.painel = null; }
+    this.refreshAlvos();
+  },
+
+  refreshAlvos() {
+    // segurando um bloco: só as caixas podem ser miradas
+    this.blocos.forEach(b => b.el.classList.toggle('alvo', !this.segurando && !b.voando));
+    this.cestas.forEach(c => c.el.classList.toggle('alvo', !!this.segurando));
+    const rc = this.cursor.components.raycaster; if (rc) rc.refreshObjects();
+  },
+
+  acao(alvo) {
+    if (!alvo) { if (this.segurando) this.mostraMsg('Olhe para a caixa\nda mesma cor', 1.2); return; }
+    if (alvo.dataset.tipo === 'botao') { this.clicaBotao(alvo.dataset.acao); return; }
+    if (this.estado !== 'jogando') return;
+    if (alvo.dataset.tipo === 'bloco' && !this.segurando) {
+      const b = alvo.__bloco; if (!b || b.voando) return;
+      this.segurando = b; b.voando = true; this.mao.poseAlvo = 1;
+      this.voa(b, null, 0.22, () => { b.voando = false; });
+      som('pega'); vibrar(20); this.refreshAlvos(); this.atualizaMaoMira();
+      return;
+    }
+    if (alvo.dataset.tipo === 'cesta' && this.segurando) {
+      const b = this.segurando, cesta = this.cestas.find(c => c.el === alvo);
+      this.segurando = null; this.mao.poseAlvo = 0;
+      const certo = b.ouro || cesta.cor.id === b.cor.id;
+      const dentro = new THREE.Vector3(); cesta.g.getWorldPosition(dentro); dentro.y = 0.72;
+      if (certo) {
+        b.voando = true;
+        this.voa(b, dentro, 0.45, () => {
+          this.combo++; const ganho = (b.ouro ? 50 : 10) + Math.min(5, this.combo - 1) * 2;
+          this.pontos += ganho; this.entregues++;
+          cesta.pula = 1; this.solta(dentro, b.ouro ? '#ffb300' : b.cor.hex, b.ouro ? 40 : 22);
+          b.el.parentNode && b.el.parentNode.removeChild(b.el); this.blocos.splice(this.blocos.indexOf(b), 1);
+          som(b.ouro ? 'ouro' : 'acerto'); vibrar(40);
+          this.mostraMsg(b.ouro ? `OURO! +${ganho}` : this.combo > 2 ? `COMBO x${this.combo}! +${ganho}` : `+${ganho}`, 0.9);
+          this.atualizaHud(); this.refreshAlvos();
+          if (this.entregues >= this.total) this.fimNivel();
+        }, true);
+      } else {
+        cesta.treme = 0.6; this.combo = 0; som('erro'); vibrar([30, 40, 30]);
+        const certa = CORES.find(c => c.id === b.cor.id);
+        this.mostraMsg(`Ops! Esse bloco vai\nna caixa ${certa.nome} ${certa.simbolo}`, 1.8);
+        b.voando = true; this.voa(b, b.lugar, 0.55, () => { b.voando = false; this.refreshAlvos(); }, true);
+      }
+      this.refreshAlvos(); this.atualizaMaoMira();
+    }
+  },
+
+  voa(b, destino, dur, fim, arco) {
+    const de = b.el.object3D.position.clone();
+    this.voos.push({ b, de, destino, dur, t: 0, fim, arco });
+  },
+
+  solta(p, cor, n) {
+    const mat = new THREE.MeshBasicMaterial({ color: cor });
+    for (let i = 0; i < n; i++) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.025, 0.025), i % 3 ? mat : new THREE.MeshBasicMaterial({ color: '#ffffff' }));
+      m.position.copy(p); this.mundo.add(m);
+      this.confete.push({ m, v: new THREE.Vector3((Math.random() - 0.5) * 1.6, 1.2 + Math.random() * 1.6, (Math.random() - 0.5) * 1.6), vida: 1.2 });
+    }
+  },
+
+  fimNivel() {
+    this.estado = 'fim'; som('nivel'); vibrar([60, 60, 120]);
+    const N = NIVEIS[this.nivel], t = this.tempo;
+    const estrelas = t <= N.estrelas[0] ? 3 : t <= N.estrelas[1] ? 2 : 1;
+    let rec = 0; try { rec = +localStorage.getItem('blocosvr-rec-' + this.nivel) || 0; } catch (e) {}
+    const novo = !rec || t < rec; if (novo) try { localStorage.setItem('blocosvr-rec-' + this.nivel, Math.round(t)); } catch (e) {}
+    const ultimo = this.nivel >= NIVEIS.length - 1;
+    // painel 3D na direção para onde a pessoa está olhando
+    const dir = new THREE.Vector3(); this.cam.object3D.getWorldDirection(dir); dir.y = 0; dir.normalize().multiplyScalar(-0.95);
+    const centro = new THREE.Vector3(dir.x, 1.42, dir.z);
+    const fazPainel = (obj, y, dados) => {
+      const el = document.createElement('a-entity');
+      if (dados) { el.classList.add('alvo'); el.dataset.tipo = 'botao'; el.dataset.acao = dados; }
+      el.setObject3D('mesh', obj); el.object3D.position.set(centro.x, y, centro.z); el.object3D.lookAt(0, y, 0);
+      this.el.appendChild(el); return el;
+    };
+    const titulo = rotulo(`${ultimo ? '🏆 VOCÊ ZEROU!' : 'NÍVEL ' + (this.nivel + 1) + ' COMPLETO!'}\n${'★'.repeat(estrelas)}${'☆'.repeat(3 - estrelas)}\nTempo ${fmt(t)}${novo ? ' · RECORDE!' : ''}\n${this.pontos} pontos · olhe um botão`, { largura: 0.8, w: 900, h: 400, fs: 62 });
+    const b1 = rotulo(ultimo ? '🔁 JOGAR DE NOVO' : '▶ PRÓXIMO NÍVEL', { largura: 0.62, w: 680, h: 128, fs: 60, fundo: '#ff8a3d', cor: '#1a0e02' });
+    const b2 = rotulo('↺ REPETIR NÍVEL', { largura: 0.5, w: 600, h: 128, fs: 54, fundo: '#2b3a57' });
+    this.painel = [fazPainel(titulo, centro.y + 0.24), fazPainel(b1, centro.y - 0.1, ultimo ? 'reiniciar' : 'proximo'), fazPainel(b2, centro.y - 0.27, 'repetir')];
+    this.refreshAlvos();
+    this.msg.visible = false;
+  },
+
+  clicaBotao(acao) {
+    som('pega');
+    if (acao === 'proximo') this.novoNivel(this.nivel + 1);
+    if (acao === 'repetir') this.novoNivel(this.nivel);
+    if (acao === 'reiniciar') { this.pontos = 0; this.novoNivel(0); }
+  },
+
+  anelProgresso(p) {
+    if (p <= 0) { this.anel.object3D.visible = false; return; }
+    this.anel.object3D.visible = true;
+    this.anel.setAttribute('geometry', 'thetaLength', Math.max(1, p * 360));
+  },
+
+  atualizaMaoMira() {
+    const m = this.mira;
+    this.mao.apontaAlvo = (!this.segurando && m && m.dataset.tipo === 'bloco') ? 1 : 0;
+    this.cursor.setAttribute('material', 'color', m ? (this.segurando && m.dataset.tipo === 'cesta' ? '#2ed47a' : '#ffd23d') : '#ffffff');
+    if (m) som('mira');
+  },
+
+  atualizaHud() {
+    const falta = (this.total || 0) - (this.entregues || 0);
+    this.hud.userData.troca(`⭐ ${this.pontos}   ⏱ ${fmt(this.tempo)}   📦 ${falta}`);
+    this.hudSeg = Math.floor(this.tempo);
+  },
+
+  mostraMsg(t, dur) { this.msg.userData.troca(t); this.msg.visible = true; this.msgAte = performance.now() + dur * 1000; },
+
+  tick(time, dtMs) {
+    const dt = Math.min(0.05, (dtMs || 16) / 1000);
+    poseMao(this.mao, dt);
+    if (this.estado === 'jogando') { this.tempo += dt; if (Math.floor(this.tempo) !== this.hudSeg) this.atualizaHud(); }
+    if (this.msg.visible && performance.now() > this.msgAte) this.msg.visible = false;
+    // anel de mira enchendo
+    if (this.fuseT0) this.anelProgresso((performance.now() - this.fuseT0) / FUSE_MS);
+    // bloco na mão
+    const naMao = new THREE.Vector3(); this.mao.pegada.getWorldPosition(naMao);
+    if (this.segurando && !this.segurando.voando) { this.segurando.el.object3D.position.copy(naMao); this.segurando.el.object3D.rotation.y += dt * 1.5; }
+    // voos (pegar, entregar, voltar para a mesa)
+    for (let i = this.voos.length - 1; i >= 0; i--) {
+      const v = this.voos[i]; v.t += dt / v.dur;
+      const alvo = v.destino || naMao, k = Math.min(1, v.t), e = 1 - Math.pow(1 - k, 3);
+      const p = v.b.el.object3D.position; p.lerpVectors(v.de, alvo, e);
+      if (v.arco) p.y += Math.sin(k * Math.PI) * 0.35;
+      v.b.el.object3D.rotation.x += dt * 8 * (1 - k);
+      if (v.destino && this.voos[i].fim && v.arco && v.destino !== v.b.lugar) v.b.el.object3D.scale.setScalar(1 - Math.max(0, k - 0.75) * 3);
+      if (k >= 1) { this.voos.splice(i, 1); if (v.destino === v.b.lugar) { v.b.el.object3D.rotation.x = 0; v.b.el.object3D.scale.setScalar(1); } v.fim && v.fim(); }
+    }
+    // blocos na mesa flutuam de leve; ouro brilha
+    this.blocos.forEach(b => { if (b === this.segurando || b.voando) return; b.giro += dt; b.el.object3D.position.y = b.lugar.y + Math.sin(b.giro * 2) * 0.012; if (b.ouro) b.el.object3D.rotation.y += dt; });
+    // caixas: pulo ao acertar, tremida ao errar; no nível 3 elas giram devagar
+    const gira = this.estado === 'jogando' ? NIVEIS[this.nivel].gira : 0;
+    this.cestas.forEach(c => {
+      if (gira) { c.ang = c.base + Math.sin(this.tempo * gira * 3) * 0.35; c.el.object3D.position.set(Math.sin(c.ang) * 1.45, 0, -Math.cos(c.ang) * 1.45); c.el.object3D.lookAt(0, 0, 0); }
+      c.pula = Math.max(0, c.pula - dt * 3); c.treme = Math.max(0, c.treme - dt);
+      c.g.position.y = Math.sin(c.pula * Math.PI) * 0.08;
+      c.g.rotation.z = c.treme > 0 ? Math.sin(time / 30) * 0.06 * c.treme : 0;
+    });
+    // confete
+    for (let i = this.confete.length - 1; i >= 0; i--) {
+      const c = this.confete[i]; c.vida -= dt; c.v.y -= 4 * dt; c.m.position.addScaledVector(c.v, dt); c.m.rotation.x += dt * 9; c.m.rotation.y += dt * 7;
+      if (c.vida <= 0) { this.mundo.remove(c.m); c.m.geometry.dispose(); this.confete.splice(i, 1); }
+    }
+    if (this.ilhas) this.ilhas.forEach(il => { il.position.y += Math.sin(time / 1000 + il.userData.f) * 0.002; });
+  }
+});
+const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+
+// ---------- tela de início ----------
+window.addEventListener('DOMContentLoaded', () => {
+  const sc = document.querySelector('a-scene');
+  const inicio = document.getElementById('inicio'), aviso = document.getElementById('aviso');
+  const jogo = () => sc.components['blocos-jogo'];
+  const comecar = () => {
+    inicio.hidden = true; document.getElementById('sair').hidden = false; document.getElementById('toque').hidden = false;
+    setTimeout(() => { document.getElementById('toque').hidden = true; }, 7000);
+    som('pega');
+    const j = jogo(); if (j && j.estado === 'espera') { j.pontos = 0; j.novoNivel(0); }
+  };
+  const pedeSensor = async () => { // iPhone pede permissão para usar o giroscópio
+    try { if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) await DeviceOrientationEvent.requestPermission(); } catch (e) {}
+  };
+  document.getElementById('btn-tela').onclick = async () => { await pedeSensor(); comecar(); };
+  document.getElementById('btn-vr').onclick = async () => {
+    await pedeSensor();
+    try { await sc.enterVR(); comecar(); }
+    catch (e) { aviso.textContent = 'O modo Cardboard não abriu neste navegador. Abra o arquivo do jogo no Chrome do celular. Por enquanto, jogue sem óculos.'; }
+  };
+  document.getElementById('sair').onclick = () => { if (sc.is('vr-mode')) sc.exitVR(); inicio.hidden = false; aviso.textContent = ''; };
+});
+})();
+</script>
+
+<a-scene blocos-jogo vr-mode-ui="enabled: true; cardboardModeEnabled: true" renderer="antialias: true; colorManagement: true; foveationLevel: 0" loading-screen="dotsColor: #ff8a3d; backgroundColor: #101826" device-orientation-permission-ui="enabled: true" light="defaultLightsEnabled: false" background="color: #101826">
+  <a-entity id="rig" position="0 0 0">
+    <a-entity id="cam" camera position="0 1.5 0" look-controls="magicWindowTrackingEnabled: true; touchEnabled: true; mouseEnabled: true" wasd-controls="enabled: false">
+      <a-entity id="cursor" cursor="fuse: true; fuseTimeout: 1100; downEvents: semclique; upEvents: semclique" raycaster="objects: .alvo; far: 6"
+        position="0 0 -0.7" geometry="primitive: ring; radiusInner: 0.007; radiusOuter: 0.012" material="color: #ffffff; shader: flat; depthTest: false; transparent: true"></a-entity>
+      <a-entity id="anel" position="0 0 -0.69" visible="false" geometry="primitive: ring; radiusInner: 0.014; radiusOuter: 0.02; thetaLength: 1; thetaStart: 90" material="color: #ffd23d; shader: flat; depthTest: false; side: double"></a-entity>
+    </a-entity>
+  </a-entity>
+</a-scene>
+</body>
+</html>

@@ -16,3 +16,11 @@ O modo Cardboard precisa do sensor de movimento do celular, que só funciona qua
 3. Use uma cadeira que gira para virar até as caixas.
 
 Sem óculos: toque em **Jogar sem óculos** e mexa o celular ou arraste o dedo para olhar em volta.
+
+## Aplicativo Android (APK)
+
+`BlocosVR.apk` é o jogo como aplicativo: abre direto em tela cheia, deitado, com a tela sempre acesa e o A-Frame dentro do app (funciona sem internet).
+
+Para instalar: baixe o `BlocosVR.apk` no celular Android, toque nele e permita **"instalar apps desconhecidos"** quando o celular pedir. Depois abra **Blocos VR** pelo ícone.
+
+O código do app fica em `android/` e o script `android/build.sh` monta o APK de novo sem precisar do Android Studio.
