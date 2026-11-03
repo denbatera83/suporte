@@ -83,7 +83,7 @@
       <button id="btn-pc" class="sec">🖥️ Modo Computador <small>mouse e teclado</small></button>
     </div>
     <p class="nota">Computador: arraste o mouse para olhar, clique para apertar; no Google digite no teclado; Esc pausa os jogos; na Corrida use ← → (ou A e D) e espaço para o turbo. Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 2.4</p>
+    <p class="nota" id="versao">Ryan VR 2.5</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -685,7 +685,7 @@ EXP.aurora = function (G) {
 AFRAME.registerComponent('ryan-vr', {
   init() {
     const sc = this.el;
-    this.secao = Q.get('secao') || 'videos'; this.detalhe = null; this.estado = 'saguao';
+    this.secao = Q.get('secao') || 'inicio'; this.detalhe = null; this.estado = 'saguao';
     try { this.busca = localStorage.getItem('ryanvr-busca') || ''; } catch (e) { this.busca = ''; }
     this.rig = document.getElementById('rig'); this.centro = document.getElementById('centro'); this.cam = document.getElementById('cam');
     this.cursor = document.getElementById('cursor'); this.anel = document.getElementById('anel');
@@ -755,6 +755,7 @@ AFRAME.registerComponent('ryan-vr', {
     this.pCentro = new Painel('centro', { larg: 1.56, alt: 0.98, ang: 0, y: 0, raio: 1.55, ppm: 1000, pai, desenhar: (g, p) => self.desenhaCentro(g, p) });
     this.pLado = new Painel('lado', { larg: 0.62, alt: 0.92, ang: 0.75, y: 0, raio: 1.55, ppm: 1000, pai, desenhar: (g, p) => self.desenhaLado(g, p) });
     this.pDock = new Painel('dock', { larg: 0.88, alt: 0.11, ang: 0, y: -0.6, raio: 1.5, ppm: 1000, pai, desenhar: (g, p) => self.desenhaDock(g, p) });
+    this.pDock.mesh.material.depthTest = false; this.pDock.mesh.renderOrder = 20; // a barra fica sempre visível (o chão da sala não a cobre)
     // controles do vídeo: presos no "carrinho" (rig), embaixo da vista
     this.pPlayer = new Painel('player', { larg: 1.0, alt: 0.2, ang: 0, y: 0.98, raio: 1.4, ppm: 1000, pai: this.rig, desenhar: (g, p) => self.desenhaPlayer(g, p) });
     this.pPlayer.visivel = false;
@@ -765,11 +766,11 @@ AFRAME.registerComponent('ryan-vr', {
     caixa(g, 0, 0, p.W, p.H, 36, UI.fundo);
     texto(g, 'Ryan', 40, 92, FONTE_T(64), UI.txt); texto(g, 'VR', 40 + g.measureText('Ryan ').width, 92, FONTE_T(64), UI.acc2);
     texto(g, 'MENU', 42, 150, FONTE(800, 22), UI.sub);
-    const itens = [['videos', '🎬', 'Vídeos 360°'], ['jogos', '🎮', 'Jogos'], ['meus', '📁', 'Meus vídeos'], ['google', '🔎', 'Google'], ['ajustes', '⚙️', 'Ajustes']];
+    const itens = [['inicio', '🏠', 'Início'], ['videos', '🎬', 'Vídeos 360°'], ['jogos', '🎮', 'Jogos'], ['meus', '📁', 'Meus vídeos'], ['google', '🔎', 'Google'], ['ajustes', '⚙️', 'Ajustes']];
     itens.forEach(([id, ic, nome], i) => {
-      const y = 172 + i * 112, sel = this.secao === id;
-      const hv = p.botao('m-' + id, 24, y, p.W - 48, 96, () => { this.secao = id; this.detalhe = null; this.renderTudo(); });
-      caixa(g, 24, y, p.W - 48, 96, 24, sel ? UI.acc : hv ? UI.cardHover : 'rgba(255,255,255,.04)', hv && !sel ? UI.acc : null);
+      const y = 168 + i * 100, sel = this.secao === id;
+      const hv = p.botao('m-' + id, 24, y, p.W - 48, 88, () => { this.secao = id; this.detalhe = null; this.renderTudo(); });
+      caixa(g, 24, y, p.W - 48, 88, 24, sel ? UI.acc : hv ? UI.cardHover : 'rgba(255,255,255,.04)', hv && !sel ? UI.acc : null);
       texto(g, ic, 60, y + 66, FONTE(800, 44), UI.txt); texto(g, nome, 128, y + 64, FONTE(800, 40), sel ? '#120d2e' : UI.txt);
     });
     texto(g, 'Olhe e segure, ou aperte', 42, p.H - 74, FONTE(700, 24), UI.sub); texto(g, 'o botão do Cardboard', 42, p.H - 42, FONTE(700, 24), UI.sub);
@@ -818,6 +819,7 @@ AFRAME.registerComponent('ryan-vr', {
       quebra(g, 'Os vídeos não saem do seu celular: nada é enviado para a internet.', 50, 700, W - 100, 30, FONTE(700, 24), UI.sub);
       return;
     }
+    if (this.secao === 'inicio') return this.desenhaInicio(g, p);
     if (this.secao === 'google') return this.desenhaGoogle(g, p);
     if (this.secao === 'ajustes') {
       texto(g, 'Ajustes', 48, 92, FONTE_T(64), UI.txt);
@@ -845,6 +847,34 @@ AFRAME.registerComponent('ryan-vr', {
     }
   },
 
+  // ---------- Início: os apps flutuando em ícones redondos de vidro ----------
+  desenhaInicio(g, p) {
+    const W = p.W, agora = new Date();
+    texto(g, agora.getHours() < 12 ? 'Bom dia, Ryan' : agora.getHours() < 18 ? 'Boa tarde, Ryan' : 'Boa noite, Ryan', 56, 96, FONTE_T(60), UI.txt);
+    texto(g, 'Toque, olhe ou faça a pinça num app para abrir', 58, 138, FONTE(700, 27), UI.sub);
+    const CURTO = { corrida: 'Corrida', cubos: 'Corta Cubos', alvos: 'Tiro ao Alvo', baloes: 'Balões', blocos: 'Blocos', turbo: 'Turbo', montanha: 'Montanha', mar: 'Fundo do Mar', espaco: 'Espaço', aurora: 'Aurora' };
+    const apps = [...JOGOS.map(j => ({ it: j, nome: CURTO[j.id] || j.titulo })), ...VIDEOS.map(v => ({ it: v, nome: CURTO[v.id] || v.titulo })),
+      { id: 'google', nome: 'Google', ic: '🔎', cor: ['#4f8df7', '#1a56c4'] }, { id: 'meus', nome: 'Meus vídeos', ic: '📁', cor: ['#ffb36b', '#d9762b'] }, { id: 'ajustes', nome: 'Ajustes', ic: '⚙️', cor: ['#9aa0b5', '#5a6075'] }];
+    const cols = 7, R = 82, dx = (W - 112) / cols;
+    apps.forEach((a, i) => {
+      const c = i % cols, l = Math.floor(i / cols), cx = 56 + dx * (c + 0.5), cy = 285 + l * 320;
+      const id = a.it ? a.it.id : a.id, hv = p.botao('app-' + id, cx - R - 10, cy - R - 10, 2 * R + 20, 2 * R + 80, () => {
+        if (a.it) { this.detalhe = a.it; this.renderTudo(); } else { this.secao = a.id; this.detalhe = null; this.renderTudo(); }
+      });
+      const r = hv ? R * 1.1 : R; // o ícone cresce quando você aponta
+      g.save(); g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = hv ? 30 : 18; g.shadowOffsetY = 8;
+      g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fillStyle = 'rgba(255,255,255,.18)'; g.fill(); g.restore();
+      g.save(); g.beginPath(); g.arc(cx, cy, r - 4, 0, 7); g.clip();
+      if (a.it) { const im = capa(id), h = 2 * r, w = h * im.width / im.height; g.drawImage(im, cx - w / 2, cy - h / 2, w, h); }
+      else { const gr = g.createLinearGradient(cx, cy - r, cx, cy + r); gr.addColorStop(0, a.cor[0]); gr.addColorStop(1, a.cor[1]); g.fillStyle = gr; g.fillRect(cx - r, cy - r, 2 * r, 2 * r); g.font = `${Math.round(r * 0.95)}px serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(a.ic, cx, cy + 4); }
+      // brilho de vidro por cima
+      const br = g.createLinearGradient(cx, cy - r, cx, cy + r); br.addColorStop(0, 'rgba(255,255,255,.35)'); br.addColorStop(0.45, 'rgba(255,255,255,0)'); g.fillStyle = br; g.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+      g.restore();
+      g.lineWidth = hv ? 5 : 3; g.strokeStyle = hv ? '#ffffff' : 'rgba(255,255,255,.45)'; g.beginPath(); g.arc(cx, cy, r - 2, 0, 7); g.stroke();
+      g.font = FONTE(800, 28); const fs = Math.min(28, Math.floor(28 * (dx - 18) / Math.max(1, g.measureText(a.nome).width))); // o nome sempre cabe embaixo do ícone
+      texto(g, a.nome, cx, cy + R + 50, FONTE(800, fs), UI.txt, 'center');
+    });
+  },
   // ---------- Google: teclado no VR (aponte e faça a pinça, ou olhe) ----------
   desenhaGoogle(g, p) {
     const W = p.W, b = this.busca || '';
@@ -940,7 +970,7 @@ AFRAME.registerComponent('ryan-vr', {
 
   desenhaDock(g, p) {
     caixa(g, 0, 0, p.W, p.H, 30, 'rgba(14,12,26,.92)');
-    const itens = [['inicio', '🏠', () => { this.secao = 'videos'; this.detalhe = null; this.renderTudo(); }], ['centro', '🎯', () => { this.recentrar(); this.aviso('Visão centralizada'); }], ['som', AJ.musica ? '🔊' : '🔇', () => { AJ.musica = !AJ.musica; salva(); volumeMusica(); this.renderTudo(); }], ['casa', '📷', () => this.ligarCasa(!this.casa)], ['colocar', '📍', () => this.comecaPosicionar()], ['ajustes', '⚙️', () => { this.secao = 'ajustes'; this.detalhe = null; this.renderTudo(); }]];
+    const itens = [['inicio', '🏠', () => { this.secao = 'inicio'; this.detalhe = null; this.renderTudo(); }], ['centro', '🎯', () => { this.recentrar(); this.aviso('Visão centralizada'); }], ['som', AJ.musica ? '🔊' : '🔇', () => { AJ.musica = !AJ.musica; salva(); volumeMusica(); this.renderTudo(); }], ['casa', '📷', () => this.ligarCasa(!this.casa)], ['colocar', '📍', () => this.comecaPosicionar()], ['ajustes', '⚙️', () => { this.secao = 'ajustes'; this.detalhe = null; this.renderTudo(); }]];
     itens.forEach(([id, ic, f], i) => { const x = 20 + i * 104; const hv = p.botao('d-' + id, x, 12, 86, 86, f); caixa(g, x, 12, 86, 86, 22, hv ? UI.acc : id === 'casa' && this.casa ? 'rgba(46,212,122,.45)' : 'rgba(255,255,255,.06)'); texto(g, ic, x + 43, 72, FONTE(800, 42), UI.txt, 'center'); });
     const d = new Date(); texto(g, `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`, p.W - 40, 72, FONTE(800, 40), UI.txt, 'right');
   },
@@ -1226,7 +1256,7 @@ AFRAME.registerComponent('ryan-vr', {
     }
   },
   atualizaFundo() {
-    if (!!UI.vidro !== !!this.casa) { Object.assign(UI, this.casa ? UI_VIDRO : UI_ROXO); UI.vidro = !!this.casa; if (this.pCentro) setTimeout(() => this.renderTudo(), 0); } // tema de vidro no Modo Casa
+    if (!UI.vidro) { Object.assign(UI, UI_VIDRO); UI.vidro = true; if (this.pCentro) setTimeout(() => this.renderTudo(), 0); } // janelas de vidro em todos os modos
     // no Modo Casa some o céu e o deque; nas experiências 360° a câmera fica escondida (imersão total)
     const midia = this.estado === 'midia' && !this.naTV, jogo = ['corrida', 'cubos', 'alvos'].includes(this.estado);
     if (this.camPlano) this.camPlano.visible = this.casa && !midia && !jogo;
@@ -2349,6 +2379,10 @@ AFRAME.registerComponent('ryan-vr', {
   tick(time, dtMs) {
     if (!this.qualOk && this.el.renderer) { this.qualOk = true; this.qualidadeTela(); }
     const dt = Math.min(0.05, (dtMs || 16) / 1000);
+    // ao abrir, o olhar só aperta depois que a cabeça se mexer (nada abre sozinho no começo)
+    const ent = document.getElementById('entrada');
+    if (ent && !ent.hidden) this.entrouEm = 0; else if (!this.entrouEm) this.entrouEm = performance.now();
+    const olharEspera = !this.entrouEm || performance.now() - this.entrouEm < 3000;
     this.passoVeu(dt);
     this.detectaMao(dt);
     if (this.posicionando) { // enquanto coloca a TV, nada é apertado sem querer
@@ -2393,6 +2427,7 @@ AFRAME.registerComponent('ryan-vr', {
       this.cursor.setAttribute('material', 'color', atual ? '#ffb36b' : '#ffffff');
     }
     if (this.dirTrava) { const d = new THREE.Vector3(); this.cam.object3D.getWorldDirection(d); if (d.angleTo(this.dirTrava) > 0.07 || !atual) { this.dirTrava = null; this.fuseT0 = Math.max(performance.now(), this.bloqueioAte || 0); } }
+    if (olharEspera && this.fonte === 'olhar') this.disparado = true; // começo: o olhar ainda não aperta
     if (atual && !this.disparado && !this.dirTrava && this.fonte !== 'mouse' && !(this.fonte === 'mao' && atual.p.id === 'teclado')) { // no teclado de mesa a mão digita com toque/pinça (não só parando em cima)
       const tec = (atual.p.id === 'centro' && atual.b.id.startsWith('k-')) || atual.p.id === 'teclado'; // no teclado as teclas são escolhidas mais rápido
       const v = Math.max(0, performance.now() - this.fuseT0) / ((this.fonte === 'mao' ? (tec ? 0.6 : 0.8) : tec ? Math.min(AJ.fuse, 0.75) : AJ.fuse) * 1000);
@@ -2523,7 +2558,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 2.4' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 2.5' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 
