@@ -774,7 +774,7 @@ AFRAME.registerComponent('cardboard', {
     if (!this.rt || this.rt.width !== W || this.rt.height !== H) {
       if (this.rt) this.rt.dispose();
       // cor comum (8 bits): todo celular consegue desenhar nela
-      const aa = this.modo === 0 && r.capabilities.isWebGL2 ? 4 : 0;
+      const aa = this.modo === 0 && r.capabilities.isWebGL2 ? (this.suave() ? 2 : 4) : 0; // modo Suave: menos peso por quadro
       this.rt = new THREE.WebGLRenderTarget(W, H, { type: THREE.UnsignedByteType, format: THREE.RGBAFormat, samples: aa, depthBuffer: true });
       this.lente.uniforms.tDiffuse.value = this.rt.texture;
       this.conferir = true;
@@ -809,12 +809,15 @@ AFRAME.registerComponent('cardboard', {
     r.setViewport(meio, 0, meio, h); r.setScissor(meio, 0, meio, h); this.orig(cena, this.estereo.cameraR);
     r.setScissorTest(false); r.setViewport(0, 0, w, h); r.setScissor(0, 0, w, h);
   },
+  suave() { return (() => { try { const v = localStorage.getItem('ryanvr-suave'); return v === null ? true : JSON.parse(v); } catch (e) { return true; } })(); },
+  // ajuste ⚡ Suave / ✨ Bonito: troca a resolução na hora
+  qualidade() { if (!this.r) return; if (this.ativo) this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 1.15 : 1.6)); if (this.rt) { this.rt.dispose(); this.rt = null; } },
   lenteLigada(v) { this.lenteOn = !!v; if (this.lente) this.lente.uniforms.ligada.value = v ? 1 : 0; },
   entrar() {
     this.prepara();
     this.ativo = true;
     this.pixelAntes = this.r.getPixelRatio();
-    this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+    this.r.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.suave() ? 1.15 : 1.6));
     document.body.classList.add('modo-vr');
     const app = /\bwv\b/.test(navigator.userAgent);   // dentro do APK já está em tela cheia e deitado
     if (!app && document.documentElement.requestFullscreen) {
