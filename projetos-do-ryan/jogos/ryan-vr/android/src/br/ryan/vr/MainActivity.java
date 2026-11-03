@@ -1,6 +1,15 @@
 package br.ryan.vr;
 
+import android.Manifest;
 import android.app.Activity;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.webkit.PermissionRequest;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
@@ -17,7 +26,11 @@ import android.widget.FrameLayout;
 
 /** Ryan VR: abre o saguão de realidade virtual (HTML + A-Frame) em tela cheia, deitado, para o Cardboard. */
 public class MainActivity extends Activity {
-    private static final int ESCOLHER_VIDEO = 42;
+    private static final int ESCOLHER_VIDEO = 42, PEDIR_CAMERA = 7;
+    // as páginas abrem num endereço seguro interno (https://ryan.vr/...) entregue de dentro do app:
+    // assim a câmera e o reconhecimento da mão funcionam, sem precisar de internet
+    private static final String CASA = "ryan.vr";
+    private PermissionRequest pedidoCamera;
     private WebView web;
     private FrameLayout raiz;
     private View telaCheia;
@@ -40,7 +53,24 @@ public class MainActivity extends Activity {
         s.setMediaPlaybackRequiresUserGesture(false);
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
-        web.setWebViewClient(new WebViewClient());
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest req) {
+                Uri u = req.getUrl();
+                if (!"https".equals(u.getScheme()) || !CASA.equals(u.getHost())) return null;
+                String caminho = u.getPath(); if (caminho == null || caminho.equals("/")) caminho = "/ryan-vr/index.html";
+                if (caminho.endsWith("/")) caminho += "index.html";
+                try {
+                    InputStream in = getAssets().open(caminho.substring(1));
+                    Map<String, String> cab = new HashMap<String, String>();
+                    cab.put("Access-Control-Allow-Origin", "*");
+                    cab.put("Cache-Control", "no-cache");
+                    return new WebResourceResponse(tipo(caminho), "UTF-8", 200, "OK", cab, in);
+                } catch (Exception e) {
+                    return new WebResourceResponse("text/plain", "UTF-8", 404, "Not Found", new HashMap<String, String>(), null);
+                }
+            }
+        });
         web.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
@@ -52,6 +82,18 @@ public class MainActivity extends Activity {
             public void onHideCustomView() {
                 if (telaCheia != null) { raiz.removeView(telaCheia); telaCheia = null; }
                 esconderBarras();
+            }
+            // Modo Casa: a página pede a câmera; o app pede a permissão do Android se ainda não tiver
+            @Override
+            public void onPermissionRequest(final PermissionRequest r) {
+                runOnUiThread(new Runnable() { public void run() {
+                    boolean querCamera = false;
+                    for (String x : r.getResources()) if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(x)) querCamera = true;
+                    if (!querCamera) { r.deny(); return; }
+                    if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                        pedidoCamera = r; requestPermissions(new String[]{ Manifest.permission.CAMERA }, PEDIR_CAMERA);
+                    } else r.grant(new String[]{ PermissionRequest.RESOURCE_VIDEO_CAPTURE });
+                }});
             }
             // "Meus vídeos": abre a galeria para escolher um vídeo
             @Override
@@ -69,7 +111,7 @@ public class MainActivity extends Activity {
         raiz.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(raiz);
         esconderBarras();
-        web.loadUrl("file:///android_asset/ryan-vr/index.html");
+        web.loadUrl("https://" + CASA + "/ryan-vr/index.html");
     }
 
     @Override
@@ -81,6 +123,26 @@ public class MainActivity extends Activity {
         escolha.onReceiveValue(r);
         escolha = null;
         esconderBarras();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int req, String[] perms, int[] res) {
+        if (req != PEDIR_CAMERA || pedidoCamera == null) return;
+        if (res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED) pedidoCamera.grant(new String[]{ PermissionRequest.RESOURCE_VIDEO_CAPTURE });
+        else pedidoCamera.deny();
+        pedidoCamera = null;
+        esconderBarras();
+    }
+
+    private static String tipo(String c) {
+        c = c.toLowerCase();
+        if (c.endsWith(".html")) return "text/html";
+        if (c.endsWith(".js") || c.endsWith(".mjs")) return "application/javascript";
+        if (c.endsWith(".wasm")) return "application/wasm";
+        if (c.endsWith(".json")) return "application/json";
+        if (c.endsWith(".png")) return "image/png";
+        if (c.endsWith(".css")) return "text/css";
+        return "application/octet-stream";
     }
 
     private void esconderBarras() {
