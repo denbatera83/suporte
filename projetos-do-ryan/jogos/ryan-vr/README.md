@@ -35,7 +35,8 @@ Na tela de entrada, **📺 Modo TV** entra no Cardboard, liga a câmera (você v
 - **Janelas de vidro no Modo Casa**: os painéis ficam transparentes, claros e com borda de luz, flutuando na sua sala (a moldura da TV só aparece com vídeo passando).
 - **Imagem da casa sempre encaixada**: no Modo Casa/TV a câmera é desenhada no fundo de cada olho, então não fica torta nem escorrega quando você vira a cabeça.
 - **Pausar e sair do jogo**: em qualquer jogo, **olhe para baixo** e aparece o menu ⏸ com **▶ Continuar** e **🏠 Sair do jogo** (o jogo fica parado; olhe para cima para continuar). No app, o **botão voltar** do celular também pausa; apertando de novo, sai do jogo.
-- **⚡ Suave / ✨ Bonito** (em Ajustes): o Suave (padrão) desenha menos pontos e lê a câmera numa imagem menor, para o jogo ficar liso no celular; o Bonito mostra mais detalhes.
+- **✨ Bonito / ⚡ Suave** (em Ajustes): o **Bonito** (padrão) desenha na resolução cheia da tela do celular, com a imagem da câmera em alta; o **Suave** ajusta a resolução sozinho para ficar mais liso em celulares mais fracos.
+- **Mãos em 3D**: juntas redondas, ossos em tubo e a palma de vidro (esquerda rosada, direita azulada).
 - **Blocos VR com a mão de verdade:** no Blocos, toque em **✋ Jogar com a mão de verdade**. A mão do jogo acompanha a sua; **feche a mão em cima de um bloco** para pegar e **abra em cima da caixa** da mesma cor para soltar. A câmera só escaneia a mão: você continua na ilha do jogo.
 - **Estoura Balões** (em Jogos): balões aparecem na sua frente por 60 segundos; estoure com o dedo de verdade. Combo, balão dourado (+5) e recorde. Sem câmera, dá para estourar olhando.
 - Ajustes: ligar/desligar a mão e o tamanho da imagem da câmera (Automático enche a vista).

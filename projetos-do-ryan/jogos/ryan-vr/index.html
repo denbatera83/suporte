@@ -82,7 +82,7 @@
       <button id="btn-tela" class="sec">📱 Ver sem óculos</button>
     </div>
     <p class="nota">Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 2.2</p>
+    <p class="nota" id="versao">Ryan VR 2.3</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -165,7 +165,7 @@ AFRAME.registerComponent('cardboard', {
     const ms = this.somaT / this.nT; this.somaT = 0; this.nT = 0; this.tAjuste = t;
     const r = this.r, pr = r.getPixelRatio(); let novo = pr;
     if (this.limite === undefined || t - (this.limiteEm || 0) > 20000) { this.limite = this.teto(); this.limiteEm = t; }
-    if (ms > 21) { const piso = Math.min(this.teto(), ms > 40 ? 1 : 1.3); novo = Math.max(piso, pr - (ms > 30 ? 0.25 : 0.12)); this.limite = Math.max(piso, pr - 0.05); this.limiteEm = t; } // travou: baixa e lembra
+    if (ms > 21) { const piso = Math.min(this.teto(), this.suave() ? (ms > 40 ? 1 : 1.3) : (ms > 45 ? 1.6 : 2.4)); /* Bonito: quase sempre na resolução cheia */ novo = Math.max(piso, pr - (ms > 30 ? 0.25 : 0.12)); this.limite = Math.max(piso, pr - 0.05); this.limiteEm = t; } // travou: baixa e lembra
     else if (ms < 17.8) novo = Math.min(this.limite, pr + 0.1);                                                                 // liso: sobe aos poucos
     if (Math.abs(novo - pr) > 0.01) r.setPixelRatio(novo);
   },
@@ -232,15 +232,15 @@ AFRAME.registerComponent('cardboard', {
     r.setViewport(meio, 0, meio, h); r.setScissor(meio, 0, meio, h); this.orig(cena, this.estereo.cameraR);
     r.setScissorTest(false); r.setViewport(0, 0, w, h); r.setScissor(0, 0, w, h);
   },
-  suave() { return (() => { try { const v = localStorage.getItem('ryanvr-suave'); return v === null ? true : JSON.parse(v); } catch (e) { return true; } })(); },
+  suave() { return (() => { try { const v = localStorage.getItem('ryanvr-suave2'); return v === null ? false : JSON.parse(v); } catch (e) { return true; } })(); },
   // ajuste ⚡ Suave / ✨ Bonito: troca a resolução na hora
-  qualidade() { if (!this.r) return; if (this.ativo) { this.limite = this.teto(); this.r.setPixelRatio(Math.min(this.teto(), this.suave() ? 1.5 : 2)); } if (this.rt) { this.rt.dispose(); this.rt = null; } },
+  qualidade() { if (!this.r) return; if (this.ativo) { this.limite = this.teto(); this.r.setPixelRatio(this.suave() ? Math.min(this.teto(), 1.75) : this.teto()); } if (this.rt) { this.rt.dispose(); this.rt = null; } },
   lenteLigada(v) { this.lenteOn = !!v; if (this.lente) this.lente.uniforms.ligada.value = v ? 1 : 0; },
   entrar() {
     this.prepara();
     this.ativo = true;
     this.pixelAntes = this.r.getPixelRatio();
-    this.limite = undefined; this.r.setPixelRatio(Math.min(this.teto(), this.suave() ? 1.75 : 2.2)); // começa nítido e se ajusta
+    this.limite = undefined; this.r.setPixelRatio(this.suave() ? Math.min(this.teto(), 1.75) : this.teto()); // Bonito começa na resolução cheia da tela
     document.body.classList.add('modo-vr');
     const app = /\bwv\b/.test(navigator.userAgent);   // dentro do APK já está em tela cheia e deitado
     if (!app && document.documentElement.requestFullscreen) {
@@ -272,9 +272,9 @@ const APP = /\bwv\b/.test(navigator.userAgent);
 const Q = new URLSearchParams(location.search);
 const AJ = (() => { // ajustes guardados no celular (valem também para o Blocos VR)
   const g = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
-  return { ipd: g('ryanvr-ipd', 0.064), lente: g('ryanvr-lente', true), fuse: g('ryanvr-fuse', 1.2), musica: g('ryanvr-musica', true), maos: g('ryanvr-maos', true), camFov: g('ryanvr-camfov2', 0), distTV: g('ryanvr-disttv', 2.2), suave: g('ryanvr-suave', true) };
+  return { ipd: g('ryanvr-ipd', 0.064), lente: g('ryanvr-lente', true), fuse: g('ryanvr-fuse', 1.2), musica: g('ryanvr-musica', true), maos: g('ryanvr-maos', true), camFov: g('ryanvr-camfov2', 0), distTV: g('ryanvr-disttv', 2.2), suave: g('ryanvr-suave2', false) };
 })();
-const salva = () => { try { localStorage.setItem('ryanvr-ipd', JSON.stringify(AJ.ipd)); localStorage.setItem('ryanvr-lente', JSON.stringify(AJ.lente)); localStorage.setItem('ryanvr-fuse', JSON.stringify(AJ.fuse)); localStorage.setItem('ryanvr-musica', JSON.stringify(AJ.musica)); localStorage.setItem('ryanvr-maos', JSON.stringify(AJ.maos)); localStorage.setItem('ryanvr-camfov2', JSON.stringify(AJ.camFov)); localStorage.setItem('ryanvr-disttv', JSON.stringify(AJ.distTV)); localStorage.setItem('ryanvr-suave', JSON.stringify(AJ.suave)); } catch (e) {} };
+const salva = () => { try { localStorage.setItem('ryanvr-ipd', JSON.stringify(AJ.ipd)); localStorage.setItem('ryanvr-lente', JSON.stringify(AJ.lente)); localStorage.setItem('ryanvr-fuse', JSON.stringify(AJ.fuse)); localStorage.setItem('ryanvr-musica', JSON.stringify(AJ.musica)); localStorage.setItem('ryanvr-maos', JSON.stringify(AJ.maos)); localStorage.setItem('ryanvr-camfov2', JSON.stringify(AJ.camFov)); localStorage.setItem('ryanvr-disttv', JSON.stringify(AJ.distTV)); localStorage.setItem('ryanvr-suave2', JSON.stringify(AJ.suave)); } catch (e) {} };
 // reconhecimento da mão (MediaPipe, do Google): no app vem de dentro do APK
 const MP_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/';
 const MP_MODELO = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
@@ -1272,16 +1272,19 @@ AFRAME.registerComponent('ryan-vr', {
       const bola = tex(64, 64, (g, w, h) => { const gr = g.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.45, 'rgba(255,255,255,.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
       const OSSOS = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12], [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [0, 17], [17, 18], [18, 19], [19, 20]];
       this.maoOssos = OSSOS;
-      // esquerda puxada para o rosa, direita para o azul
-      this.maosViz = [[0xffa3c4, 0xff5c8a], [0x9ff3ff, 0x8f7bff]].map(([cp, cl]) => {
+      // mãos em 3D: juntas redondas, ossos em tubo e a palma de vidro (esquerda rosada, direita azulada)
+      const geoJ = new THREE.SphereGeometry(1, 14, 10), geoO = new THREE.CylinderGeometry(1, 1, 1, 10, 1, true);
+      this.maosViz = [[0xffd0e0, 0xff6f9c], [0xd2f6ff, 0x5aa8ff]].map(([cj, co]) => {
         const g = new THREE.Group(); g.renderOrder = 50;
-        const pts = new THREE.BufferGeometry(); pts.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(21 * 3), 3));
-        const P = new THREE.Points(pts, new THREE.PointsMaterial({ color: cp, size: 0.014, map: bola, depthTest: false, depthWrite: false, transparent: true, sizeAttenuation: true, blending: THREE.AdditiveBlending }));
-        P.renderOrder = 50; P.frustumCulled = false; g.add(P);
-        const lin = new THREE.BufferGeometry(); lin.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(OSSOS.length * 6), 3));
-        const L = new THREE.LineSegments(lin, new THREE.LineBasicMaterial({ color: cl, transparent: true, opacity: 0.8, depthTest: false })); L.renderOrder = 49; L.frustumCulled = false; g.add(L);
-        this.el.object3D.add(g);
-        return { g, pts, lin, matP: P.material, matL: L.material };
+        const matJ = new THREE.MeshBasicMaterial({ color: cj, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false, toneMapped: false });
+        const matO = new THREE.MeshBasicMaterial({ color: co, transparent: true, opacity: 0.75, depthTest: false, depthWrite: false, toneMapped: false });
+        const matP = new THREE.MeshBasicMaterial({ color: co, transparent: true, opacity: 0.22, depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+        const juntas = new THREE.InstancedMesh(geoJ, matJ, 21), ossos = new THREE.InstancedMesh(geoO, matO, OSSOS.length);
+        juntas.renderOrder = 52; ossos.renderOrder = 51; juntas.frustumCulled = ossos.frustumCulled = false;
+        const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(7 * 3), 3)); pg.setIndex([0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 5, 0, 5, 6, 0, 6, 1]);
+        const palma = new THREE.Mesh(pg, matP); palma.renderOrder = 50; palma.frustumCulled = false;
+        g.add(palma, ossos, juntas); this.el.object3D.add(g);
+        return { g, juntas, ossos, palma, matP: matJ, matL: matO, matPalma: matP };
       });
       const ponta = new THREE.Mesh(new THREE.RingGeometry(0.012, 0.02, 24), new THREE.MeshBasicMaterial({ color: 0xffb36b, depthTest: false, transparent: true, side: THREE.DoubleSide })); ponta.renderOrder = 51;
       this.maoPonta = ponta; this.el.object3D.add(ponta);
@@ -1292,11 +1295,15 @@ AFRAME.registerComponent('ryan-vr', {
     MAO.r.maos.forEach((m, k) => {
       const viz = this.maosViz[k], vis = this.maoVisivel(m);
       viz.g.visible = vis; if (!vis) return;
-      viz.matP.opacity = fraca ? 0.35 : 1; viz.matL.opacity = fraca ? 0.25 : 0.8;
-      const pa = viz.pts.attributes.position, la = viz.lin.attributes.position, Q = [];
-      for (let i = 0; i < 21; i++) { const w = this.pontoNaImagem(m.lm[i].x, m.lm[i].y, D); Q.push(w); pa.setXYZ(i, w.x, w.y, w.z); }
-      this.maoOssos.forEach(([a, b], j) => { la.setXYZ(j * 2, Q[a].x, Q[a].y, Q[a].z); la.setXYZ(j * 2 + 1, Q[b].x, Q[b].y, Q[b].z); });
-      pa.needsUpdate = true; la.needsUpdate = true;
+      viz.matP.opacity = fraca ? 0.35 : 0.95; viz.matL.opacity = fraca ? 0.25 : 0.75; viz.matPalma.opacity = fraca ? 0.08 : 0.22;
+      const Q = [], M4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0), d = new THREE.Vector3(), meio = new THREE.Vector3();
+      for (let i = 0; i < 21; i++) Q.push(this.pontoNaImagem(m.lm[i].x, m.lm[i].y, D));
+      const tam = Q[0].distanceTo(Q[9]) || 0.08; // tamanho da mão na vista: juntas e ossos acompanham
+      for (let i = 0; i < 21; i++) { const r = tam * ([4, 8, 12, 16, 20].includes(i) ? 0.085 : i === 0 ? 0.11 : 0.07); M4.compose(Q[i], q.identity(), sc.setScalar(r)); viz.juntas.setMatrixAt(i, M4); }
+      this.maoOssos.forEach(([a, b], j) => { d.subVectors(Q[b], Q[a]); const len = d.length() || 1e-4; meio.addVectors(Q[a], Q[b]).multiplyScalar(0.5); q.setFromUnitVectors(Y, d.divideScalar(len)); M4.compose(meio, q, sc.set(tam * 0.045, len, tam * 0.045)); viz.ossos.setMatrixAt(j, M4); });
+      viz.juntas.instanceMatrix.needsUpdate = true; viz.ossos.instanceMatrix.needsUpdate = true;
+      const pa = viz.palma.geometry.attributes.position, idx = [0, 1, 5, 9, 13, 17], c = new THREE.Vector3();
+      idx.forEach(k => c.add(Q[k])); c.divideScalar(idx.length); pa.setXYZ(0, c.x, c.y, c.z); idx.forEach((k, n) => pa.setXYZ(n + 1, Q[k].x, Q[k].y, Q[k].z)); pa.needsUpdate = true;
       if (m === MAO.r.principal) P.push(Q);
     });
     // anel na ponta do dedo que aponta (só nos menus e nos balões)
@@ -2477,7 +2484,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 2.2' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 2.3' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 

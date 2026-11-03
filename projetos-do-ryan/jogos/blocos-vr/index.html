@@ -763,7 +763,7 @@ AFRAME.registerComponent('cardboard', {
     const ms = this.somaT / this.nT; this.somaT = 0; this.nT = 0; this.tAjuste = t;
     const r = this.r, pr = r.getPixelRatio(); let novo = pr;
     if (this.limite === undefined || t - (this.limiteEm || 0) > 20000) { this.limite = this.teto(); this.limiteEm = t; }
-    if (ms > 21) { const piso = Math.min(this.teto(), ms > 40 ? 1 : 1.3); novo = Math.max(piso, pr - (ms > 30 ? 0.25 : 0.12)); this.limite = Math.max(piso, pr - 0.05); this.limiteEm = t; } // travou: baixa e lembra
+    if (ms > 21) { const piso = Math.min(this.teto(), this.suave() ? (ms > 40 ? 1 : 1.3) : (ms > 45 ? 1.6 : 2.4)); /* Bonito: quase sempre na resolução cheia */ novo = Math.max(piso, pr - (ms > 30 ? 0.25 : 0.12)); this.limite = Math.max(piso, pr - 0.05); this.limiteEm = t; } // travou: baixa e lembra
     else if (ms < 17.8) novo = Math.min(this.limite, pr + 0.1);                                                                 // liso: sobe aos poucos
     if (Math.abs(novo - pr) > 0.01) r.setPixelRatio(novo);
   },
@@ -830,15 +830,15 @@ AFRAME.registerComponent('cardboard', {
     r.setViewport(meio, 0, meio, h); r.setScissor(meio, 0, meio, h); this.orig(cena, this.estereo.cameraR);
     r.setScissorTest(false); r.setViewport(0, 0, w, h); r.setScissor(0, 0, w, h);
   },
-  suave() { return (() => { try { const v = localStorage.getItem('ryanvr-suave'); return v === null ? true : JSON.parse(v); } catch (e) { return true; } })(); },
+  suave() { return (() => { try { const v = localStorage.getItem('ryanvr-suave2'); return v === null ? false : JSON.parse(v); } catch (e) { return true; } })(); },
   // ajuste ⚡ Suave / ✨ Bonito: troca a resolução na hora
-  qualidade() { if (!this.r) return; if (this.ativo) { this.limite = this.teto(); this.r.setPixelRatio(Math.min(this.teto(), this.suave() ? 1.5 : 2)); } if (this.rt) { this.rt.dispose(); this.rt = null; } },
+  qualidade() { if (!this.r) return; if (this.ativo) { this.limite = this.teto(); this.r.setPixelRatio(this.suave() ? Math.min(this.teto(), 1.75) : this.teto()); } if (this.rt) { this.rt.dispose(); this.rt = null; } },
   lenteLigada(v) { this.lenteOn = !!v; if (this.lente) this.lente.uniforms.ligada.value = v ? 1 : 0; },
   entrar() {
     this.prepara();
     this.ativo = true;
     this.pixelAntes = this.r.getPixelRatio();
-    this.limite = undefined; this.r.setPixelRatio(Math.min(this.teto(), this.suave() ? 1.75 : 2.2)); // começa nítido e se ajusta
+    this.limite = undefined; this.r.setPixelRatio(this.suave() ? Math.min(this.teto(), 1.75) : this.teto()); // Bonito começa na resolução cheia da tela
     document.body.classList.add('modo-vr');
     const app = /\bwv\b/.test(navigator.userAgent);   // dentro do APK já está em tela cheia e deitado
     if (!app && document.documentElement.requestFullscreen) {
