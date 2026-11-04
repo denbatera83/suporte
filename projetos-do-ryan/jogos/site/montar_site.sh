@@ -5,6 +5,9 @@ set -e
 J="$(cd "$(dirname "$0")/.." && pwd)"; RAIZ="$(cd "$J/../.." && pwd)"; D="$RAIZ/docs"
 rm -rf "$D"; mkdir -p "$D/jogo/ryan-vr" "$D/jogo/blocos-vr" "$D/jogo/turbo-noturno" "$D/jogo/comum"
 cp "$J/site/index.html" "$D/index.html"
+# tamanho de verdade dos arquivos no botão de baixar (ex.: "APK · 12,6 MB")
+mb() { awk -v b="$(wc -c < "$1")" 'BEGIN { printf "%.1f", b / 1000000 }' | tr . ,; }
+sed -i "s/APK · [0-9]*,[0-9]* MB/APK · $(mb "$J/ryan-vr/RyanVR.apk") MB/; s/\.zip · [0-9]*,[0-9]* MB/.zip · $(mb "$J/ryan-vr/RyanVR-Computador.zip") MB/" "$D/index.html"
 cp "$J/ryan-vr/RyanVR.apk" "$J/ryan-vr/RyanVR-Android.zip" "$J/ryan-vr/RyanVR-Computador.zip" "$D/"
 cp "$J/ryan-vr/index.html" "$J/ryan-vr/manifest.json" "$J/ryan-vr/sw.js" "$J/ryan-vr/icon-192.png" "$J/ryan-vr/icon-512.png" "$J/ryan-vr/icon-maskable-512.png" "$D/jogo/ryan-vr/"
 cp "$J/blocos-vr/index.html" "$D/jogo/blocos-vr/"

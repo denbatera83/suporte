@@ -62,6 +62,7 @@
   #erros span { white-space: pre-wrap; word-break: break-word; }
   #erros button { justify-self: start; font-size: 15px; padding: 6px 14px; }
   #arquivo, #arq-fotos, #arq-musica { position: fixed; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  #cfg-input { position: fixed; left: 0; top: 0; width: 2px; height: 2px; opacity: 0; border: 0; padding: 0; font-size: 16px; pointer-events: none; z-index: -1; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/aframe@1.6.0/dist/aframe-v1.6.0.min.js"></script>
@@ -83,13 +84,14 @@
       <button id="btn-pc" class="sec">🖥️ Modo Computador <small>mouse e teclado</small></button>
     </div>
     <p class="nota">Computador: arraste o mouse para olhar, clique para apertar; no Google digite no teclado; Esc pausa os jogos; na Corrida use ← → (ou A e D) e espaço para o turbo. Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 3.6</p>
+    <p class="nota" id="versao">Ryan VR 3.7</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
 <button id="menu2d" class="sec" hidden>☰ Início</button>
 <div id="vr-ui" hidden><div class="linha"></div><button id="vr-sair" aria-label="Sair do modo Cardboard">✕</button><p id="vr-modo" class="vr-aviso" hidden></p><p id="vr-erro" class="vr-aviso erro" hidden></p></div>
 <div id="girar"><div><span class="tel">📱</span>Gire o celular de lado<br><small style="font: 600 15px var(--body); color: var(--muted)">e encaixe no Cardboard com a linha branca no meio</small></div></div>
+<input id="cfg-input" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Campo de texto da configuração">
 <input type="file" id="arquivo" accept="video/*">
 <input type="file" id="arq-fotos" accept="image/*" multiple>
 <input type="file" id="arq-musica" accept="audio/*" multiple>
@@ -281,6 +283,42 @@ const AJ = (() => { // ajustes guardados no celular (valem também para o Blocos
   return { ipd: g('ryanvr-ipd', 0.064), lente: g('ryanvr-lente', true), fuse: g('ryanvr-fuse', 1.2), musica: g('ryanvr-musica', true), maos: g('ryanvr-maos', true), camFov: g('ryanvr-camfov2', 0), distTV: g('ryanvr-disttv', 2.2), suave: g('ryanvr-suave2', false), graficos: g('ryanvr-graficos', g('ryanvr-suave2', false) ? 'baixo' : 'medio'), ambiente: g('ryanvr-ambiente', 'saguao'), imersao: g('ryanvr-imersao', 1), volume: g('ryanvr-volume', 0.8), miopia: g('ryanvr-miopia', true), maoVisual: g('ryanvr-maovisual', 'esqueleto'), brilho: g('ryanvr-brilho', 1) };
 })();
 const salva = () => { try { localStorage.setItem('ryanvr-ipd', JSON.stringify(AJ.ipd)); localStorage.setItem('ryanvr-lente', JSON.stringify(AJ.lente)); localStorage.setItem('ryanvr-fuse', JSON.stringify(AJ.fuse)); localStorage.setItem('ryanvr-musica', JSON.stringify(AJ.musica)); localStorage.setItem('ryanvr-maos', JSON.stringify(AJ.maos)); localStorage.setItem('ryanvr-camfov2', JSON.stringify(AJ.camFov)); localStorage.setItem('ryanvr-disttv', JSON.stringify(AJ.distTV)); localStorage.setItem('ryanvr-suave2', JSON.stringify(AJ.suave)); localStorage.setItem('ryanvr-graficos', JSON.stringify(AJ.graficos)); localStorage.setItem('ryanvr-ambiente', JSON.stringify(AJ.ambiente)); localStorage.setItem('ryanvr-imersao', JSON.stringify(AJ.imersao)); localStorage.setItem('ryanvr-volume', JSON.stringify(AJ.volume)); localStorage.setItem('ryanvr-miopia', JSON.stringify(AJ.miopia)); localStorage.setItem('ryanvr-maovisual', JSON.stringify(AJ.maoVisual)); localStorage.setItem('ryanvr-brilho', JSON.stringify(AJ.brilho)); } catch (e) {} };
+// ---------- conta do óculos: fica só neste aparelho (nada vai para a internet) ----------
+// a senha nunca é guardada: só um "resumo" (SHA-256 com sal), que não dá para desfazer
+function sha256(s) {
+  const K = [], H = []; let n = 2, c = 0;
+  const frac = x => ((x - Math.floor(x)) * 4294967296) | 0;
+  while (c < 64) { let primo = true; for (let i = 2; i * i <= n; i++) if (n % i === 0) { primo = false; break; } if (primo) { if (c < 8) H[c] = frac(Math.pow(n, 1 / 2)); K[c] = frac(Math.pow(n, 1 / 3)); c++; } n++; }
+  const b = unescape(encodeURIComponent(s)), l = b.length, w = [];
+  for (let i = 0; i < l; i++) w[i >> 2] |= b.charCodeAt(i) << (24 - (i % 4) * 8);
+  w[l >> 2] |= 0x80 << (24 - (l % 4) * 8);
+  w[(((l + 8) >> 6) << 4) + 15] = l * 8;
+  const ror = (x, k) => (x >>> k) | (x << (32 - k));
+  for (let j = 0; j < w.length; j += 16) {
+    const W = [], a = H.slice();
+    for (let i = 0; i < 64; i++) {
+      if (i < 16) W[i] = w[j + i] | 0;
+      else { const x = W[i - 15], y = W[i - 2]; W[i] = ((ror(x, 7) ^ ror(x, 18) ^ (x >>> 3)) + W[i - 16] + (ror(y, 17) ^ ror(y, 19) ^ (y >>> 10)) + W[i - 7]) | 0; }
+      const [A, B, C, D, E, F, G, Hh] = a;
+      const t1 = (Hh + (ror(E, 6) ^ ror(E, 11) ^ ror(E, 25)) + ((E & F) ^ (~E & G)) + K[i] + W[i]) | 0;
+      const t2 = ((ror(A, 2) ^ ror(A, 13) ^ ror(A, 22)) + ((A & B) ^ (A & C) ^ (B & C))) | 0;
+      a[7] = G; a[6] = F; a[5] = E; a[4] = (D + t1) | 0; a[3] = C; a[2] = B; a[1] = A; a[0] = (t1 + t2) | 0;
+    }
+    for (let i = 0; i < 8; i++) H[i] = (H[i] + a[i]) | 0;
+  }
+  return H.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+}
+const aleatorio = () => { try { const a = new Uint8Array(12); crypto.getRandomValues(a); return Array.from(a, b => b.toString(16).padStart(2, '0')).join(''); } catch (e) { return Math.random().toString(36).slice(2) + Date.now().toString(36); } };
+const hashSenha = (senha, sal) => { let h = sal + '|' + senha; for (let i = 0; i < 300; i++) h = sha256(h + '|' + senha); return h; };
+let CONTA = (() => { try { const c = JSON.parse(localStorage.getItem('ryanvr-conta') || 'null'); return c && c.id ? c : null; } catch (e) { return null; } })();
+const guardaConta = () => { try { if (CONTA) localStorage.setItem('ryanvr-conta', JSON.stringify(CONTA)); else localStorage.removeItem('ryanvr-conta'); } catch (e) {} };
+const sessaoAberta = () => { try { return !!CONTA && sessionStorage.getItem('ryanvr-sessao') === CONTA.id; } catch (e) { return false; } };
+const abreSessao = v => { try { if (v && CONTA) sessionStorage.setItem('ryanvr-sessao', CONTA.id); else sessionStorage.removeItem('ryanvr-sessao'); } catch (e) {} };
+const nomeConta = () => (CONTA && CONTA.nome) || 'Ryan';
+const AVATARES = ['🦁', '🐼', '🦊', '🐯', '🦖', '🐶', '🐱', '🐵', '🤖', '🚀', '⚽', '🎮'];
+const PASSOS_CFG = [['ola', '👋', 'Boas-vindas'], ['maos', '✋', 'Mãos'], ['tamanho', '📏', 'Tamanho'], ['olhar', '👀', 'Olhar'], ['perfil', '👤', 'Conta'], ['senha', '🔑', 'Senha'], ['ambiente', '🏞️', 'Lugar'], ['pronto', '✅', 'Pronto']];
+const CAMPOS_CFG = { perfil: ['nome', 'email'], senha: ['senha', 'senha2'], entrar: ['login'], esqueci: ['emailEsq'] };
+const LIMITE_CFG = { nome: 20, email: 60, senha: 32, senha2: 32, login: 32, emailEsq: 60 };
 // reconhecimento da mão (MediaPipe, do Google): no app vem de dentro do APK
 const MP_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/';
 const MP_MODELO = 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
@@ -1116,6 +1154,8 @@ AFRAME.registerComponent('ryan-vr', {
   init() {
     const sc = this.el;
     this.secao = Q.get('secao') || 'inicio'; this.detalhe = null; this.estado = 'saguao';
+    // primeira vez: configuração do óculos; depois: pede a senha ao abrir (se a conta pedir)
+    this.cfg = !CONTA ? this.cfgNovo('ola') : (CONTA.pedir !== false && !sessaoAberta()) ? this.cfgNovo('entrar') : null;
     try { this.busca = localStorage.getItem('ryanvr-busca') || ''; } catch (e) { this.busca = ''; }
     this.rig = document.getElementById('rig'); this.centro = document.getElementById('centro'); this.cam = document.getElementById('cam');
     this.cursor = document.getElementById('cursor'); this.anel = document.getElementById('anel');
@@ -1138,7 +1178,7 @@ AFRAME.registerComponent('ryan-vr', {
       cv.addEventListener('mouseup', e => { if (performance.now() - t0 < 400 && Math.hypot(e.clientX - x0, e.clientY - y0) < 6) this.toque(e.clientX, e.clientY); });
     };
     if (sc.canvas) liga(); else sc.addEventListener('renderstart', liga);
-    window.addEventListener('keydown', e => { if ((e.code === 'Space' || e.code === 'Enter') && !((this.secao === 'google' || (this.secao === 'sites' && this.addSite)) && this.estado === 'saguao' && !this.detalhe) && !this.emJogo()) { e.preventDefault(); this.tocar(true); } }); // espaço/Enter = botão do óculos (controle Bluetooth); não atrapalha digitar nem o turbo
+    window.addEventListener('keydown', e => { if ((e.code === 'Space' || e.code === 'Enter') && !(e.target && e.target.id === 'cfg-input') && !(this.cfg && this.cfg.campo) && !((this.secao === 'google' || (this.secao === 'sites' && this.addSite)) && this.estado === 'saguao' && !this.detalhe) && !this.emJogo()) { e.preventDefault(); this.tocar(true); } }); // espaço/Enter = botão do óculos (controle Bluetooth); não atrapalha digitar nem o turbo
     if (document.fonts) document.fonts.ready.then(() => this.renderTudo());
     // escolher vídeo do celular
     document.getElementById('arquivo').addEventListener('change', e => {
@@ -1197,9 +1237,11 @@ AFRAME.registerComponent('ryan-vr', {
   renderTudo() { PAINEIS.forEach(p => p.render()); },
 
   desenhaMenu(g, p) {
+    if (this.cfg) return this.desenhaCfgMenu(g, p);
     caixa(g, 0, 0, p.W, p.H, 36, UI.fundo);
     texto(g, 'Ryan', 40, 92, FONTE_T(64), UI.txt); texto(g, 'VR', 40 + g.measureText('Ryan ').width, 92, FONTE_T(64), UI.acc2);
     texto(g, 'MENU', 42, 150, FONTE(800, 22), UI.sub);
+    if (CONTA) { let nm = CONTA.avatar + ' ' + CONTA.nome; g.font = FONTE(800, 24); while (nm.length > 4 && g.measureText(nm).width > p.W - 190) nm = nm.slice(0, -2) + '…'; texto(g, nm, p.W - 40, 150, FONTE(800, 24), UI.sub, 'right'); }
     const itens = [['inicio', '🏠', 'Início'], ['videos', '🎬', 'Vídeos 360°'], ['jogos', '🎮', 'Jogos'], ['meus', '📁', 'Meus vídeos'], ['apps', '📱', 'Apps do Richard'], ['google', '🔎', 'Google'], ['ajustes', '⚙️', 'Ajustes']];
     itens.forEach(([id, ic, nome], i) => {
       const y = 164 + i * 90, sel = this.secao === id;
@@ -1242,6 +1284,7 @@ AFRAME.registerComponent('ryan-vr', {
   desenhaCentro(g, p) {
     caixa(g, 0, 0, p.W, p.H, 40, UI.fundo);
     const W = p.W;
+    if (this.cfg) return this.desenhaCfg(g, p);
     if (this.detalhe) return this.desenhaDetalhe(g, p, this.detalhe);
     if (this.secao === 'jogos') return this.desenhaJogos(g, p);
     if (this.secao === 'videos' || this.secao === 'jogos') {
@@ -1315,10 +1358,414 @@ AFRAME.registerComponent('ryan-vr', {
     }
   },
 
+  // ---------- configuração do óculos (primeira vez) e tela de entrar com a senha ----------
+  cfgNovo(passo, extra) {
+    const C = Object.assign({ passo, campo: null, val: { nome: CONTA ? CONTA.nome : '', email: CONTA ? CONTA.email : '', senha: '', senha2: '', login: '', emailEsq: '' },
+      avatar: (CONTA && CONTA.avatar) || AVATARES[0], pedir: CONTA ? CONTA.pedir !== false : true, ponto: 0, esq: false, dir: false, pinca: false, erro: '', tent: 0, tentEsq: 0 }, extra || {});
+    C.campo = (CAMPOS_CFG[passo] || [])[0] || null; return C;
+  },
+  cfgIndice() { return this.cfg ? PASSOS_CFG.findIndex(s => s[0] === this.cfg.passo) : -1; },
+  cfgFechaTeclado() { const el = document.getElementById('cfg-input'); if (el && document.activeElement === el) el.blur(); },
+  cfgVai(passo) {
+    const C = this.cfg; if (!C) return;
+    C.passo = passo; C.erro = ''; C.mai = false; C.ver = false; C.confirma = null; C.campo = (CAMPOS_CFG[passo] || [])[0] || null;
+    this.cfgFechaTeclado(); som('abre'); this.renderTudo();
+  },
+  cfgErro(t, campo) { const C = this.cfg; C.erro = t; if (campo) C.campo = campo; this.vibra([50, 40, 50]); this.renderTudo(); },
+  cfgProximo() {
+    const C = this.cfg; if (!C) return; const v = C.val, p = C.passo;
+    if (p === 'entrar') return this.cfgEntrar();
+    if (p === 'esqueci') return this.cfgEsqueci();
+    if (p === 'perfil') {
+      v.nome = v.nome.trim().replace(/\s+/g, ' '); v.email = v.email.trim().toLowerCase();
+      if (!v.nome) return this.cfgErro('Digite o seu nome', 'nome');
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s.]{2,}$/.test(v.email)) return this.cfgErro('E-mail inválido. Exemplo: ryan@gmail.com', 'email');
+    }
+    if (p === 'senha') {
+      if (v.senha.length < 4) return this.cfgErro('A senha precisa ter pelo menos 4 letras ou números', 'senha');
+      if (v.senha !== v.senha2) { v.senha2 = ''; return this.cfgErro('As duas senhas não são iguais. Digite de novo.', 'senha2'); }
+      const sal = aleatorio(), velha = CONTA;
+      CONTA = { id: velha && (C.troca || C.reset) ? velha.id : aleatorio(), nome: v.nome || (velha && velha.nome) || 'Ryan', email: v.email || (velha && velha.email) || '',
+        avatar: C.avatar, pedir: C.pedir, sal, hash: hashSenha(v.senha, sal), criada: (velha && velha.criada) || Date.now() };
+      guardaConta(); abreSessao(true); v.senha = v.senha2 = '';
+      if (C.troca) return this.cfgTermina('🔑 Senha trocada!', 'ajustes');
+      if (C.reset) return this.cfgTermina('🔑 Senha nova criada! ' + CONTA.avatar, 'inicio');
+    }
+    if (p === 'pronto') return this.cfgTermina(`Bem-vindo, ${nomeConta()}! ${CONTA ? CONTA.avatar : ''}`, 'inicio');
+    const i = this.cfgIndice(); if (i >= 0 && i < PASSOS_CFG.length - 1) this.cfgVai(PASSOS_CFG[i + 1][0]);
+  },
+  cfgVoltar() {
+    const C = this.cfg; if (!C) return;
+    if (C.troca || (C.alvo && C.passo === 'entrar')) return this.cfgTermina(null, 'ajustes'); // cancelou: volta para os Ajustes, nada muda
+    if (C.passo === 'esqueci' || C.reset) { C.reset = false; return this.cfgVai('entrar'); }
+    const i = this.cfgIndice();
+    if (i === 0 && C.refazer) return this.cfgTermina(null, 'ajustes');
+    if (i > 0) this.cfgVai(PASSOS_CFG[i - 1][0]);
+  },
+  cfgTermina(msg, secao) {
+    this.cfgFechaTeclado(); this.cfg = null; abreSessao(true);
+    this.secao = secao || 'inicio'; this.detalhe = null; this.renderTudo(); som('abre'); if (msg) this.aviso(msg);
+  },
+  cfgEntrar() {
+    const C = this.cfg, agora = performance.now();
+    if (C.bloqT && agora < C.bloqT) return this.vibra(40);
+    if (!C.val.login) return this.cfgErro('Digite a sua senha', 'login');
+    if (CONTA && hashSenha(C.val.login, CONTA.sal) === CONTA.hash) {
+      C.val.login = ''; C.tent = 0; abreSessao(true);
+      if (C.alvo === 'troca') { C.troca = true; return this.cfgVai('senha'); }
+      if (C.alvo === 'refazer') { C.refazer = true; C.alvo = null; return this.cfgVai('ola'); }
+      return this.cfgTermina(`Olá, ${nomeConta()}! ${CONTA.avatar || ''}`, 'inicio');
+    }
+    C.tent++; C.val.login = '';
+    if (C.tent >= 5) { C.tent = 0; C.bloqT = agora + 30000; return this.cfgErro('Muitas tentativas: espere 30 segundos'); }
+    this.cfgErro(`Senha errada (${C.tent} de 5). Tente de novo.`, 'login');
+  },
+  cfgEsqueci() {
+    const C = this.cfg, e = C.val.emailEsq.trim().toLowerCase();
+    if (!e) return this.cfgErro('Digite o e-mail da conta', 'emailEsq');
+    if (CONTA && e === CONTA.email) { C.val.emailEsq = ''; C.reset = true; C.val.nome = CONTA.nome; C.val.email = CONTA.email; this.aviso('E-mail certo! Crie uma senha nova'); return this.cfgVai('senha'); }
+    C.tentEsq++; this.cfgErro('Esse não é o e-mail da conta', 'emailEsq');
+  },
+  cfgApagaConta() {
+    const C = this.cfg;
+    if (C.confirma !== 'apagar' || performance.now() - C.confirmaT > 6000) { C.confirma = 'apagar'; C.confirmaT = performance.now(); this.aviso('Toque de novo para apagar a conta'); this.renderTudo(); return; }
+    CONTA = null; guardaConta(); abreSessao(false); this.cfg = this.cfgNovo('ola'); this.renderTudo(); this.aviso('Conta apagada: vamos criar outra');
+  },
+  trancar() { this.cfgFechaTeclado(); abreSessao(false); this.cfg = CONTA ? this.cfgNovo('entrar') : this.cfgNovo('ola'); this.secao = 'inicio'; this.detalhe = null; this.fechaCentral && this.fechaCentral(); this.renderTudo(); this.aviso('🔒 Óculos trancado'); },
+  // digitar: teclado do painel, teclado de luz (dedos), teclado do computador ou do celular
+  cfgAtivaCampo(f, abrirTeclado) {
+    const C = this.cfg; if (!C) return; C.campo = f; C.mai = false; this.renderTudo();
+    const el = document.getElementById('cfg-input'), cb = this.el.components.cardboard;
+    if (!el || (cb && cb.ativo) || this.modoPC) return;
+    const foco = document.activeElement === el; if (!foco && !abrirTeclado) return;
+    el.type = /senha|login/.test(f) ? 'password' : /email/i.test(f) ? 'email' : 'text';
+    el.value = C.val[f] || ''; if (!foco) try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
+  },
+  cfgPoeTexto(v) {
+    const C = this.cfg; if (!C || !C.campo) return;
+    C.val[C.campo] = String(v).slice(0, LIMITE_CFG[C.campo] || 40); C.erro = ''; this.pCentro.render();
+  },
+  cfgDigita(ch) { const C = this.cfg; if (!C || !C.campo) return; this.cfgPoeTexto((C.val[C.campo] || '') + ch); this.cfgEspelha(); },
+  cfgEspelha() { const el = document.getElementById('cfg-input'), C = this.cfg; if (el && C && C.campo && document.activeElement === el) el.value = C.val[C.campo] || ''; },
+  cfgTecla(id) {
+    const C = this.cfg; if (!C || !C.campo) return;
+    const f = C.campo, v = C.val[f] || '';
+    this.teclaFlash = this.teclaFlash || {}; this.teclaFlash[id] = performance.now(); som('hover'); this.vibra(10);
+    if (id === 'ok' || id === 'vai') {
+      const lista = CAMPOS_CFG[C.passo] || [], k = lista.indexOf(f);
+      if (k >= 0 && k < lista.length - 1) return this.cfgAtivaCampo(lista[k + 1], false);
+      return this.cfgProximo();
+    }
+    if (id === 'shift') { C.mai = !C.mai; this.renderTudo(); return; }
+    if (id === 'olho') { C.ver = !C.ver; this.renderTudo(); return; }
+    let novo = v;
+    if (id === 'apaga') novo = v.slice(0, -1);
+    else if (id === 'limpa') novo = '';
+    else if (id === 'espaco') novo = f === 'nome' || /senha|login/.test(f) ? v + ' ' : v;
+    else if (id === '.com' || id === 'ponto-com') novo = v + '.com';
+    else if ([...id].length === 1) { novo = v + (C.mai ? id.toUpperCase() : id); C.mai = false; }
+    this.cfgPoeTexto(novo); this.cfgEspelha(); if (this.pTeclado) this.pTeclado.render();
+  },
+  passoCfg() {
+    const C = this.cfg; if (!C) return;
+    const agora = performance.now();
+    if (C.passo === 'maos') {
+      let mudou = false;
+      this.maosVisiveis().forEach(m => { if (!C[m.lado]) { C[m.lado] = true; mudou = true; } if (m.pinca && !C.pinca) { C.pinca = true; mudou = true; } });
+      if (mudou) { som('hover'); this.vibra(20); this.pCentro.render(); if (C.esq && C.dir && C.pinca) this.aviso('🎉 Suas mãos estão prontas!'); }
+    }
+    if (agora - (C.relT || 0) > 1000) { // relógio e contagem da tela de bloqueio
+      C.relT = agora; const m = new Date().getMinutes();
+      if (m !== C.relM) { C.relM = m; this.pLado.render(); this.pDock.render(); }
+      if (C.bloqT) { if (agora >= C.bloqT) { C.bloqT = 0; C.erro = ''; } this.pCentro.render(); }
+    }
+  },
+  // botões e campos desenhados nos painéis da configuração
+  cfgBotao(g, p, id, rot, x, y, w, h, f, tipo = 'sec', fs = 34) {
+    const hv = p.botao(id, x, y, w, h, f);
+    const cor = tipo === 'pri' ? (hv ? '#b3a6ff' : '#8f7bff') : tipo === 'ok' ? (hv ? '#5be39a' : '#22b866') : tipo === 'perigo' ? (hv ? '#ff7088' : '#d93b54') : tipo === 'off' ? 'rgba(255,255,255,.08)' : hv ? UI.cardHover : UI.card;
+    caixa(g, x, y, w, h, Math.min(h / 2, 28), cor, hv ? '#ffffff' : null, 5);
+    texto(g, rot, x + w / 2, y + h / 2 + fs * 0.36, FONTE(800, fs), tipo === 'off' ? UI.sub : '#ffffff', 'center');
+    return hv;
+  },
+  cfgCampo(g, p, f, rotulo, x, y, w, h, dica) {
+    const C = this.cfg, ativo = C.campo === f, v = C.val[f] || '', senha = /senha|login/.test(f);
+    p.botao('cf-' + f, x, y, w, h, () => this.cfgAtivaCampo(f, true));
+    caixa(g, x, y, w, h, 26, ativo ? '#ffffff' : 'rgba(255,255,255,.78)', ativo ? '#8f7bff' : null, 7);
+    texto(g, rotulo, x + 28, y + 36, FONTE(800, 22), ativo ? '#6a55e0' : '#5f5a7a');
+    let mostra = senha && !C.ver ? '•'.repeat([...v].length) : v; g.font = FONTE(800, 40);
+    while (mostra.length > 1 && g.measureText(mostra + '|').width > w - 60) mostra = mostra.slice(1); // mostra o fim do texto
+    if (!v && !ativo) texto(g, dica || '', x + 28, y + h - 24, FONTE(700, 34), '#9a96ad');
+    else texto(g, mostra + (ativo ? '|' : ''), x + 28, y + h - 24, FONTE(800, 40), '#1d1a2e');
+  },
+  cfgTeclas(g, p, y0, kh) {
+    const C = this.cfg, W = p.W, gap = 10, u = (W - 112 - 9 * gap) / 10, agora = performance.now(), larg = n => n * u + (n - 1) * gap;
+    const linhas = [[...'1234567890'].map(c => [c, 1]), [...'qwertyuiop'].map(c => [c, 1]), [...'asdfghjklç'].map(c => [c, 1]),
+      [['shift', 1.5], ...[...'zxcvbnm'].map(c => [c, 1]), ['apaga', 1.5]],
+      [['@', 1], ['.', 1], ['-', 1], ['_', 1], ['espaco', 3], ['.com', 1.5], ['ok', 1.5]]];
+    linhas.forEach((l, r) => {
+      let x = 56; const y = y0 + r * (kh + gap);
+      l.forEach(([id, n]) => {
+        const w = larg(n), rot = id === 'shift' ? '⇧' : id === 'apaga' ? '⌫' : id === 'espaco' ? 'espaço' : id === 'ok' ? 'OK ✓' : C.mai ? id.toUpperCase() : id;
+        const hv = p.botao('k-' + id, x, y, w, kh, () => this.cfgTecla(id)), aceso = hv || (this.teclaFlash && agora - (this.teclaFlash[id] || 0) < 180);
+        const fundo = id === 'ok' ? '#22b866' : id === 'shift' && C.mai ? '#8f7bff' : UI.card;
+        caixa(g, x, y, w, kh, 20, aceso ? '#ffffff' : fundo);
+        texto(g, rot, x + w / 2, y + kh / 2 + 14, FONTE(800, rot.length > 2 ? 30 : 42), aceso ? '#120d2e' : '#ffffff', 'center');
+        x += w + gap;
+      });
+    });
+  },
+  cfgAvatar(g, cx, cy, r, emoji) {
+    const gr = g.createRadialGradient(cx, cy - r * 0.3, r * 0.1, cx, cy, r); gr.addColorStop(0, '#b9adff'); gr.addColorStop(1, '#5a46c8');
+    g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill(); g.lineWidth = 5; g.strokeStyle = 'rgba(255,255,255,.85)'; g.stroke();
+    g.font = Math.round(r * 1.15) + 'px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText(emoji || '🙂', cx, cy + r * 0.06); g.textBaseline = 'alphabetic';
+  },
+  desenhaCfg(g, p) {
+    const C = this.cfg, W = p.W, i = this.cfgIndice(), n = PASSOS_CFG.length, cx = W / 2;
+    const bt = (...a) => this.cfgBotao(g, p, ...a);
+    const passo = () => { if (i >= 0 && !C.troca && !C.reset) texto(g, `CONFIGURAÇÃO · PASSO ${i + 1} DE ${n}`, 58, 62, FONTE(800, 24), UI.sub); };
+    const cabeca = (titulo, sub) => { passo(); texto(g, titulo, 56, 136, FONTE_T(66), UI.txt); if (sub) quebra(g, sub, 58, 184, W - 120, 36, FONTE(700, 28), UI.sub, 2); };
+    const nav = (pronto, rotOk) => {
+      if (i > 0 || C.refazer) bt('cfg-volta', '‹ Voltar', 56, 852, 260, 92, () => this.cfgVoltar(), 'sec', 32);
+      bt('cfg-ok', rotOk || (pronto ? 'Continuar  ›' : 'Pular  ›'), W - 456, 852, 400, 92, () => this.cfgProximo(), pronto ? 'pri' : 'sec', 34);
+    };
+    const erro = y => { if (C.erro) texto(g, '⚠️ ' + C.erro, 58, y, FONTE(800, 30), '#ffb4b4'); };
+    const sel = (x, y, w, h, on, hv) => caixa(g, x, y, w, h, 30, on ? 'rgba(46,212,122,.3)' : hv ? UI.cardHover : UI.card, on ? '#2ed47a' : null, 6);
+    const emoji = (e, x, y, px) => { g.font = px + 'px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText(e, x, y); g.textBaseline = 'alphabetic'; };
+
+    if (C.passo === 'ola') {
+      const gr = g.createRadialGradient(cx, 300, 10, cx, 300, 190); gr.addColorStop(0, 'rgba(255,255,255,.95)'); gr.addColorStop(0.35, 'rgba(201,191,255,.85)'); gr.addColorStop(0.75, 'rgba(143,123,255,.4)'); gr.addColorStop(1, 'rgba(143,123,255,0)');
+      g.fillStyle = gr; g.beginPath(); g.arc(cx, 300, 190, 0, 7); g.fill(); emoji('🥽', cx, 300, 140);
+      texto(g, C.refazer ? 'Vamos configurar de novo' : 'Bem-vindo ao Ryan VR', cx, 570, FONTE_T(84), UI.txt, 'center');
+      texto(g, 'Vamos deixar o óculos do seu jeito: as mãos, o tamanho,', cx, 634, FONTE(700, 32), UI.sub, 'center');
+      texto(g, 'e a sua conta com e-mail e senha. Leva uns 2 minutinhos.', cx, 676, FONTE(700, 32), UI.sub, 'center');
+      bt('cfg-ok', 'Começar  ›', cx - 240, 726, 480, 116, () => this.cfgProximo(), 'pri', 46);
+      if (C.refazer) bt('cfg-volta', '‹ Cancelar', 56, 852, 260, 92, () => this.cfgVoltar(), 'sec', 32);
+      texto(g, 'Olhe para o botão e segure · faça a pinça · ou toque', cx, 925, FONTE(700, 26), UI.sub, 'center');
+      return;
+    }
+    if (C.passo === 'maos') {
+      cabeca('Suas mãos', this.modoPC ? 'No computador você usa o mouse e o teclado. As mãos funcionam no celular, com a câmera de trás.' : 'Mostre as mãos para a câmera de trás do celular. Depois junte o dedão com o indicador (pinça).');
+      const cw = (W - 112 - 60) / 3, tudo = C.esq && C.dir && C.pinca;
+      [['esq', '🤚', 'Mão esquerda', 'mostre para a câmera'], ['dir', '✋', 'Mão direita', 'mostre para a câmera'], ['pinca', '🤏', 'Pinça', 'dedão no indicador']].forEach(([k, ic, nome, dica], j) => {
+        const x = 56 + j * (cw + 30), y = 250; sel(x, y, cw, 440, C[k]);
+        emoji(ic, x + cw / 2, y + 160, 150);
+        texto(g, nome, x + cw / 2, y + 320, FONTE_T(46), UI.txt, 'center');
+        texto(g, C[k] ? '✓ Pronto!' : dica, x + cw / 2, y + 378, FONTE(800, 30), C[k] ? '#8dffc0' : UI.sub, 'center');
+      });
+      texto(g, tudo ? '🎉 Suas mãos estão prontas!' : this.modoPC ? '' : 'Dica: boa luz e a mão a um palmo do celular', cx, 770, FONTE(800, 32), tudo ? '#8dffc0' : UI.sub, 'center');
+      nav(tudo || this.modoPC);
+      return;
+    }
+    if (C.passo === 'tamanho') {
+      cabeca('Tamanho e visão', 'Deixe as letras nítidas e as janelas confortáveis. Dá para mudar depois em Ajustes.');
+      const cb = this.el.components.cardboard;
+      const linha = (y, nome, valor, menos, mais) => {
+        caixa(g, 56, y, 900, 106, 26, 'rgba(255,255,255,.05)'); texto(g, nome, 86, y + 67, FONTE(800, 32), UI.txt);
+        bt('ct-' + y + '-', '−', 486, y + 12, 110, 82, () => { menos(); this.renderTudo(); }, 'sec', 44);
+        bt('ct-' + y + '+', '+', 822, y + 12, 110, 82, () => { mais(); this.renderTudo(); }, 'sec', 44);
+        texto(g, valor, 709, y + 67, FONTE(800, 32), '#ffd08f', 'center');
+      };
+      const ipd = d => { AJ.ipd = Math.max(0.054, Math.min(0.074, +(AJ.ipd + d).toFixed(3))); salva(); if (cb) cb.distancia = AJ.ipd; };
+      const mio = () => { AJ.miopia = !AJ.miopia; salva(); this.raioAtual = 0; this.aplicaDistancia(); this.atualizaFundo(); if (cb && cb.lente) cb.lente.uniforms.nitidez.value = AJ.miopia ? 1.1 : 0.7; };
+      const dist = d => { AJ.distTV = Math.max(1.4, Math.min(3.2, +(AJ.distTV + d).toFixed(1))); salva(); this.raioAtual = 0; this.aplicaDistancia(); };
+      const bri = d => { AJ.brilho = Math.max(0.6, Math.min(1.8, +(AJ.brilho + d).toFixed(1))); salva(); this.aplicaGraficos(); };
+      linha(250, '👀 Distância dos olhos', (AJ.ipd * 1000).toFixed(0) + ' mm', () => ipd(-0.002), () => ipd(0.002));
+      linha(372, '🔠 Letras e janelas', AJ.miopia ? 'Grandes' : 'Normais', mio, mio);
+      linha(494, '📏 Distância', AJ.distTV.toFixed(1) + ' m', () => dist(-0.2), () => dist(0.2));
+      linha(616, '☀️ Brilho', Math.round(AJ.brilho * 100) + '%', () => bri(-0.1), () => bri(0.1));
+      // teste de nitidez
+      const tx = 990, tw = W - 56 - tx; caixa(g, tx, 250, tw, 472, 30, 'rgba(255,255,255,.93)');
+      const ccx = tx + tw / 2; g.lineWidth = 6; g.strokeStyle = '#1d1a2e'; [92, 64, 36].forEach(r => { g.beginPath(); g.arc(ccx, 380, r, 0, 7); g.stroke(); }); g.fillStyle = '#8f7bff'; g.beginPath(); g.arc(ccx, 380, 12, 0, 7); g.fill();
+      texto(g, 'Consegue ler?', ccx, 538, FONTE_T(40), '#1d1a2e', 'center');
+      texto(g, 'Ryan VR 123', ccx, 590, FONTE(800, 34), '#1d1a2e', 'center');
+      texto(g, 'letras médias', ccx, 636, FONTE(800, 26), '#3a3550', 'center');
+      texto(g, 'letras bem pequenas', ccx, 676, FONTE(800, 19), '#3a3550', 'center');
+      quebra(g, 'No óculos: mude a distância dos olhos até ver um círculo só e bem nítido. Se as letras pequenas borrarem, use Letras grandes.', 58, 770, W - 120, 34, FONTE(700, 26), UI.sub, 2);
+      nav(true);
+      return;
+    }
+    if (C.passo === 'olhar') {
+      cabeca('Olhe para as bolinhas', 'Olhe para a bolinha acesa e segure o olhar até o anel encher (ou aponte e faça a pinça, ou toque).');
+      const pts = [[cx, 520], [260, 330], [W - 260, 330], [W - 260, 740], [260, 740]], feito = C.ponto >= pts.length;
+      pts.forEach(([x, y], k) => {
+        if (k < C.ponto) { g.fillStyle = 'rgba(46,212,122,.85)'; g.beginPath(); g.arc(x, y, 40, 0, 7); g.fill(); texto(g, '✓', x, y + 15, FONTE(800, 44), '#fff', 'center'); return; }
+        if (k > C.ponto) { g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.arc(x, y, 24, 0, 7); g.fill(); return; }
+        const hv = p.botao('ol-' + k, x - 95, y - 95, 190, 190, () => {
+          C.ponto++; this.vibra(15);
+          if (C.ponto >= pts.length) { this.recentrar(); this.aviso('🎯 Visão centralizada'); }
+          this.renderTudo();
+        });
+        const gr = g.createRadialGradient(x, y, 4, x, y, 90); gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.5, 'rgba(201,191,255,.9)'); gr.addColorStop(1, 'rgba(143,123,255,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(x, y, 90, 0, 7); g.fill();
+        g.lineWidth = 6; g.strokeStyle = hv ? '#ffd08f' : '#ffffff'; g.beginPath(); g.arc(x, y, 58, 0, 7); g.stroke();
+      });
+      texto(g, feito ? '✓ Pronto! A visão foi centralizada.' : `${C.ponto} de ${pts.length}`, cx, feito ? 660 : 650, FONTE(800, 32), feito ? '#8dffc0' : UI.sub, 'center');
+      nav(feito);
+      return;
+    }
+    if (C.passo === 'perfil' || C.passo === 'senha') {
+      passo();
+      const nova = C.troca || C.reset;
+      texto(g, C.passo === 'perfil' ? 'Crie a sua conta' : nova ? 'Senha nova' : 'Crie uma senha', 56, 128, FONTE_T(60), UI.txt);
+      bt('cfg-volta', C.troca ? '✕ Cancelar' : '‹ Voltar', W - 640, 40, 230, 88, () => this.cfgVoltar(), 'sec', 30);
+      bt('cfg-ok', C.passo === 'senha' && nova ? 'Salvar ✓' : 'Próximo  ›', W - 390, 40, 334, 88, () => this.cfgProximo(), 'pri', 32);
+      if (C.passo === 'perfil') {
+        this.cfgCampo(g, p, 'nome', 'SEU NOME', 56, 156, 560, 112, 'ex.: Ryan');
+        this.cfgCampo(g, p, 'email', 'E-MAIL', 640, 156, W - 696, 112, 'ex.: ryan@gmail.com');
+      } else {
+        this.cfgCampo(g, p, 'senha', 'SENHA', 56, 156, 600, 112, 'pelo menos 4');
+        bt('cf-olho', C.ver ? '🙈' : '👁', 672, 156, 112, 112, () => this.cfgTecla('olho'), 'sec', 46);
+        this.cfgCampo(g, p, 'senha2', 'REPITA A SENHA', 800, 156, W - 856, 112, 'a mesma senha');
+      }
+      if (C.erro) erro(318);
+      else if (C.passo === 'senha') { // força da senha
+        const s = C.val.senha, f = !s ? 0 : s.length < 4 ? 1 : s.length < 6 || !(/[0-9]/.test(s) && /[a-zA-Zç]/.test(s)) ? 2 : 3;
+        const rot = ['', 'Fraca: pelo menos 4', 'Boa', 'Forte 💪'][f], cor = ['', '#ff7b7b', '#ffd08f', '#8dffc0'][f];
+        [0, 1, 2].forEach(k => caixa(g, 58 + k * 130, 296, 120, 16, 8, k < f ? cor : 'rgba(255,255,255,.15)'));
+        if (rot) texto(g, rot, 470, 316, FONTE(800, 28), cor);
+      } else texto(g, '🔒 A conta fica só neste aparelho — nada é enviado para a internet', 58, 318, FONTE(700, 26), UI.sub);
+      this.cfgTeclas(g, p, 346, 96);
+      return;
+    }
+    if (C.passo === 'entrar' || C.passo === 'esqueci') {
+      const esq = C.passo === 'esqueci';
+      this.cfgAvatar(g, 140, 140, 92, CONTA && CONTA.avatar);
+      texto(g, esq ? 'Esqueceu a senha?' : `Olá, ${nomeConta()}!`, 260, 128, FONTE_T(64), UI.txt);
+      texto(g, esq ? 'Digite o e-mail da conta para criar uma senha nova' : C.alvo === 'troca' ? 'Digite a senha atual para trocar' : C.alvo === 'refazer' ? 'Digite a senha para configurar de novo' : 'Digite a sua senha para entrar', 262, 180, FONTE(700, 28), UI.sub);
+      const bloq = C.bloqT && performance.now() < C.bloqT;
+      if (esq || C.alvo) bt('cfg-volta', esq ? '‹ Voltar' : '✕ Cancelar', W - 640, 60, 230, 92, () => this.cfgVoltar(), 'sec', 30);
+      bt('cfg-ok', esq ? 'Verificar ›' : 'Entrar  ›', W - 390, 60, 334, 92, () => this.cfgProximo(), bloq ? 'off' : 'ok', 34);
+      if (esq) this.cfgCampo(g, p, 'emailEsq', 'E-MAIL DA CONTA', 56, 252, W - 112, 108, 'ex.: ryan@gmail.com');
+      else {
+        this.cfgCampo(g, p, 'login', 'SENHA', 56, 252, W - 112 - 480, 108, 'digite a senha');
+        bt('cf-olho', C.ver ? '🙈' : '👁', W - 536, 252, 108, 108, () => this.cfgTecla('olho'), 'sec', 44);
+        bt('cfg-esqueci', 'Esqueci a senha', W - 412, 252, 356, 108, () => this.cfgVai('esqueci'), 'sec', 30);
+      }
+      if (bloq) texto(g, `⏳ Muitas tentativas: espere ${Math.ceil((C.bloqT - performance.now()) / 1000)} s`, 58, 404, FONTE(800, 30), '#ffd08f');
+      else erro(404);
+      if (esq && C.tentEsq >= 2) bt('cfg-apagar', C.confirma === 'apagar' ? 'Toque de novo para apagar' : '🗑 Apagar a conta e começar de novo', W - 696, 372, 640, 60, () => this.cfgApagaConta(), 'perigo', 26);
+      this.cfgTeclas(g, p, 444, 90);
+      return;
+    }
+    if (C.passo === 'ambiente') {
+      cabeca('Escolha o seu lugar', 'É o lugar em volta de você no óculos. Olhe em volta para ver! Dá para trocar depois na Central de controle.');
+      const cores = { saguao: ['#b6a6ec', '#6f63c9'], praia: ['#8fd0ff', '#1f8fc4'], montanhas: ['#b9d8f5', '#4f6b3a'], lua: ['#55555f', '#101018'], espaco: ['#3a1a6e', '#05030f'], floresta: ['#2e4a6e', '#132413'] };
+      const cw = (W - 112 - 5 * 20) / 6;
+      AMBIENTES.forEach((a, k) => {
+        const x = 56 + k * (cw + 20), y = 260, h = 420, on = (AJ.ambiente || 'saguao') === a.id;
+        const hv = p.botao('amb-' + a.id, x, y, cw, h, () => { this.trocaAmbiente(a.id); this.renderTudo(); });
+        const gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, (cores[a.id] || cores.saguao)[0]); gr.addColorStop(1, (cores[a.id] || cores.saguao)[1]);
+        caixa(g, x, y, cw, h, 30, gr, on ? '#ffffff' : hv ? 'rgba(255,255,255,.7)' : null, on ? 8 : 4);
+        emoji(a.ic, x + cw / 2, y + 170, 110);
+        texto(g, a.nome, x + cw / 2, y + h - 70, FONTE(800, 32), '#ffffff', 'center');
+        if (on) texto(g, '✓ escolhido', x + cw / 2, y + h - 28, FONTE(800, 24), '#ffffff', 'center');
+      });
+      nav(true);
+      return;
+    }
+    if (C.passo === 'pronto') {
+      this.cfgAvatar(g, cx, 270, 140, CONTA && CONTA.avatar);
+      texto(g, `Tudo pronto, ${nomeConta()}!`, cx, 520, FONTE_T(80), UI.txt, 'center');
+      const amb = AMBIENTES.find(a => a.id === (AJ.ambiente || 'saguao')) || AMBIENTES[0];
+      [`👤 ${CONTA ? CONTA.email : ''}`, `🔒 Senha ${CONTA && CONTA.pedir !== false ? 'pedida sempre que abrir' : 'não é pedida ao abrir'}`, `📏 Olhos ${(AJ.ipd * 1000).toFixed(0)} mm · letras ${AJ.miopia ? 'grandes' : 'normais'} · ${amb.ic} ${amb.nome}`]
+        .forEach((t, k) => texto(g, t, cx, 590 + k * 46, FONTE(800, 30), UI.sub, 'center'));
+      bt('cfg-ok', 'Começar a usar  ›', cx - 300, 740, 600, 110, () => this.cfgProximo(), 'pri', 44);
+      bt('cfg-volta', '‹ Voltar', 56, 852, 260, 92, () => this.cfgVoltar(), 'sec', 32);
+    }
+  },
+  desenhaCfgMenu(g, p) {
+    caixa(g, 0, 0, p.W, p.H, 36, UI.fundo);
+    texto(g, 'Ryan', 40, 92, FONTE_T(64), UI.txt); texto(g, 'VR', 40 + g.measureText('Ryan ').width, 92, FONTE_T(64), UI.acc2);
+    const C = this.cfg, cx = p.W / 2;
+    if (C.passo === 'entrar' || C.passo === 'esqueci' || C.troca || C.reset) {
+      this.cfgAvatar(g, cx, 340, 130, CONTA && CONTA.avatar);
+      texto(g, nomeConta(), cx, 540, FONTE_T(56), UI.txt, 'center');
+      let em = CONTA ? CONTA.email : ''; g.font = FONTE(700, 26); while (em.length > 4 && g.measureText(em).width > p.W - 60) em = em.slice(0, -2) + '…';
+      texto(g, em, cx, 586, FONTE(700, 26), UI.sub, 'center');
+      texto(g, C.alvo || C.troca ? '🔑 Conta' : '🔒 Óculos trancado', cx, 680, FONTE(800, 32), UI.txt, 'center');
+      return;
+    }
+    texto(g, 'CONFIGURAÇÃO', 42, 150, FONTE(800, 22), UI.sub);
+    const i0 = this.cfgIndice();
+    PASSOS_CFG.forEach(([id, ic, nome], k) => {
+      const y = 170 + k * 84, feito = k < i0, atual = k === i0;
+      caixa(g, 24, y, p.W - 48, 74, 22, atual ? 'rgba(143,123,255,.6)' : 'rgba(255,255,255,.04)', atual ? '#ffffff' : null, 3);
+      texto(g, feito ? '✓' : ic, 62, y + 50, FONTE(800, 34), feito ? '#8dffc0' : UI.txt, 'center');
+      texto(g, nome, 112, y + 50, FONTE(800, 34), feito ? UI.sub : UI.txt);
+    });
+    texto(g, `Passo ${i0 + 1} de ${PASSOS_CFG.length}`, 42, p.H - 44, FONTE(700, 26), UI.sub);
+  },
+  desenhaCfgLado(g, p) {
+    caixa(g, 0, 0, p.W, p.H, 36, UI.fundo);
+    const C = this.cfg, W = p.W;
+    if (C.passo === 'perfil') {
+      texto(g, 'SEU AVATAR', 36, 70, FONTE(800, 30), UI.txt);
+      const cw = (W - 72 - 36) / 3, ch = 160;
+      AVATARES.forEach((a, k) => {
+        const x = 36 + (k % 3) * (cw + 18), y = 100 + Math.floor(k / 3) * (ch + 18), on = C.avatar === a;
+        const hv = p.botao('av-' + k, x, y, cw, ch, () => { C.avatar = a; this.renderTudo(); });
+        caixa(g, x, y, cw, ch, 28, on ? 'rgba(143,123,255,.65)' : hv ? UI.cardHover : UI.card, on ? '#ffffff' : null, 6);
+        g.font = '92px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText(a, x + cw / 2, y + ch / 2 + 4); g.textBaseline = 'alphabetic';
+      });
+      texto(g, 'Aparece no menu e na tela de entrar', 36, 868, FONTE(700, 24), UI.sub);
+      return;
+    }
+    if (C.passo === 'senha' && !C.troca && !C.reset) {
+      texto(g, 'SENHA AO ABRIR', 36, 70, FONTE(800, 30), UI.txt);
+      quebra(g, 'Toda vez que abrir o Ryan VR, ele pede a senha, como num óculos de verdade.', 36, 122, W - 72, 36, FONTE(700, 27), UI.sub, 3);
+      [[true, '🔒 Pedir a senha'], [false, '🔓 Não pedir']].forEach(([v, nome], k) => {
+        const y = 250 + k * 122, on = C.pedir === v, hv = p.botao('pd-' + k, 36, y, W - 72, 102, () => { C.pedir = v; this.renderTudo(); });
+        caixa(g, 36, y, W - 72, 102, 28, on ? 'rgba(143,123,255,.65)' : hv ? UI.cardHover : UI.card, on ? '#ffffff' : null, 6);
+        texto(g, (on ? '● ' : '○ ') + nome, 66, y + 64, FONTE(800, 34), UI.txt);
+      });
+      texto(g, 'DICAS', 36, 560, FONTE(800, 30), UI.txt);
+      quebra(g, 'Use pelo menos 4 letras ou números. Misture letras e números para ficar forte. Não conte a senha para ninguém!', 36, 606, W - 72, 36, FONTE(700, 27), UI.sub, 6);
+      return;
+    }
+    if (C.passo === 'entrar' || C.passo === 'esqueci' || C.troca || C.reset) {
+      const d = new Date();
+      texto(g, `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`, W / 2, 330, FONTE_T(170), UI.txt, 'center');
+      let dia = ''; try { dia = d.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }); } catch (e) {}
+      texto(g, dia, W / 2, 400, FONTE(800, 30), UI.sub, 'center');
+      quebra(g, 'Esqueceu a senha? Toque em "Esqueci a senha" e digite o e-mail da conta.', 36, 700, W - 72, 34, FONTE(700, 25), UI.sub, 3);
+      return;
+    }
+    const DICAS = {
+      ola: 'Aqui você prepara o óculos para você. No fim, cria a sua conta com nome, e-mail e senha.',
+      maos: 'As mãos são o controle do Ryan VR: apontar com o indicador mira, e a pinça (dedão no indicador) aperta. A câmera só lê as mãos; nada é gravado.',
+      tamanho: 'Cada pessoa tem os olhos numa distância diferente (de 54 a 74 mm). Se a imagem ficar dupla ou cansar a vista, mude esse número.',
+      olhar: 'No óculos, o centro da vista também aperta: olhe para um botão e segure até o anel encher.',
+      ambiente: 'Os ambientes ficam em volta de você. No Modo Casa, a imersão mistura o ambiente com a sua casa de verdade.',
+      pronto: 'Pronto! Para mudar a conta, a senha ou o tamanho depois, vá em ⚙️ Ajustes.'
+    };
+    texto(g, 'DICA', 36, 70, FONTE(800, 30), UI.txt);
+    quebra(g, DICAS[C.passo] || '', 36, 124, W - 72, 40, FONTE(700, 29), UI.sub, 12);
+    quebra(g, '🔒 Seus dados ficam só neste aparelho. Nada é enviado para a internet.', 36, 760, W - 72, 36, FONTE(700, 26), UI.sub, 3);
+  },
+  // Ajustes: a sua conta na janela da direita
+  desenhaContaLado(g, p) {
+    caixa(g, 0, 0, p.W, p.H, 36, UI.fundo);
+    const W = p.W, bt = (...a) => this.cfgBotao(g, p, ...a);
+    texto(g, 'SUA CONTA', 36, 70, FONTE(800, 30), UI.txt);
+    if (!CONTA) { quebra(g, 'Nenhuma conta neste aparelho.', 36, 130, W - 72, 36, FONTE(700, 28), UI.sub, 2); bt('cc-criar', '👤 Criar conta', 36, 200, W - 72, 100, () => { this.cfg = this.cfgNovo('ola'); this.renderTudo(); }, 'pri', 32); return; }
+    this.cfgAvatar(g, 100, 170, 64, CONTA.avatar);
+    let nome = CONTA.nome; g.font = FONTE_T(44); while (nome.length > 3 && g.measureText(nome).width > W - 220) nome = nome.slice(0, -2) + '…';
+    texto(g, nome, 186, 162, FONTE_T(44), UI.txt);
+    let em = CONTA.email; g.font = FONTE(700, 23); while (em.length > 4 && g.measureText(em).width > W - 220) em = em.slice(0, -2) + '…';
+    texto(g, em, 188, 204, FONTE(700, 23), UI.sub);
+    const pede = CONTA.pedir !== false;
+    bt('cc-pedir', `${pede ? '🔒' : '🔓'} Senha ao abrir: ${pede ? 'Sim' : 'Não'}`, 36, 272, W - 72, 96, () => { CONTA.pedir = !pede; guardaConta(); this.renderTudo(); this.aviso(CONTA.pedir ? '🔒 A senha será pedida ao abrir' : '🔓 A senha não será pedida'); }, 'sec', 30);
+    bt('cc-trocar', '🔑 Trocar a senha', 36, 386, W - 72, 96, () => { this.cfg = this.cfgNovo('entrar', { alvo: 'troca' }); this.renderTudo(); }, 'sec', 30);
+    bt('cc-trancar', '🚪 Trancar agora', 36, 500, W - 72, 96, () => this.trancar(), 'sec', 30);
+    bt('cc-refazer', '↺ Configurar de novo', 36, 614, W - 72, 96, () => { this.cfg = this.cfgNovo('entrar', { alvo: 'refazer' }); this.renderTudo(); }, 'sec', 30);
+    quebra(g, '🔒 A conta fica só neste aparelho: nada vai para a internet.', 36, 790, W - 72, 34, FONTE(700, 24), UI.sub, 2);
+  },
+
   // ---------- Início: os apps flutuando em ícones redondos de vidro ----------
   desenhaInicio(g, p) {
     const W = p.W, agora = new Date();
-    texto(g, agora.getHours() < 12 ? 'Bom dia, Ryan' : agora.getHours() < 18 ? 'Boa tarde, Ryan' : 'Boa noite, Ryan', 56, 96, FONTE_T(60), UI.txt);
+    texto(g, (agora.getHours() < 5 ? 'Boa noite, ' : agora.getHours() < 12 ? 'Bom dia, ' : agora.getHours() < 18 ? 'Boa tarde, ' : 'Boa noite, ') + nomeConta(), 56, 96, FONTE_T(60), UI.txt);
     texto(g, 'Toque, olhe ou faça a pinça num app para abrir', 58, 138, FONTE(700, 27), UI.sub);
     const CURTO = { estrelas: 'Estrelas', bolhas: 'Bolhas', robos: 'Robôs', pintura: 'Pintura', tambores: 'Tambores', latas: 'Latas', basquete: 'Basquete', labirinto: 'Labirinto', muro: 'Passa-Muro', dedos: 'Dedos', ppt: 'Pedra Papel', paredao: 'Paredão', piano: 'Piano de Luz', corrida: 'Corrida', cubos: 'Corta Cubos', alvos: 'Tiro ao Alvo', baloes: 'Balões', blocos: 'Blocos', turbo: 'Turbo', montanha: 'Montanha', mar: 'Fundo do Mar', espaco: 'Espaço', aurora: 'Aurora' };
     const DESTAQUE = ['cubos', 'alvos', 'ppt', 'estrelas', 'basquete', 'robos', 'piano', 'tambores'];
@@ -1562,6 +2009,8 @@ AFRAME.registerComponent('ryan-vr', {
   },
 
   desenhaLado(g, p) {
+    if (this.cfg) return this.desenhaCfgLado(g, p);
+    if (this.secao === 'ajustes' && !this.detalhe) return this.desenhaContaLado(g, p);
     caixa(g, 0, 0, p.W, p.H, 36, UI.fundo);
     const jogos = this.secao === 'jogos';
     texto(g, jogos ? 'ASSISTA TAMBÉM' : 'DESTAQUES', 36, 70, FONTE(800, 30), UI.txt);
@@ -1578,6 +2027,11 @@ AFRAME.registerComponent('ryan-vr', {
 
   desenhaDock(g, p) {
     caixa(g, 0, 0, p.W, p.H, 30, 'rgba(14,12,26,.92)');
+    if (this.cfg) { // configurando ou trancado: só centralizar a visão
+      const hv = p.botao('d-centro', 20, 12, 86, 86, () => { this.recentrar(); this.aviso('Visão centralizada'); }); caixa(g, 20, 12, 86, 86, 22, hv ? UI.acc : 'rgba(255,255,255,.06)'); texto(g, '🎯', 63, 72, FONTE(800, 42), UI.txt, 'center');
+      texto(g, ['entrar', 'esqueci'].includes(this.cfg.passo) ? '🔒 Digite a senha' : '⚙️ Configurando o óculos', 136, 70, FONTE(800, 34), UI.txt);
+      const d0 = new Date(); texto(g, `${String(d0.getHours()).padStart(2, '0')}:${String(d0.getMinutes()).padStart(2, '0')}`, p.W - 40, 72, FONTE(800, 40), UI.txt, 'right'); return;
+    }
     const itens = [['inicio', '🏠', () => { this.secao = 'inicio'; this.detalhe = null; this.renderTudo(); }], ['centro', '🎯', () => { this.recentrar(); this.aviso('Visão centralizada'); }], ['som', AJ.musica ? '🔊' : '🔇', () => { AJ.musica = !AJ.musica; salva(); volumeMusica(); this.renderTudo(); }], ['casa', '📷', () => this.ligarCasa(!this.casa)], ['colocar', '📍', () => this.comecaPosicionar()], ['ajustes', '⚙️', () => { this.secao = 'ajustes'; this.detalhe = null; this.renderTudo(); }], ['central', '🎛️', () => this.abreCentral(false)]];
     itens.forEach(([id, ic, f], i) => { const x = 20 + i * 104; const hv = p.botao('d-' + id, x, 12, 86, 86, f); caixa(g, x, 12, 86, 86, 22, hv ? UI.acc : id === 'casa' && this.casa ? 'rgba(46,212,122,.45)' : 'rgba(255,255,255,.06)'); texto(g, ic, x + 43, 72, FONTE(800, 42), UI.txt, 'center'); });
     const d = new Date(); texto(g, `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`, p.W - 40, 72, FONTE(800, 40), UI.txt, 'right');
@@ -2869,6 +3323,7 @@ AFRAME.registerComponent('ryan-vr', {
 
   // ---------- teclado de mesa: teclado de luz deitado na sua frente (digite com os dedos) ----------
   teclaAcao(id) {
+    if (this.cfg) return this.cfgTecla(id === 'vai' ? 'ok' : id === 'ponto-com' ? '.com' : id);
     if (this.secao === 'sites' && this.addSite) {
       const t = this.siteTexto || '';
       if (id === 'vai') return this.salvaSite();
@@ -2911,16 +3366,16 @@ AFRAME.registerComponent('ryan-vr', {
       linha(x, y, w, kh, 14, aceso);
       texto(g, rot, x + w / 2, y + kh / 2 + 12, FONTE(800, rot.length > 2 ? 26 : 34), aceso ? '#15131f' : '#ffffff', 'center');
     };
-    ['1234567890', 'qwertyuiop', 'asdfghjklç', 'zxcvbnm,.'].forEach((l, r) => [...l].forEach((c, i) => tecla(c, c, kx0 + i * (kw + 12) + (r === 2 ? kw * 0.25 : r === 3 ? kw * 0.5 : 0), ky0 + r * (kh + 14), kw)));
+    ['1234567890', 'qwertyuiop', 'asdfghjklç', this.cfg ? 'zxcvbnm@.' : 'zxcvbnm,.'].forEach((l, r) => [...l].forEach((c, i) => tecla(c, c, kx0 + i * (kw + 12) + (r === 2 ? kw * 0.25 : r === 3 ? kw * 0.5 : 0), ky0 + r * (kh + 14), kw)));
     tecla('apaga', '⌫', kx0 + 9 * (kw + 12) + kw * 0.5, ky0 + 3 * (kh + 14), kw * 0.5 + 0);
     const y5 = ky0 + 4 * (kh + 14);
     tecla('espaco', 'espaço', kx0 + 2 * (kw + 12), y5, kw * 5 + 48);
-    tecla('vai', 'pesquisar', kx0 + 7 * (kw + 12), y5, kw * 3 + 24);
+    tecla('vai', this.cfg ? 'ok ✓' : 'pesquisar', kx0 + 7 * (kw + 12), y5, kw * 3 + 24);
     // touchpad ao lado (só o desenho, como num teclado de verdade)
     g.save(); g.shadowColor = '#fff'; g.shadowBlur = 18; g.lineWidth = 5; g.strokeStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.roundRect(KW + 100, 14, W - KW - 114, H - 28, 34); g.stroke(); g.restore();
   },
   passoTeclado(dt) {
-    const quer = (this.secao === 'google' || (this.secao === 'sites' && this.addSite)) && this.estado === 'saguao' && !this.detalhe && !this.posicionando && this.pCentro.el.object3D.visible;
+    const quer = (this.cfg ? !!this.cfg.campo : (this.secao === 'google' || (this.secao === 'sites' && this.addSite)) && !this.detalhe) && this.estado === 'saguao' && !this.posicionando && this.pCentro.el.object3D.visible;
     if (!quer) {
       if (this.pTeclado && this.pTeclado.el.object3D.visible) this.pTeclado.visivel = false;
       // saiu do Google: desliga a câmera escondida que ele ligou
@@ -3108,6 +3563,7 @@ AFRAME.registerComponent('ryan-vr', {
   // CENTRAL DE CONTROLE: olhe para cima (ou toque em 🎛️ na barra)
   // =====================================================================
   abreCentral(emCima) {
+    if (this.cfg) return; // configurando ou trancado
     if (!this.pCentral) {
       this.centralRaiz = document.createElement('a-entity'); this.el.appendChild(this.centralRaiz);
       this.pCentral = new Painel('central', { larg: 0.9, alt: 0.62, ang: 0, y: 0, raio: 1.1, ppm: 1000, pai: this.centralRaiz, desenhar: (g, p) => this.desenhaCentral(g, p) });
@@ -3860,6 +4316,7 @@ AFRAME.registerComponent('ryan-vr', {
     let atual = null; this.fonte = 'olhar';
     this.passoPausa(dt);
     this.passoTeclado(dt);
+    this.passoCfg(dt);
     if (!this.ambIni && this.cam) { this.ambIni = true; if (AJ.ambiente && AJ.ambiente !== 'saguao') this.trocaAmbiente(AJ.ambiente); }
     this.gestosMaos(dt); this.passoAmbiente(dt, time); this.passoCentral(dt); this.sincBarras();
     if (this.pMusica && this.pMusica.el.object3D.visible !== (this.estado === 'saguao' && this.musicaAtual !== null && this.musicaAtual !== undefined)) this.pMusica.visivel = this.estado === 'saguao' && this.musicaAtual !== null && this.musicaAtual !== undefined;
@@ -4012,8 +4469,18 @@ window.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('blur', () => TECLAS.clear());
   window.addEventListener('keydown', e => {
     const a = app(); if (!a || !entrada.hidden) return;
+    if (e.target && e.target.id === 'cfg-input') return; // o teclado do celular já escreve pelo campo escondido
     const k = e.key.toLowerCase();
     if (k === 'escape') { if (window.__voltar && !window.__voltar() && a.detalhe) { a.detalhe = null; a.renderTudo(); } e.preventDefault(); return; }
+    // configuração / senha: o teclado do computador escreve no campo
+    if (a.cfg && a.cfg.campo && a.estado === 'saguao') {
+      if (k === 'enter') a.cfgTecla('ok');
+      else if (k === 'backspace') a.cfgTecla('apaga');
+      else if (k === 'tab') { const l = CAMPOS_CFG[a.cfg.passo] || []; a.cfgAtivaCampo(l[(l.indexOf(a.cfg.campo) + 1) % l.length], false); }
+      else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) a.cfgDigita(e.key);
+      else return;
+      e.preventDefault(); return;
+    }
     // Google: o teclado do computador digita na busca
     if ((a.secao === 'google' || (a.secao === 'sites' && a.addSite)) && a.estado === 'saguao' && !a.detalhe) {
       if (k === 'enter') a.teclaAcao('vai');
@@ -4025,6 +4492,10 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     if (a.emJogo && a.emJogo()) { TECLAS.add(k); if ([' ', 'arrowleft', 'arrowright', 'arrowup', 'arrowdown'].includes(k)) e.preventDefault(); }
   });
+  // teclado do celular (Modo Celular): o campo escondido escreve na configuração / senha
+  const ci = document.getElementById('cfg-input');
+  ci.addEventListener('input', () => { const a = app(); if (a && a.cfg && a.cfg.campo) a.cfgPoeTexto(ci.value); });
+  ci.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const a = app(); if (a && a.cfg) a.cfgTecla('ok'); } });
   document.getElementById('vr-sair').onclick = sair;
   document.getElementById('menu2d').onclick = sair;
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && sc.components.cardboard.ativo && !APP) sair(); });
@@ -4047,7 +4518,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 3.6' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 3.7' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 
@@ -4057,7 +4528,7 @@ window.addEventListener('error', e => { const a = document.getElementById('vr-er
 <a-scene ryan-vr cardboard xr-mode-ui="enabled: false" renderer="antialias: true; colorManagement: true" loading-screen="dotsColor: #8f7bff; backgroundColor: #1a1630" device-orientation-permission-ui="enabled: true" light="defaultLightsEnabled: false" background="color: #1a1630">
   <a-entity id="rig">
     <a-entity id="centro">
-      <a-entity id="cam" camera="fov: 80" position="0 1.6 0" look-controls="magicWindowTrackingEnabled: true; touchEnabled: true; mouseEnabled: true" wasd-controls="enabled: false">
+      <a-entity id="cam" camera="fov: 80; near: 0.05" position="0 1.6 0" look-controls="magicWindowTrackingEnabled: true; touchEnabled: true; mouseEnabled: true" wasd-controls="enabled: false">
         <a-entity id="cursor" raycaster="objects: .alvo; far: 30; interval: 0" position="0 0 -0.7" geometry="primitive: ring; radiusInner: 0.006; radiusOuter: 0.011" material="color: #ffffff; shader: flat; depthTest: false; transparent: true"></a-entity>
         <a-entity id="anel" position="0 0 -0.69" visible="false" geometry="primitive: ring; radiusInner: 0.013; radiusOuter: 0.019; thetaLength: 1; thetaStart: 90" material="color: #ffb36b; shader: flat; depthTest: false; side: double"></a-entity>
       </a-entity>

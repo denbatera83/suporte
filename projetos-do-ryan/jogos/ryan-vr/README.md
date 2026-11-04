@@ -58,6 +58,20 @@ Na tela de entrada, **📺 Modo TV** entra no Cardboard, liga a câmera (você v
   - WhatsApp: na primeira vez, conecte pelo código (WhatsApp do celular → Aparelhos conectados → Conectar com número de telefone). O Spotify pode bloquear a reprodução dentro de apps.
 - **🧠 Scanner da mão mais preciso**: usa os pontos da mão em 3D (em metros) — a pinça é medida em centímetros (dedos a menos de 2,8 cm), a mão fechada e a curva dos dedos funcionam com a mão de lado ou girada, e a distância da mão se ajusta ao tamanho real dela (mão de criança). Detecções sem certeza são ignoradas (menos "mãos fantasmas"). Reconhece também quais dedos estão esticados.
 - **✊✋✌️ Pedra, Papel e Tesoura** (novo): contra o Robô Ryan. Ele conta 3, 2, 1, JÁ! e você mostra a mão: fechada = pedra, aberta = papel, dois dedos = tesoura. O jogo mostra qual gesto viu. Quem fizer 3 pontos vence. Sem câmera, olhe para um dos botões.
+- **👋 Configuração do óculos e conta com senha** (versão 3.7): na primeira vez que abrir, o Ryan VR faz uma configuração passo a passo, como num óculos de realidade virtual novo:
+  1. **Boas-vindas**;
+  2. **Mãos**: mostre a mão esquerda, a direita e faça a pinça (cada uma fica verde);
+  3. **Tamanho e visão**: distância dos olhos, letras grandes ou normais, distância das janelas e brilho, com um teste de nitidez;
+  4. **Olhar**: olhe para 5 bolinhas (centraliza a visão);
+  5. **Conta**: nome, e-mail e um avatar;
+  6. **Senha** (pelo menos 4 letras ou números, digitada duas vezes) e se ela é pedida ao abrir;
+  7. **Lugar**: o ambiente em volta;
+  8. **Pronto**.
+  - Depois, toda vez que abrir, aparece a **tela de entrar**: o avatar, "Olá, nome!", a hora e o campo da senha. 5 senhas erradas = esperar 30 segundos. **Esqueci a senha**: digitando o e-mail da conta, dá para criar uma senha nova (e, se nem o e-mail lembrar, apagar a conta e começar de novo).
+  - Dá para digitar com o teclado do painel (apontar + pinça, ou olhar), com o teclado de luz na mesa (dedos), com o teclado do celular (Modo Celular: toque no campo) ou do computador.
+  - **Ajustes → Sua conta** (janela da direita): senha ao abrir Sim/Não, trocar a senha (pede a atual), trancar agora e configurar de novo.
+  - A conta fica **só neste aparelho** (nada vai para a internet) e a senha não é guardada: só um resumo SHA-256 com sal, que não dá para desfazer. O e-mail não é verificado; serve para recuperar a senha.
+- **Janelas inteiras**: a parte de baixo das janelas (como a última fileira do teclado e a última linha dos Ajustes) não fica mais escondida atrás do chão da sala.
 - **🗂️ Jogos em setores** (versão 3.6): a janela de Jogos tem abas no alto — ⭐ Todos, ⚡ Ação, ✋ Mãos, 🏀 Esportes, 🎵 Música, 🧩 Criativo e 🖥️ Tela — com 8 jogos por página (◀ ▶ para passar). O Início mostra os destaques e o ícone **Todos os jogos**.
 - **10 jogos novos com as mãos** (versão 3.6), todos com recorde, pausa olhando para baixo e 🏠 Sair:
   - **⭐ Pega Estrelas** (Mãos): estrelas caem do céu; pegue com a palma da mão (a arco-íris vale 3; a nuvem de chuva tira 2).
