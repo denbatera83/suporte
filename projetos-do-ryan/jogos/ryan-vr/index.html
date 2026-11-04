@@ -92,7 +92,7 @@
       <div class="marca"><div class="oculos" aria-hidden="true"></div><h1>Ryan <em>VR</em></h1></div>
       <p class="ent-frase">Realidade virtual com as suas mãos: jogos, vídeos 360° e uma TV flutuando na sua casa.</p>
       <ul class="ent-chips" aria-label="Destaques">
-        <li>✋ Mãos de verdade</li><li>🎮 20 jogos</li><li>🌐 360°</li><li>📺 Sua casa</li>
+        <li>✋ Mãos de verdade</li><li>🎮 24 jogos</li><li>🌐 360°</li><li>📺 Sua casa</li>
       </ul>
       <p class="nota" id="versao">Ryan VR</p>
     </section>
@@ -971,6 +971,263 @@ MINI.mina = {
   }
 };
 
+// ===================== TEMPO CONGELADO: o tempo só anda quando você se mexe =====================
+MINI.tempo = {
+  titulo: 'Tempo Congelado', ic: '⏳', setor: 'acao', tipo: 'O tempo só anda quando você se mexe', tags: ['Ação', 'Mãos', '3 vidas'], dur: 0, vidas: 3,
+  desc: 'Parado, o tempo quase congela; mexendo as mãos ou a cabeça, ele anda. Drones de cristal atiram bolinhas de fogo devagar: desvie mexendo a cabeça e atire apontando o dedo e fazendo a pinça. Acertar uma bolinha também a destrói. 3 vidas. Sem câmera, olhe para o drone e toque na tela.',
+  dica: 'Fique parado para pensar, mexa-se para o tempo andar!', ceu: [[0, '#e9edf5'], [0.5, '#ffffff'], [0.53, '#d9dee8'], [1, '#aab2c2']], chao: 0xdfe3ea, trilha: 'espaco', cores: ['#7bdcff', '#3a4a6a'],
+  monta(J) {
+    J.drones = []; J.balas = []; J.tiros = []; J.ts = 0.1; J.prox = 0; J.mortos = 0;
+    const branco = new THREE.MeshStandardMaterial({ color: 0xf4f6fa, roughness: 0.7 });
+    for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2, h = 2 + (i % 4) * 0.9, b = new THREE.Mesh(new THREE.BoxGeometry(0.8, h, 0.8), branco); b.position.set(Math.sin(a) * (9 + i % 3), h / 2, -Math.cos(a) * (9 + i % 3)); J.G.add(b); }
+    J.matD = new THREE.MeshStandardMaterial({ color: 0x5ad1ff, emissive: 0x0a3a6a, roughness: 0.15, metalness: 0.3, flatShading: true, transparent: true, opacity: 0.92 });
+    J.geoD = new THREE.OctahedronGeometry(0.28, 0); J.geoB = new THREE.SphereGeometry(0.06, 14, 10);
+    J.matB = new THREE.MeshBasicMaterial({ color: 0xff7a1a, toneMapped: false }); J.laser = new THREE.MeshBasicMaterial({ color: 0x9ff3ff, transparent: true, opacity: 0.9, toneMapped: false });
+  },
+  passo(J, dt) {
+    // quanto você se mexeu (mãos e cabeça) decide a velocidade do tempo
+    if (!J.olhAnt) J.olhAnt = J.olhar.direction.clone();
+    let mov = 0; J.maos.forEach(h => { mov += Math.min(2, h.vel.length()); });
+    mov += Math.min(3, J.olhar.direction.angleTo(J.olhAnt) / Math.max(dt, 1e-3)) * 0.6; J.olhAnt.copy(J.olhar.direction);
+    J.ts += (Math.max(0.06, Math.min(1, 0.06 + mov * 0.55)) - J.ts) * Math.min(1, dt * 8);
+    const dtw = dt * J.ts, cab = J.olhar.origin;
+    J.prox -= dt * Math.max(0.35, J.ts); // drones novos chegam mesmo com o tempo devagar
+    if (J.prox <= 0 && J.drones.length < 2 + Math.floor(J.mortos / 4)) {
+      J.prox = Math.max(1.4, 3.2 - J.mortos * 0.08); const a = (Math.random() - 0.5) * 1.8, d = 6 + Math.random() * 3, m = new THREE.Mesh(J.geoD, J.matD);
+      m.position.set(Math.sin(a) * d, J.olhoY - 0.3 + Math.random() * 1.2, -Math.cos(a) * d); J.G.add(m); J.drones.push({ m, tiro: 1.5 + Math.random() * 1.5 });
+    }
+    J.drones.forEach(o => {
+      o.m.rotation.y += dtw * 1.5; o.m.rotation.x += dtw * 0.7;
+      const v = cab.clone().sub(o.m.position); if (v.length() > 2.2) o.m.position.addScaledVector(v.normalize(), dtw * 0.45);
+      o.tiro -= dtw;
+      if (o.tiro <= 0) { o.tiro = 2.6 + Math.random() * 1.6; const b = new THREE.Mesh(J.geoB, J.matB); b.position.copy(o.m.position); J.G.add(b); J.balas.push({ m: b, v: cab.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.15, -0.05, 0)).sub(o.m.position).normalize().multiplyScalar(1.6) }); this.somCurto('tiro'); }
+    });
+    for (let i = J.balas.length - 1; i >= 0; i--) {
+      const b = J.balas[i]; b.m.position.addScaledVector(b.v, dtw); const d = b.m.position.distanceTo(cab);
+      if (d < 0.16) { J.G.remove(b.m); J.balas.splice(i, 1); J.vidas--; this.vibra([80, 40, 80]); this.somCurto('erro'); if (J.vidas > 0) this.aviso('💥 Atingido! Desvie com a cabeça'); }
+      else if (d > 14) { J.G.remove(b.m); J.balas.splice(i, 1); }
+    }
+    const atira = ray => {
+      let alvo = null, md = 1e9;
+      J.drones.forEach(o => { const t = o.m.position.clone().sub(ray.origin).dot(ray.direction); if (t > 0 && t < md && ray.distanceToPoint(o.m.position) < 0.32) { md = t; alvo = { o }; } });
+      J.balas.forEach(b => { const t = b.m.position.clone().sub(ray.origin).dot(ray.direction); if (t > 0 && t < md && ray.distanceToPoint(b.m.position) < 0.12) { md = t; alvo = { b }; } });
+      const fim = alvo ? (alvo.o || alvo.b).m.position.clone() : ray.at(12, new THREE.Vector3()), len = fim.distanceTo(ray.origin);
+      const l = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, len, 6), J.laser); l.position.copy(ray.origin).add(fim).multiplyScalar(0.5); l.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), fim.clone().sub(ray.origin).normalize()); J.G.add(l); J.tiros.push({ m: l, vida: 0.12 });
+      this.somCurto('corte'); J.ts = Math.max(J.ts, 0.5);
+      if (alvo && alvo.o) { const w = this.mw(J, alvo.o.m.position); this.faiscas(w, 0x5ad1ff, 22, 1.8); this.popup('+10', w, '#9ff3ff'); J.G.remove(alvo.o.m); J.drones.splice(J.drones.indexOf(alvo.o), 1); J.pontos += 10; J.mortos++; this.vibra(30); this.somCurto('quebra'); }
+      else if (alvo && alvo.b) { this.popup('+2', this.mw(J, alvo.b.m.position), '#ffb36b'); J.G.remove(alvo.b.m); J.balas.splice(J.balas.indexOf(alvo.b), 1); J.pontos += 2; }
+    };
+    J.maos.forEach(h => { if (h.pincou || h.m.atirou) atira(h.raio); });
+    if (!J.maos.length && J.toque) atira(J.olhar);
+    for (let i = J.tiros.length - 1; i >= 0; i--) { const t = J.tiros[i]; t.vida -= dt; if (t.vida <= 0) { J.G.remove(t.m); t.m.geometry.dispose(); J.tiros.splice(i, 1); } }
+    J.info = `⏳ tempo ${Math.round(J.ts * 100)}%`; J.extra = `${J.mortos} drones`;
+  }
+};
+
+// ===================== MINI GOLFE: 3 buracos num campinho flutuante =====================
+const GOLFE_BURACOS = [ // medidas em metros: largura, comprimento, bola [x, z], buraco [x, z], obstáculos [x, z, largura, fundura], par
+  { w: 0.5, l: 1.25, bola: [0, -0.15], buraco: [0, -1.1], obs: [], par: 2 },
+  { w: 0.6, l: 1.35, bola: [-0.15, -0.15], buraco: [0.15, -1.2], obs: [[0, -0.68, 0.36, 0.06]], par: 2 },
+  { w: 0.7, l: 1.45, bola: [0, -0.15], buraco: [0, -1.3], obs: [[-0.17, -0.5, 0.32, 0.05], [0.17, -0.85, 0.32, 0.05]], move: [0, -1.07, 0.2, 0.05], par: 3 }
+];
+MINI.golfe = {
+  titulo: 'Mini Golfe', ic: '⛳', setor: 'esporte', tipo: 'Puxe e solte para dar a tacada', tags: ['Esporte', 'Mãos', '3 buracos'], dur: 0,
+  desc: 'Três buracos num campinho flutuando no céu. Aponte a mão para a bola, faça a pinça, puxe a mão para baixo (como um estilingue) e solte: quanto mais puxar, mais forte. A seta mostra para onde a bola vai. Menos tacadas = mais pontos. Sem câmera: olhe para onde quer jogar, toque para começar e toque de novo na força certa.',
+  dica: 'Pinça na bola, puxe para baixo e solte!', ceu: [[0, '#6fb8ff'], [0.5, '#e0f4ff'], [0.53, '#bfe8b0'], [1, '#5a9a4a']], chao: 0x7cc96a, trilha: 'montanha', cores: ['#5fd06a', '#2a7fd0'],
+  monta(J) {
+    J.T = J.olhoY - 0.42; J.z0 = -0.5; J.n = 0; J.golpes = 0; J.total = 0;
+    J.matGrama = new THREE.MeshStandardMaterial({ color: 0x3fbf5a, roughness: 0.9 }); J.matBorda = new THREE.MeshStandardMaterial({ color: 0xf4f0e6, roughness: 0.6 }); J.matObs = new THREE.MeshStandardMaterial({ color: 0xff8a3d, roughness: 0.5 });
+    J.bola = new THREE.Mesh(new THREE.SphereGeometry(0.021, 20, 14), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3 })); J.G.add(J.bola);
+    J.seta = new THREE.Mesh(new THREE.ConeGeometry(0.018, 1, 10), new THREE.MeshBasicMaterial({ color: 0xffd23d, transparent: true, opacity: 0.85, toneMapped: false })); J.seta.visible = false; J.G.add(J.seta);
+    this.golfeBuraco(J);
+  },
+  passo(J, dt) {
+    const B = J.def === MINI.golfe && J.b; if (!B) return;
+    const pos = (x, z) => new THREE.Vector3(x, J.T + 0.021, J.z0 + z);
+    if (J.espera > 0) { J.espera -= dt; if (J.espera <= 0) { if (J.n >= GOLFE_BURACOS.length - 1) { J.acabou = true; J.extra = `${J.total} tacadas`; return; } J.n++; this.golfeBuraco(J); } return; }
+    const parada = J.v.lengthSq() < 0.0004;
+    // obstáculo que anda (no 3º buraco)
+    if (B.move) { const x = B.move[0] + Math.sin(J.t * 1.5) * (B.w / 2 - B.move[2] / 2 - 0.03); B.obsAt[B.obsAt.length - 1][0] = x; J.movel.position.x = x; }
+    // mirar: pinça perto da bola, puxe a mão para baixo e para o lado, solte
+    if (parada) {
+      const bw = pos(J.p.x, J.p.y);
+      if (!J.mira) {
+        const h = J.maos.find(h => h.pegou && h.raioPalma.distanceToPoint(bw) < 0.15);
+        if (h) J.mira = { k: h.k, ini: h.palma.clone() };
+        else if (!J.maos.length && J.toque) J.mira = { olhar: true, t0: J.t };
+      } else {
+        let dir = null, forca = 0, solta = false;
+        if (J.mira.olhar) {
+          const d = J.olhar.direction; dir = new THREE.Vector2(d.x, d.z); forca = 0.3 + 2.1 * (0.5 - 0.5 * Math.cos((J.t - J.mira.t0) * 2.5)); solta = J.toque;
+        } else {
+          const h = J.maos.find(h => h.k === J.mira.k);
+          if (!h) { J.mira = null; J.seta.visible = false; return; }
+          const dx = J.mira.ini.x - h.palma.x, dy = J.mira.ini.y - h.palma.y; // mão para baixo = tacada para a frente
+          dir = new THREE.Vector2(dx * 1.2, -Math.max(0, dy)); forca = Math.min(2.4, Math.hypot(dx, dy) * 9); solta = !h.pinca && !h.fechada;
+        }
+        if (dir.lengthSq() > 1e-6) dir.normalize(); else dir.set(0, -1);
+        J.seta.visible = forca > 0.12; J.seta.scale.set(1, 0.05 + forca * 0.09, 1);
+        J.seta.position.copy(bw).add(new THREE.Vector3(dir.x, 0, dir.y).multiplyScalar(0.05 + forca * 0.045)); J.seta.position.y = J.T + 0.03;
+        J.seta.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(dir.x, 0, dir.y));
+        if (solta) { J.seta.visible = false; J.mira = null; if (forca > 0.12) { J.v.set(dir.x * forca, dir.y * forca); J.golpes++; this.somCurto('bloco'); this.vibra(20); } }
+      }
+    }
+    // a bola rola: atrito, paredes, obstáculos e o buraco
+    for (let s = 0; s < 4; s++) {
+      const h = dt / 4, r = 0.021; J.p.addScaledVector(J.v, h);
+      if (Math.abs(J.p.x) > B.w / 2 - r) { J.p.x = Math.sign(J.p.x) * (B.w / 2 - r); J.v.x *= -0.8; this.somCurto('bloco'); }
+      if (J.p.y > -r) { J.p.y = -r; J.v.y *= -0.8; } if (J.p.y < -B.l + r) { J.p.y = -B.l + r; J.v.y *= -0.8; this.somCurto('bloco'); }
+      B.obsAt.forEach(([ox, oz, ow, od]) => {
+        const qx = ow / 2 + r - Math.abs(J.p.x - ox), qz = od / 2 + r - Math.abs(J.p.y - oz);
+        if (qx > 0 && qz > 0) { if (qx < qz) { J.p.x += Math.sign(J.p.x - ox) * qx; J.v.x *= -0.8; } else { J.p.y += Math.sign(J.p.y - oz) * qz; J.v.y *= -0.8; } this.somCurto('bloco'); }
+      });
+      const sp = J.v.length(); if (sp > 0) J.v.multiplyScalar(Math.max(0, sp - 0.6 * h) / sp);
+      const db = Math.hypot(J.p.x - B.buraco[0], J.p.y - B.buraco[1]);
+      if (db < 0.034 && sp < 1.1) { // caiu no buraco!
+        J.v.set(0, 0); J.p.set(B.buraco[0], B.buraco[1]); J.bola.position.copy(pos(J.p.x, J.p.y)).add(new THREE.Vector3(0, -0.03, 0));
+        const pts = Math.max(1, B.par + 3 - J.golpes) * 10; J.pontos += pts; J.total += J.golpes;
+        const w = this.mw(J, pos(B.buraco[0], B.buraco[1])); this.faiscas(w, 0xffd23d, 24, 1.4); this.popup('+' + pts, w, '#ffd23d'); this.somCurto('mosca'); this.vibra([40, 30, 40]);
+        this.aviso(J.golpes === 1 ? '⛳ Buraco em 1 tacada!!' : `⛳ Buraco ${J.n + 1} em ${J.golpes} tacadas`); J.espera = 1.8; return;
+      }
+    }
+    J.bola.position.copy(pos(J.p.x, J.p.y)); J.bola.rotation.x -= J.v.y * dt * 40; J.bola.rotation.z -= J.v.x * dt * 40;
+    J.info = `⛳ buraco ${J.n + 1}/3 · tacadas ${J.golpes} · par ${B.par}`;
+  }
+};
+
+// ===================== PINGUE-PONGUE COM O BIP =====================
+MINI.pingue = {
+  titulo: 'Pingue-pongue com o Bip', ic: '🏓', setor: 'esporte', tipo: 'Sua mão é a raquete', tags: ['Esporte', 'Mãos', 'Até 5'], dur: 0,
+  desc: 'Uma mesa de pingue-pongue e o Bip do outro lado. Sua mão vira a raquete: coloque a raquete na frente da bolinha quando ela chegar e mexa a mão para rebater (mexer rápido = bola mais forte; para o lado = bola de lado). Quem fizer 5 pontos primeiro vence. Sem câmera, olhe para a bolinha.',
+  dica: 'Ponha a raquete na frente da bolinha!', ceu: [[0, '#2a2f5e'], [0.5, '#6f63c9'], [0.53, '#3a3363'], [1, '#1a1630']], chao: 0x2e2650, trilha: 'montanha', cores: ['#2aa36b', '#2a2f5e'],
+  monta(J) {
+    const T = J.T = J.olhoY - 0.42; J.zP = -0.35; J.zB = -1.95; J.meio = (J.zP + J.zB) / 2; J.g = 3.4; J.eu = 0; J.bip = 0; J.rally = 0; J.batidas = 0;
+    const mesa = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.03, J.zP - J.zB), new THREE.MeshStandardMaterial({ color: 0x1f7a52, roughness: 0.6 })); mesa.position.set(0, T - 0.015, J.meio); J.G.add(mesa);
+    const branca = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    [[0, J.zP], [0, J.zB]].forEach(([x, z]) => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.002, 0.012), branca); l.position.set(x, T + 0.001, z + (z === J.zP ? -0.006 : 0.006)); J.G.add(l); });
+    const lm = new THREE.Mesh(new THREE.BoxGeometry(0.006, 0.002, J.zP - J.zB), branca); lm.position.set(0, T + 0.001, J.meio); J.G.add(lm);
+    const rede = new THREE.Mesh(new THREE.BoxGeometry(0.96, 0.06, 0.006), new THREE.MeshStandardMaterial({ color: 0xf4f2ff, transparent: true, opacity: 0.7 })); rede.position.set(0, T + 0.03, J.meio); J.G.add(rede);
+    const pe = new THREE.MeshStandardMaterial({ color: 0x3a3363 }); [[-0.4, J.zP - 0.1], [0.4, J.zP - 0.1], [-0.4, J.zB + 0.1], [0.4, J.zB + 0.1]].forEach(([x, z]) => { const p = new THREE.Mesh(new THREE.BoxGeometry(0.04, T, 0.04), pe); p.position.set(x, T / 2, z); J.G.add(p); });
+    J.bola = new THREE.Mesh(new THREE.SphereGeometry(0.02, 16, 12), new THREE.MeshStandardMaterial({ color: 0xffa040, emissive: 0x552200 })); J.G.add(J.bola);
+    const rq = () => { const g = new THREE.Group(), d = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.012, 24), new THREE.MeshStandardMaterial({ color: 0xd93b54, roughness: 0.5 })); d.rotation.x = Math.PI / 2; g.add(d); const c = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.08, 0.02), new THREE.MeshStandardMaterial({ color: 0xc89a5e })); c.position.y = -0.1; g.add(c); return g; };
+    J.raquete = rq(); J.G.add(J.raquete);
+    // o Bip do outro lado da mesa, com a raquete dele
+    const bip = new THREE.Group(), cinza = new THREE.MeshLambertMaterial({ color: 0xd4d8ea, emissive: 0x2a2e3c }), roxo = new THREE.MeshLambertMaterial({ color: 0x8f7bff, emissive: 0x2a1f66 });
+    const cx = (w, h, d, m, x, y, z) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); bip.add(b); return b; };
+    cx(0.22, 0.24, 0.16, roxo, 0, 0, 0); cx(0.24, 0.19, 0.19, cinza, 0, 0.23, 0); const olho = new THREE.MeshBasicMaterial({ color: 0x5ad1ff, toneMapped: false }); cx(0.05, 0.04, 0.01, olho, -0.055, 0.24, 0.1); cx(0.05, 0.04, 0.01, olho, 0.055, 0.24, 0.1);
+    const rb = rq(); rb.position.set(0.2, 0.05, 0.12); bip.add(rb); bip.position.set(0, T + 0.15, J.zB - 0.25); J.G.add(bip); J.robo = bip;
+    J.saque = 1.2;
+  },
+  passo(J, dt) {
+    const T = J.T, r = 0.02, b = J.bola, g = J.g;
+    const batePara = (tx, tz, vel) => { const p = J.p, d = Math.hypot(tx - p.x, tz - p.z), tf = Math.max(0.35, d / vel); J.v.set((tx - p.x) / tf, (T + r - p.y + 0.5 * g * tf * tf) / tf, (tz - p.z) / tf); };
+    // raquete: na mão (raio do olho pelo meio da mão, na distância da mesa) ou no olhar
+    const h = J.maos[0], ray = h ? h.raioPalma : J.olhar, rq = ray.at(0.55, new THREE.Vector3());
+    J.raquete.position.lerp(rq, 0.6); J.raquete.lookAt(J.olhar.origin);
+    // saque do Bip
+    if (!J.p) { J.saque -= dt; J.robo.position.x += (0 - J.robo.position.x) * dt * 3; if (J.saque <= 0) { J.p = new THREE.Vector3(J.robo.position.x + 0.15, T + 0.2, J.zB - 0.05); J.v = new THREE.Vector3(); batePara((Math.random() - 0.5) * 0.5, -0.65 - Math.random() * 0.15, 1.5); J.vez = 'bip'; J.quicou = 0; J.rally = 0; this.somCurto('bloco'); } b.visible = !!J.p; return; }
+    const ponto = quem => {
+      if (quem === 'eu') { J.eu++; this.aviso(`🏓 Ponto seu! ${J.eu} x ${J.bip}`); this.somCurto('acerto'); } else { J.bip++; this.aviso(`🤖 Ponto do Bip: ${J.eu} x ${J.bip}`); this.somCurto('erro'); }
+      J.p = null; J.saque = 1.6;
+      if (J.eu >= 5 || J.bip >= 5) { J.extra = `${J.eu} x ${J.bip}`; this.aviso(J.eu >= 5 ? '🏆 Você venceu o Bip!' : '🤖 O Bip venceu! Tente de novo'); J.acabou = true; }
+    };
+    for (let s = 0; s < 3; s++) {
+      const d = dt / 3; J.v.y -= g * d; J.p.addScaledVector(J.v, d);
+      if (J.p.y <= T + r && J.v.y < 0 && Math.abs(J.p.x) <= 0.45 && J.p.z <= J.zP && J.p.z >= J.zB) { J.p.y = T + r; J.v.y = -J.v.y * 0.86; J.quicou++; this.somCurto('poe'); }
+    }
+    b.position.copy(J.p);
+    // você rebate quando a bolinha chega perto (vindo na sua direção)
+    if (J.vez === 'bip' && J.v.z > 0 && J.p.z > -0.8 && J.p.z < -0.15 && ray.distanceToPoint(J.p) < (h ? 0.08 : 0.11)) {
+      const forca = h ? Math.min(1.2, h.vel.length() * 0.35) : 0.3, lado = h ? Math.max(-0.3, Math.min(0.3, h.vel.x * 0.12 + J.p.x * 0.4)) : (Math.random() - 0.5) * 0.4;
+      batePara(lado, J.zB + 0.3 + Math.random() * 0.25, 1.7 + forca); J.vez = 'eu'; J.rally++; J.batidas++; this.somCurto('bloco'); this.vibra(25);
+      this.popup(J.rally > 3 ? `${J.rally}!` : '🏓', this.mw(J, J.p), '#ffd23d');
+    }
+    // o Bip vai atrás da bolinha e devolve (às vezes erra)
+    J.robo.position.x += (Math.max(-0.4, Math.min(0.4, J.p.x - 0.15)) - J.robo.position.x) * Math.min(1, dt * 2.6);
+    if (J.vez === 'eu' && J.v.z < 0 && J.p.z < J.zB + 0.12 && !J.tentou) {
+      J.tentou = true; const sp = J.v.length(), chance = Math.max(0.3, Math.min(0.93, 1 - Math.abs(J.p.x - 0.15 - J.robo.position.x) * 2.5 - (sp - 2.2) * 0.3 - J.rally * 0.01));
+      if (Math.random() < chance) { batePara((Math.random() - 0.5) * 0.55, -0.6 - Math.random() * 0.2, Math.min(2.4, 1.5 + J.rally * 0.05)); J.vez = 'bip'; this.somCurto('bloco'); }
+    }
+    if (J.vez === 'bip') J.tentou = false;
+    // ponto: a bolinha passou de alguém ou caiu fora da mesa
+    if (J.p && J.p.z > 0.2) ponto('bip');
+    else if (J.p && J.p.z < J.zB - 0.5) ponto('eu');
+    else if (J.p && J.p.y < T - 0.4) ponto(J.vez === 'eu' ? 'bip' : 'eu');
+    J.pontos = J.eu * 10 + J.batidas;
+    J.info = `🏓 você ${J.eu} x ${J.bip} Bip`;
+  }
+};
+
+// ===================== NAVE PERDIDA: conserte a nave =====================
+MINI.nave = {
+  titulo: 'Nave Perdida', ic: '🚀', setor: 'aventura', tipo: 'Conserte a nave com as mãos', tags: ['Aventura', 'Mãos', 'Enigmas'], dur: 0,
+  desc: 'Sua nave quebrou no espaço! 1) Olhe em volta (esquerda, direita e atrás) e pegue as 3 células de energia verdes: aponte a mão e feche a mão (ou faça a pinça). 2) O painel acende uma sequência de botões: repita na mesma ordem apontando e fazendo a pinça. 3) Puxe a alavanca para baixo. Quanto mais rápido, mais pontos. Sem câmera, olhe e toque na tela.',
+  dica: 'Ache as 3 células de energia em volta de você!', ceu: [[0, '#05030f'], [0.5, '#140a2a'], [0.53, '#0e0a1e'], [1, '#05030f']], chao: 0x2a2e3c, estrelas: true, trilha: 'espaco', cores: ['#5ad1ff', '#140a2a'],
+  monta(J) {
+    const Y = J.olhoY, metal = new THREE.MeshStandardMaterial({ color: 0x8a90a6, metalness: 0.6, roughness: 0.35 }), escuro = new THREE.MeshStandardMaterial({ color: 0x2a2e3c, metalness: 0.5, roughness: 0.5 });
+    const pl = new THREE.Mesh(new THREE.SphereGeometry(14, 40, 30), new THREE.MeshStandardMaterial({ color: 0xff9a5a, emissive: 0x5a1a08, roughness: 0.9 })); pl.position.set(-18, Y + 6, -60); J.G.add(pl); J.planeta = pl;
+    // painel na frente
+    J.topo = Y - 0.3;
+    const painel = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.34), escuro); painel.position.set(0, J.topo - 0.04, -0.6); J.G.add(painel);
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.7, J.topo - 0.08, 0.25), metal); base.position.set(0, (J.topo - 0.08) / 2, -0.62); J.G.add(base);
+    J.tela = tex(1024, 256, () => {}); const tl = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.2), new THREE.MeshBasicMaterial({ map: J.tela, toneMapped: false })); tl.position.set(0, Y + 0.12, -0.85); J.G.add(tl);
+    // encaixes das células, botões e alavanca
+    J.encaixes = [-0.22, 0, 0.22].map(x => { const e = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.02, 16), metal); e.position.set(x, J.topo + 0.01, -0.68); J.G.add(e); return e.position.clone().add(new THREE.Vector3(0, 0.05, 0)); });
+    J.botoes = [0xff4d6d, 0x2ed47a, 0x3d8bff].map((c, i) => { const m = new THREE.Mesh(new THREE.SphereGeometry(0.035, 20, 14), new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.15 })); m.position.set(-0.2 + i * 0.2, J.topo + 0.02, -0.52); J.G.add(m); return m; });
+    J.alavanca = new THREE.Group(); const haste = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.14, 10), metal); haste.position.y = 0.07; const bola = new THREE.Mesh(new THREE.SphereGeometry(0.025, 14, 10), new THREE.MeshStandardMaterial({ color: 0xffb36b, emissive: 0x552200 })); bola.position.y = 0.14; J.alavanca.add(haste, bola); J.alavanca.position.set(0.38, J.topo, -0.56); J.alavanca.rotation.x = -0.5; J.G.add(J.alavanca); J.puxe = 0;
+    // as 3 células, espalhadas: esquerda, direita e atrás
+    const celM = new THREE.MeshStandardMaterial({ color: 0x5bff9a, emissive: 0x1fa55a, emissiveIntensity: 1.2, transparent: true, opacity: 0.95 });
+    J.celulas = [[-0.6, Y - 0.12, -0.15], [0.62, Y - 0.06, 0.05], [0.1, Y - 0.02, 0.6]].map(([x, y, z], i) => {
+      const sup = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.03, 0.14), metal); sup.position.set(x, y - 0.06, z); J.G.add(sup);
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.09, 14), celM); c.position.set(x, y, z); J.G.add(c); return { m: c, y0: y, i, voando: null, pronta: false };
+    });
+    J.etapa = 0; J.seq = [0, 1, 2, 0].map(() => Math.floor(Math.random() * 3)); J.demo = 0.8; J.passoSeq = 0;
+    this.naveTela(J, 'Ache as 3 células de energia', 'Olhe para a esquerda, a direita e atrás de você');
+  },
+  passo(J, dt) {
+    const pega = (pos, raioMao) => J.maos.some(h => h.pegou && h.raioPalma.distanceToPoint(pos) < (raioMao || 0.09)) || (!J.maos.length && J.toque && J.olhar.distanceToPoint(pos) < 0.09);
+    J.planeta.rotation.y += dt * 0.02;
+    if (J.etapa === 0) {
+      J.celulas.forEach(c => {
+        if (c.pronta) return;
+        if (c.voando) { c.m.position.lerp(c.voando, Math.min(1, dt * 5)); if (c.m.position.distanceTo(c.voando) < 0.005) { c.pronta = true; this.somCurto('poe'); } return; }
+        c.m.position.y = c.y0 + Math.sin(J.t * 2 + c.i) * 0.01; c.m.rotation.y += dt;
+        if (pega(c.m.position)) { const n = J.celulas.filter(x => x.voando).length; c.voando = J.encaixes[n]; this.somCurto('ouro'); this.vibra(25); J.pontos += 20; this.popup('+20', this.mw(J, c.m.position), '#5bff9a'); this.aviso(`🔋 Célula ${n + 1} de 3`); }
+      });
+      if (J.celulas.every(c => c.pronta)) { J.etapa = 1; J.demo = 1; J.mostra = 0; this.naveTela(J, 'Energia ligada! Repita a sequência', 'Veja os botões acenderem e aperte na mesma ordem'); this.somCurto('mosca'); }
+    } else if (J.etapa === 1) {
+      const acende = (i, v) => { J.botoes[i].material.emissiveIntensity = v ? 1.4 : 0.15; J.botoes[i].scale.setScalar(v ? 1.25 : 1); };
+      if (J.demo > 0) { // mostra a sequência
+        J.tdemo = (J.tdemo || 0) + dt; const passo = Math.floor(J.tdemo / 0.65), dentro = (J.tdemo % 0.65) < 0.45;
+        J.botoes.forEach((_, i) => acende(i, passo < J.seq.length && dentro && J.seq[passo] === i));
+        if (passo >= J.seq.length) { J.demo = 0; J.tdemo = 0; J.passoSeq = 0; J.botoes.forEach((_, i) => acende(i, false)); this.aviso('Sua vez! Aperte na mesma ordem'); }
+        else if (dentro && J.ultimoPasso !== passo) { J.ultimoPasso = passo; this.somCurto('acerto'); }
+        return;
+      }
+      J.botoes.forEach((b, i) => {
+        if (J.apertoT && J.t - J.apertoT < 0.25) return;
+        const ok = J.maos.some(h => h.pincou && h.raio.distanceToPoint(b.position) < 0.05) || (!J.maos.length && J.toque && J.olhar.distanceToPoint(b.position) < 0.06);
+        if (!ok) return; J.apertoT = J.t; acende(i, true); setTimeout(() => acende(i, false), 200);
+        if (J.seq[J.passoSeq] === i) { J.passoSeq++; this.somCurto('acerto'); if (J.passoSeq >= J.seq.length) { J.etapa = 2; J.pontos += 50; this.naveTela(J, 'Motores prontos! Puxe a alavanca', 'Pegue a alavanca laranja à direita e puxe para baixo'); this.somCurto('mosca'); } }
+        else { this.somCurto('erro'); this.vibra([60, 40, 60]); this.aviso('Ops! Veja de novo'); J.demo = 1; J.tdemo = 0; J.ultimoPasso = -1; }
+      });
+    } else if (J.etapa === 2) {
+      const bolaW = J.alavanca.localToWorld(new THREE.Vector3(0, 0.14, 0)), bolaL = J.G.worldToLocal(bolaW);
+      if (!J.segura) { const h = J.maos.find(h => h.pegou && h.raioPalma.distanceToPoint(bolaL) < 0.1); if (h) J.segura = { k: h.k, y0: h.palma.y }; else if (!J.maos.length && J.toque && J.olhar.distanceToPoint(bolaL) < 0.1) J.segura = { auto: true }; }
+      if (J.segura) {
+        if (J.segura.auto) J.puxe = Math.min(1, J.puxe + dt * 1.5);
+        else { const h = J.maos.find(h => h.k === J.segura.k); if (!h || h.soltou) J.segura = null; else J.puxe = Math.max(J.puxe, Math.min(1, (J.segura.y0 - h.palma.y) * 7)); }
+      }
+      J.alavanca.rotation.x = -0.5 + J.puxe * 1.6;
+      if (J.puxe >= 0.95) { J.etapa = 3; J.fimT = J.t; J.pontos += Math.max(50, Math.round(300 - J.t * 2)); this.naveTela(J, '🚀 Nave consertada!', 'Rumo para casa!'); this.somCurto('ouro'); this.faiscas(this.mw(J, new THREE.Vector3(0, J.olhoY, -1)), 0x9ff3ff, 40, 2.2); this.vibra([60, 40, 60, 40, 120]); }
+    } else {
+      J.planeta.position.z += dt * 30; J.planeta.scale.multiplyScalar(1 + dt * 0.8); // a nave acelera
+      if (J.t - J.fimT > 3) { J.extra = `${Math.round(J.fimT)} s`; J.acabou = true; }
+    }
+    J.info = ['🔋 células ' + J.celulas.filter(c => c.voando).length + '/3', '🔴🟢🔵 sequência ' + J.passoSeq + '/' + J.seq.length, '🕹️ puxe a alavanca', '🚀'][J.etapa];
+  }
+};
+
 const JOGOS = [
   { id: 'corrida', titulo: 'Corrida VR', tipo: 'Dirija com a mão (câmera)', tags: ['Carro', 'Mão de verdade', '90 s'], desc: 'Você está dentro do carro numa estrada. Segure um volante imaginário com as duas mãos e gire para virar (ou gire uma mão só); faça a pinça para o turbo. Desvie dos carros e pegue moedas. Sem câmera, vire a cabeça para dirigir.', interno: true, vr: true },
   { id: 'cubos', titulo: 'Corta Cubos', tipo: 'Duas espadas de luz (câmera)', tags: ['Duas mãos', 'Ritmo', '90 s'], desc: 'Suas duas mãos viram espadas de luz! Cubos vêm na sua direção no ritmo da música: corte cada um ao meio com um golpe rápido. Vermelho é da mão esquerda e azul da direita (a cor certa vale mais e aumenta o combo); dourado vale muito. Não corte as minas espinhosas! Sem câmera, a espada fica na sua cabeça.', interno: true, vr: true },
@@ -985,7 +1242,7 @@ const JOGOS = [
 
 window.__V = VIDEOS; // usado nos testes automáticos
 // setores de jogos (abas na tela de Jogos) e os mini-jogos com as mãos entram na lista
-const SETORES = [['todos', '⭐ Todos'], ['acao', '⚡ Ação'], ['maos', '✋ Mãos'], ['esporte', '🏀 Esportes'], ['musica', '🎵 Música'], ['calmo', '🧩 Criativo'], ['tela', '🖥️ Tela']];
+const SETORES = [['todos', '⭐ Todos'], ['acao', '⚡ Ação'], ['maos', '✋ Mãos'], ['esporte', '🏀 Esportes'], ['musica', '🎵 Música'], ['calmo', '🧩 Criativo'], ['aventura', '🚀 Aventura'], ['tela', '🖥️ Tela']];
 const SETOR_DE = { corrida: 'acao', cubos: 'acao', alvos: 'acao', paredao: 'acao', ppt: 'maos', baloes: 'maos', piano: 'musica', blocos: 'calmo', turbo: 'tela' };
 JOGOS.forEach(j => { j.setor = SETOR_DE[j.id] || 'acao'; });
 Object.entries(MINI).forEach(([id, d]) => JOGOS.push({ id, titulo: d.titulo, tipo: d.tipo, tags: d.tags, desc: d.desc, interno: true, vr: true, mini: true, setor: d.setor }));
@@ -1691,6 +1948,31 @@ AFRAME.registerComponent('ryan-vr', {
     R.socoK = Math.max(0, R.socoK - dt * 5); R.bD.position.z = R.socoK * 0.035; R.bD.rotation.x = -R.socoK * 1.2;
   },
 
+  // ---------- Mini Golfe: monta cada buraco ----------
+  golfeBuraco(J) {
+    const B = Object.assign({}, GOLFE_BURACOS[J.n]); J.b = B; B.obsAt = B.obs.map(o => o.slice()); if (B.move) B.obsAt.push(B.move.slice());
+    if (J.curso) { J.G.remove(J.curso); J.curso.traverse(o => { if (o.geometry) o.geometry.dispose(); }); }
+    const C = J.curso = new THREE.Group(); J.G.add(C); const T = J.T, z0 = J.z0;
+    const grama = new THREE.Mesh(new THREE.BoxGeometry(B.w, 0.04, B.l), J.matGrama); grama.position.set(0, T - 0.02, z0 - B.l / 2); C.add(grama);
+    const borda = (w, d, x, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.035, d), J.matBorda); m.position.set(x, T + 0.0175, z); C.add(m); };
+    borda(B.w + 0.04, 0.02, 0, z0 + 0.01); borda(B.w + 0.04, 0.02, 0, z0 - B.l - 0.01); borda(0.02, B.l, -B.w / 2 - 0.01, z0 - B.l / 2); borda(0.02, B.l, B.w / 2 + 0.01, z0 - B.l / 2);
+    B.obs.forEach(([x, z, w, d]) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.04, d), J.matObs); m.position.set(x, T + 0.02, z0 + z); C.add(m); });
+    if (B.move) { J.movel = new THREE.Mesh(new THREE.BoxGeometry(B.move[2], 0.04, B.move[3]), new THREE.MeshStandardMaterial({ color: 0x8f7bff })); J.movel.position.set(B.move[0], T + 0.02, z0 + B.move[1]); C.add(J.movel); }
+    const furo = new THREE.Mesh(new THREE.CircleGeometry(0.036, 24), new THREE.MeshBasicMaterial({ color: 0x0a0a0a })); furo.rotation.x = -Math.PI / 2; furo.position.set(B.buraco[0], T + 0.001, z0 + B.buraco[1]); C.add(furo);
+    const haste = new THREE.Mesh(new THREE.CylinderGeometry(0.003, 0.003, 0.22, 6), J.matBorda); haste.position.set(B.buraco[0], T + 0.11, z0 + B.buraco[1]); C.add(haste);
+    const band = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.045, 0.003), new THREE.MeshStandardMaterial({ color: 0xff4d6d, side: THREE.DoubleSide })); band.position.set(B.buraco[0] + 0.036, T + 0.195, z0 + B.buraco[1]); C.add(band);
+    const pe = new THREE.Mesh(new THREE.BoxGeometry(0.3, T - 0.04, 0.3), J.matBorda); pe.position.set(0, (T - 0.04) / 2, z0 - B.l / 2); C.add(pe);
+    J.p = new THREE.Vector2(B.bola[0], B.bola[1]); J.v = new THREE.Vector2(); J.golpes = 0; J.mira = null; J.espera = 0;
+    this.aviso(`⛳ Buraco ${J.n + 1} de 3 · par ${B.par}`);
+  },
+  // ---------- Nave Perdida: a tela do painel ----------
+  naveTela(J, a, b) {
+    const c = J.tela.image, g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
+    caixa(g, 6, 6, c.width - 12, c.height - 12, 30, 'rgba(10,20,40,.92)', '#5ad1ff', 6);
+    const cabe = (t, px, peso) => { let f = px; g.font = FONTE(peso, f); while (f > 22 && g.measureText(t).width > c.width - 80) { f -= 2; g.font = FONTE(peso, f); } return f; };
+    texto(g, a, c.width / 2, 110, FONTE(800, cabe(a, 60, 800)), '#9ff3ff', 'center'); texto(g, b, c.width / 2, 190, FONTE(700, cabe(b, 36, 700)), '#cfe8ff', 'center');
+    J.tela.needsUpdate = true;
+  },
   // ---------- Mina de Cubos: mundo, desenho, mira e golpes ----------
   minaIdx(J, i, j, k) { return (i * J.dim[1] + j) * J.dim[2] + k; },
   minaCentro(J, i, j, k) { return new THREE.Vector3(J.x0 + (i - 0.5) * J.S, J.y0 + (j + 0.5) * J.S, J.z0 - (k - 0.5) * J.S); },
@@ -2329,8 +2611,8 @@ AFRAME.registerComponent('ryan-vr', {
     const W = p.W, agora = new Date();
     texto(g, (agora.getHours() < 5 ? 'Boa noite, ' : agora.getHours() < 12 ? 'Bom dia, ' : agora.getHours() < 18 ? 'Boa tarde, ' : 'Boa noite, ') + nomeConta(), 56, 96, FONTE_T(60), UI.txt);
     texto(g, 'Toque, olhe ou faça a pinça num app para abrir', 58, 138, FONTE(700, 27), UI.sub);
-    const CURTO = { mina: 'Mina', estrelas: 'Estrelas', bolhas: 'Bolhas', robos: 'Robôs', pintura: 'Pintura', tambores: 'Tambores', latas: 'Latas', basquete: 'Basquete', labirinto: 'Labirinto', muro: 'Passa-Muro', dedos: 'Dedos', ppt: 'Pedra Papel', paredao: 'Paredão', piano: 'Piano de Luz', corrida: 'Corrida', cubos: 'Corta Cubos', alvos: 'Tiro ao Alvo', baloes: 'Balões', blocos: 'Blocos', turbo: 'Turbo', montanha: 'Montanha', mar: 'Fundo do Mar', espaco: 'Espaço', aurora: 'Aurora' };
-    const DESTAQUE = ['mina', 'cubos', 'alvos', 'ppt', 'estrelas', 'basquete', 'robos', 'piano'];
+    const CURTO = { tempo: 'Tempo Congelado', golfe: 'Mini Golfe', pingue: 'Pingue-pongue', nave: 'Nave Perdida', mina: 'Mina', estrelas: 'Estrelas', bolhas: 'Bolhas', robos: 'Robôs', pintura: 'Pintura', tambores: 'Tambores', latas: 'Latas', basquete: 'Basquete', labirinto: 'Labirinto', muro: 'Passa-Muro', dedos: 'Dedos', ppt: 'Pedra Papel', paredao: 'Paredão', piano: 'Piano de Luz', corrida: 'Corrida', cubos: 'Corta Cubos', alvos: 'Tiro ao Alvo', baloes: 'Balões', blocos: 'Blocos', turbo: 'Turbo', montanha: 'Montanha', mar: 'Fundo do Mar', espaco: 'Espaço', aurora: 'Aurora' };
+    const DESTAQUE = ['tempo', 'golfe', 'pingue', 'nave', 'mina', 'cubos', 'alvos', 'ppt'];
     const app = (id, nome, ic, cor) => ({ id, nome, ic, cor });
     // três fileiras com nome, como numa tela de início de verdade
     const GRUPOS = [
@@ -5097,7 +5379,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 4.1.1' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 4.2' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 
