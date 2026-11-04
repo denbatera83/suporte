@@ -24,21 +24,37 @@
   #entrada { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; overflow-y: auto;
     padding-block: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-bottom, 0px));
     padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
-    background: radial-gradient(110% 80% at 50% 0%, rgba(143,123,255,.35), rgba(26,22,48,.97) 62%); }
-  .cartao { width: min(520px, 100%); display: grid; gap: 14px; }
+    background: radial-gradient(90% 70% at 15% 10%, rgba(143,123,255,.38), transparent 60%), radial-gradient(70% 60% at 95% 100%, rgba(255,179,107,.16), transparent 60%), rgba(22,19,40,.94); }
+  .ent { width: min(980px, 100%); display: grid; grid-template-columns: 1fr; gap: 18px; align-items: center; }
+  @media (min-width: 700px) { .ent { grid-template-columns: 1fr 1.15fr; gap: 36px; } }
+  .ent-marca { display: grid; gap: 12px; align-content: center; min-width: 0; }
   .marca { display: flex; align-items: center; gap: 12px; }
-  .marca .oculos { width: 58px; height: 34px; border-radius: 12px; background: var(--accent); position: relative; box-shadow: 0 6px 20px rgba(143,123,255,.45); }
-  .marca .oculos::before, .marca .oculos::after { content: ""; position: absolute; top: 9px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg); }
+  .marca .oculos { width: 58px; height: 34px; border-radius: 12px; background: linear-gradient(135deg, #a898ff, var(--accent)); position: relative; box-shadow: 0 6px 24px rgba(143,123,255,.55); flex: none; }
+  .marca .oculos::before, .marca .oculos::after { content: ""; position: absolute; top: 9px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg); box-shadow: inset 0 0 0 3px rgba(159,243,255,.35); }
   .marca .oculos::before { left: 9px; } .marca .oculos::after { right: 9px; }
-  h1 { font-family: var(--display); font-weight: 800; font-size: clamp(46px, 12vw, 76px); line-height: .85; margin: 0; letter-spacing: -.01em; }
+  h1 { font-family: var(--display); font-weight: 800; font-size: clamp(44px, 9vw, 78px); line-height: .85; margin: 0; letter-spacing: -.015em; text-shadow: 0 6px 30px rgba(143,123,255,.35); }
   h1 em { font-style: normal; color: var(--accent-2); }
   p { margin: 0; line-height: 1.5; color: var(--muted); }
-  .menu-prev { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .menu-prev div { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px; font: 700 13px var(--body); color: var(--fg); display: grid; gap: 4px; }
-  .menu-prev b { font-size: 22px; }
-  .botoes { display: grid; gap: 10px; }
-  #btn-tv { display: grid; gap: 2px; font-size: 24px; background: linear-gradient(100deg, var(--accent-2), #ffd08f); }
-  #btn-tv small { font: 700 14px var(--body); color: #3a2410; }
+  .ent-frase { font: 700 clamp(16px, 2.2vw, 19px)/1.45 var(--body); color: var(--fg); max-width: 34ch; text-wrap: balance; }
+  .ent-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+  .ent-chips li { font: 700 13px var(--body); color: var(--fg); padding: 6px 11px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); }
+  .ent-modos { display: grid; gap: 10px; min-width: 0; }
+  .ent-etq { font: 800 12px var(--body); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  button.modo { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 12px; align-items: center; text-align: left; padding: 14px 14px; min-height: 84px; border-radius: 18px;
+    background: rgba(36,31,64,.82); color: var(--fg); border: 1px solid rgba(255,255,255,.12); box-shadow: 0 10px 30px rgba(0,0,0,.25); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: transform .12s, border-color .12s, background .12s; }
+  button.modo:hover { border-color: rgba(255,255,255,.35); background: rgba(52,45,92,.9); }
+  button.modo:active { transform: scale(.98); box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+  button.modo .ic { grid-row: 1 / span 2; font-size: 30px; width: 46px; height: 46px; display: grid; place-items: center; border-radius: 14px; background: rgba(255,255,255,.08); }
+  button.modo b { font: 800 19px/1.1 var(--display); }
+  button.modo small { font: 700 13px/1.25 var(--body); color: var(--muted); }
+  button.modo.destaque { background: linear-gradient(135deg, #ffd08f, var(--accent-2)); color: #2a1606; border-color: transparent; box-shadow: 0 10px 34px rgba(255,179,107,.35); }
+  button.modo.destaque small { color: #5a3410; } button.modo.destaque .ic { background: rgba(255,255,255,.35); }
+  .ent-ajuda { border-radius: 14px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); padding: 10px 14px; }
+  .ent-ajuda summary { cursor: pointer; font: 800 14px var(--body); color: var(--fg); }
+  .ent-ajuda p { margin-top: 8px; font-size: 13px; }
+  @media (max-width: 520px) { .botoes { grid-template-columns: 1fr; } button.modo { min-height: 70px; } }
+  @media (max-height: 430px) and (min-width: 700px) { button.modo { min-height: 72px; padding: 10px 12px; } h1 { font-size: 56px; } .ent { gap: 24px; } }
   button { font: 800 20px var(--display); border: 0; border-radius: 14px; padding: 14px 18px; cursor: pointer; color: #120d2e; background: var(--accent-2); box-shadow: 0 4px 0 #b06a2c; transition: transform .1s; }
   button:active { transform: translateY(3px); box-shadow: 0 1px 0 #b06a2c; }
   button.sec { background: var(--panel); color: var(--fg); box-shadow: 0 4px 0 #0e0b1f; border: 1px solid var(--line); }
@@ -71,20 +87,25 @@
 <body>
 
 <div id="entrada">
-  <div class="cartao">
-    <div class="marca"><div class="oculos" aria-hidden="true"></div><h1>Ryan <em>VR</em></h1></div>
-    <p>Uma TV de realidade virtual na sua casa: a câmera mostra o seu quarto, a TV flutua na sua frente e você aperta os botões com a mão. Também tem vídeos 360° e jogos.</p>
-    <div class="menu-prev" aria-hidden="true">
-      <div><b>📺</b>TV na sua casa</div><div><b>✋</b>Controle com a mão</div><div><b>🎮</b>Jogos e vídeos 360°</div>
-    </div>
-    <div class="botoes">
-      <button id="btn-tv">📺 Modo TV <small>sua casa + controle com a mão</small></button>
-      <button id="btn-vr" class="sec">🥽 Modo VR <small>celular no óculos (Cardboard)</small></button>
-      <button id="btn-tela" class="sec">📱 Modo Celular <small>sem óculos: toque na tela</small></button>
-      <button id="btn-pc" class="sec">🖥️ Modo Computador <small>mouse e teclado</small></button>
-    </div>
-    <p class="nota">Computador: arraste o mouse para olhar, clique para apertar; no Google digite no teclado; Esc pausa os jogos; na Corrida use ← → (ou A e D) e espaço para o turbo. Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 3.9</p>
+  <div class="ent">
+    <section class="ent-marca">
+      <div class="marca"><div class="oculos" aria-hidden="true"></div><h1>Ryan <em>VR</em></h1></div>
+      <p class="ent-frase">Realidade virtual com as suas mãos: jogos, vídeos 360° e uma TV flutuando na sua casa.</p>
+      <ul class="ent-chips" aria-label="Destaques">
+        <li>✋ Mãos de verdade</li><li>🎮 20 jogos</li><li>🌐 360°</li><li>📺 Sua casa</li>
+      </ul>
+      <p class="nota" id="versao">Ryan VR</p>
+    </section>
+    <section class="ent-modos" aria-label="Como você quer usar">
+      <span class="ent-etq">Escolha como usar</span>
+      <div class="botoes">
+        <button id="btn-tv" class="modo destaque"><span class="ic" aria-hidden="true">📺</span><b>Modo TV</b><small>sua casa + mão como controle</small></button>
+        <button id="btn-vr" class="modo"><span class="ic" aria-hidden="true">🥽</span><b>Modo VR</b><small>celular no óculos</small></button>
+        <button id="btn-tela" class="modo"><span class="ic" aria-hidden="true">📱</span><b>Celular</b><small>sem óculos, toque na tela</small></button>
+        <button id="btn-pc" class="modo"><span class="ic" aria-hidden="true">🖥️</span><b>Computador</b><small>mouse e teclado</small></button>
+      </div>
+      <details class="ent-ajuda"><summary>Como usar</summary><p>Computador: arraste o mouse para olhar, clique para apertar; no Google digite no teclado; Esc pausa os jogos; na Corrida use ← → (ou A e D) e espaço para o turbo. Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p></details>
+    </section>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -2267,12 +2288,17 @@ AFRAME.registerComponent('ryan-vr', {
     texto(g, 'Toque, olhe ou faça a pinça num app para abrir', 58, 138, FONTE(700, 27), UI.sub);
     const CURTO = { mina: 'Mina', estrelas: 'Estrelas', bolhas: 'Bolhas', robos: 'Robôs', pintura: 'Pintura', tambores: 'Tambores', latas: 'Latas', basquete: 'Basquete', labirinto: 'Labirinto', muro: 'Passa-Muro', dedos: 'Dedos', ppt: 'Pedra Papel', paredao: 'Paredão', piano: 'Piano de Luz', corrida: 'Corrida', cubos: 'Corta Cubos', alvos: 'Tiro ao Alvo', baloes: 'Balões', blocos: 'Blocos', turbo: 'Turbo', montanha: 'Montanha', mar: 'Fundo do Mar', espaco: 'Espaço', aurora: 'Aurora' };
     const DESTAQUE = ['mina', 'cubos', 'alvos', 'ppt', 'estrelas', 'basquete', 'robos', 'piano'];
-    const apps = [{ id: 'jogos', nome: 'Todos os jogos', ic: '🎮', cor: ['#8f7bff', '#3a2f8a'] }, ...JOGOS.filter(j => DESTAQUE.includes(j.id)).map(j => ({ it: j, nome: CURTO[j.id] || j.titulo })), ...VIDEOS.map(v => ({ it: v, nome: CURTO[v.id] || v.titulo })),
-      { id: 'ambientes', nome: 'Ambientes', ic: '🏞️', cor: ['#5fd0a0', '#1f7a6a'] }, { id: 'fotos', nome: 'Fotos', ic: '🖼️', cor: ['#ff9ac4', '#c2367a'] }, { id: 'musica', nome: 'Música', ic: '🎵', cor: ['#ff7a6b', '#b8322a'] }, { id: 'central', nome: 'Controle', ic: '🎛️', cor: ['#7b86ff', '#3a3fb8'] },
-      { id: 'apps', nome: 'Apps', ic: '📱', cor: ['#ffb36b', '#c2602a'] }, { id: 'mensagens', nome: 'Mensagens', ic: '💬', cor: ['#5be39a', '#1f9a5a'] }, { id: 'sites', nome: 'Meus sites', ic: '🌐', cor: ['#5ad1ff', '#2a5fb8'] }, { id: 'google', nome: 'Google', ic: '🔎', cor: ['#4f8df7', '#1a56c4'] }, { id: 'meus', nome: 'Meus vídeos', ic: '📁', cor: ['#ffb36b', '#d9762b'] }, { id: 'assistente', nome: 'Assistente', ic: '🎙️', cor: ['#ff8ad8', '#8f3bd6'] }, { id: 'ajustes', nome: 'Ajustes', ic: '⚙️', cor: ['#9aa0b5', '#5a6075'] }];
+    const app = (id, nome, ic, cor) => ({ id, nome, ic, cor });
+    // três fileiras com nome, como numa tela de início de verdade
+    const GRUPOS = [
+      ['Jogos', [app('jogos', 'Todos os jogos', '🎮', ['#8f7bff', '#3a2f8a']), ...JOGOS.filter(j => DESTAQUE.includes(j.id)).map(j => ({ it: j, nome: CURTO[j.id] || j.titulo }))]],
+      ['Assistir e explorar', [...VIDEOS.map(v => ({ it: v, nome: CURTO[v.id] || v.titulo })), app('ambientes', 'Ambientes', '🏞️', ['#5fd0a0', '#1f7a6a']), app('fotos', 'Fotos', '🖼️', ['#ff9ac4', '#c2367a']), app('musica', 'Música', '🎵', ['#ff7a6b', '#b8322a']), app('central', 'Controle', '🎛️', ['#7b86ff', '#3a3fb8'])]],
+      ['Apps', [app('apps', 'Apps do celular', '📱', ['#ffb36b', '#c2602a']), app('mensagens', 'Mensagens', '💬', ['#5be39a', '#1f9a5a']), app('sites', 'Meus sites', '🌐', ['#5ad1ff', '#2a5fb8']), app('google', 'Google', '🔎', ['#4f8df7', '#1a56c4']), app('meus', 'Meus vídeos', '📁', ['#ffb36b', '#d9762b']), app('assistente', 'Assistente', '🎙️', ['#ff8ad8', '#8f3bd6']), app('ajustes', 'Ajustes', '⚙️', ['#9aa0b5', '#5a6075'])]]
+    ];
+    const apps = []; GRUPOS.forEach(([nome, l], gi) => { texto(g, nome.toUpperCase(), 58, 184 + gi * 266, FONTE(800, 22), UI.sub); l.slice(0, 9).forEach((a, k) => apps.push(Object.assign(a, { gi, k }))); });
     const cols = 9, R = 66, dx = (W - 112) / cols;
     apps.forEach((a, i) => {
-      const c = i % cols, l = Math.floor(i / cols), cx = 56 + dx * (c + 0.5), cy = 270 + l * 280;
+      const c = a.k, l = a.gi, cx = 56 + dx * (c + 0.5), cy = 274 + l * 266;
       const id = a.it ? a.it.id : a.id, hv = p.botao('app-' + id, cx - R - 10, cy - R - 10, 2 * R + 20, 2 * R + 80, () => {
         if (a.it) { this.detalhe = a.it; this.renderTudo(); } else if (a.id === 'central') this.abreCentral(false); else if (a.id === 'assistente') this.abreAssistente(); else { this.secao = a.id; this.detalhe = null; this.renderTudo(); }
       });
@@ -2286,8 +2312,11 @@ AFRAME.registerComponent('ryan-vr', {
       const br = g.createLinearGradient(cx, cy - r, cx, cy + r); br.addColorStop(0, 'rgba(255,255,255,.35)'); br.addColorStop(0.45, 'rgba(255,255,255,0)'); g.fillStyle = br; g.fillRect(cx - r, cy - r, 2 * r, 2 * r);
       g.restore();
       g.lineWidth = hv ? 5 : 3; g.strokeStyle = hv ? '#ffffff' : 'rgba(255,255,255,.45)'; g.beginPath(); g.arc(cx, cy, r - 2, 0, 7); g.stroke();
-      g.font = FONTE(800, 28); const fs = Math.min(28, Math.floor(28 * (dx - 18) / Math.max(1, g.measureText(a.nome).width))); // o nome sempre cabe embaixo do ícone
-      texto(g, a.nome, cx, cy + R + 50, FONTE(800, fs), UI.txt, 'center');
+      // o nome embaixo do ícone: grande e legível; se não couber, quebra em duas linhas
+      g.font = FONTE(800, 30); const cabe = t => { g.font = FONTE(800, 30); return g.measureText(t).width <= dx - 12; };
+      let linhas = [a.nome];
+      if (!cabe(a.nome) && a.nome.includes(' ')) { const pal = a.nome.split(' '); let melhor = null; for (let q = 1; q < pal.length; q++) { const l1 = pal.slice(0, q).join(' '), l2 = pal.slice(q).join(' '), m = Math.max(l1.length, l2.length); if (!melhor || m < melhor[0]) melhor = [m, l1, l2]; } linhas = [melhor[1], melhor[2]]; }
+      linhas.forEach((t, n) => { g.font = FONTE(800, 30); const fs = Math.min(30, Math.floor(30 * (dx - 12) / Math.max(1, g.measureText(t).width))); texto(g, t, cx, cy + R + 44 + n * 32, FONTE(800, fs), UI.txt, 'center'); });
     });
   },
   // ---------- 📱 Apps do Richard: os apps do celular e os sites, num lugar só ----------
@@ -5023,7 +5052,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 3.9' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 4.0' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 
