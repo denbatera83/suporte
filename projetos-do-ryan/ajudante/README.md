@@ -9,6 +9,9 @@ App **separado do Ryan VR** que conversa por voz (ouve e fala). Aperte o 🎤 e 
 - 🎙️ *"abre o assistente"*: abre o Assistente do Google.
 - 😂 piadas, 🧮 contas (*"quanto é 7 vezes 8"*), ⏰ horas e 📅 data.
 
+- 🧹 **Faxina** (aba 🧹 Celular, ou *"faz uma faxina"*): mostra o armazenamento e a memória (usado/livre, com barras), apaga os arquivos temporários do próprio Ajudante (mostrando quanto liberou de verdade) e abre o **"Liberar espaço" do Android**, onde você escolhe o que apagar. Um app comum não consegue apagar arquivos dos outros apps (o Android bloqueia), então o Ajudante não inventa números de "limpeza".
+- 🔍 **Varredura** (*"faz uma varredura"*): bateria (carga, saúde, temperatura, voltagem), armazenamento, memória, tela (resolução, Hz, brilho), sensores, sistema (modelo, Android, há quanto tempo está ligado) e internet, com ✅/⚠️ e dicas faladas. Depois, testes que você confere: 🎨 cores da tela (pixel queimado), 👆 toque (passe o dedo em todos os quadrados) e 🔊 som. Também: *"como está a bateria"*, *"quanto espaço eu tenho"*.
+
 Os contatos (nome, WhatsApp com DDD e um emoji) ficam só no celular, na aba 👥 Contatos. Também dá para escrever em vez de falar.
 
 ## Por que ele não faz as coisas sozinho

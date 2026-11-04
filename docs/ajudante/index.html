@@ -25,13 +25,13 @@
   h1 { font: 800 30px/1 var(--titulo); margin: 0; }
   h1 em { font-style: normal; color: var(--laranja); }
   .sub { margin: 4px 0 0; color: var(--sub); font-size: 15px; }
-  nav { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 14px 0 10px; }
-  nav button { padding: 10px; border-radius: 14px; background: var(--painel); color: var(--txt); border: 1px solid var(--linha); font: 800 16px var(--corpo); }
+  nav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 14px 0 10px; }
+  nav button { padding: 10px 4px; font-size: 14px !important; border-radius: 14px; background: var(--painel); color: var(--txt); border: 1px solid var(--linha); font: 800 16px var(--corpo); }
   nav button[aria-selected="true"] { background: var(--roxo); color: #120d2e; border-color: transparent; }
   button { cursor: pointer; }
   button:focus-visible, input:focus-visible { outline: 3px solid var(--laranja); outline-offset: 2px; }
   html, body { overflow: hidden; }
-  #tela-conversa, #tela-contatos, #tela-apps { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  #tela-conversa, #tela-contatos, #tela-apps, #tela-celular { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   #conversa { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 6px 2px 10px; }
   .msg { max-width: 86%; padding: 10px 14px; border-radius: 18px; white-space: pre-wrap; word-wrap: break-word; }
   .msg.eu { align-self: flex-end; background: var(--roxo); color: #120d2e; border-bottom-right-radius: 6px; }
@@ -44,7 +44,24 @@
   #mic { width: 72px; height: 72px; flex: none; border: 0; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffd08f, var(--laranja)); font-size: 32px; box-shadow: 0 6px 0 #b06a2c; }
   #mic:active { transform: translateY(3px); box-shadow: 0 3px 0 #b06a2c; }
   #mic.ouvindo { background: radial-gradient(circle at 35% 30%, #8dffc0, var(--verde)); box-shadow: 0 0 0 8px rgba(46,212,122,.3); }
-  #tela-contatos, #tela-apps { overflow-y: auto; }
+  #tela-contatos, #tela-apps, #tela-celular { overflow-y: auto; }
+  .cartao { padding: 14px; border-radius: 18px; background: var(--painel); border: 1px solid var(--linha); margin-bottom: 12px; }
+  .cartao h2 { font: 800 19px var(--titulo); margin: 4px 0 8px; }
+  .barra-uso, .progresso { height: 14px; border-radius: 8px; background: rgba(255,255,255,.1); overflow: hidden; }
+  .barra-uso i, .progresso i { display: block; height: 100%; width: 0; border-radius: 8px; background: linear-gradient(90deg, var(--verde), var(--laranja)); transition: width .6s; }
+  .barra-uso i.cheio { background: linear-gradient(90deg, var(--laranja), var(--vermelho)); }
+  .linha-info { margin: 6px 0 12px; color: var(--sub); font-size: 15px; }
+  .grande { display: block; width: 100%; padding: 14px; border: 0; border-radius: 14px; font: 800 18px var(--corpo); margin-top: 6px; }
+  .grande.verde { background: var(--verde); color: #08291a; } .grande.roxo { background: var(--roxo); color: #120d2e; }
+  .grande:disabled { opacity: .6; }
+  .passos, .resultado { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+  .passos li, .resultado li { padding: 9px 12px; border-radius: 12px; background: rgba(255,255,255,.05); font-size: 15px; }
+  .resultado li b { display: block; font-size: 16px; } .resultado li small { color: var(--sub); }
+  .resultado li.ok b::before { content: "✅ "; } .resultado li.atencao b::before { content: "⚠️ "; } .resultado li.info b::before { content: "ℹ️ "; }
+  .tres { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tres button { padding: 12px 4px; border-radius: 12px; border: 1px solid var(--linha); background: var(--bg); color: var(--txt); font: 800 15px var(--corpo); }
+  #teste-tela { position: fixed; inset: 0; z-index: 50; display: grid; place-items: end center; padding-bottom: 30px; color: #888; font: 800 16px var(--corpo); touch-action: none; }
+  #teste-tela canvas { position: absolute; inset: 0; }
   .app { display: block; width: 100%; text-align: left; padding: 12px 14px; margin-bottom: 6px; border-radius: 14px; background: var(--painel); color: var(--txt); border: 1px solid var(--linha); font: 800 17px var(--corpo); }
   .contato { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; background: var(--painel); border: 1px solid var(--linha); margin-bottom: 8px; }
   .contato .ic { font-size: 30px; }
@@ -70,6 +87,7 @@
   <button role="tab" id="aba-conversa" aria-selected="true">💬 Conversa</button>
   <button role="tab" id="aba-contatos" aria-selected="false">👥 Contatos</button>
   <button role="tab" id="aba-apps" aria-selected="false">📱 Apps</button>
+  <button role="tab" id="aba-celular" aria-selected="false">🧹 Celular</button>
 </nav>
 <main id="tela-conversa">
   <div id="conversa" aria-live="polite"></div>
@@ -90,6 +108,31 @@
   <input id="busca-app" placeholder="🔎 Procurar app" autocomplete="off" style="padding:12px 14px;border-radius:12px;border:1px solid var(--linha);background:var(--painel);color:var(--txt);font:700 17px var(--corpo);margin-bottom:8px">
   <div id="apps"></div>
 </section>
+<section id="tela-celular" hidden>
+  <div class="cartao">
+    <h2>💾 Armazenamento</h2>
+    <div class="barra-uso"><i id="uso-arm"></i></div>
+    <p id="txt-arm" class="linha-info">…</p>
+    <h2>🧠 Memória (RAM)</h2>
+    <div class="barra-uso"><i id="uso-ram"></i></div>
+    <p id="txt-ram" class="linha-info">…</p>
+    <button class="grande verde" id="faxina">🧹 Fazer faxina</button>
+    <ol id="passos-faxina" class="passos" hidden></ol>
+  </div>
+  <div class="cartao">
+    <h2>🔍 Varredura</h2>
+    <p class="nota" style="margin-top:0">Confere a bateria, a tela, a memória, os sensores e o sistema.</p>
+    <div class="progresso" id="prog-var" hidden><i></i></div>
+    <button class="grande roxo" id="varredura">🔍 Fazer varredura</button>
+    <ul id="resultado" class="resultado"></ul>
+    <div id="testes" hidden>
+      <p class="nota">Testes que você mesmo confere:</p>
+      <div class="tres"><button id="t-cores">🎨 Cores da tela</button><button id="t-toque">👆 Toque</button><button id="t-som">🔊 Som</button></div>
+    </div>
+  </div>
+  <p class="nota">🔒 Nada é enviado para a internet. Um app comum não consegue apagar os arquivos dos outros apps (o Android bloqueia): por isso a faxina limpa o Ajudante e abre a limpeza do próprio Android, onde você escolhe o que apagar.</p>
+</section>
+<div id="teste-tela" hidden></div>
 <div id="rodape">
   <div class="chips" id="chips"></div>
   <div class="barra">
@@ -225,6 +268,11 @@ function entende(t) {
   // Minecraft
   if (eMinecraft(T) && /\b(jog|brinc|vamos|bora|comigo|desafio)/.test(T) && !/\b(abre|abrir|abra)\b/.test(T)) return desafioMinecraft(true);
   if (/\bdesafio\b/.test(T)) return desafioMinecraft(false);
+  // faxina e varredura
+  if (/\b(faxina|limpa|limpar|limpeza|liberar espaco)\b/.test(T)) { aba('celular'); return faxina(); }
+  if (/\b(varredura|escaneia|escanear|diagnostico|verifica o celular|como esta o celular)\b/.test(T)) { aba('celular'); return varredura(); }
+  if (/\b(bateria)\b/.test(T)) { const bt = J('bateria'); return diz(bt ? `A bateria está com ${bt.nivel}%${bt.temperatura > -100 ? ' e ' + bt.temperatura.toFixed(0) + ' graus' : ''}. ${bt.temperatura > 42 ? 'Está quente!' : ''}` : 'Para ver a bateria, use o app Android do Ajudante.'); }
+  if (/\b(espaco|armazenamento|memoria)\b/.test(T)) { const a = J('armazenamento'); return diz(a && a.total ? `Você tem ${GB(a.livre)} livres de ${GB(a.total)}.` : 'Para ver o espaço, use o app Android do Ajudante.'); }
   // abrir um app
   const ab = T.match(/\b(abre|abrir|abra|entra no|entra na|entrar no|liga o|joga|jogar)\s+(.+)/);
   if (ab && !/\b(piada|conta)\b/.test(T)) { if (/assistente|google assistente/.test(ab[2])) { if (A && A.abrirAssistente && A.abrirAssistente()) return diz('Abrindo o Assistente do Google! 🎙️'); return diz('Diga "Ok Google" no celular para chamar o Assistente.'); } return abreApp(ab[2]); }
@@ -239,10 +287,10 @@ function entende(t) {
   if (/\b(ajuda|o que voce faz|o que voce sabe)\b/.test(T)) return ajuda();
   diz('Hmm, não entendi. 🤔 Você pode dizer: "manda mensagem pra Mãe dizendo oi", "abre o Minecraft", "vamos jogar Minecraft", "liga pro Pai" ou "conta uma piada".');
 }
-function ajuda() { diz('Eu sei fazer: 💬 "manda mensagem pra Mãe dizendo estou com fome" · 📞 "liga pro Pai" · 🚀 "abre o YouTube" · ⛏️ "vamos jogar Minecraft" ou "me dá um desafio" · 😂 "conta uma piada" · 🧮 "quanto é 7 vezes 8" · ⏰ "que horas são".'); }
+function ajuda() { diz('Eu sei fazer: 💬 "manda mensagem pra Mãe dizendo estou com fome" · 📞 "liga pro Pai" · 🚀 "abre o YouTube" · ⛏️ "vamos jogar Minecraft" ou "me dá um desafio" · 😂 "conta uma piada" · 🧮 "quanto é 7 vezes 8" · ⏰ "que horas são" · 🧹 "faz uma faxina" · 🔍 "faz uma varredura" · 🔋 "como está a bateria".'); }
 
 // ---------- tela ----------
-[['💬 Mensagem', 'manda mensagem'], ['⛏️ Jogar Minecraft', 'vamos jogar minecraft'], ['🎯 Desafio', 'me dá um desafio'], ['😂 Piada', 'conta uma piada'], ['⏰ Horas', 'que horas são'], ['❓ O que você faz', 'o que você faz']].forEach(([r, f]) => {
+[['🧹 Faxina', 'faz uma faxina'], ['🔍 Varredura', 'faz uma varredura'], ['💬 Mensagem', 'manda mensagem'], ['⛏️ Jogar Minecraft', 'vamos jogar minecraft'], ['🎯 Desafio', 'me dá um desafio'], ['😂 Piada', 'conta uma piada'], ['⏰ Horas', 'que horas são'], ['❓ O que você faz', 'o que você faz']].forEach(([r, f]) => {
   const b = document.createElement('button'); b.textContent = r; b.onclick = () => entende(f); $('chips').appendChild(b);
 });
 $('mic').onclick = ouvir;
@@ -277,13 +325,89 @@ function mostraApps() {
   lista.forEach(a => { const b = document.createElement('button'); b.className = 'app'; b.textContent = (eMinecraft(a.nome) ? '⛏️ ' : '▶ ') + a.nome; b.onclick = () => { if (!A.abrirApp(a.pacote)) diz('Não consegui abrir ' + a.nome); }; L.appendChild(b); });
 }
 $('busca-app').addEventListener('input', mostraApps);
-function aba(qual) {
-  ['conversa', 'contatos', 'apps'].forEach(n => { $('aba-' + n).setAttribute('aria-selected', qual === n); $('tela-' + n).hidden = qual !== n; });
-  $('rodape').hidden = qual !== 'conversa';
-  if (qual === 'contatos') mostraContatos(); if (qual === 'apps') mostraApps();
+// ---------- 🧹 faxina e 🔍 varredura ----------
+const J = f => { try { return JSON.parse(A && A[f] ? A[f]() : 'null'); } catch (e) { return null; } };
+const GB = b => (b / 1e9).toLocaleString('pt-BR', { maximumFractionDigits: b < 1e10 ? 1 : 0 }) + ' GB';
+const MB = b => b < 1e6 ? Math.round(b / 1e3) + ' KB' : (b / 1e6).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' MB';
+const espera_ = ms => new Promise(r => setTimeout(r, ms));
+function barra(id, txt, usado, total, extra) {
+  const pc = total ? Math.round(usado / total * 100) : 0, el = $(id);
+  el.style.width = pc + '%'; el.classList.toggle('cheio', pc >= 85); $(txt).textContent = total ? `${GB(usado)} usados de ${GB(total)} · ${GB(total - usado)} livres (${100 - pc}%)${extra || ''}` : 'Aparece no app Android do Ajudante.';
+  return pc;
 }
-$('aba-conversa').onclick = () => aba('conversa'); $('aba-contatos').onclick = () => aba('contatos'); $('aba-apps').onclick = () => aba('apps');
-window.__voltar = () => { if ($('tela-conversa').hidden) { aba('conversa'); return true; } return false; };
+function mostraCelular() {
+  const a = J('armazenamento'), m = J('memoria');
+  if (a && a.total) barra('uso-arm', 'txt-arm', a.total - a.livre, a.total); else barra('uso-arm', 'txt-arm', 0, 0);
+  if (m && m.total) barra('uso-ram', 'txt-ram', m.total - m.livre, m.total); else { const d = navigator.deviceMemory; $('txt-ram').textContent = d ? `Cerca de ${d} GB de memória` : 'Aparece no app Android do Ajudante.'; }
+}
+async function faxina() {
+  const b = $('faxina'), L = $('passos-faxina'); b.disabled = true; L.hidden = false; L.innerHTML = '';
+  const passo = t => { const li = document.createElement('li'); li.textContent = t; L.appendChild(li); return li; };
+  const a0 = J('armazenamento');
+  let li = passo('🧽 Limpando os arquivos temporários do Ajudante…'); await espera_(700);
+  const liberou = A && A.limparLixoAjudante ? A.limparLixoAjudante() : 0;
+  li.textContent = liberou > 0 ? `✅ Ajudante limpo: ${MB(liberou)} liberados` : '✅ O Ajudante já estava limpinho';
+  li = passo('🧠 Conferindo a memória…'); await espera_(600);
+  const m = J('memoria'); li.textContent = m && m.total ? (m.pouca ? '⚠️ Pouca memória livre: feche os apps que não está usando' : `✅ Memória ok: ${GB(m.livre)} livres`) : '✅ Memória conferida';
+  li = passo('💾 Conferindo o armazenamento…'); await espera_(600);
+  const livrePc = a0 && a0.total ? Math.round(a0.livre / a0.total * 100) : null;
+  li.textContent = livrePc === null ? '✅ Armazenamento conferido' : livrePc < 10 ? `⚠️ Só ${livrePc}% livre: hora de apagar coisas` : `✅ ${livrePc}% livre`;
+  mostraCelular();
+  const msg = (livrePc !== null && livrePc < 15 ? 'O celular está quase cheio. ' : '') + 'Agora vou abrir a limpeza do próprio Android: lá você escolhe o que apagar, como fotos repetidas, downloads e apps que não usa.';
+  passo('📂 ' + msg); diz('Faxina feita! ' + msg);
+  setTimeout(() => { if (A && A.abrirLiberarEspaco) A.abrirLiberarEspaco(); }, 3500);
+  b.disabled = false;
+}
+const SAUDE = { 1: 'desconhecida', 2: 'boa', 3: 'esquentando demais', 4: 'gasta (morta)', 5: 'com voltagem alta', 6: 'com defeito', 7: 'fria demais' };
+async function varredura() {
+  const b = $('varredura'), R = $('resultado'), pr = $('prog-var'); b.disabled = true; R.innerHTML = ''; pr.hidden = false; $('testes').hidden = true;
+  const res = []; let n = 0; const total = 7;
+  const item = async (rotulo, f) => { pr.firstElementChild.style.width = Math.round(++n / total * 100) + '%'; b.textContent = '🔍 ' + rotulo + '…'; await espera_(550); const r = await f(); if (r) { res.push(r); const li = document.createElement('li'); li.className = r.nivel; li.innerHTML = '<b></b><small></small>'; li.querySelector('b').textContent = r.titulo; li.querySelector('small').textContent = r.det; R.appendChild(li); } };
+  await item('Bateria', async () => {
+    let bt = J('bateria');
+    if (!bt) { try { const x = await navigator.getBattery(); bt = { nivel: Math.round(x.level * 100), status: x.charging ? 2 : 3 }; } catch (e) { return { nivel: 'info', titulo: 'Bateria', det: 'Aparece no app Android do Ajudante.' }; } }
+    const carregando = bt.status === 2 || bt.tomada > 0, ruim = bt.saude && bt.saude !== 2 && bt.saude !== 1, quente = bt.temperatura > 42;
+    const det = [`${bt.nivel}%${carregando ? ' (carregando)' : ''}`, bt.saude ? 'saúde ' + SAUDE[bt.saude] : '', bt.temperatura > -100 ? bt.temperatura.toFixed(1).replace('.', ',') + ' °C' : '', bt.voltagem > 0 ? (bt.voltagem / 1000).toFixed(2).replace('.', ',') + ' V' : ''].filter(Boolean).join(' · ');
+    return { nivel: ruim || quente || bt.nivel <= 15 ? 'atencao' : 'ok', titulo: quente ? 'Bateria quente' : ruim ? 'Bateria precisa de atenção' : bt.nivel <= 15 ? 'Bateria fraca' : 'Bateria boa', det, dica: quente ? 'A bateria está quente: tire da capinha e deixe descansar.' : bt.nivel <= 15 ? 'Coloque o celular para carregar.' : '' };
+  });
+  await item('Armazenamento', () => { const a = J('armazenamento'); if (!a || !a.total) return { nivel: 'info', titulo: 'Armazenamento', det: 'Aparece no app Android do Ajudante.' }; const pc = Math.round(a.livre / a.total * 100); return { nivel: pc < 10 ? 'atencao' : 'ok', titulo: pc < 10 ? 'Armazenamento quase cheio' : 'Armazenamento ok', det: `${GB(a.livre)} livres de ${GB(a.total)} (${pc}%)`, dica: pc < 10 ? 'Faça a faxina para liberar espaço.' : '' }; });
+  await item('Memória', () => { const m = J('memoria'); if (!m || !m.total) return { nivel: 'info', titulo: 'Memória', det: navigator.deviceMemory ? `Cerca de ${navigator.deviceMemory} GB` : 'Aparece no app Android do Ajudante.' }; return { nivel: m.pouca ? 'atencao' : 'ok', titulo: m.pouca ? 'Pouca memória livre' : 'Memória ok', det: `${GB(m.livre)} livres de ${GB(m.total)}`, dica: m.pouca ? 'Feche os apps que não está usando.' : '' }; });
+  await item('Tela', () => { const t = J('tela') || { largura: Math.round(Math.max(screen.width, screen.height) * devicePixelRatio), altura: Math.round(Math.min(screen.width, screen.height) * devicePixelRatio), brilho: -1 }; const br = t.brilho >= 0 ? ` · brilho ${Math.round(t.brilho / 255 * 100)}%${t.brilhoAuto ? ' (automático)' : ''}` : ''; return { nivel: 'ok', titulo: 'Tela', det: `${t.largura} × ${t.altura} pixels${t.hz ? ' · ' + t.hz + ' Hz' : ''}${br}`, dica: '' }; });
+  await item('Sensores', () => { const l = J('sensores'); if (!l) return { nivel: 'info', titulo: 'Sensores', det: 'Aparecem no app Android do Ajudante.' }; const NOMES = { acelerometro: 'movimento', giroscopio: 'giroscópio', bussola: 'bússola', proximidade: 'proximidade', luz: 'luz' }; const tem = l.filter(x => x.tem).map(x => NOMES[x.nome]), falta = l.filter(x => !x.tem).map(x => NOMES[x.nome]); return { nivel: 'ok', titulo: `Sensores: ${tem.length} de ${l.length}`, det: (tem.length ? 'tem ' + tem.join(', ') : '') + (falta.length ? ' · não tem ' + falta.join(', ') : '') }; });
+  await item('Sistema', () => { const s = J('sistema'); if (!s) return { nivel: 'info', titulo: 'Sistema', det: navigator.userAgent.replace(/.*(Android [^;)]*).*/, '$1') }; const dias = Math.floor(s.ligadoMs / 864e5); return { nivel: dias >= 7 ? 'atencao' : 'ok', titulo: `${s.fabricante} ${s.modelo} · Android ${s.android}`, det: `Ligado há ${dias >= 1 ? dias + (dias === 1 ? ' dia' : ' dias') : Math.round(s.ligadoMs / 36e5) + ' horas'}`, dica: dias >= 7 ? 'O celular está ligado há mais de uma semana: reiniciar deixa ele mais rápido.' : '' }; });
+  await item('Internet', () => ({ nivel: navigator.onLine ? 'ok' : 'atencao', titulo: navigator.onLine ? 'Internet conectada' : 'Sem internet', det: navigator.onLine ? 'O celular está conectado' : 'Ligue o Wi-Fi ou os dados móveis', dica: navigator.onLine ? '' : 'Ligue o Wi-Fi ou os dados móveis.' }));
+  pr.hidden = true; b.disabled = false; b.textContent = '🔍 Fazer varredura de novo'; $('testes').hidden = false;
+  const avisos = res.filter(r => r.nivel === 'atencao'), dicas = res.map(r => r.dica).filter(Boolean);
+  diz(avisos.length ? `Varredura pronta! Achei ${avisos.length} ${avisos.length === 1 ? 'coisa' : 'coisas'} para cuidar. ${dicas.join(' ')}` : 'Varredura pronta! Está tudo certo com o seu celular. 🎉 Quer testar as cores da tela, o toque e o som?');
+}
+// testes que a pessoa confere: cores (pixel queimado), toque (encher a tela) e som
+function testeCores() {
+  const T = $('teste-tela'), cores = ['#ff0000', '#00ff00', '#0000ff', '#ffffff', '#000000']; let i = 0;
+  const mostra = () => { if (i >= cores.length) { T.hidden = true; diz('Teste de cores pronto! Se viu algum pontinho de outra cor parado, pode ser um pixel queimado.'); return; } T.style.background = cores[i]; T.textContent = 'Procure pontinhos de outra cor · toque para a próxima (' + (i + 1) + '/5)'; i++; };
+  T.innerHTML = ''; T.hidden = false; T.onclick = mostra; mostra();
+}
+function testeToque() {
+  const T = $('teste-tela'); T.style.background = '#111'; T.textContent = ''; T.hidden = false; T.onclick = null;
+  const c = document.createElement('canvas'), g = c.getContext('2d'), W = c.width = innerWidth, H = c.height = innerHeight, C = 6, Lh = 10, tw = W / C, th = H / Lh, feitos = new Set();
+  T.appendChild(c);
+  const desenha = () => { g.fillStyle = '#111'; g.fillRect(0, 0, W, H); for (let x = 0; x < C; x++) for (let y = 0; y < Lh; y++) { g.fillStyle = feitos.has(x + ',' + y) ? '#2ed47a' : '#2a2450'; g.fillRect(x * tw + 2, y * th + 2, tw - 4, th - 4); } g.fillStyle = '#fff'; g.font = '800 18px Nunito, sans-serif'; g.textAlign = 'center'; g.fillText('Passe o dedo em todos os quadrados', W / 2, H / 2); };
+  const toca = e => { for (const t of e.touches || [e]) { feitos.add(Math.floor(t.clientX / tw) + ',' + Math.floor(t.clientY / th)); } desenha(); e.preventDefault(); if (feitos.size >= C * Lh) { T.hidden = true; T.innerHTML = ''; diz('Teste de toque pronto: a tela respondeu em todos os quadrados! ✅'); } };
+  c.addEventListener('touchstart', toca, { passive: false }); c.addEventListener('touchmove', toca, { passive: false }); c.addEventListener('mousemove', e => { if (e.buttons) toca(e); });
+  setTimeout(() => { if (!T.hidden && c.isConnected) { /* sai se a pessoa desistir: botão voltar */ } }, 0);
+  desenha();
+}
+function testeSom() {
+  try { const a = new (window.AudioContext || window.webkitAudioContext)(); [523, 659, 784, 1047].forEach((f, i) => { const o = a.createOscillator(), v = a.createGain(); o.frequency.value = f; o.connect(v); v.connect(a.destination); v.gain.setValueAtTime(0.25, a.currentTime + i * 0.25); v.gain.exponentialRampToValueAtTime(0.001, a.currentTime + i * 0.25 + 0.24); o.start(a.currentTime + i * 0.25); o.stop(a.currentTime + i * 0.25 + 0.25); }); } catch (e) {}
+  setTimeout(() => diz('Ouviu as quatro notinhas? Então o alto-falante está funcionando! 🔊'), 1200);
+}
+$('faxina').onclick = faxina; $('varredura').onclick = varredura; $('t-cores').onclick = testeCores; $('t-toque').onclick = testeToque; $('t-som').onclick = testeSom;
+function aba(qual) {
+  ['conversa', 'contatos', 'apps', 'celular'].forEach(n => { $('aba-' + n).setAttribute('aria-selected', qual === n); $('tela-' + n).hidden = qual !== n; });
+  $('rodape').hidden = qual !== 'conversa';
+  if (qual === 'contatos') mostraContatos(); if (qual === 'apps') mostraApps(); if (qual === 'celular') mostraCelular();
+}
+$('aba-conversa').onclick = () => aba('conversa'); $('aba-contatos').onclick = () => aba('contatos'); $('aba-apps').onclick = () => aba('apps'); $('aba-celular').onclick = () => aba('celular');
+window.__voltar = () => { if (!$('teste-tela').hidden) { $('teste-tela').hidden = true; $('teste-tela').innerHTML = ''; return true; } if ($('tela-conversa').hidden) { aba('conversa'); return true; } return false; };
 window.__entende = entende; // para os testes
 setTimeout(() => diz('Oi! Eu sou o Ajudante do Ryan. 🤖 Aperte o 🎤 e fale comigo. Posso deixar mensagens prontas no WhatsApp, abrir apps e jogar desafios de Minecraft com você!'), 400);
 })();
