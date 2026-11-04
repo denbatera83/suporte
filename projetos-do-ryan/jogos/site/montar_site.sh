@@ -5,7 +5,7 @@ set -e
 J="$(cd "$(dirname "$0")/.." && pwd)"; RAIZ="$(cd "$J/../.." && pwd)"; D="$RAIZ/docs"
 rm -rf "$D"; mkdir -p "$D/jogo/ryan-vr" "$D/jogo/blocos-vr" "$D/jogo/turbo-noturno" "$D/jogo/comum"
 cp "$J/site/index.html" "$D/index.html"
-cp "$J/ryan-vr/RyanVR.apk" "$J/ryan-vr/RyanVR-Computador.zip" "$D/"
+cp "$J/ryan-vr/RyanVR.apk" "$J/ryan-vr/RyanVR-Android.zip" "$J/ryan-vr/RyanVR-Computador.zip" "$D/"
 cp "$J/ryan-vr/index.html" "$J/ryan-vr/manifest.json" "$J/ryan-vr/sw.js" "$J/ryan-vr/icon-192.png" "$J/ryan-vr/icon-512.png" "$J/ryan-vr/icon-maskable-512.png" "$D/jogo/ryan-vr/"
 cp "$J/blocos-vr/index.html" "$D/jogo/blocos-vr/"
 cp "$J/turbo-noturno/index.html" "$D/jogo/turbo-noturno/"
