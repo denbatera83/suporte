@@ -4,7 +4,7 @@ App **separado do Ryan VR** que conversa por voz (ouve e fala). Aperte o 🎤 e 
 
 - 💬 *"manda mensagem pra Mãe dizendo estou com fome"*: o WhatsApp abre com a mensagem pronta para a pessoa certa, e **você aperta Enviar**. Também funciona em duas partes: *"fala pro Pai"* → "O que você quer dizer?" → *"vem me buscar"*.
 - 📞 *"liga pro Pai"*: abre a tela de ligar com o número; você aperta o botão verde.
-- 🚀 *"abre o YouTube"*, *"abre o Minecraft"*, *"joga Roblox"*: abre o app pelo nome.
+- 🚀 *"abre o YouTube"*, *"abre o Minecraft"*, *"joga Roblox"*: abre o app pelo nome. Entende nomes parecidos e jeitos diferentes que a voz escreve ("mine craft", "maicraft", "robloxx") e todas as versões do Minecraft (normal, Trial, Education). A aba **📱 Apps** mostra todos os apps do celular para abrir com um toque (o Minecraft aparece primeiro).
 - ⛏️ *"vamos jogar Minecraft"*: dá um desafio (ex.: "construa uma casa em 5 minutos") e abre o Minecraft; quando você volta, ele pergunta se você conseguiu. *"me dá um desafio"* só sorteia o desafio.
 - 🎙️ *"abre o assistente"*: abre o Assistente do Google.
 - 😂 piadas, 🧮 contas (*"quanto é 7 vezes 8"*), ⏰ horas e 📅 data.

@@ -25,13 +25,13 @@
   h1 { font: 800 30px/1 var(--titulo); margin: 0; }
   h1 em { font-style: normal; color: var(--laranja); }
   .sub { margin: 4px 0 0; color: var(--sub); font-size: 15px; }
-  nav { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0 10px; }
+  nav { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 14px 0 10px; }
   nav button { padding: 10px; border-radius: 14px; background: var(--painel); color: var(--txt); border: 1px solid var(--linha); font: 800 16px var(--corpo); }
   nav button[aria-selected="true"] { background: var(--roxo); color: #120d2e; border-color: transparent; }
   button { cursor: pointer; }
   button:focus-visible, input:focus-visible { outline: 3px solid var(--laranja); outline-offset: 2px; }
   html, body { overflow: hidden; }
-  #tela-conversa, #tela-contatos { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  #tela-conversa, #tela-contatos, #tela-apps { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   #conversa { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 6px 2px 10px; }
   .msg { max-width: 86%; padding: 10px 14px; border-radius: 18px; white-space: pre-wrap; word-wrap: break-word; }
   .msg.eu { align-self: flex-end; background: var(--roxo); color: #120d2e; border-bottom-right-radius: 6px; }
@@ -44,7 +44,8 @@
   #mic { width: 72px; height: 72px; flex: none; border: 0; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffd08f, var(--laranja)); font-size: 32px; box-shadow: 0 6px 0 #b06a2c; }
   #mic:active { transform: translateY(3px); box-shadow: 0 3px 0 #b06a2c; }
   #mic.ouvindo { background: radial-gradient(circle at 35% 30%, #8dffc0, var(--verde)); box-shadow: 0 0 0 8px rgba(46,212,122,.3); }
-  #tela-contatos { overflow-y: auto; }
+  #tela-contatos, #tela-apps { overflow-y: auto; }
+  .app { display: block; width: 100%; text-align: left; padding: 12px 14px; margin-bottom: 6px; border-radius: 14px; background: var(--painel); color: var(--txt); border: 1px solid var(--linha); font: 800 17px var(--corpo); }
   .contato { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; background: var(--painel); border: 1px solid var(--linha); margin-bottom: 8px; }
   .contato .ic { font-size: 30px; }
   .contato b { display: block; } .contato small { color: var(--sub); }
@@ -68,6 +69,7 @@
 <nav role="tablist">
   <button role="tab" id="aba-conversa" aria-selected="true">💬 Conversa</button>
   <button role="tab" id="aba-contatos" aria-selected="false">👥 Contatos</button>
+  <button role="tab" id="aba-apps" aria-selected="false">📱 Apps</button>
 </nav>
 <main id="tela-conversa">
   <div id="conversa" aria-live="polite"></div>
@@ -83,6 +85,10 @@
     <button class="salvar" type="submit">✓ Salvar</button>
   </form>
   <p class="nota">🔒 Os contatos ficam só neste celular.</p>
+</section>
+<section id="tela-apps" hidden>
+  <input id="busca-app" placeholder="🔎 Procurar app" autocomplete="off" style="padding:12px 14px;border-radius:12px;border:1px solid var(--linha);background:var(--painel);color:var(--txt);font:700 17px var(--corpo);margin-bottom:8px">
+  <div id="apps"></div>
 </section>
 <div id="rodape">
   <div class="chips" id="chips"></div>
@@ -151,16 +157,33 @@ function mandaZap(c, txt) {
   diz(`Pronto! Mensagem para ${c.nome}: "${txt}". Vou abrir o WhatsApp: é só apertar o botão de enviar.`, { rotulo: '📲 Abrir no WhatsApp de novo', f: abre });
   setTimeout(abre, 2600);
 }
-const APPS = { minecraft: 'com.mojang.minecraftpe', roblox: 'com.roblox.client', youtube: 'com.google.android.youtube', whatsapp: 'com.whatsapp', spotify: 'com.spotify.music', 'ryan vr': 'br.ryan.vr' };
+const APPS = { minecraft: 'com.mojang.minecraftpe', roblox: 'com.roblox.client', youtube: 'com.google.android.youtube', whatsapp: 'com.whatsapp', spotify: 'com.spotify.music', ryanvr: 'br.ryan.vr' };
+const MINECRAFT = ['com.mojang.minecraftpe', 'com.mojang.minecrafttrialpe', 'com.mojang.minecraftedu', 'com.mojang.minecraftpe.preview'];
+const junto = s => norm(s).replace(/[^a-z0-9]/g, ''); // "Mine Craft" = "minecraft"
+// o reconhecimento de voz escreve o Minecraft de muitos jeitos: mine craft, maicraft, mainkraft, mincraft…
+const eMinecraft = s => /m(a|e)?i?n?e?(c|k)+ra(f|ph)t|maicra|maincra|mincra|minicra|maicraf/.test(junto(s));
+function parecido(a, b) { // quantas letras precisa trocar para virar o outro
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+function meusApps() { try { const l = JSON.parse(A && A.listarApps ? A.listarApps() : '[]'); return Array.isArray(l) ? l : []; } catch (e) { return []; } }
+function achaApp(nome) {
+  const lista = meusApps(), N = junto(norm(nome).replace(/^(o|a|os|as|no|na|do|da)\s+/, '').replace(/\s+(pra|para) (mim|eu)$/, ''));
+  if (!N) return null;
+  if (eMinecraft(N)) return lista.find(a => /mojang|minecraft/.test(a.pacote) || eMinecraft(a.nome)) || { nome: 'Minecraft', pacote: null, minecraft: true };
+  let ap = lista.find(a => junto(a.nome) === N) || lista.find(a => junto(a.nome).length > 2 && (junto(a.nome).includes(N) || N.includes(junto(a.nome))));
+  if (!ap) { let melhor = null, md = 99; lista.forEach(a => { const d = parecido(junto(a.nome), N); if (d < md) { md = d; melhor = a; } }); if (melhor && md <= Math.max(1, Math.floor(N.length / 4))) ap = melhor; }
+  if (!ap) { const k = Object.keys(APPS).find(k => N.includes(k)); if (k) ap = { nome, pacote: APPS[k] }; }
+  return ap || null;
+}
 function abreApp(nome) {
-  const N = norm(nome).replace(/^(o|a|os|as|no|na)\s+/, '').trim();
-  if (!N) return false;
-  let lista = []; try { lista = JSON.parse(A && A.listarApps ? A.listarApps() : '[]'); } catch (e) {}
-  let ap = lista.find(a => norm(a.nome) === N) || lista.find(a => norm(a.nome).includes(N) || N.includes(norm(a.nome)));
-  const pac = ap ? ap.pacote : Object.keys(APPS).find(k => N.includes(k)) && APPS[Object.keys(APPS).find(k => N.includes(k))];
   if (!A || !A.abrirApp) { diz(`Para abrir o ${nome} eu preciso estar no app Android do Ajudante.`); return true; }
-  if (pac && A.abrirApp(pac)) { diz(`Abrindo ${ap ? ap.nome : nome}! 🚀`); return true; }
-  diz(`Não achei o app "${nome}" no celular.`); return true;
+  const ap = achaApp(nome);
+  if (ap && ap.pacote && A.abrirApp(ap.pacote)) { diz(`Abrindo ${ap.nome}! 🚀`); return true; }
+  if (ap && ap.minecraft) for (const pk of MINECRAFT) if (A.abrirApp(pk)) { diz('Abrindo o Minecraft! ⛏️'); return true; }
+  diz(`Não achei o app "${nome}". Toque na aba 📱 Apps para ver todos os apps do celular e abrir com um toque.`); return true;
 }
 const DESAFIOS = ['Construa uma casa com porta e janela em 5 minutos! 🏠', 'Ache 10 blocos de carvão antes do anoitecer! ⛏️', 'Faça uma torre de 20 blocos e pule lá de cima na água! 🌊', 'Plante uma fazenda de trigo com 9 plantinhas! 🌾', 'Monte um barco e atravesse um lago! ⛵', 'Faça uma estátua de você mesmo com blocos! 🗿', 'Ache uma caverna e coloque 5 tochas lá dentro! 🔥', 'Construa uma ponte entre duas montanhas! 🌉', 'Doma um lobo ou um gato! 🐺', 'Faça um jardim com 5 tipos de flores! 🌸'];
 const PIADAS = ['Por que o livro de matemática ficou triste? Porque tinha muitos problemas! 📘', 'O que o zero disse para o oito? Que cinto bonito! 0️⃣', 'Por que o esqueleto não brigou? Porque ele não tinha estômago para isso! 💀', 'Qual é o peixe que caiu do 10º andar? O aaaatum! 🐟', 'O que a vaca foi fazer no espaço? Visitar a Via Láctea! 🐄'];
@@ -200,7 +223,7 @@ function entende(t) {
     return diz(`Para ligar para ${m.c.nome}, use o app Android do Ajudante.`);
   }
   // Minecraft
-  if (/minecraft|maicraft|maincraft/.test(T) && /\b(jog|brinc|vamos|bora|comigo|desafio)/.test(T)) return desafioMinecraft(true);
+  if (eMinecraft(T) && /\b(jog|brinc|vamos|bora|comigo|desafio)/.test(T) && !/\b(abre|abrir|abra)\b/.test(T)) return desafioMinecraft(true);
   if (/\bdesafio\b/.test(T)) return desafioMinecraft(false);
   // abrir um app
   const ab = T.match(/\b(abre|abrir|abra|entra no|entra na|entrar no|liga o|joga|jogar)\s+(.+)/);
@@ -246,13 +269,21 @@ $('novo').addEventListener('submit', e => {
   contatos.push({ nome, numero: n, ic: emoji }); grava('ajudante-contatos', contatos);
   $('n-nome').value = ''; $('n-num').value = ''; $('n-erro').textContent = ''; mostraContatos();
 });
-function aba(qual) {
-  $('aba-conversa').setAttribute('aria-selected', qual === 'conversa'); $('aba-contatos').setAttribute('aria-selected', qual === 'contatos');
-  $('tela-conversa').hidden = qual !== 'conversa'; $('rodape').hidden = qual !== 'conversa'; $('tela-contatos').hidden = qual !== 'contatos';
-  if (qual === 'contatos') mostraContatos();
+function mostraApps() {
+  const L = $('apps'), q = junto($('busca-app').value), lista = meusApps().filter(a => !q || junto(a.nome).includes(q)).sort((a, b) => (eMinecraft(b.nome) - eMinecraft(a.nome)) || a.nome.localeCompare(b.nome));
+  L.innerHTML = '';
+  if (!A) { L.innerHTML = '<p class="nota">A lista de apps aparece no app Android do Ajudante.</p>'; return; }
+  if (!lista.length) { L.innerHTML = '<p class="nota">Nenhum app encontrado.</p>'; return; }
+  lista.forEach(a => { const b = document.createElement('button'); b.className = 'app'; b.textContent = (eMinecraft(a.nome) ? '⛏️ ' : '▶ ') + a.nome; b.onclick = () => { if (!A.abrirApp(a.pacote)) diz('Não consegui abrir ' + a.nome); }; L.appendChild(b); });
 }
-$('aba-conversa').onclick = () => aba('conversa'); $('aba-contatos').onclick = () => aba('contatos');
-window.__voltar = () => { if (!$('tela-contatos').hidden) { aba('conversa'); return true; } return false; };
+$('busca-app').addEventListener('input', mostraApps);
+function aba(qual) {
+  ['conversa', 'contatos', 'apps'].forEach(n => { $('aba-' + n).setAttribute('aria-selected', qual === n); $('tela-' + n).hidden = qual !== n; });
+  $('rodape').hidden = qual !== 'conversa';
+  if (qual === 'contatos') mostraContatos(); if (qual === 'apps') mostraApps();
+}
+$('aba-conversa').onclick = () => aba('conversa'); $('aba-contatos').onclick = () => aba('contatos'); $('aba-apps').onclick = () => aba('apps');
+window.__voltar = () => { if ($('tela-conversa').hidden) { aba('conversa'); return true; } return false; };
 window.__entende = entende; // para os testes
 setTimeout(() => diz('Oi! Eu sou o Ajudante do Ryan. 🤖 Aperte o 🎤 e fale comigo. Posso deixar mensagens prontas no WhatsApp, abrir apps e jogar desafios de Minecraft com você!'), 400);
 })();
