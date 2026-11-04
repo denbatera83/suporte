@@ -13,6 +13,9 @@ cp "$J/ryan-vr/index.html" "$J/ryan-vr/manifest.json" "$J/ryan-vr/sw.js" "$J/rya
 cp "$J/blocos-vr/index.html" "$D/jogo/blocos-vr/"
 cp "$J/turbo-noturno/index.html" "$D/jogo/turbo-noturno/"
 cp "$J/comum/maos-vr.js" "$D/jogo/comum/"
+# Ajudante do Ryan (outro app, separado): APK e a versão para testar no navegador
+A="$(cd "$J/../ajudante" && pwd)"; mkdir -p "$D/ajudante"
+cp "$A/AjudanteDoRyan.apk" "$A/AjudanteDoRyan-Android.zip" "$D/"; cp "$A/index.html" "$A/icone.png" "$D/ajudante/"
 touch "$D/.nojekyll"   # o GitHub Pages entrega os arquivos como estão
 printf 'User-agent: *\nAllow: /\nSitemap: https://denbatera83.github.io/suporte/sitemap.xml\n' > "$D/robots.txt"
 HOJE=$(date +%Y-%m-%d)

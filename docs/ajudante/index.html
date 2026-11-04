@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ajudante do Ryan</title>
+<meta name="description" content="Um ajudante que conversa por voz: deixa mensagens do WhatsApp prontas, abre apps, liga e dá desafios de Minecraft.">
+<link rel="icon" href="icone.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@600;700;800&display=swap">
+<style>
+  :root { --bg: #1a1630; --painel: #262046; --linha: rgba(255,255,255,.1); --txt: #f4f2ff; --sub: #b3acd6; --roxo: #8f7bff; --laranja: #ffb36b; --verde: #2ed47a; --vermelho: #ff6b81;
+    --corpo: "Nunito", system-ui, sans-serif; --titulo: "Baloo 2", "Nunito", system-ui, sans-serif; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--txt); font: 700 17px/1.4 var(--corpo); }
+  body { display: flex; flex-direction: column; padding: max(12px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom)); max-width: 640px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 12px; }
+  .robo { width: 74px; height: 74px; flex: none; border-radius: 22px; background: linear-gradient(160deg, #a596ff, #5a46c8); position: relative; box-shadow: 0 8px 24px rgba(143,123,255,.4); }
+  .robo::before, .robo::after { content: ""; position: absolute; top: 26px; width: 14px; height: 14px; border-radius: 50%; background: #9ff3ff; box-shadow: 0 0 10px #9ff3ff; }
+  .robo::before { left: 18px; } .robo::after { right: 18px; }
+  .robo .boca { position: absolute; left: 24px; right: 24px; bottom: 16px; height: 6px; border-radius: 4px; background: #fff; transition: height .1s; }
+  .robo.fala .boca { animation: fala .25s infinite alternate; }
+  .robo.ouve { box-shadow: 0 0 0 6px rgba(46,212,122,.45), 0 8px 24px rgba(143,123,255,.4); }
+  @keyframes fala { from { height: 4px; } to { height: 14px; } }
+  h1 { font: 800 30px/1 var(--titulo); margin: 0; }
+  h1 em { font-style: normal; color: var(--laranja); }
+  .sub { margin: 4px 0 0; color: var(--sub); font-size: 15px; }
+  nav { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0 10px; }
+  nav button { padding: 10px; border-radius: 14px; background: var(--painel); color: var(--txt); border: 1px solid var(--linha); font: 800 16px var(--corpo); }
+  nav button[aria-selected="true"] { background: var(--roxo); color: #120d2e; border-color: transparent; }
+  button { cursor: pointer; }
+  button:focus-visible, input:focus-visible { outline: 3px solid var(--laranja); outline-offset: 2px; }
+  html, body { overflow: hidden; }
+  #tela-conversa, #tela-contatos { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  #conversa { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 6px 2px 10px; }
+  .msg { max-width: 86%; padding: 10px 14px; border-radius: 18px; white-space: pre-wrap; word-wrap: break-word; }
+  .msg.eu { align-self: flex-end; background: var(--roxo); color: #120d2e; border-bottom-right-radius: 6px; }
+  .msg.ele { align-self: flex-start; background: var(--painel); border: 1px solid var(--linha); border-bottom-left-radius: 6px; }
+  .msg .acao { display: block; margin-top: 8px; width: 100%; padding: 10px; border: 0; border-radius: 12px; background: var(--verde); color: #08291a; font: 800 16px var(--corpo); }
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 10px; scrollbar-width: none; }
+  .chips button { flex: none; padding: 9px 14px; border-radius: 999px; background: var(--painel); color: var(--txt); border: 1px solid var(--linha); font: 700 15px var(--corpo); }
+  .barra { display: flex; gap: 10px; align-items: center; }
+  .barra input { flex: 1; min-width: 0; padding: 14px 16px; border-radius: 16px; border: 1px solid var(--linha); background: var(--painel); color: var(--txt); font: 700 17px var(--corpo); }
+  #mic { width: 72px; height: 72px; flex: none; border: 0; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffd08f, var(--laranja)); font-size: 32px; box-shadow: 0 6px 0 #b06a2c; }
+  #mic:active { transform: translateY(3px); box-shadow: 0 3px 0 #b06a2c; }
+  #mic.ouvindo { background: radial-gradient(circle at 35% 30%, #8dffc0, var(--verde)); box-shadow: 0 0 0 8px rgba(46,212,122,.3); }
+  #tela-contatos { overflow-y: auto; }
+  .contato { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 16px; background: var(--painel); border: 1px solid var(--linha); margin-bottom: 8px; }
+  .contato .ic { font-size: 30px; }
+  .contato b { display: block; } .contato small { color: var(--sub); }
+  .contato .tira { margin-left: auto; border: 0; background: transparent; color: var(--vermelho); font: 800 15px var(--corpo); padding: 8px; }
+  form { display: grid; gap: 8px; padding: 12px; border-radius: 16px; background: var(--painel); border: 1px solid var(--linha); margin-top: 6px; }
+  form input { padding: 12px 14px; border-radius: 12px; border: 1px solid var(--linha); background: var(--bg); color: var(--txt); font: 700 17px var(--corpo); width: 100%; }
+  form .emojis { display: flex; flex-wrap: wrap; gap: 6px; }
+  form .emojis button { font-size: 24px; padding: 4px 8px; border-radius: 10px; background: transparent; border: 2px solid transparent; }
+  form .emojis button[aria-pressed="true"] { border-color: var(--roxo); background: rgba(143,123,255,.2); }
+  form .salvar { padding: 12px; border: 0; border-radius: 12px; background: var(--verde); color: #08291a; font: 800 17px var(--corpo); }
+  .nota { color: var(--sub); font-size: 14px; margin: 8px 2px; }
+  .erro { color: var(--vermelho); font-size: 15px; min-height: 1em; margin: 0; }
+  @media (prefers-reduced-motion: reduce) { .robo.fala .boca { animation: none; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="robo" id="robo" aria-hidden="true"><div class="boca"></div></div>
+  <div><h1>Ajudante <em>do Ryan</em></h1><p class="sub">Fale comigo: aperte o 🎤</p></div>
+</header>
+<nav role="tablist">
+  <button role="tab" id="aba-conversa" aria-selected="true">💬 Conversa</button>
+  <button role="tab" id="aba-contatos" aria-selected="false">👥 Contatos</button>
+</nav>
+<main id="tela-conversa">
+  <div id="conversa" aria-live="polite"></div>
+</main>
+<section id="tela-contatos" hidden>
+  <div id="contatos"></div>
+  <form id="novo" autocomplete="off">
+    <b>➕ Novo contato</b>
+    <input id="n-nome" placeholder="Nome (ex.: Mãe)" maxlength="20" required>
+    <input id="n-num" placeholder="WhatsApp com DDD (ex.: 11 98765-4321)" inputmode="tel" maxlength="20" required>
+    <div class="emojis" id="n-emojis"></div>
+    <p class="erro" id="n-erro"></p>
+    <button class="salvar" type="submit">✓ Salvar</button>
+  </form>
+  <p class="nota">🔒 Os contatos ficam só neste celular.</p>
+</section>
+<div id="rodape">
+  <div class="chips" id="chips"></div>
+  <div class="barra">
+    <input id="digitar" placeholder="Escreva ou aperte o 🎤" enterkeyhint="send" autocomplete="off">
+    <button id="mic" aria-label="Falar">🎤</button>
+  </div>
+</div>
+<script>
+(() => {
+const A = window.Ajudante || null; // no app Android: voz, WhatsApp, ligar e abrir apps
+const $ = id => document.getElementById(id);
+const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const ler = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
+const grava = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+let contatos = ler('ajudante-contatos', []);
+if (!Array.isArray(contatos)) contatos = [];
+let espera = null; // quando o ajudante fez uma pergunta e espera a resposta
+let desafio = null;
+const robo = $('robo');
+
+// ---------- falar e ouvir ----------
+window.__falando = v => robo.classList.toggle('fala', !!v);
+function fala(t) {
+  const limpo = t.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}]/gu, '').trim();
+  if (A && A.falar && A.falar(limpo)) return;
+  try {
+    if (!window.speechSynthesis) return;
+    speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(limpo); u.lang = 'pt-BR';
+    u.onstart = () => window.__falando(true); u.onend = u.onerror = () => window.__falando(false); speechSynthesis.speak(u);
+  } catch (e) {}
+}
+function diz(t, acao) { // o ajudante responde: aparece na conversa e é falado
+  const d = document.createElement('div'); d.className = 'msg ele'; d.textContent = t;
+  if (acao) { const b = document.createElement('button'); b.className = 'acao'; b.textContent = acao.rotulo; b.onclick = acao.f; d.appendChild(b); }
+  $('conversa').appendChild(d); $('conversa').scrollTop = 1e9; fala(t);
+}
+function eu(t) { const d = document.createElement('div'); d.className = 'msg eu'; d.textContent = t; $('conversa').appendChild(d); $('conversa').scrollTop = 1e9; }
+let ouvindo = false;
+window.__voz = t => { ouvindo = false; $('mic').classList.remove('ouvindo'); robo.classList.remove('ouve'); if (t && String(t).trim()) entende(String(t).trim()); else diz('Não ouvi nada. Aperte o 🎤 e fale de novo.'); };
+function ouvir() {
+  if (A && A.calar) A.calar(); try { window.speechSynthesis && speechSynthesis.cancel(); } catch (e) {}
+  ouvindo = true; $('mic').classList.add('ouvindo'); robo.classList.add('ouve');
+  if (A && A.ouvir) { A.ouvir(); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { window.__voz(null); diz('Aqui a voz não funciona. Escreva embaixo, ou use o app Android.'); return; }
+  try { const r = new SR(); r.lang = 'pt-BR'; let ok = false; r.onresult = e => { ok = true; window.__voz(e.results[0][0].transcript); }; r.onend = () => { if (!ok && ouvindo) window.__voz(null); }; r.start(); }
+  catch (e) { window.__voz(null); }
+}
+
+// ---------- coisas que ele sabe fazer ----------
+function achaContato(T) {
+  let m = null;
+  contatos.forEach((c, i) => { const n = norm(c.nome), pos = T.indexOf(n); if (n && pos >= 0 && (!m || n.length > m.n.length)) m = { c, i, n, pos }; });
+  return m;
+}
+function textoDepois(t, T, m) { // o que vem depois do nome, sem "dizendo", "que"…
+  let mapa = [], N = ''; for (let k = 0; k < t.length; k++) { for (const ch of norm(t[k])) { N += ch; mapa.push(k); } }
+  const fim = mapa[m.pos + m.n.length - 1] + 1;
+  let r = t.slice(fim).replace(/^[\s,:;.\-]*(dizendo|falando|escrevendo|com a mensagem|a mensagem|mensagem|que)?[\s,:;.\-]*/i, '').trim();
+  return r ? r.charAt(0).toUpperCase() + r.slice(1) : '';
+}
+function mandaZap(c, txt) {
+  const url = 'https://wa.me/' + c.numero + '?text=' + encodeURIComponent(txt);
+  const abre = () => { if (A && A.abrirLink) { if (!A.abrirLink(url)) diz('Não consegui abrir o WhatsApp. Ele está instalado?'); } else window.open(url, '_blank'); };
+  diz(`Pronto! Mensagem para ${c.nome}: "${txt}". Vou abrir o WhatsApp: é só apertar o botão de enviar.`, { rotulo: '📲 Abrir no WhatsApp de novo', f: abre });
+  setTimeout(abre, 2600);
+}
+const APPS = { minecraft: 'com.mojang.minecraftpe', roblox: 'com.roblox.client', youtube: 'com.google.android.youtube', whatsapp: 'com.whatsapp', spotify: 'com.spotify.music', 'ryan vr': 'br.ryan.vr' };
+function abreApp(nome) {
+  const N = norm(nome).replace(/^(o|a|os|as|no|na)\s+/, '').trim();
+  if (!N) return false;
+  let lista = []; try { lista = JSON.parse(A && A.listarApps ? A.listarApps() : '[]'); } catch (e) {}
+  let ap = lista.find(a => norm(a.nome) === N) || lista.find(a => norm(a.nome).includes(N) || N.includes(norm(a.nome)));
+  const pac = ap ? ap.pacote : Object.keys(APPS).find(k => N.includes(k)) && APPS[Object.keys(APPS).find(k => N.includes(k))];
+  if (!A || !A.abrirApp) { diz(`Para abrir o ${nome} eu preciso estar no app Android do Ajudante.`); return true; }
+  if (pac && A.abrirApp(pac)) { diz(`Abrindo ${ap ? ap.nome : nome}! 🚀`); return true; }
+  diz(`Não achei o app "${nome}" no celular.`); return true;
+}
+const DESAFIOS = ['Construa uma casa com porta e janela em 5 minutos! 🏠', 'Ache 10 blocos de carvão antes do anoitecer! ⛏️', 'Faça uma torre de 20 blocos e pule lá de cima na água! 🌊', 'Plante uma fazenda de trigo com 9 plantinhas! 🌾', 'Monte um barco e atravesse um lago! ⛵', 'Faça uma estátua de você mesmo com blocos! 🗿', 'Ache uma caverna e coloque 5 tochas lá dentro! 🔥', 'Construa uma ponte entre duas montanhas! 🌉', 'Doma um lobo ou um gato! 🐺', 'Faça um jardim com 5 tipos de flores! 🌸'];
+const PIADAS = ['Por que o livro de matemática ficou triste? Porque tinha muitos problemas! 📘', 'O que o zero disse para o oito? Que cinto bonito! 0️⃣', 'Por que o esqueleto não brigou? Porque ele não tinha estômago para isso! 💀', 'Qual é o peixe que caiu do 10º andar? O aaaatum! 🐟', 'O que a vaca foi fazer no espaço? Visitar a Via Láctea! 🐄'];
+const sorteia = l => l[Math.floor(Math.random() * l.length)];
+function desafioMinecraft(abrir) {
+  desafio = { txt: sorteia(DESAFIOS), t: Date.now() };
+  diz('Desafio de Minecraft: ' + desafio.txt + (abrir ? ' Vou abrir o Minecraft. Quando terminar, volta aqui e me conta!' : ''), { rotulo: '⛏️ Abrir o Minecraft', f: () => abreApp('minecraft') });
+  if (abrir) setTimeout(() => abreApp('minecraft'), 4500);
+}
+window.__voltou = () => { if (desafio && Date.now() - desafio.t > 20000) { const min = Math.round((Date.now() - desafio.t) / 60000); diz(`Voltou! Você jogou ${min < 1 ? 'menos de um minuto' : min + (min === 1 ? ' minuto' : ' minutos')}. Conseguiu fazer o desafio?`); espera = { tipo: 'desafio' }; desafio = null; } };
+function conta(T) { // "quanto é 7 mais 5"
+  const n = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10 };
+  const m = T.replace(/\b(um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez)\b/g, w => n[w]).match(/(-?\d+(?:[.,]\d+)?)\s*(mais|\+|menos|-|vezes|x|\*|dividido por|dividido|\/)\s*(-?\d+(?:[.,]\d+)?)/);
+  if (!m) return null;
+  const a = parseFloat(m[1].replace(',', '.')), b = parseFloat(m[3].replace(',', '.')), op = m[2];
+  const r = /mais|\+/.test(op) ? a + b : /menos|-/.test(op) ? a - b : /vezes|x|\*/.test(op) ? a * b : b ? a / b : NaN;
+  return isNaN(r) ? 'Não dá para dividir por zero! 🤯' : `${m[1]} ${op} ${m[3]} é ${String(Math.round(r * 100) / 100).replace('.', ',')}! 🧮`;
+}
+
+// ---------- o cérebro: entende o que você falou ----------
+function entende(t) {
+  eu(t); const T = norm(t);
+  if (espera && espera.tipo === 'mensagem') { const c = espera.c; espera = null; if (/^(cancela|deixa|nada|esquece)/.test(T)) return diz('Tudo bem, não mando nada.'); return mandaZap(c, t.charAt(0).toUpperCase() + t.slice(1)); }
+  if (espera && espera.tipo === 'desafio') { espera = null; if (/\b(sim|consegui|fiz|terminei|claro)\b/.test(T)) return diz('Parabéns, você é demais! 🏆 Quer outro? Diga "me dá um desafio".'); if (/\b(nao|quase)\b/.test(T)) return diz('Tudo bem, quase lá! Tenta de novo depois. 💪'); }
+  // mensagem no WhatsApp
+  if (/\b(mand|envi|escrev)\w*\b.*\b(mensagem|zap|whats|recado)|\bmensagem (pra|para|pro)\b|\bmanda (pra|para|pro)\b|\bfala (pra|para|pro)\b/.test(T)) {
+    const m = achaContato(T);
+    if (!m) { diz(contatos.length ? 'Para quem? Eu conheço: ' + contatos.map(c => c.nome).join(', ') + '.' : 'Primeiro salve um contato na aba 👥 Contatos (nome e WhatsApp com DDD).'); return; }
+    const txt = textoDepois(t, T, m);
+    if (!txt) { espera = { tipo: 'mensagem', c: m.c }; return diz(`O que você quer dizer para ${m.c.nome}? Aperte o 🎤 e fale.`); }
+    return mandaZap(m.c, txt);
+  }
+  // ligar
+  if (/\b(liga|ligar|ligue|telefona|chama no telefone)\b/.test(T)) {
+    const m = achaContato(T); if (!m) return diz('Para quem eu ligo? Salve a pessoa na aba 👥 Contatos.');
+    if (A && A.ligar && A.ligar('+' + m.c.numero)) return diz(`Abrindo a ligação para ${m.c.nome}. É só apertar o botão verde! 📞`);
+    return diz(`Para ligar para ${m.c.nome}, use o app Android do Ajudante.`);
+  }
+  // Minecraft
+  if (/minecraft|maicraft|maincraft/.test(T) && /\b(jog|brinc|vamos|bora|comigo|desafio)/.test(T)) return desafioMinecraft(true);
+  if (/\bdesafio\b/.test(T)) return desafioMinecraft(false);
+  // abrir um app
+  const ab = T.match(/\b(abre|abrir|abra|entra no|entra na|entrar no|liga o|joga|jogar)\s+(.+)/);
+  if (ab && !/\b(piada|conta)\b/.test(T)) { if (/assistente|google assistente/.test(ab[2])) { if (A && A.abrirAssistente && A.abrirAssistente()) return diz('Abrindo o Assistente do Google! 🎙️'); return diz('Diga "Ok Google" no celular para chamar o Assistente.'); } return abreApp(ab[2]); }
+  // conversa
+  const c = conta(T); if (c) return diz(c);
+  if (/\b(piada|engracad)/.test(T)) return diz(sorteia(PIADAS));
+  if (/\b(que horas|hora)\b/.test(T)) { const d = new Date(); return diz(`Agora são ${d.getHours()} horas e ${d.getMinutes()} minutos. ⏰`); }
+  if (/\b(que dia|data|hoje)\b/.test(T)) return diz('Hoje é ' + new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }) + '. 📅');
+  if (/\b(quem e voce|seu nome|como voce chama)\b/.test(T)) return diz('Eu sou o Ajudante do Ryan! 🤖 Eu deixo mensagens prontas no WhatsApp, abro apps, ligo para as pessoas e dou desafios de Minecraft.');
+  if (/\b(obrigad|valeu)\b/.test(T)) return diz('De nada! Tô aqui para ajudar. 😄');
+  if (/\b(oi|ola|eai|e ai|bom dia|boa tarde|boa noite|tudo bem)\b/.test(T)) return diz('Oi! Tudo ótimo por aqui! 😄 O que vamos fazer? Mandar mensagem, abrir um jogo ou um desafio de Minecraft?');
+  if (/\b(ajuda|o que voce faz|o que voce sabe)\b/.test(T)) return ajuda();
+  diz('Hmm, não entendi. 🤔 Você pode dizer: "manda mensagem pra Mãe dizendo oi", "abre o Minecraft", "vamos jogar Minecraft", "liga pro Pai" ou "conta uma piada".');
+}
+function ajuda() { diz('Eu sei fazer: 💬 "manda mensagem pra Mãe dizendo estou com fome" · 📞 "liga pro Pai" · 🚀 "abre o YouTube" · ⛏️ "vamos jogar Minecraft" ou "me dá um desafio" · 😂 "conta uma piada" · 🧮 "quanto é 7 vezes 8" · ⏰ "que horas são".'); }
+
+// ---------- tela ----------
+[['💬 Mensagem', 'manda mensagem'], ['⛏️ Jogar Minecraft', 'vamos jogar minecraft'], ['🎯 Desafio', 'me dá um desafio'], ['😂 Piada', 'conta uma piada'], ['⏰ Horas', 'que horas são'], ['❓ O que você faz', 'o que você faz']].forEach(([r, f]) => {
+  const b = document.createElement('button'); b.textContent = r; b.onclick = () => entende(f); $('chips').appendChild(b);
+});
+$('mic').onclick = ouvir;
+$('digitar').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.value.trim()) { entende(e.target.value.trim()); e.target.value = ''; } });
+const EMOJIS = ['👩', '👨', '👵', '👴', '👧', '👦', '🧑', '👶', '🐶', '⭐', '❤️', '🏠']; let emoji = EMOJIS[0];
+EMOJIS.forEach(e => { const b = document.createElement('button'); b.type = 'button'; b.textContent = e; b.setAttribute('aria-pressed', e === emoji); b.onclick = () => { emoji = e; [...$('n-emojis').children].forEach(x => x.setAttribute('aria-pressed', x.textContent === e)); }; $('n-emojis').appendChild(b); });
+function mostraContatos() {
+  const L = $('contatos'); L.innerHTML = '';
+  if (!contatos.length) L.innerHTML = '<p class="nota">Nenhum contato ainda. Salve a Mãe, o Pai ou um amigo para mandar mensagens e ligar por voz.</p>';
+  contatos.forEach((c, i) => {
+    const d = document.createElement('div'); d.className = 'contato';
+    d.innerHTML = `<span class="ic"></span><div><b></b><small></small></div><button class="tira" aria-label="Remover">✕ Remover</button>`;
+    d.querySelector('.ic').textContent = c.ic; d.querySelector('b').textContent = c.nome; d.querySelector('small').textContent = '+' + c.numero;
+    d.querySelector('.tira').onclick = () => { contatos.splice(i, 1); grava('ajudante-contatos', contatos); mostraContatos(); };
+    L.appendChild(d);
+  });
+}
+$('novo').addEventListener('submit', e => {
+  e.preventDefault();
+  const nome = $('n-nome').value.trim().replace(/\s+/g, ' '); let n = $('n-num').value.replace(/\D/g, '');
+  if (n.length === 10 || n.length === 11) n = '55' + n;
+  if (!nome) { $('n-erro').textContent = 'Digite o nome.'; return; }
+  if (n.length < 12 || n.length > 15) { $('n-erro').textContent = 'Número com DDD, ex.: 11 98765-4321'; return; }
+  contatos.push({ nome, numero: n, ic: emoji }); grava('ajudante-contatos', contatos);
+  $('n-nome').value = ''; $('n-num').value = ''; $('n-erro').textContent = ''; mostraContatos();
+});
+function aba(qual) {
+  $('aba-conversa').setAttribute('aria-selected', qual === 'conversa'); $('aba-contatos').setAttribute('aria-selected', qual === 'contatos');
+  $('tela-conversa').hidden = qual !== 'conversa'; $('rodape').hidden = qual !== 'conversa'; $('tela-contatos').hidden = qual !== 'contatos';
+  if (qual === 'contatos') mostraContatos();
+}
+$('aba-conversa').onclick = () => aba('conversa'); $('aba-contatos').onclick = () => aba('contatos');
+window.__voltar = () => { if (!$('tela-contatos').hidden) { aba('conversa'); return true; } return false; };
+window.__entende = entende; // para os testes
+setTimeout(() => diz('Oi! Eu sou o Ajudante do Ryan. 🤖 Aperte o 🎤 e fale comigo. Posso deixar mensagens prontas no WhatsApp, abrir apps e jogar desafios de Minecraft com você!'), 400);
+})();
+</script>
+</body>
+</html>
