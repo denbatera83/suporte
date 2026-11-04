@@ -99,6 +99,8 @@
         lm.forEach((p, i) => { m.alvo[i].x += (p.x - m.alvo[i].x) * a; m.alvo[i].y += (p.y - m.alvo[i].y) * a; });
       }
       m.vistoEm = agora;
+      // forma 3D da mão (metros), suavizada: usada pelo braço de cubos
+      if (w3 && w3.length === 21) { if (!m.w3) m.w3 = w3.map(p => ({ x: p.x, y: p.y, z: p.z })); else for (let i = 0; i < 21; i++) { const q = m.w3[i], p = w3[i]; q.x += (p.x - q.x) * 0.55; q.y += (p.y - q.y) * 0.55; q.z += (p.z - q.z) * 0.55; } }
       const d = (a, b) => Math.hypot(lm[a].x - lm[b].x, lm[a].y - lm[b].y);
       // em 3D (metros): não engana com a mão de lado, girada ou longe
       const d3 = w3 ? (a, b) => Math.hypot(w3[a].x - w3[b].x, w3[a].y - w3[b].y, w3[a].z - w3[b].z) : null;

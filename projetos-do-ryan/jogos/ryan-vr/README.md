@@ -58,6 +58,13 @@ Na tela de entrada, **📺 Modo TV** entra no Cardboard, liga a câmera (você v
   - WhatsApp: na primeira vez, conecte pelo código (WhatsApp do celular → Aparelhos conectados → Conectar com número de telefone). O Spotify pode bloquear a reprodução dentro de apps.
 - **🧠 Scanner da mão mais preciso**: usa os pontos da mão em 3D (em metros) — a pinça é medida em centímetros (dedos a menos de 2,8 cm), a mão fechada e a curva dos dedos funcionam com a mão de lado ou girada, e a distância da mão se ajusta ao tamanho real dela (mão de criança). Detecções sem certeza são ignoradas (menos "mãos fantasmas"). Reconhece também quais dedos estão esticados.
 - **✊✋✌️ Pedra, Papel e Tesoura** (novo): contra o Robô Ryan. Ele conta 3, 2, 1, JÁ! e você mostra a mão: fechada = pedra, aberta = papel, dois dedos = tesoura. O jogo mostra qual gesto viu. Quem fizer 3 pontos vence. Sem câmera, olhe para um dos botões.
+- **⛏️ Mina de Cubos** (versão 3.8, setor 🧩 Criativo e no Início): uma parede de cubos na sua frente, na altura dos olhos — grama em cima, terra, pedra e, lá dentro, ouro, cristais 💎 e um baú do tesouro 🎁, com uma árvore no alto.
+  - **Seus braços viram cubos** (mãos, dedos e antebraço quadradinhos em 3D, com manga roxa), que acompanham a mão de verdade.
+  - **Quebrar:** ponha a mão na frente de um cubo (a moldura branca mostra qual) e dê um **soquinho**, **feche a mão** ou **segure a mão fechada** para ir quebrando. Folha quebra com 1 golpe, grama e terra com 2, pedra e ouro com 3, cristal com 4 (o cubo vai rachando). Os pedacinhos voam e o cubo vai para a coluna da esquerda.
+  - **Construir:** toque num cubo da coluna da esquerda (aparece quantos você tem) e depois na parede: o cubo é colocado na frente do que você aponta. ⛏️ volta a quebrar. **🔄** faz um mundo novo, com os cristais em outros lugares.
+  - Pontos: grama/terra/folha 1, pedra/madeira 2, ouro 10, cristal 25, baú 100. Sem tempo: é para brincar. Sem câmera, olhe para o cubo e toque na tela.
+- **🧊 Mão de cubos em todo o app:** em Ajustes → Mão, escolha **Cubos** para ter o braço quadradinho também nos menus e nos outros jogos.
+- **Chão consertado:** o chão dos ambientes (Montanhas, Praia, Lua…), o deque da sala e o chão dos jogos cobriam a parte de baixo das janelas e dos objetos (por exemplo a última fileira de apps do Início). Agora o chão é feito de anéis pequenos e fica sempre atrás.
 - **👋 Configuração do óculos e conta com senha** (versão 3.7): na primeira vez que abrir, o Ryan VR faz uma configuração passo a passo, como num óculos de realidade virtual novo:
   1. **Boas-vindas**;
   2. **Mãos**: mostre a mão esquerda, a direita e faça a pinça (cada uma fica verde);
