@@ -84,7 +84,7 @@
       <button id="btn-pc" class="sec">🖥️ Modo Computador <small>mouse e teclado</small></button>
     </div>
     <p class="nota">Computador: arraste o mouse para olhar, clique para apertar; no Google digite no teclado; Esc pausa os jogos; na Corrida use ← → (ou A e D) e espaço para o turbo. Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 3.8</p>
+    <p class="nota" id="versao">Ryan VR 3.9</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -892,9 +892,10 @@ const MINA_TIPOS = [null,
   { nome: 'Grama', golpes: 2, pts: 1, cor: 0x62c04c }, { nome: 'Terra', golpes: 2, pts: 1, cor: 0x8a5a3c }, { nome: 'Pedra', golpes: 3, pts: 2, cor: 0x8f919b },
   { nome: 'Ouro', golpes: 3, pts: 10, cor: 0xffd23d }, { nome: 'Cristal', golpes: 4, pts: 25, cor: 0xb05cff }, { nome: 'Madeira', golpes: 2, pts: 2, cor: 0x7a5230 },
   { nome: 'Folhas', golpes: 1, pts: 1, cor: 0x3f9f45 }, { nome: 'Baú', golpes: 2, pts: 100, cor: 0xffb36b }];
+const ROBO_MODOS = [['ajuda', '⛏️', 'Bora cavar! ⛏️'], ['cristal', '💎', 'Vou procurar cristal! 🔍'], ['ouro', '🟡', 'Vou atrás do ouro! ⛏️'], ['torre', '🏰', 'Vou construir uma torre! 🏗️'], ['parar', '😴', 'Tá bom, vou descansar 😴']];
 MINI.mina = {
   titulo: 'Mina de Cubos', ic: '⛏️', setor: 'calmo', tipo: 'Quebre e construa com as mãos', tags: ['Criativo', 'Mãos', 'Livre'], dur: 0, mao: 'cubos',
-  desc: 'Uma parede de cubos na sua frente: grama, terra, pedra e, lá dentro, ouro, cristais e um baú do tesouro! Seus braços viram cubos. Aponte a mão para um cubo e dê um soquinho (ou feche a mão) para quebrar. Toque num cubo da coluna da esquerda para construir com ele e no ⛏️ para voltar a quebrar. 🔄 faz um mundo novo. Sem câmera, olhe para o cubo e toque na tela.',
+  desc: 'Uma parede de cubos na sua frente: grama, terra, pedra e, lá dentro, ouro, cristais e um baú do tesouro! Seus braços viram cubos. Aponte a mão para um cubo e dê um soquinho (ou feche a mão) para quebrar. Toque num cubo da coluna da esquerda para construir com ele e no ⛏️ para voltar a quebrar. 🔄 faz um mundo novo. O Bip 🤖 joga com você: toque no 🤖 para mudar o que ele faz, ou no 🎤 e fale ("acha o cristal", "constrói uma torre", "para"). Sem câmera, olhe para o cubo e toque na tela.',
   dica: 'Aponte para um cubo e dê um soquinho!', ceu: [[0, '#4f9cf5'], [0.5, '#cfe8ff'], [0.53, '#9fd88a'], [1, '#4f8a3a']], chao: 0x6fbf5a, trilha: 'montanha', cores: ['#6fcf6a', '#3d7bd6'],
   monta(J) {
     const S = J.S = 0.085, NX = 8, NZ = 4; J.NY = 7;
@@ -909,7 +910,7 @@ MINI.mina = {
     J.mira = [0, 1].map(() => { const l = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(S * 1.05, S * 1.05, S * 1.05)), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.95, depthTest: false })); l.renderOrder = 40; l.visible = false; J.G.add(l); return l; });
     J.racha = new THREE.Mesh(new THREE.BoxGeometry(S * 1.012, S * 1.012, S * 1.012), new THREE.MeshBasicMaterial({ map: this.minaRachas()[0], transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2 })); J.racha.visible = false; J.G.add(J.racha);
     J.geoP = new THREE.BoxGeometry(S * 0.22, S * 0.22, S * 0.22); J.parts = []; J.socoT = [0, 0]; J.modo = 'quebrar'; J.sel = 3; J.inv = {};
-    this.minaMundo(J); this.minaHotbar(J);
+    this.minaMundo(J); this.minaHotbar(J); this.roboMonta(J);
   },
   passo(J, dt) {
     // quem aponta para onde: cada mão (raio do olho pelo meio da mão: não muda quando a mão fecha) ou o olhar
@@ -939,8 +940,10 @@ MINI.mina = {
       const p = J.parts[i]; p.vida -= dt; p.v.y -= 5 * dt; p.m.position.addScaledVector(p.v, dt); p.m.rotation.x += dt * 6; p.m.rotation.y += dt * 4; p.m.scale.setScalar(Math.max(0.01, p.vida / p.v0));
       if (p.vida <= 0) { J.G.remove(p.m); J.parts.splice(i, 1); }
     }
+    J.miraJogador = alvos.map(x => x.a && x.a.bloco ? x.a.bloco : null); this.roboPasso(J, dt);
     J.slots.forEach(s => { if (s.cubo) s.cubo.rotation.y += dt * 0.8; });
-    J.info = `💎 ${J.achados}/${J.cristais} · ` + (J.modo === 'construir' ? `🧱 ${MINA_TIPOS[J.sel].nome} ${J.inv[J.sel] || 0}` : '⛏️ quebrar');
+    const rm = J.robo && ROBO_MODOS.find(m => m[0] === J.robo.modo);
+    J.info = `💎 ${J.achados}/${J.cristais} · ` + (J.modo === 'construir' ? `🧱 ${MINA_TIPOS[J.sel].nome} ${J.inv[J.sel] || 0}` : '⛏️ quebrar') + (rm ? ` · 🤖${rm[1]}` : '');
   }
 };
 
@@ -1248,7 +1251,7 @@ AFRAME.registerComponent('ryan-vr', {
       cv.addEventListener('mouseup', e => { if (performance.now() - t0 < 400 && Math.hypot(e.clientX - x0, e.clientY - y0) < 6) this.toque(e.clientX, e.clientY); });
     };
     if (sc.canvas) liga(); else sc.addEventListener('renderstart', liga);
-    window.addEventListener('keydown', e => { if ((e.code === 'Space' || e.code === 'Enter') && !(e.target && e.target.id === 'cfg-input') && !(this.cfg && this.cfg.campo) && !((this.secao === 'google' || (this.secao === 'sites' && this.addSite)) && this.estado === 'saguao' && !this.detalhe) && !this.emJogo()) { e.preventDefault(); this.tocar(true); } }); // espaço/Enter = botão do óculos (controle Bluetooth); não atrapalha digitar nem o turbo
+    window.addEventListener('keydown', e => { if ((e.code === 'Space' || e.code === 'Enter') && !(e.target && e.target.id === 'cfg-input') && !(this.formAtual() && this.formAtual().campo) && !((this.secao === 'google' || (this.secao === 'sites' && this.addSite)) && this.estado === 'saguao' && !this.detalhe) && !this.emJogo()) { e.preventDefault(); this.tocar(true); } }); // espaço/Enter = botão do óculos (controle Bluetooth); não atrapalha digitar nem o turbo
     if (document.fonts) document.fonts.ready.then(() => this.renderTudo());
     // escolher vídeo do celular
     document.getElementById('arquivo').addEventListener('change', e => {
@@ -1394,6 +1397,7 @@ AFRAME.registerComponent('ryan-vr', {
     if (this.secao === 'musica') return this.desenhaMusica(g, p);
     if (this.secao === 'google') return this.desenhaGoogle(g, p);
     if (this.secao === 'sites') return this.desenhaSites(g, p);
+    if (this.secao === 'mensagens') return this.desenhaMensagens(g, p);
     if (this.secao === 'apps') return this.desenhaApps(g, p);
     if (this.secao === 'ajustes') {
       texto(g, 'Ajustes', 48, 92, FONTE_T(64), UI.txt);
@@ -1427,6 +1431,240 @@ AFRAME.registerComponent('ryan-vr', {
       const hvo = p.botao('miopia', 1165, 840, W - 1213, 90, () => { muda('miopia', !AJ.miopia); this.raioAtual = 0; this.aplicaDistancia(); this.atualizaFundo(); const cb = this.el.components.cardboard; if (cb && cb.lente) cb.lente.uniforms.nitidez.value = AJ.miopia ? 1.1 : 0.7; this.aviso(AJ.miopia ? '👓 Modo Miopia: letras grandes e fortes' : 'Letras no tamanho normal'); });
       caixa(g, 1165, 840, W - 1213, 90, 22, hvo ? UI.acc : AJ.miopia ? 'rgba(143,123,255,.55)' : UI.card); texto(g, AJ.miopia ? '👓 Miopia: ligado' : '👓 Miopia: desligado', 1165 + (W - 1213) / 2, 898, FONTE(800, 28), hvo ? '#120d2e' : UI.txt, 'center');
     }
+  },
+
+  // ---------- 🎤 voz: o reconhecimento de voz do Google (no app Android) ou do Chrome ----------
+  ouvir(destino) {
+    this.vozDestino = destino;
+    if (window.RyanApp && window.RyanApp.ouvirVoz) { this.aviso('🎤 Fale agora…'); window.RyanApp.ouvirVoz(); return; }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { this.vozDestino = null; this.aviso('🎤 A voz funciona no app Android ou no Chrome'); return; }
+    try {
+      const r = new SR(); r.lang = 'pt-BR'; r.interimResults = false; r.maxAlternatives = 1; let ok = false;
+      r.onresult = e => { ok = true; this.vozChegou(e.results[0][0].transcript); };
+      r.onend = () => { if (!ok && this.vozDestino) this.vozChegou(null); };
+      r.start(); this.aviso('🎤 Fale agora…');
+    } catch (e) { this.vozDestino = null; this.aviso('🎤 Não deu para ouvir'); }
+  },
+  vozChegou(t) {
+    const d = this.vozDestino; this.vozDestino = null;
+    if (!t || !String(t).trim()) { this.aviso('🎤 Não ouvi nada. Tente de novo'); return; }
+    t = String(t).trim();
+    if (d === 'robo') { if (this.mi && this.mi.robo) this.roboComando(this.mi, t); return; }
+    if (d === 'msg-texto') { const M = this.msgEstado(); M.val.texto = ((M.val.texto ? M.val.texto + ' ' : '') + t).slice(0, 300); M.erro = ''; this.cfgEspelha(); this.renderTudo(); return; }
+    if (d === 'msg-cmd') this.msgComando(t);
+  },
+  // ---------- 🎙️ Assistente do celular (Google/Gemini): manda mensagens e faz tarefas por voz, do jeito oficial ----------
+  abreAssistente() {
+    if (window.RyanApp && window.RyanApp.abrirAssistente) {
+      const vr = this.el.components.cardboard.ativo; som('abre');
+      this.aviso(vr ? '🎙️ Abrindo o Assistente — tire o celular do óculos' : '🎙️ Abrindo o Assistente do Google');
+      setTimeout(() => { if (!window.RyanApp.abrirAssistente()) this.aviso('Este celular não tem assistente de voz'); }, vr ? 1200 : 300); return;
+    }
+    this.aviso('🎙️ No navegador: diga "Ok Google" no celular');
+  },
+  // ---------- 💬 Mensagens: o WhatsApp abre com a mensagem pronta para a pessoa certa (você aperta Enviar) ----------
+  contatos() {
+    if (!this._contatos) { try { this._contatos = JSON.parse(localStorage.getItem('ryanvr-contatos') || '[]'); } catch (e) { this._contatos = []; } if (!Array.isArray(this._contatos)) this._contatos = []; }
+    return this._contatos;
+  },
+  guardaContatos() { try { localStorage.setItem('ryanvr-contatos', JSON.stringify(this.contatos())); } catch (e) {} },
+  msgEstado() {
+    if (!this.msg) this.msg = { tela: 'lista', val: { texto: '', nome: '', numero: '' }, campo: null, campos: [], mai: false, ver: false, erro: '', ic: '👩', contato: -1, edita: false, limites: { texto: 300, nome: 20, numero: 20 } };
+    return this.msg;
+  },
+  msgVai(tela, contato) {
+    const M = this.msgEstado(); M.tela = tela; M.erro = ''; M.mai = false; M.edita = false;
+    if (contato !== undefined) M.contato = contato;
+    M.campos = tela === 'escrever' ? ['texto'] : tela === 'novo' ? ['nome', 'numero'] : []; M.campo = M.campos[0] || null;
+    if (tela === 'novo') { M.val.nome = ''; M.val.numero = ''; M.ic = '👩'; }
+    if (tela === 'escrever') M.val.texto = ''; // cada pessoa começa com a mensagem em branco
+    this.cfgFechaTeclado(); this.renderTudo();
+  },
+  msgOk() {
+    const M = this.msgEstado();
+    if (M.tela === 'novo') {
+      const nome = M.val.nome.trim().replace(/\s+/g, ' '); let n = M.val.numero.replace(/\D/g, '');
+      if (!nome) { M.erro = 'Digite o nome da pessoa'; M.campo = 'nome'; return this.renderTudo(); }
+      if (n.length === 10 || n.length === 11) n = '55' + n; // celular do Brasil com DDD
+      if (n.length < 12 || n.length > 15) { M.erro = 'Número com DDD, ex.: 11 98765-4321'; M.campo = 'numero'; return this.renderTudo(); }
+      this.contatos().push({ nome, numero: n, ic: M.ic }); this.guardaContatos(); this.aviso(`${M.ic} ${nome} salvo!`); return this.msgVai('lista');
+    }
+    if (M.tela === 'escrever') this.msgEnvia();
+  },
+  msgEnvia() {
+    const M = this.msgEstado(), c = this.contatos()[M.contato], txt = M.val.texto.trim();
+    if (!c) return this.msgVai('lista');
+    if (!txt) { M.erro = 'Escreva ou fale a mensagem 🎤'; return this.renderTudo(); }
+    const url = 'https://wa.me/' + c.numero + '?text=' + encodeURIComponent(txt), vr = this.el.components.cardboard.ativo;
+    som('abre'); this.aviso(vr ? '📲 Abrindo o WhatsApp — tire o celular do óculos e aperte ➤' : '📲 Abrindo o WhatsApp: aperte ➤ para enviar');
+    M.val.texto = ''; this.cfgFechaTeclado(); this.renderTudo(); this.ultimoLink = url;
+    setTimeout(() => {
+      if (window.RyanApp) { if (!(window.RyanApp.abrirLink && window.RyanApp.abrirLink(url))) this.aviso('Não deu para abrir o WhatsApp'); }
+      else window.open(url, '_blank');
+    }, vr ? 1200 : 300);
+  },
+  // "mandar mensagem pra Mãe dizendo estou com fome" → acha a Mãe e põe "Estou com fome" na mensagem
+  msgComando(t) {
+    let T = ''; const mapa = [];
+    for (let k = 0; k < t.length; k++) { const n = t[k].normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(); for (const c of n) { T += c; mapa.push(k); } }
+    let melhor = null;
+    this.contatos().forEach((c, i) => { const n = c.nome.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(), pos = T.indexOf(n); if (n && pos >= 0 && (!melhor || n.length > melhor.n.length)) melhor = { i, n, pos }; });
+    if (!melhor) { this.aviso(this.contatos().length ? `Não achei o contato em "${t.slice(0, 40)}"` : 'Primeiro salve um contato (➕)'); this.msgVai('lista'); return; }
+    const fim = mapa[melhor.pos + melhor.n.length - 1] + 1;
+    let txt = t.slice(fim).replace(/^[\s,:;.\-]*(dizendo|falando|escrevendo|com a mensagem|a mensagem|mensagem|que)?[\s,:;.\-]*/i, '').trim();
+    if (txt) txt = txt.charAt(0).toUpperCase() + txt.slice(1);
+    this.msgVai('escrever', melhor.i); this.msgEstado().val.texto = txt.slice(0, 300); this.renderTudo();
+    const c = this.contatos()[melhor.i]; this.aviso(txt ? `${c.ic} Para ${c.nome}: confira e aperte ➤ Enviar` : `O que você quer dizer para ${c.nome}? Toque em 🎤`);
+  },
+  desenhaMensagens(g, p) {
+    const M = this.msgEstado(), W = p.W, L = this.contatos(), bt = (...a) => this.cfgBotao(g, p, ...a);
+    const bola = (cx, cy, r, ic, hv) => { const gr = g.createLinearGradient(cx, cy - r, cx, cy + r); gr.addColorStop(0, '#5be39a'); gr.addColorStop(1, '#1f9a5a'); g.fillStyle = gr; g.beginPath(); g.arc(cx, cy, r, 0, 7); g.fill(); g.lineWidth = hv ? 6 : 3; g.strokeStyle = hv ? '#ffffff' : 'rgba(255,255,255,.5)'; g.stroke(); g.font = Math.round(r * 1.05) + 'px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText(ic, cx, cy + 4); g.textBaseline = 'alphabetic'; };
+    if (M.tela === 'lista') {
+      texto(g, '💬 Mensagens', 56, 96, FONTE_T(60), UI.txt);
+      texto(g, 'Fale ou escolha para quem mandar', 58, 138, FONTE(700, 26), UI.sub);
+      bt('ms-falar', '🎤 Falar', W - 580, 36, 270, 84, () => this.ouvir('msg-cmd'), 'pri', 32);
+      bt('ms-editar', M.edita ? '✓ Pronto' : '✏️ Editar', W - 290, 36, 234, 84, () => { M.edita = !M.edita; this.renderTudo(); }, M.edita ? 'perigo' : 'sec', 30);
+      const itens = [...L.map((c, i) => ({ c, i })), { novo: true }], cols = 6, R = 78, dx = (W - 112) / cols;
+      itens.slice(0, 12).forEach((it, k) => {
+        const cx = 56 + dx * (k % cols + 0.5), cy = 290 + Math.floor(k / cols) * 250;
+        const hv = p.botao('mc-' + k, cx - R - 12, cy - R - 12, 2 * R + 24, 2 * R + 70, () => {
+          if (it.novo) return this.msgVai('novo');
+          if (M.edita) { L.splice(it.i, 1); this.guardaContatos(); this.aviso('Contato removido'); this.renderTudo(); return; }
+          this.msgVai('escrever', it.i);
+        });
+        if (it.novo) { g.fillStyle = hv ? 'rgba(255,255,255,.3)' : 'rgba(255,255,255,.14)'; g.beginPath(); g.arc(cx, cy, R, 0, 7); g.fill(); texto(g, '➕', cx, cy + 22, FONTE(800, 60), '#fff', 'center'); texto(g, 'Novo contato', cx, cy + R + 50, FONTE(800, 28), UI.txt, 'center'); return; }
+        bola(cx, cy, R, it.c.ic || '🙂', hv);
+        if (M.edita) { g.fillStyle = '#e5485f'; g.beginPath(); g.arc(cx + R * 0.72, cy - R * 0.72, 26, 0, 7); g.fill(); texto(g, '✕', cx + R * 0.72, cy - R * 0.72 + 11, FONTE(800, 30), '#fff', 'center'); }
+        let nm = it.c.nome; g.font = FONTE(800, 30); while (nm.length > 3 && g.measureText(nm).width > dx - 16) nm = nm.slice(0, -2) + '…';
+        texto(g, nm, cx, cy + R + 50, FONTE(800, 30), UI.txt, 'center');
+      });
+      if (!L.length) quebra(g, 'Toque em ➕ para salvar a Mãe, o Pai ou um amigo (nome e número com DDD). Depois é só falar: "mandar mensagem pra Mãe dizendo estou com fome".', 360, 260, W - 420, 38, FONTE(700, 28), UI.sub, 4);
+      bt('ms-assistente', '🎙️ Assistente do Google', 56, 852, 520, 92, () => this.abreAssistente(), 'sec', 32);
+      texto(g, 'Diga: "mandar mensagem pra Mãe dizendo oi"', 610, 908, FONTE(700, 26), UI.sub);
+      return;
+    }
+    if (M.tela === 'escrever') {
+      const c = L[M.contato]; if (!c) { M.tela = 'lista'; return this.desenhaMensagens(g, p); }
+      bola(110, 92, 56, c.ic || '🙂', false);
+      texto(g, 'Para: ' + c.nome, 190, 100, FONTE_T(56), UI.txt);
+      texto(g, '+' + c.numero, 192, 138, FONTE(700, 24), UI.sub);
+      bt('cfg-volta', '‹ Voltar', W - 580, 36, 230, 84, () => this.msgVai('lista'), 'sec', 30);
+      bt('ms-enviar', '➤ Enviar', W - 330, 36, 274, 84, () => this.msgEnvia(), 'ok', 34);
+      this.cfgCampo(g, p, 'texto', 'MENSAGEM', 56, 160, W - 112 - 260, 112, 'escreva ou fale…');
+      bt('ms-voz', '🎤 Falar', W - 296, 160, 240, 112, () => this.ouvir('msg-texto'), 'pri', 34);
+      let x = 56; ['Oi! 👋', 'Estou com fome 🍕', 'Vem me buscar? 🚗', 'Já chego! 🏃', 'Te amo ❤️', 'Boa noite 🌙'].forEach((fr, k) => {
+        g.font = FONTE(800, 26); const w = g.measureText(fr).width + 40;
+        if (x + w > W - 56) return;
+        bt('ms-fr' + k, fr, x, 290, w, 66, () => { M.val.texto = ((M.val.texto ? M.val.texto + ' ' : '') + fr).slice(0, 300); M.erro = ''; this.cfgEspelha(); this.renderTudo(); }, 'sec', 26); x += w + 12;
+      });
+      if (M.erro) texto(g, '⚠️ ' + M.erro, 58, 392, FONTE(800, 28), '#ffb4b4');
+      else texto(g, '📲 O WhatsApp abre com a mensagem pronta: aperte ➤ lá para enviar', 58, 392, FONTE(700, 26), UI.sub);
+      this.cfgTeclas(g, p, 414, 88);
+      return;
+    }
+    if (M.tela === 'novo') {
+      texto(g, '➕ Novo contato', 56, 110, FONTE_T(56), UI.txt);
+      bt('cfg-volta', '‹ Voltar', W - 580, 36, 230, 84, () => this.msgVai('lista'), 'sec', 30);
+      bt('ms-salvar', '✓ Salvar', W - 330, 36, 274, 84, () => this.msgOk(), 'pri', 34);
+      this.cfgCampo(g, p, 'nome', 'NOME', 56, 150, 560, 112, 'ex.: Mãe');
+      this.cfgCampo(g, p, 'numero', 'NÚMERO DO WHATSAPP (COM DDD)', 640, 150, W - 696, 112, 'ex.: 11 98765-4321');
+      ['👩', '👨', '👵', '👴', '👧', '👦', '🧑', '👶', '🐶', '⭐', '❤️', '🏠'].forEach((e, k) => {
+        const x = 56 + k * 120, on = M.ic === e, hv = p.botao('ms-ic' + k, x, 276, 108, 80, () => { M.ic = e; this.renderTudo(); });
+        caixa(g, x, 276, 108, 80, 22, on ? 'rgba(46,212,122,.55)' : hv ? UI.cardHover : UI.card, on ? '#ffffff' : null, 4);
+        g.font = '52px serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#fff'; g.fillText(e, x + 54, 318); g.textBaseline = 'alphabetic';
+      });
+      if (M.erro) texto(g, '⚠️ ' + M.erro, 58, 392, FONTE(800, 28), '#ffb4b4');
+      else texto(g, '🔒 Os contatos ficam só neste aparelho', 58, 392, FONTE(700, 26), UI.sub);
+      this.cfgTeclas(g, p, 414, 88);
+    }
+  },
+
+  // ---------- 🤖 Bip, o robô parceiro da Mina de Cubos (cava, acha cristais, constrói e obedece à voz) ----------
+  roboMonta(J) {
+    const g = new THREE.Group(), cinza = new THREE.MeshLambertMaterial({ color: 0xd4d8ea, emissive: 0x2a2e3c }), roxo = new THREE.MeshLambertMaterial({ color: 0x8f7bff, emissive: 0x2a1f66 });
+    const olho = new THREE.MeshBasicMaterial({ color: 0x5ad1ff, toneMapped: false });
+    const cx = (w, h, d, m, x, y, z) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); g.add(b); return b; };
+    cx(0.06, 0.055, 0.045, roxo, 0, 0, 0); cx(0.072, 0.056, 0.056, cinza, 0, 0.058, 0);
+    cx(0.015, 0.013, 0.004, olho, -0.017, 0.062, 0.029); cx(0.015, 0.013, 0.004, olho, 0.017, 0.062, 0.029);
+    cx(0.006, 0.026, 0.006, cinza, 0, 0.099, 0); const bola = cx(0.015, 0.015, 0.015, new THREE.MeshBasicMaterial({ color: 0xffb36b, toneMapped: false }), 0, 0.117, 0);
+    const bE = cx(0.016, 0.046, 0.016, cinza, -0.043, -0.003, 0), bD = cx(0.016, 0.046, 0.016, cinza, 0.043, -0.003, 0);
+    const jato = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.036, 8), new THREE.MeshBasicMaterial({ color: 0x9ff3ff, transparent: true, opacity: 0.75, toneMapped: false })); jato.rotation.x = Math.PI; jato.position.y = -0.047; g.add(jato);
+    const bal = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex(640, 128, () => {}), transparent: true, depthTest: false })); bal.scale.set(0.3, 0.06, 1); bal.position.y = 0.17; bal.renderOrder = 45; bal.visible = false; g.add(bal);
+    g.position.set(-J.x0 + 0.17, J.olhoY - 0.02, J.z0 + 0.12); J.G.add(g);
+    J.robo = { g, bE, bD, jato, bola, bal, modo: 'ajuda', alvo: null, espera: 1.5, golpeT: 0, torre: 0, falaAte: 0, socoK: 0 };
+    this.roboFala(J, 'Oi! Eu sou o Bip 🤖 Vamos cavar juntos!');
+  },
+  roboFala(J, txt) {
+    const R = J.robo; if (!R) return;
+    const c = R.bal.material.map.image, g = c.getContext('2d'); g.clearRect(0, 0, c.width, c.height);
+    let fs = 46; g.font = FONTE(800, fs); while (fs > 24 && g.measureText(txt).width > c.width - 60) { fs -= 2; g.font = FONTE(800, fs); }
+    caixa(g, 6, 6, c.width - 12, c.height - 12, 50, 'rgba(255,255,255,.95)', '#8f7bff', 5);
+    texto(g, txt, c.width / 2, c.height / 2 + fs * 0.36, FONTE(800, fs), '#1d1a2e', 'center');
+    R.bal.material.map.needsUpdate = true; R.falaAte = J.t + 3;
+  },
+  roboModo(J, modo, fala) {
+    const R = J.robo; if (!R) return; R.modo = modo; R.alvo = null; R.espera = 0.4; if (modo === 'torre') R.torre = 0;
+    const m = ROBO_MODOS.find(x => x[0] === modo); this.roboFala(J, fala || (m ? m[2] : 'Tá bom!'));
+  },
+  roboComando(J, t) {
+    const T = t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    if (/cristal|diamante|joia|roxo/.test(T)) return this.roboModo(J, 'cristal');
+    if (/ouro|dourad|tesouro/.test(T)) return this.roboModo(J, 'ouro');
+    if (/torre|constr|predio|castelo|casa/.test(T)) return this.roboModo(J, 'torre');
+    if (/\b(vem|vem ca|aqui|perto)\b/.test(T)) return this.roboModo(J, 'parar', 'Tô aqui! 👋');
+    if (/\b(para|pare|parar|chega|descansa|descansar|espera|dorme)\b/.test(T)) return this.roboModo(J, 'parar');
+    if (/quebr|cava|cavar|minera|ajuda|joga|bora|vamos|trabalha/.test(T)) return this.roboModo(J, 'ajuda');
+    this.roboFala(J, 'Não entendi 🤔 Diga: "acha o cristal"');
+  },
+  // o próximo cubo: um de fora (com um lado livre); no cristal/ouro, o de fora mais perto do tesouro (vai cavando até ele)
+  roboEscolhe(J) {
+    const R = J.robo, [DX, DY, DZ] = J.dim;
+    if (R.modo === 'torre') {
+      const i = 2, k = 1; let j = DY - 2; while (j >= 0 && !this.minaCheio(J, i, j, k)) j--; j++;
+      if (R.torre >= 5 || j >= DY - 1) { this.roboModo(J, 'parar', 'Torre pronta! 🏰'); return null; }
+      return { i, j, k, constroi: true };
+    }
+    const quer = R.modo === 'cristal' ? 5 : R.modo === 'ouro' ? 4 : 0, fora = [], tesouros = [];
+    for (let i = 0; i < DX; i++) for (let j = 0; j < DY; j++) for (let k = 0; k < DZ; k++) {
+      const t = J.cel[this.minaIdx(J, i, j, k)]; if (!t) continue;
+      if (quer && t === quer) tesouros.push([i, j, k]);
+      if (this.minaCheio(J, i + 1, j, k) && this.minaCheio(J, i - 1, j, k) && this.minaCheio(J, i, j + 1, k) && this.minaCheio(J, i, j - 1, k) && this.minaCheio(J, i, j, k - 1) && this.minaCheio(J, i, j, k + 1)) continue;
+      fora.push([i, j, k, t]);
+    }
+    const seus = J.miraJogador || [], lista0 = fora.filter(([i, j, k]) => !seus.some(m => m && m.i === i && m.j === j && m.k === k)), lista = lista0.length ? lista0 : fora; // não briga pelo cubo que você está mirando
+    if (!lista.length) return null;
+    let esc = null, me = 1e9;
+    if (quer) {
+      if (!tesouros.length) { this.roboModo(J, 'ajuda', quer === 5 ? 'Acabaram os cristais! Toque em 🔄' : 'Não tem mais ouro aqui! 🟡'); return null; }
+      let alvo = null, md = 1e9; tesouros.forEach(c => { const d = this.minaCentro(J, ...c).distanceTo(R.g.position); if (d < md) { md = d; alvo = c; } });
+      lista.forEach(c => { const d = Math.hypot(c[0] - alvo[0], c[1] - alvo[1], c[2] - alvo[2]); if (d < me) { me = d; esc = c; } });
+    } else lista.forEach(c => { const d = this.minaCentro(J, c[0], c[1], c[2]).distanceTo(R.g.position) + c[2] * 0.03 + Math.random() * 0.12 + (c[3] === 8 ? 0.25 : 0); if (d < me) { me = d; esc = c; } });
+    return esc && { i: esc[0], j: esc[1], k: esc[2] };
+  },
+  roboPasso(J, dt) {
+    const R = J.robo; if (!R) return;
+    const t = J.t, g = R.g;
+    R.bal.visible = t < R.falaAte; R.jato.scale.y = 0.8 + Math.sin(t * 30) * 0.2; R.bola.material.color.setHSL((t * 0.2) % 1, 0.8, 0.62);
+    let destino = null, olhaBloco = false;
+    if (R.modo === 'parar') { destino = new THREE.Vector3(-J.x0 + 0.17, J.olhoY - 0.04 + Math.sin(t * 2) * 0.01, J.z0 + 0.14); R.alvo = null; R.bE.rotation.z = Math.sin(t * 6) * 0.6; }
+    else {
+      R.bE.rotation.z *= 0.9;
+      if (R.alvo && !R.alvo.constroi && !this.minaCheio(J, R.alvo.i, R.alvo.j, R.alvo.k)) R.alvo = null; // você quebrou antes
+      if (!R.alvo) { R.espera -= dt; if (R.espera <= 0) { R.alvo = this.roboEscolhe(J); R.espera = 0.5; R.golpeT = t + 0.4; } }
+      if (R.alvo) { destino = this.minaCentro(J, R.alvo.i, R.alvo.j, R.alvo.k).add(new THREE.Vector3(0, 0, J.S * 1.15)); olhaBloco = true; }
+    }
+    if (destino) { const d = destino.clone().sub(g.position); g.position.addScaledVector(d, Math.min(1, dt * 3.2)); }
+    const perto = destino && g.position.distanceTo(destino) < 0.03;
+    g.rotation.y += ((olhaBloco && perto ? Math.PI : 0) - g.rotation.y) * Math.min(1, dt * 6);
+    if (R.alvo && perto && t >= R.golpeT) {
+      R.golpeT = t + 0.7; R.socoK = 1;
+      if (R.alvo.constroi) {
+        const a = R.alvo; R.alvo = null; R.espera = 0.35;
+        if (!this.minaCheio(J, a.i, a.j, a.k)) { J.cel[this.minaIdx(J, a.i, a.j, a.k)] = 3; R.torre++; this.somCurto('poe'); this.minaDesenha(J); if (R.torre === 1) this.roboFala(J, 'Construindo… 🧱'); }
+      } else this.minaDano(J, R.alvo, true);
+    }
+    R.socoK = Math.max(0, R.socoK - dt * 5); R.bD.position.z = R.socoK * 0.035; R.bD.rotation.x = -R.socoK * 1.2;
   },
 
   // ---------- Mina de Cubos: mundo, desenho, mira e golpes ----------
@@ -1479,7 +1717,7 @@ AFRAME.registerComponent('ryan-vr', {
     put(ti, NY, tk, 6); put(ti, NY + 1, tk, 6);
     for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) { if (a || b) put(ti + a, NY + 1, tk + b, 7); if (!a || !b) put(ti + a, NY + 2, tk + b, 7); }
     J.cristais = 0; for (let x = 0; x < J.cel.length; x++) if (J.cel[x] === 5) J.cristais++;
-    J.achados = 0; J.bau = false;
+    J.achados = 0; J.bau = false; if (J.robo) J.robo.alvo = null;
     this.minaDesenha(J);
   },
   minaCheio(J, i, j, k) { const [DX, DY, DZ] = J.dim; return i >= 0 && j >= 0 && k >= 0 && i < DX && j < DY && k < DZ && J.cel[this.minaIdx(J, i, j, k)] > 0; },
@@ -1508,6 +1746,8 @@ AFRAME.registerComponent('ryan-vr', {
         J.slots.push({ t, pos, cubo, num, n: -1 });
       });
       const novo = this.miniEmoji('🔄', 0.07); novo.position.set(-J.x0 + 0.08, J.olhoY + 0.12, z); J.G.add(novo); J.slots.push({ novo: true, pos: novo.position.clone(), m: novo });
+      const rb = this.miniEmoji('🤖', 0.065); rb.position.set(-J.x0 + 0.08, J.olhoY + 0.02, z); J.G.add(rb); J.slots.push({ robo: true, pos: rb.position.clone(), m: rb });
+      const mic = this.miniEmoji('🎤', 0.065); mic.position.set(-J.x0 + 0.08, J.olhoY - 0.08, z); J.G.add(mic); J.slots.push({ voz: true, pos: mic.position.clone(), m: mic });
     }
     J.slots.forEach(s => {
       if (!s.t) return; const q = J.inv[s.t] || 0; if (q === s.n) return; s.n = q;
@@ -1542,6 +1782,8 @@ AFRAME.registerComponent('ryan-vr', {
   minaGolpe(J, a) {
     if (a.slot) {
       const s = a.slot; som('clique'); this.vibra(12);
+      if (s.robo) { const i = ROBO_MODOS.findIndex(m => m[0] === J.robo.modo); this.roboModo(J, ROBO_MODOS[(i + 1) % ROBO_MODOS.length][0]); return; }
+      if (s.voz) { this.ouvir('robo'); return; }
       if (s.novo) { this.minaMundo(J); this.aviso('🔄 Mundo novo! Ache os cristais 💎'); }
       else if (s.modo) { J.modo = 'quebrar'; this.aviso('⛏️ Quebrar cubos'); }
       else { J.modo = 'construir'; J.sel = s.t; this.aviso(`🧱 Construir com ${MINA_TIPOS[s.t].nome} (${J.inv[s.t] || 0})`); }
@@ -1554,17 +1796,22 @@ AFRAME.registerComponent('ryan-vr', {
       J.cel[this.minaIdx(J, ...b.ant)] = J.sel; J.inv[J.sel]--; J.pontos += 1;
       this.somCurto('poe'); this.vibra(15); this.minaDesenha(J); this.minaHotbar(J); return;
     }
-    const idx = this.minaIdx(J, b.i, b.j, b.k), tipo = MINA_TIPOS[b.t], c = this.minaCentro(J, b.i, b.j, b.k), d = (J.dano.get(idx) || 0) + 1;
-    if (d < tipo.golpes) { J.dano.set(idx, d); this.somCurto('bloco'); this.vibra(15); this.minaPedacos(J, c, b.t, 3, 0.6); return; }
-    // quebrou!
+    this.minaDano(J, b, false);
+  },
+  minaDano(J, b, robo) { // um golpe (seu ou do Bip): o cubo racha e, no último golpe, quebra
+    const idx = this.minaIdx(J, b.i, b.j, b.k), t = J.cel[idx]; if (!t) return false;
+    const tipo = MINA_TIPOS[t], c = this.minaCentro(J, b.i, b.j, b.k), d = (J.dano.get(idx) || 0) + 1;
+    if (d < tipo.golpes) { J.dano.set(idx, d); this.somCurto('bloco'); if (!robo) this.vibra(15); this.minaPedacos(J, c, t, 3, 0.6); return false; }
+    // quebrou! (o que o Bip pega também vai para a sua coluna: vocês jogam juntos)
     J.cel[idx] = 0; J.dano.delete(idx); J.pontos += tipo.pts;
-    if (b.t !== 8) J.inv[b.t] = (J.inv[b.t] || 0) + 1;
-    this.somCurto(b.t === 4 || b.t === 5 || b.t === 8 ? 'ouro' : 'quebra'); this.vibra(30);
-    this.minaPedacos(J, c, b.t, 9, 1);
-    const w = this.mw(J, c); this.popup('+' + tipo.pts, w, b.t === 5 ? '#e0b8ff' : b.t === 4 || b.t === 8 ? '#ffd23d' : '#ffffff');
-    if (b.t === 5) { J.achados++; this.faiscas(w, 0xb05cff, 18, 1.2); this.aviso(J.achados >= J.cristais ? '💎 Você achou todos os cristais!' : `💎 Cristal! ${J.achados} de ${J.cristais}`); }
-    if (b.t === 8) { J.bau = true; this.faiscas(w, 0xffd23d, 30, 1.6); this.aviso('🎁 Baú do tesouro! +100'); }
-    this.minaDesenha(J); this.minaHotbar(J);
+    if (t !== 8) J.inv[t] = (J.inv[t] || 0) + 1;
+    this.somCurto(t === 4 || t === 5 || t === 8 ? 'ouro' : 'quebra'); if (!robo) this.vibra(30);
+    this.minaPedacos(J, c, t, 9, 1);
+    const w = this.mw(J, c); this.popup((robo ? '🤖+' : '+') + tipo.pts, w, robo ? '#9ff3ff' : t === 5 ? '#e0b8ff' : t === 4 || t === 8 ? '#ffd23d' : '#ffffff');
+    if (t === 5) { J.achados++; this.faiscas(w, 0xb05cff, 18, 1.2); this.aviso(J.achados >= J.cristais ? '💎 Vocês acharam todos os cristais!' : `💎 Cristal! ${J.achados} de ${J.cristais}`); if (J.robo) { if (robo && J.robo.modo === 'cristal') this.roboModo(J, 'ajuda', 'Achei um cristal! 💎 Sua vez!'); else this.roboFala(J, robo ? 'Achei um cristal! 💎' : 'Uau, você achou um cristal! 💎'); } }
+    if (t === 8) { J.bau = true; this.faiscas(w, 0xffd23d, 30, 1.6); this.aviso('🎁 Baú do tesouro! +100'); if (J.robo) this.roboFala(J, robo ? 'Achei o baú!! 🎁' : 'O baú do tesouro!! 🎁'); }
+    if (t === 4 && robo) { if (J.robo.modo === 'ouro') this.roboModo(J, 'ajuda', 'Achei ouro! ✨ Sua vez!'); else this.roboFala(J, 'Achei ouro! ✨'); }
+    this.minaDesenha(J); this.minaHotbar(J); return true;
   },
 
   // ---------- braço de cubos: palma, dedos e antebraço em caixas 3D (quadradinhos) ----------
@@ -1681,35 +1928,38 @@ AFRAME.registerComponent('ryan-vr', {
   },
   trancar() { this.cfgFechaTeclado(); abreSessao(false); this.cfg = CONTA ? this.cfgNovo('entrar') : this.cfgNovo('ola'); this.secao = 'inicio'; this.detalhe = null; this.fechaCentral && this.fechaCentral(); this.renderTudo(); this.aviso('🔒 Óculos trancado'); },
   // digitar: teclado do painel, teclado de luz (dedos), teclado do computador ou do celular
+  // o formulário que está na tela: a configuração/senha, ou as Mensagens (contato e texto)
+  formAtual() { if (this.cfg) return this.cfg; const M = this.msg; return M && this.secao === 'mensagens' && !this.detalhe && M.campos && M.campos.length ? M : null; },
+  formCampos(F) { return F === this.cfg ? (CAMPOS_CFG[F.passo] || []) : (F.campos || []); },
   cfgAtivaCampo(f, abrirTeclado) {
-    const C = this.cfg; if (!C) return; C.campo = f; C.mai = false; this.renderTudo();
+    const C = this.formAtual(); if (!C) return; C.campo = f; C.mai = false; this.renderTudo();
     const el = document.getElementById('cfg-input'), cb = this.el.components.cardboard;
     if (!el || (cb && cb.ativo) || this.modoPC) return;
     const foco = document.activeElement === el; if (!foco && !abrirTeclado) return;
-    el.type = /senha|login/.test(f) ? 'password' : /email/i.test(f) ? 'email' : 'text';
+    el.type = /senha|login/.test(f) ? 'password' : /email/i.test(f) ? 'email' : f === 'numero' ? 'tel' : 'text';
     el.value = C.val[f] || ''; if (!foco) try { el.focus({ preventScroll: true }); } catch (e) { el.focus(); }
   },
   cfgPoeTexto(v) {
-    const C = this.cfg; if (!C || !C.campo) return;
-    C.val[C.campo] = String(v).slice(0, LIMITE_CFG[C.campo] || 40); C.erro = ''; this.pCentro.render();
+    const C = this.formAtual(); if (!C || !C.campo) return;
+    C.val[C.campo] = String(v).slice(0, (C.limites && C.limites[C.campo]) || LIMITE_CFG[C.campo] || 40); C.erro = ''; this.pCentro.render();
   },
-  cfgDigita(ch) { const C = this.cfg; if (!C || !C.campo) return; this.cfgPoeTexto((C.val[C.campo] || '') + ch); this.cfgEspelha(); },
-  cfgEspelha() { const el = document.getElementById('cfg-input'), C = this.cfg; if (el && C && C.campo && document.activeElement === el) el.value = C.val[C.campo] || ''; },
+  cfgDigita(ch) { const C = this.formAtual(); if (!C || !C.campo) return; this.cfgPoeTexto((C.val[C.campo] || '') + ch); this.cfgEspelha(); },
+  cfgEspelha() { const el = document.getElementById('cfg-input'), C = this.formAtual(); if (el && C && C.campo && document.activeElement === el) el.value = C.val[C.campo] || ''; },
   cfgTecla(id) {
-    const C = this.cfg; if (!C || !C.campo) return;
+    const C = this.formAtual(); if (!C || !C.campo) return;
     const f = C.campo, v = C.val[f] || '';
     this.teclaFlash = this.teclaFlash || {}; this.teclaFlash[id] = performance.now(); som('hover'); this.vibra(10);
     if (id === 'ok' || id === 'vai') {
-      const lista = CAMPOS_CFG[C.passo] || [], k = lista.indexOf(f);
+      const lista = this.formCampos(C), k = lista.indexOf(f);
       if (k >= 0 && k < lista.length - 1) return this.cfgAtivaCampo(lista[k + 1], false);
-      return this.cfgProximo();
+      return C === this.cfg ? this.cfgProximo() : this.msgOk();
     }
     if (id === 'shift') { C.mai = !C.mai; this.renderTudo(); return; }
     if (id === 'olho') { C.ver = !C.ver; this.renderTudo(); return; }
     let novo = v;
     if (id === 'apaga') novo = v.slice(0, -1);
     else if (id === 'limpa') novo = '';
-    else if (id === 'espaco') novo = f === 'nome' || /senha|login/.test(f) ? v + ' ' : v;
+    else if (id === 'espaco') novo = f === 'nome' || f === 'texto' || /senha|login/.test(f) ? v + ' ' : v;
     else if (id === '.com' || id === 'ponto-com') novo = v + '.com';
     else if ([...id].length === 1) { novo = v + (C.mai ? id.toUpperCase() : id); C.mai = false; }
     this.cfgPoeTexto(novo); this.cfgEspelha(); if (this.pTeclado) this.pTeclado.render();
@@ -1737,7 +1987,7 @@ AFRAME.registerComponent('ryan-vr', {
     return hv;
   },
   cfgCampo(g, p, f, rotulo, x, y, w, h, dica) {
-    const C = this.cfg, ativo = C.campo === f, v = C.val[f] || '', senha = /senha|login/.test(f);
+    const C = this.formAtual(), ativo = C.campo === f, v = C.val[f] || '', senha = /senha|login/.test(f);
     p.botao('cf-' + f, x, y, w, h, () => this.cfgAtivaCampo(f, true));
     caixa(g, x, y, w, h, 26, ativo ? '#ffffff' : 'rgba(255,255,255,.78)', ativo ? '#8f7bff' : null, 7);
     texto(g, rotulo, x + 28, y + 36, FONTE(800, 22), ativo ? '#6a55e0' : '#5f5a7a');
@@ -1747,7 +1997,7 @@ AFRAME.registerComponent('ryan-vr', {
     else texto(g, mostra + (ativo ? '|' : ''), x + 28, y + h - 24, FONTE(800, 40), '#1d1a2e');
   },
   cfgTeclas(g, p, y0, kh) {
-    const C = this.cfg, W = p.W, gap = 10, u = (W - 112 - 9 * gap) / 10, agora = performance.now(), larg = n => n * u + (n - 1) * gap;
+    const C = this.formAtual(), W = p.W, gap = 10, u = (W - 112 - 9 * gap) / 10, agora = performance.now(), larg = n => n * u + (n - 1) * gap;
     const linhas = [[...'1234567890'].map(c => [c, 1]), [...'qwertyuiop'].map(c => [c, 1]), [...'asdfghjklç'].map(c => [c, 1]),
       [['shift', 1.5], ...[...'zxcvbnm'].map(c => [c, 1]), ['apaga', 1.5]],
       [['@', 1], ['.', 1], ['-', 1], ['_', 1], ['espaco', 3], ['.com', 1.5], ['ok', 1.5]]];
@@ -2019,12 +2269,12 @@ AFRAME.registerComponent('ryan-vr', {
     const DESTAQUE = ['mina', 'cubos', 'alvos', 'ppt', 'estrelas', 'basquete', 'robos', 'piano'];
     const apps = [{ id: 'jogos', nome: 'Todos os jogos', ic: '🎮', cor: ['#8f7bff', '#3a2f8a'] }, ...JOGOS.filter(j => DESTAQUE.includes(j.id)).map(j => ({ it: j, nome: CURTO[j.id] || j.titulo })), ...VIDEOS.map(v => ({ it: v, nome: CURTO[v.id] || v.titulo })),
       { id: 'ambientes', nome: 'Ambientes', ic: '🏞️', cor: ['#5fd0a0', '#1f7a6a'] }, { id: 'fotos', nome: 'Fotos', ic: '🖼️', cor: ['#ff9ac4', '#c2367a'] }, { id: 'musica', nome: 'Música', ic: '🎵', cor: ['#ff7a6b', '#b8322a'] }, { id: 'central', nome: 'Controle', ic: '🎛️', cor: ['#7b86ff', '#3a3fb8'] },
-      { id: 'apps', nome: 'Apps', ic: '📱', cor: ['#ffb36b', '#c2602a'] }, { id: 'sites', nome: 'Meus sites', ic: '🌐', cor: ['#5ad1ff', '#2a5fb8'] }, { id: 'google', nome: 'Google', ic: '🔎', cor: ['#4f8df7', '#1a56c4'] }, { id: 'meus', nome: 'Meus vídeos', ic: '📁', cor: ['#ffb36b', '#d9762b'] }, { id: 'ajustes', nome: 'Ajustes', ic: '⚙️', cor: ['#9aa0b5', '#5a6075'] }];
+      { id: 'apps', nome: 'Apps', ic: '📱', cor: ['#ffb36b', '#c2602a'] }, { id: 'mensagens', nome: 'Mensagens', ic: '💬', cor: ['#5be39a', '#1f9a5a'] }, { id: 'sites', nome: 'Meus sites', ic: '🌐', cor: ['#5ad1ff', '#2a5fb8'] }, { id: 'google', nome: 'Google', ic: '🔎', cor: ['#4f8df7', '#1a56c4'] }, { id: 'meus', nome: 'Meus vídeos', ic: '📁', cor: ['#ffb36b', '#d9762b'] }, { id: 'assistente', nome: 'Assistente', ic: '🎙️', cor: ['#ff8ad8', '#8f3bd6'] }, { id: 'ajustes', nome: 'Ajustes', ic: '⚙️', cor: ['#9aa0b5', '#5a6075'] }];
     const cols = 9, R = 66, dx = (W - 112) / cols;
     apps.forEach((a, i) => {
       const c = i % cols, l = Math.floor(i / cols), cx = 56 + dx * (c + 0.5), cy = 270 + l * 280;
       const id = a.it ? a.it.id : a.id, hv = p.botao('app-' + id, cx - R - 10, cy - R - 10, 2 * R + 20, 2 * R + 80, () => {
-        if (a.it) { this.detalhe = a.it; this.renderTudo(); } else if (a.id === 'central') this.abreCentral(false); else { this.secao = a.id; this.detalhe = null; this.renderTudo(); }
+        if (a.it) { this.detalhe = a.it; this.renderTudo(); } else if (a.id === 'central') this.abreCentral(false); else if (a.id === 'assistente') this.abreAssistente(); else { this.secao = a.id; this.detalhe = null; this.renderTudo(); }
       });
       const r = hv ? R * 1.1 : R; // o ícone cresce quando você aponta
       g.save(); g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = hv ? 30 : 18; g.shadowOffsetY = 8;
@@ -3576,7 +3826,7 @@ AFRAME.registerComponent('ryan-vr', {
 
   // ---------- teclado de mesa: teclado de luz deitado na sua frente (digite com os dedos) ----------
   teclaAcao(id) {
-    if (this.cfg) return this.cfgTecla(id === 'vai' ? 'ok' : id === 'ponto-com' ? '.com' : id);
+    if (this.formAtual()) return this.cfgTecla(id === 'vai' ? 'ok' : id === 'ponto-com' ? '.com' : id);
     if (this.secao === 'sites' && this.addSite) {
       const t = this.siteTexto || '';
       if (id === 'vai') return this.salvaSite();
@@ -3619,16 +3869,16 @@ AFRAME.registerComponent('ryan-vr', {
       linha(x, y, w, kh, 14, aceso);
       texto(g, rot, x + w / 2, y + kh / 2 + 12, FONTE(800, rot.length > 2 ? 26 : 34), aceso ? '#15131f' : '#ffffff', 'center');
     };
-    ['1234567890', 'qwertyuiop', 'asdfghjklç', this.cfg ? 'zxcvbnm@.' : 'zxcvbnm,.'].forEach((l, r) => [...l].forEach((c, i) => tecla(c, c, kx0 + i * (kw + 12) + (r === 2 ? kw * 0.25 : r === 3 ? kw * 0.5 : 0), ky0 + r * (kh + 14), kw)));
+    ['1234567890', 'qwertyuiop', 'asdfghjklç', this.formAtual() ? 'zxcvbnm@.' : 'zxcvbnm,.'].forEach((l, r) => [...l].forEach((c, i) => tecla(c, c, kx0 + i * (kw + 12) + (r === 2 ? kw * 0.25 : r === 3 ? kw * 0.5 : 0), ky0 + r * (kh + 14), kw)));
     tecla('apaga', '⌫', kx0 + 9 * (kw + 12) + kw * 0.5, ky0 + 3 * (kh + 14), kw * 0.5 + 0);
     const y5 = ky0 + 4 * (kh + 14);
     tecla('espaco', 'espaço', kx0 + 2 * (kw + 12), y5, kw * 5 + 48);
-    tecla('vai', this.cfg ? 'ok ✓' : 'pesquisar', kx0 + 7 * (kw + 12), y5, kw * 3 + 24);
+    tecla('vai', this.formAtual() ? 'ok ✓' : 'pesquisar', kx0 + 7 * (kw + 12), y5, kw * 3 + 24);
     // touchpad ao lado (só o desenho, como num teclado de verdade)
     g.save(); g.shadowColor = '#fff'; g.shadowBlur = 18; g.lineWidth = 5; g.strokeStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.roundRect(KW + 100, 14, W - KW - 114, H - 28, 34); g.stroke(); g.restore();
   },
   passoTeclado(dt) {
-    const quer = (this.cfg ? !!this.cfg.campo : (this.secao === 'google' || (this.secao === 'sites' && this.addSite)) && !this.detalhe) && this.estado === 'saguao' && !this.posicionando && this.pCentro.el.object3D.visible;
+    const F0 = this.formAtual(), quer = (F0 ? !!F0.campo : (this.secao === 'google' || (this.secao === 'sites' && this.addSite)) && !this.detalhe) && this.estado === 'saguao' && !this.posicionando && this.pCentro.el.object3D.visible;
     if (!quer) {
       if (this.pTeclado && this.pTeclado.el.object3D.visible) this.pTeclado.visivel = false;
       // saiu do Google: desliga a câmera escondida que ele ligou
@@ -4726,10 +4976,11 @@ window.addEventListener('DOMContentLoaded', () => {
     const k = e.key.toLowerCase();
     if (k === 'escape') { if (window.__voltar && !window.__voltar() && a.detalhe) { a.detalhe = null; a.renderTudo(); } e.preventDefault(); return; }
     // configuração / senha: o teclado do computador escreve no campo
-    if (a.cfg && a.cfg.campo && a.estado === 'saguao') {
+    const F = a.formAtual && a.formAtual();
+    if (F && F.campo && a.estado === 'saguao') {
       if (k === 'enter') a.cfgTecla('ok');
       else if (k === 'backspace') a.cfgTecla('apaga');
-      else if (k === 'tab') { const l = CAMPOS_CFG[a.cfg.passo] || []; a.cfgAtivaCampo(l[(l.indexOf(a.cfg.campo) + 1) % l.length], false); }
+      else if (k === 'tab') { const l = a.formCampos(F); a.cfgAtivaCampo(l[(l.indexOf(F.campo) + 1) % l.length], false); }
       else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) a.cfgDigita(e.key);
       else return;
       e.preventDefault(); return;
@@ -4747,8 +4998,9 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   // teclado do celular (Modo Celular): o campo escondido escreve na configuração / senha
   const ci = document.getElementById('cfg-input');
-  ci.addEventListener('input', () => { const a = app(); if (a && a.cfg && a.cfg.campo) a.cfgPoeTexto(ci.value); });
-  ci.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const a = app(); if (a && a.cfg) a.cfgTecla('ok'); } });
+  ci.addEventListener('input', () => { const a = app(), F = a && a.formAtual(); if (F && F.campo) a.cfgPoeTexto(ci.value); });
+  ci.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const a = app(); if (a && a.formAtual()) a.cfgTecla('ok'); } });
+  window.__voz = t => { const a = app(); if (a) a.vozChegou(t); }; // o app Android devolve aqui o que você falou
   document.getElementById('vr-sair').onclick = sair;
   document.getElementById('menu2d').onclick = sair;
   document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && sc.components.cardboard.ativo && !APP) sair(); });
@@ -4771,7 +5023,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 3.8' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 3.9' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 

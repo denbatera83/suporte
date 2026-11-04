@@ -27,7 +27,7 @@ import android.widget.FrameLayout;
 
 /** Ryan VR: abre o saguão de realidade virtual (HTML + A-Frame) em tela cheia, deitado, para o Cardboard. */
 public class MainActivity extends Activity {
-    private static final int ESCOLHER_VIDEO = 42, PEDIR_CAMERA = 7;
+    private static final int ESCOLHER_VIDEO = 42, PEDIR_CAMERA = 7, OUVIR_VOZ = 43;
     // as páginas abrem num endereço seguro interno (https://ryan.vr/...) entregue de dentro do app:
     // assim a câmera e o reconhecimento da mão funcionam, sem precisar de internet
     // endereço reservado pelo Android para páginas de dentro do app (o mesmo do WebViewAssetLoader oficial)
@@ -88,6 +88,30 @@ public class MainActivity extends Activity {
             if (i == null) return false;
             i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             try { startActivity(i); return true; } catch (Exception e) { return false; }
+        }
+        /** 💬 Abre um link do WhatsApp (wa.me) no app do WhatsApp: a mensagem vem pronta e a pessoa aperta Enviar lá. */
+        @android.webkit.JavascriptInterface public boolean abrirLink(final String url) {
+            String u = url == null ? "" : url.trim();
+            if (!(u.startsWith("https://wa.me/") || u.startsWith("https://api.whatsapp.com/"))) return false;
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(u)); i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            try { startActivity(i); return true; } catch (Exception e) { return false; }
+        }
+        /** 🎙️ Abre o Assistente do celular (Google/Gemini), do jeito oficial. */
+        @android.webkit.JavascriptInterface public boolean abrirAssistente() {
+            String[] acoes = { Intent.ACTION_VOICE_COMMAND, "android.intent.action.ASSIST" };
+            for (String a : acoes) { Intent i = new Intent(a); i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); try { startActivity(i); return true; } catch (Exception e) { } }
+            return false;
+        }
+        /** 🎤 Ouve a voz (tela de voz do Google, sem permissão de microfone no app): o texto volta em window.__voz(texto). */
+        @android.webkit.JavascriptInterface public boolean ouvirVoz() {
+            runOnUiThread(new Runnable() { public void run() {
+                Intent i = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                i.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                i.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "pt-BR");
+                i.putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Fale agora");
+                try { startActivityForResult(i, OUVIR_VOZ); } catch (Exception e) { devolveVoz(null); }
+            } });
+            return true;
         }
         /** 📸 Foto da tela: a página manda a imagem (data:image/jpeg;base64,...) e o app guarda na galeria. */
         @android.webkit.JavascriptInterface public boolean salvarFoto(String dataUrl) {
@@ -209,6 +233,11 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
+        if (req == OUVIR_VOZ) {
+            String txt = null;
+            if (res == RESULT_OK && data != null) { java.util.ArrayList<String> l = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS); if (l != null && !l.isEmpty()) txt = l.get(0); }
+            devolveVoz(txt); esconderBarras(); return;
+        }
         if (req != ESCOLHER_VIDEO || escolha == null) return;
         Uri[] r = null;
         if (res == RESULT_OK && data != null) {
@@ -220,6 +249,10 @@ public class MainActivity extends Activity {
         escolha.onReceiveValue(r);
         escolha = null;
         esconderBarras();
+    }
+
+    private void devolveVoz(String txt) {
+        if (web != null) web.evaluateJavascript("window.__voz && window.__voz(" + (txt == null ? "null" : org.json.JSONObject.quote(txt)) + ")", null);
     }
 
     @Override

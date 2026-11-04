@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="br.ryan.vr"
-    android:versionCode="29"
-    android:versionName="3.8">
+    android:versionCode="30"
+    android:versionName="3.9">
     <uses-sdk android:minSdkVersion="21" android:targetSdkVersion="34" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -12,6 +12,13 @@
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <!-- 🎤 voz (tela de voz do Google) e 🎙️ Assistente: só para abrir, sem permissão de microfone -->
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VOICE_COMMAND" />
         </intent>
     </queries>
     <uses-feature android:name="android.hardware.camera" android:required="false" />
