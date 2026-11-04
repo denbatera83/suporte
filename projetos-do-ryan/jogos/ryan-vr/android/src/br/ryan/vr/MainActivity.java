@@ -40,6 +40,7 @@ public class MainActivity extends Activity {
     private WebChromeClient.CustomViewCallback avisoSaida;
     private ValueCallback<Uri[]> escolha;
     private NavegadorVR navVR; // Google (ou outro site) dentro do VR, nas duas telas
+    private String appsJson; // lista de apps do celular (guardada depois da primeira vez)
 
     /** A página do Ryan VR chama window.RyanApp.abrirNavegadorVR(url) para abrir um site sem sair do óculos. */
     public class Ponte {
@@ -55,6 +56,39 @@ public class MainActivity extends Activity {
             runOnUiThread(new Runnable() { public void run() { if (navVR != null) navVR.mao(x, y, pinca); } });
         }
         @android.webkit.JavascriptInterface public boolean temNavegadorVR() { return true; }
+        /** Apps do Richard: lista dos apps do celular (nome, pacote e ícone pequeno em PNG), em JSON. */
+        @android.webkit.JavascriptInterface public String listarApps() {
+            if (appsJson != null) return appsJson;
+            try {
+                android.content.pm.PackageManager pm = getPackageManager();
+                Intent i = new Intent(Intent.ACTION_MAIN); i.addCategory(Intent.CATEGORY_LAUNCHER);
+                java.util.List<android.content.pm.ResolveInfo> lista = pm.queryIntentActivities(i, 0);
+                java.util.Collections.sort(lista, new android.content.pm.ResolveInfo.DisplayNameComparator(pm));
+                org.json.JSONArray arr = new org.json.JSONArray();
+                for (android.content.pm.ResolveInfo r : lista) {
+                    String pacote = r.activityInfo.packageName; if (pacote.equals(getPackageName())) continue;
+                    org.json.JSONObject o = new org.json.JSONObject();
+                    o.put("nome", String.valueOf(r.loadLabel(pm))); o.put("pacote", pacote);
+                    try {
+                        android.graphics.drawable.Drawable d = r.loadIcon(pm);
+                        android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(96, 96, android.graphics.Bitmap.Config.ARGB_8888);
+                        android.graphics.Canvas c = new android.graphics.Canvas(b); d.setBounds(0, 0, 96, 96); d.draw(c);
+                        java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream(); b.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, bo);
+                        o.put("icone", "data:image/png;base64," + android.util.Base64.encodeToString(bo.toByteArray(), android.util.Base64.NO_WRAP));
+                    } catch (Exception e) { /* sem ícone: a página desenha a letra */ }
+                    arr.put(o);
+                }
+                appsJson = arr.toString();
+            } catch (Exception e) { appsJson = "[]"; }
+            return appsJson;
+        }
+        /** Abre um app do celular (fora do VR: o Android não desenha um app dentro de outro). Voltar = Ryan VR. */
+        @android.webkit.JavascriptInterface public boolean abrirApp(final String pacote) {
+            Intent i = getPackageManager().getLaunchIntentForPackage(pacote);
+            if (i == null) return false;
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            try { startActivity(i); return true; } catch (Exception e) { return false; }
+        }
         /** 📸 Foto da tela: a página manda a imagem (data:image/jpeg;base64,...) e o app guarda na galeria. */
         @android.webkit.JavascriptInterface public boolean salvarFoto(String dataUrl) {
             try {

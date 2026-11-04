@@ -83,7 +83,7 @@
       <button id="btn-pc" class="sec">🖥️ Modo Computador <small>mouse e teclado</small></button>
     </div>
     <p class="nota">Computador: arraste o mouse para olhar, clique para apertar; no Google digite no teclado; Esc pausa os jogos; na Corrida use ← → (ou A e D) e espaço para o turbo. Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 3.1</p>
+    <p class="nota" id="versao">Ryan VR 3.2</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -813,12 +813,13 @@ AFRAME.registerComponent('ryan-vr', {
     caixa(g, 0, 0, p.W, p.H, 36, UI.fundo);
     texto(g, 'Ryan', 40, 92, FONTE_T(64), UI.txt); texto(g, 'VR', 40 + g.measureText('Ryan ').width, 92, FONTE_T(64), UI.acc2);
     texto(g, 'MENU', 42, 150, FONTE(800, 22), UI.sub);
-    const itens = [['inicio', '🏠', 'Início'], ['videos', '🎬', 'Vídeos 360°'], ['jogos', '🎮', 'Jogos'], ['meus', '📁', 'Meus vídeos'], ['google', '🔎', 'Google'], ['ajustes', '⚙️', 'Ajustes']];
+    const itens = [['inicio', '🏠', 'Início'], ['videos', '🎬', 'Vídeos 360°'], ['jogos', '🎮', 'Jogos'], ['meus', '📁', 'Meus vídeos'], ['apps', '📱', 'Apps do Richard'], ['google', '🔎', 'Google'], ['ajustes', '⚙️', 'Ajustes']];
     itens.forEach(([id, ic, nome], i) => {
-      const y = 168 + i * 100, sel = this.secao === id;
-      const hv = p.botao('m-' + id, 24, y, p.W - 48, 88, () => { this.secao = id; this.detalhe = null; this.renderTudo(); });
-      caixa(g, 24, y, p.W - 48, 88, 24, sel ? UI.acc : hv ? UI.cardHover : 'rgba(255,255,255,.04)', hv && !sel ? UI.acc : null);
-      texto(g, ic, 60, y + 66, FONTE(800, 44), UI.txt); texto(g, nome, 128, y + 64, FONTE(800, 40), sel ? '#120d2e' : UI.txt);
+      const y = 164 + i * 90, sel = this.secao === id;
+      const hv = p.botao('m-' + id, 24, y, p.W - 48, 80, () => { this.secao = id; this.detalhe = null; this.renderTudo(); });
+      caixa(g, 24, y, p.W - 48, 80, 24, sel ? UI.acc : hv ? UI.cardHover : 'rgba(255,255,255,.04)', hv && !sel ? UI.acc : null);
+      g.font = FONTE(800, 38); const fsm = Math.min(38, Math.floor(38 * (p.W - 170) / Math.max(1, g.measureText(nome).width)));
+      texto(g, ic, 58, y + 56, FONTE(800, 40), UI.txt); texto(g, nome, 122, y + 54, FONTE(800, fsm), sel ? '#120d2e' : UI.txt);
     });
     texto(g, 'Olhe e segure, ou aperte', 42, p.H - 74, FONTE(700, 24), UI.sub); texto(g, 'o botão do Cardboard', 42, p.H - 42, FONTE(700, 24), UI.sub);
   },
@@ -872,6 +873,7 @@ AFRAME.registerComponent('ryan-vr', {
     if (this.secao === 'musica') return this.desenhaMusica(g, p);
     if (this.secao === 'google') return this.desenhaGoogle(g, p);
     if (this.secao === 'sites') return this.desenhaSites(g, p);
+    if (this.secao === 'apps') return this.desenhaApps(g, p);
     if (this.secao === 'ajustes') {
       texto(g, 'Ajustes', 48, 92, FONTE_T(64), UI.txt);
       texto(g, 'Valem também para o Blocos VR', 50, 136, FONTE(700, 28), UI.sub);
@@ -914,7 +916,7 @@ AFRAME.registerComponent('ryan-vr', {
     const CURTO = { ppt: 'Pedra Papel', paredao: 'Paredão', piano: 'Piano de Luz', corrida: 'Corrida', cubos: 'Corta Cubos', alvos: 'Tiro ao Alvo', baloes: 'Balões', blocos: 'Blocos', turbo: 'Turbo', montanha: 'Montanha', mar: 'Fundo do Mar', espaco: 'Espaço', aurora: 'Aurora' };
     const apps = [...JOGOS.map(j => ({ it: j, nome: CURTO[j.id] || j.titulo })), ...VIDEOS.map(v => ({ it: v, nome: CURTO[v.id] || v.titulo })),
       { id: 'ambientes', nome: 'Ambientes', ic: '🏞️', cor: ['#5fd0a0', '#1f7a6a'] }, { id: 'fotos', nome: 'Fotos', ic: '🖼️', cor: ['#ff9ac4', '#c2367a'] }, { id: 'musica', nome: 'Música', ic: '🎵', cor: ['#ff7a6b', '#b8322a'] }, { id: 'central', nome: 'Controle', ic: '🎛️', cor: ['#7b86ff', '#3a3fb8'] },
-      { id: 'sites', nome: 'Meus sites', ic: '🌐', cor: ['#5ad1ff', '#2a5fb8'] }, { id: 'google', nome: 'Google', ic: '🔎', cor: ['#4f8df7', '#1a56c4'] }, { id: 'meus', nome: 'Meus vídeos', ic: '📁', cor: ['#ffb36b', '#d9762b'] }, { id: 'ajustes', nome: 'Ajustes', ic: '⚙️', cor: ['#9aa0b5', '#5a6075'] }];
+      { id: 'apps', nome: 'Apps', ic: '📱', cor: ['#ffb36b', '#c2602a'] }, { id: 'sites', nome: 'Meus sites', ic: '🌐', cor: ['#5ad1ff', '#2a5fb8'] }, { id: 'google', nome: 'Google', ic: '🔎', cor: ['#4f8df7', '#1a56c4'] }, { id: 'meus', nome: 'Meus vídeos', ic: '📁', cor: ['#ffb36b', '#d9762b'] }, { id: 'ajustes', nome: 'Ajustes', ic: '⚙️', cor: ['#9aa0b5', '#5a6075'] }];
     const cols = 9, R = 66, dx = (W - 112) / cols;
     apps.forEach((a, i) => {
       const c = i % cols, l = Math.floor(i / cols), cx = 56 + dx * (c + 0.5), cy = 270 + l * 280;
@@ -934,6 +936,57 @@ AFRAME.registerComponent('ryan-vr', {
       g.font = FONTE(800, 28); const fs = Math.min(28, Math.floor(28 * (dx - 18) / Math.max(1, g.measureText(a.nome).width))); // o nome sempre cabe embaixo do ícone
       texto(g, a.nome, cx, cy + R + 50, FONTE(800, fs), UI.txt, 'center');
     });
+  },
+  // ---------- 📱 Apps do Richard: os apps do celular e os sites, num lugar só ----------
+  carregaApps() {
+    if (this.appsCel) return this.appsCel;
+    this.appsCel = [];
+    if (window.RyanApp && window.RyanApp.listarApps) {
+      try { this.appsCel = JSON.parse(window.RyanApp.listarApps() || '[]'); } catch (e) { this.appsCel = []; }
+      this.appsCel.forEach(a => { if (a.icone) { a.img = new Image(); a.img.onload = () => { if (this.secao === 'apps') this.pCentro.render(); }; a.img.src = a.icone; } });
+    }
+    return this.appsCel;
+  },
+  abreApp(a) {
+    if (!window.RyanApp || !window.RyanApp.abrirApp) return;
+    const vr = this.el.components.cardboard.ativo;
+    som('abre'); this.aviso(vr ? 'Abrindo ' + a.nome + ' — tire o celular do óculos' : 'Abrindo ' + a.nome);
+    setTimeout(() => { if (!window.RyanApp.abrirApp(a.pacote)) this.aviso('Não deu para abrir ' + a.nome); }, vr ? 1200 : 300);
+  },
+  desenhaApps(g, p) {
+    const W = p.W, H = p.H, aba = this.abaApps || 'celular';
+    texto(g, 'Apps do Richard', 56, 92, FONTE_T(60), UI.txt);
+    [['celular', '📱 Apps do celular'], ['sites', '🌐 Sites']].forEach(([id, nome], i) => {
+      const x = W - 760 + i * 360, hv = p.botao('ab-' + id, x, 40, 340, 80, () => { this.abaApps = id; this.paginaApps = 0; this.renderTudo(); });
+      caixa(g, x, 40, 340, 80, 40, aba === id ? UI.acc : hv ? UI.cardHover : UI.card); texto(g, nome, x + 170, 92, FONTE(800, 30), aba === id ? '#120d2e' : UI.txt, 'center');
+    });
+    let itens;
+    if (aba === 'sites') {
+      texto(g, 'Abrem dentro do VR · a sua mão vira o mouse', 58, 136, FONTE(700, 26), UI.sub);
+      itens = [...this.listaSites().map(st => ({ nome: st.nome, ic: st.ic, cor: st.cor, abre: () => this.abreSite(st) })), { nome: 'Adicionar', ic: '➕', cor: ['rgba(255,255,255,.18)', 'rgba(255,255,255,.08)'], abre: () => { this.secao = 'sites'; this.addSite = true; this.siteTexto = ''; this.renderTudo(); } }];
+    } else {
+      const A = this.carregaApps();
+      if (!window.RyanApp || !window.RyanApp.listarApps) { quebra(g, 'Os apps do celular aparecem aqui quando você usa o app Android do Ryan VR (RyanVR.apk). No navegador, use a aba 🌐 Sites.', 60, 260, W - 120, 46, FONTE(700, 32), UI.sub, 4); return; }
+      texto(g, A.length + ' apps · abrem fora do VR (o botão voltar traz você de volta)', 58, 136, FONTE(700, 26), UI.sub);
+      itens = A.map(a => ({ nome: a.nome, img: a.img, ic: a.nome.charAt(0).toUpperCase(), cor: ['#8f7bff', '#5a46c8'], abre: () => this.abreApp(a) }));
+    }
+    const cols = 8, linhas = 3, porPag = cols * linhas, pags = Math.max(1, Math.ceil(itens.length / porPag)), pag = Math.min(this.paginaApps || 0, pags - 1);
+    const R = 64, dx = (W - 112) / cols;
+    itens.slice(pag * porPag, pag * porPag + porPag).forEach((it, k) => {
+      const c = k % cols, l = Math.floor(k / cols), cx = 56 + dx * (c + 0.5), cy = 250 + l * 215;
+      const hv = p.botao('ap-' + k, cx - R - 10, cy - R - 10, 2 * R + 20, 2 * R + 64, it.abre), r = hv ? R * 1.1 : R;
+      g.save(); g.beginPath(); g.arc(cx, cy, r, 0, 7); g.clip();
+      if (it.img && it.img.complete && it.img.naturalWidth) { g.fillStyle = '#ffffff'; g.fillRect(cx - r, cy - r, 2 * r, 2 * r); g.drawImage(it.img, cx - r * 0.82, cy - r * 0.82, r * 1.64, r * 1.64); }
+      else { const gr = g.createLinearGradient(cx, cy - r, cx, cy + r); gr.addColorStop(0, it.cor[0]); gr.addColorStop(1, it.cor[1]); g.fillStyle = gr; g.fillRect(cx - r, cy - r, 2 * r, 2 * r); g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = it.ic.length === 1 && /[A-Z0-9]/.test(it.ic) ? FONTE_T(Math.round(r)) : `${Math.round(r * 0.95)}px serif`; g.fillText(it.ic, cx, cy + 4); }
+      g.restore();
+      g.lineWidth = hv ? 5 : 3; g.strokeStyle = hv ? '#ffffff' : 'rgba(255,255,255,.4)'; g.beginPath(); g.arc(cx, cy, r - 1, 0, 7); g.stroke();
+      g.font = FONTE(800, 24); const fs = Math.min(24, Math.floor(24 * (dx - 14) / Math.max(1, g.measureText(it.nome).width)));
+      texto(g, it.nome, cx, cy + R + 44, FONTE(800, Math.max(16, fs)), UI.txt, 'center');
+    });
+    if (pags > 1) {
+      [['ant', '◀', -1], ['prox', '▶', 1]].forEach(([id, rot, d], i) => { const x = i ? W - 160 : 56, hv = p.botao('pg-' + id, x, H - 110, 104, 84, () => { this.paginaApps = (pag + d + pags) % pags; this.renderTudo(); }); caixa(g, x, H - 110, 104, 84, 42, hv ? UI.acc : UI.card); texto(g, rot, x + 52, H - 52, FONTE(800, 40), hv ? '#120d2e' : UI.txt, 'center'); });
+      texto(g, `página ${pag + 1} de ${pags}`, W / 2, H - 56, FONTE(800, 28), UI.sub, 'center');
+    }
   },
   // ---------- 🌐 Meus sites: qualquer site no VR (abre no navegador do app, nas duas telas) ----------
   listaSites() {
@@ -3431,7 +3484,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 3.1' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 3.2' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 
