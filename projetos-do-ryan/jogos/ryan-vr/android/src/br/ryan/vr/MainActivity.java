@@ -44,7 +44,15 @@ public class MainActivity extends Activity {
     /** A página do Ryan VR chama window.RyanApp.abrirNavegadorVR(url) para abrir um site sem sair do óculos. */
     public class Ponte {
         @android.webkit.JavascriptInterface public void abrirNavegadorVR(final String url) {
-            runOnUiThread(new Runnable() { public void run() { abreNavegadorVR(url); } });
+            runOnUiThread(new Runnable() { public void run() { abreNavegadorVR(url, false); } });
+        }
+        /** Meus sites: abre um site no VR; modoPC = abre a versão de computador (ex.: WhatsApp Web). */
+        @android.webkit.JavascriptInterface public void abrirSiteVR(final String url, final boolean modoPC) {
+            runOnUiThread(new Runnable() { public void run() { abreNavegadorVR(url, modoPC); } });
+        }
+        /** A página manda a mão (lida pela câmera) para o navegador VR: x, y de 0 a 1; x < 0 = sem mão. */
+        @android.webkit.JavascriptInterface public void maoNav(final float x, final float y, final boolean pinca) {
+            runOnUiThread(new Runnable() { public void run() { if (navVR != null) navVR.mao(x, y, pinca); } });
         }
         @android.webkit.JavascriptInterface public boolean temNavegadorVR() { return true; }
         /** 📸 Foto da tela: a página manda a imagem (data:image/jpeg;base64,...) e o app guarda na galeria. */
@@ -56,10 +64,10 @@ public class MainActivity extends Activity {
             } catch (Exception e) { return false; } /* sem permissão de galeria: a foto fica no app Fotos do Ryan VR */
         }
     }
-    private void abreNavegadorVR(String url) {
+    private void abreNavegadorVR(String url, boolean modoPC) {
         if (navVR != null || url == null || !(url.startsWith("https://") || url.startsWith("http://"))) return;
         web.evaluateJavascript("window.__pausaCena && window.__pausaCena(true)", null);
-        navVR = new NavegadorVR(this, url, new NavegadorVR.AoFechar() { public void fechou() {
+        navVR = new NavegadorVR(this, url, modoPC, new NavegadorVR.AoFechar() { public void fechou() {
             if (navVR != null) { raiz.removeView(navVR); navVR = null; }
             web.evaluateJavascript("window.__pausaCena && window.__pausaCena(false)", null);
             esconderBarras();

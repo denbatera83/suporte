@@ -83,7 +83,7 @@
       <button id="btn-pc" class="sec">🖥️ Modo Computador <small>mouse e teclado</small></button>
     </div>
     <p class="nota">Computador: arraste o mouse para olhar, clique para apertar; no Google digite no teclado; Esc pausa os jogos; na Corrida use ← → (ou A e D) e espaço para o turbo. Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 3.0</p>
+    <p class="nota" id="versao">Ryan VR 3.1</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -751,7 +751,7 @@ AFRAME.registerComponent('ryan-vr', {
       cv.addEventListener('mouseup', e => { if (performance.now() - t0 < 400 && Math.hypot(e.clientX - x0, e.clientY - y0) < 6) this.toque(e.clientX, e.clientY); });
     };
     if (sc.canvas) liga(); else sc.addEventListener('renderstart', liga);
-    window.addEventListener('keydown', e => { if ((e.code === 'Space' || e.code === 'Enter') && !(this.secao === 'google' && this.estado === 'saguao' && !this.detalhe) && !this.emJogo()) { e.preventDefault(); this.tocar(true); } }); // espaço/Enter = botão do óculos (controle Bluetooth); não atrapalha digitar nem o turbo
+    window.addEventListener('keydown', e => { if ((e.code === 'Space' || e.code === 'Enter') && !((this.secao === 'google' || (this.secao === 'sites' && this.addSite)) && this.estado === 'saguao' && !this.detalhe) && !this.emJogo()) { e.preventDefault(); this.tocar(true); } }); // espaço/Enter = botão do óculos (controle Bluetooth); não atrapalha digitar nem o turbo
     if (document.fonts) document.fonts.ready.then(() => this.renderTudo());
     // escolher vídeo do celular
     document.getElementById('arquivo').addEventListener('change', e => {
@@ -871,6 +871,7 @@ AFRAME.registerComponent('ryan-vr', {
     if (this.secao === 'fotos') return this.desenhaFotos(g, p);
     if (this.secao === 'musica') return this.desenhaMusica(g, p);
     if (this.secao === 'google') return this.desenhaGoogle(g, p);
+    if (this.secao === 'sites') return this.desenhaSites(g, p);
     if (this.secao === 'ajustes') {
       texto(g, 'Ajustes', 48, 92, FONTE_T(64), UI.txt);
       texto(g, 'Valem também para o Blocos VR', 50, 136, FONTE(700, 28), UI.sub);
@@ -913,7 +914,7 @@ AFRAME.registerComponent('ryan-vr', {
     const CURTO = { ppt: 'Pedra Papel', paredao: 'Paredão', piano: 'Piano de Luz', corrida: 'Corrida', cubos: 'Corta Cubos', alvos: 'Tiro ao Alvo', baloes: 'Balões', blocos: 'Blocos', turbo: 'Turbo', montanha: 'Montanha', mar: 'Fundo do Mar', espaco: 'Espaço', aurora: 'Aurora' };
     const apps = [...JOGOS.map(j => ({ it: j, nome: CURTO[j.id] || j.titulo })), ...VIDEOS.map(v => ({ it: v, nome: CURTO[v.id] || v.titulo })),
       { id: 'ambientes', nome: 'Ambientes', ic: '🏞️', cor: ['#5fd0a0', '#1f7a6a'] }, { id: 'fotos', nome: 'Fotos', ic: '🖼️', cor: ['#ff9ac4', '#c2367a'] }, { id: 'musica', nome: 'Música', ic: '🎵', cor: ['#ff7a6b', '#b8322a'] }, { id: 'central', nome: 'Controle', ic: '🎛️', cor: ['#7b86ff', '#3a3fb8'] },
-      { id: 'google', nome: 'Google', ic: '🔎', cor: ['#4f8df7', '#1a56c4'] }, { id: 'meus', nome: 'Meus vídeos', ic: '📁', cor: ['#ffb36b', '#d9762b'] }, { id: 'ajustes', nome: 'Ajustes', ic: '⚙️', cor: ['#9aa0b5', '#5a6075'] }];
+      { id: 'sites', nome: 'Meus sites', ic: '🌐', cor: ['#5ad1ff', '#2a5fb8'] }, { id: 'google', nome: 'Google', ic: '🔎', cor: ['#4f8df7', '#1a56c4'] }, { id: 'meus', nome: 'Meus vídeos', ic: '📁', cor: ['#ffb36b', '#d9762b'] }, { id: 'ajustes', nome: 'Ajustes', ic: '⚙️', cor: ['#9aa0b5', '#5a6075'] }];
     const cols = 9, R = 66, dx = (W - 112) / cols;
     apps.forEach((a, i) => {
       const c = i % cols, l = Math.floor(i / cols), cx = 56 + dx * (c + 0.5), cy = 270 + l * 280;
@@ -932,6 +933,84 @@ AFRAME.registerComponent('ryan-vr', {
       g.lineWidth = hv ? 5 : 3; g.strokeStyle = hv ? '#ffffff' : 'rgba(255,255,255,.45)'; g.beginPath(); g.arc(cx, cy, r - 2, 0, 7); g.stroke();
       g.font = FONTE(800, 28); const fs = Math.min(28, Math.floor(28 * (dx - 18) / Math.max(1, g.measureText(a.nome).width))); // o nome sempre cabe embaixo do ícone
       texto(g, a.nome, cx, cy + R + 50, FONTE(800, fs), UI.txt, 'center');
+    });
+  },
+  // ---------- 🌐 Meus sites: qualquer site no VR (abre no navegador do app, nas duas telas) ----------
+  listaSites() {
+    if (!this.sites) { try { this.sites = JSON.parse(localStorage.getItem('ryanvr-sites') || 'null'); } catch (e) {} }
+    if (!this.sites) this.sites = [
+      { nome: 'Spotify', url: 'https://open.spotify.com', ic: '🎧', cor: ['#1ed760', '#0f6e33'], pc: true },
+      { nome: 'WhatsApp', url: 'https://web.whatsapp.com', ic: '💬', cor: ['#25d366', '#0f7a3c'], pc: true },
+      { nome: 'YouTube', url: 'https://m.youtube.com', ic: '▶️', cor: ['#ff4040', '#a80f0f'] },
+      { nome: 'Google', url: 'https://www.google.com/?safe=active', ic: '🔎', cor: ['#4f8df7', '#1a56c4'] }];
+    return this.sites;
+  },
+  guardaSites() { try { localStorage.setItem('ryanvr-sites', JSON.stringify(this.sites)); } catch (e) {} },
+  // "spotify" → https://spotify.com ; "web.whatsapp.com" → https://web.whatsapp.com
+  normalizaSite(t) {
+    t = (t || '').trim().toLowerCase().replace(/\s+/g, ''); if (!t) return null;
+    if (!/^https?:\/\//.test(t)) t = 'https://' + t;
+    try { const u = new URL(t); if (!u.hostname.includes('.')) u.hostname += '.com'; return u.href; } catch (e) { return null; }
+  },
+  salvaSite() {
+    const url = this.normalizaSite(this.siteTexto); if (!url) return this.aviso('Digite o endereço, por exemplo: roblox.com');
+    const host = new URL(url).hostname.replace(/^www\.|^m\.|^web\.|^open\./, ''), base = host.split('.')[0];
+    const CONHECIDOS = { spotify: ['🎧', '#1ed760', true], whatsapp: ['💬', '#25d366', true], youtube: ['▶️', '#ff4040'], instagram: ['📷', '#d6249f'], tiktok: ['🎵', '#25f4ee'], netflix: ['🎬', '#e50914'], roblox: ['🎮', '#7a7a7a'], wikipedia: ['📚', '#9aa0b5'], facebook: ['👍', '#1877f2'], twitch: ['🟣', '#9146ff'], discord: ['🎧', '#5865f2'] };
+    const k = Object.keys(CONHECIDOS).find(n => host.includes(n)), c = k ? CONHECIDOS[k] : null;
+    const cores = ['#8f7bff', '#ff8a3d', '#2ed47a', '#3dc8ff', '#ff5c8a', '#ffd23d'], cor = c ? c[1] : cores[this.listaSites().length % cores.length];
+    this.listaSites().push({ nome: base.charAt(0).toUpperCase() + base.slice(1), url, ic: c ? c[0] : base.charAt(0).toUpperCase(), cor: [cor, cor], pc: !!(c && c[2]) });
+    this.guardaSites(); this.addSite = false; this.siteTexto = ''; this.renderTudo(); som('abre'); this.aviso('Site adicionado: ' + base);
+  },
+  abreSite(st) {
+    const vr = this.el.components.cardboard.ativo;
+    if (window.RyanApp && window.RyanApp.abrirSiteVR && vr) { som('abre'); this.aviso('Abrindo ' + st.nome + ' no VR…'); setTimeout(() => window.RyanApp.abrirSiteVR(st.url, !!st.pc), 350); return; }
+    if (window.RyanApp) { try { history.replaceState(null, '', location.pathname + '?secao=sites'); } catch (e) {} location.href = st.url; return; }
+    window.open(st.url, '_blank');
+  },
+  // teclado do painel (o mesmo jeito do Google): aponte e faça a pinça, ou olhe
+  desenhaTeclas(g, p, y0, onTecla, rotVai) {
+    const W = p.W, linhas = ['1234567890', 'qwertyuiop', 'asdfghjkl/', 'zxcvbnm.-:'], kw = (W - 96 - 9 * 10) / 10, kh = 90;
+    const tecla = (id, rot, kx, ky, w, cor, corTxt) => {
+      const hv = p.botao('k-' + id, kx, ky, w, kh, () => onTecla(id));
+      caixa(g, kx, ky, w, kh, 20, hv ? UI.acc : (cor || UI.card), hv ? '#ffffff' : null, 4);
+      texto(g, rot, kx + w / 2, ky + 60, FONTE(800, rot.length > 2 ? 32 : 44), hv ? '#120d2e' : (corTxt || UI.txt), 'center');
+    };
+    linhas.forEach((l, r) => [...l].forEach((c, i) => tecla(c, c, 48 + i * (kw + 10), y0 + r * (kh + 10), kw)));
+    const y5 = y0 + 4 * (kh + 10);
+    tecla('apaga', '⌫ Apagar', 48, y5, kw * 2 + 10); tecla('ponto-com', '.com', 48 + 2 * (kw + 10), y5, kw * 2 + 10);
+    tecla('limpa', 'Limpar', 48 + 4 * (kw + 10), y5, kw * 2 + 10); tecla('vai', rotVai, 48 + 6 * (kw + 10), y5, W - 48 - (48 + 6 * (kw + 10)), '#2ed47a', '#ffffff');
+  },
+  desenhaSites(g, p) {
+    const W = p.W, L = this.listaSites();
+    if (this.addSite) {
+      texto(g, '➕ Adicionar site', 56, 92, FONTE_T(56), UI.txt);
+      const hvX = p.botao('s-cancela', W - 260, 40, 210, 80, () => { this.addSite = false; this.renderTudo(); }); caixa(g, W - 260, 40, 210, 80, 24, hvX ? UI.acc : UI.card); texto(g, '✕ Cancelar', W - 155, 92, FONTE(800, 30), hvX ? '#120d2e' : UI.txt, 'center');
+      const hvb = p.botao('k-barra', 48, 132, W - 96, 96, () => { if (!this.el.components.cardboard.ativo) { const t = window.prompt('Endereço do site (ex.: roblox.com)', this.siteTexto || ''); if (t !== null) { this.siteTexto = t.slice(0, 80); this.renderTudo(); } } });
+      caixa(g, 48, 132, W - 96, 96, 48, '#ffffff', hvb ? UI.acc : '#dadce0', 4); texto(g, '🌐', 90, 196, FONTE(800, 40), '#5f6368');
+      texto(g, this.siteTexto ? this.siteTexto + '|' : 'endereço do site, ex.: roblox.com', 150, 196, FONTE(700, 42), this.siteTexto ? '#202124' : '#9aa0a6');
+      this.desenhaTeclas(g, p, 250, id => this.teclaAcao(id), '✓ Adicionar');
+      return;
+    }
+    texto(g, 'Meus sites', 56, 92, FONTE_T(60), UI.txt);
+    texto(g, 'Abrem dentro do VR · a sua mão vira o mouse · ⌨️ teclado no site', 58, 134, FONTE(700, 26), UI.sub);
+    const hvE = p.botao('s-editar', W - 300, 40, 250, 80, () => { this.editaSites = !this.editaSites; this.renderTudo(); }); caixa(g, W - 300, 40, 250, 80, 24, this.editaSites ? '#e5485f' : hvE ? UI.cardHover : UI.card); texto(g, this.editaSites ? '✓ Pronto' : '✏️ Editar', W - 175, 92, FONTE(800, 30), '#ffffff', 'center');
+    const itens = [...L.map((st, i) => ({ st, i })), { novo: true }], cols = 6, R = 82, dx = (W - 112) / cols;
+    itens.slice(0, 18).forEach((it, k) => {
+      const c = k % cols, l = Math.floor(k / cols), cx = 56 + dx * (c + 0.5), cy = 280 + l * 250;
+      const hv = p.botao('s-' + k, cx - R - 10, cy - R - 10, 2 * R + 20, 2 * R + 70, () => {
+        if (it.novo) { this.addSite = true; this.siteTexto = ''; this.renderTudo(); return; }
+        if (this.editaSites) { L.splice(it.i, 1); this.guardaSites(); this.renderTudo(); this.aviso('Site removido'); return; }
+        this.abreSite(it.st);
+      });
+      const r = hv ? R * 1.08 : R;
+      g.save(); g.beginPath(); g.arc(cx, cy, r, 0, 7); g.clip();
+      const cor = it.novo ? ['rgba(255,255,255,.18)', 'rgba(255,255,255,.08)'] : it.st.cor, gr = g.createLinearGradient(cx, cy - r, cx, cy + r); gr.addColorStop(0, cor[0]); gr.addColorStop(1, cor[1]); g.fillStyle = gr; g.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+      const ic = it.novo ? '➕' : it.st.ic; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#ffffff'; g.font = ic.length === 1 && /[A-Z]/.test(ic) ? FONTE_T(Math.round(r * 1.1)) : `${Math.round(r * 0.95)}px serif`; g.fillText(ic, cx, cy + 4);
+      const br = g.createLinearGradient(cx, cy - r, cx, cy + r); br.addColorStop(0, 'rgba(255,255,255,.35)'); br.addColorStop(0.45, 'rgba(255,255,255,0)'); g.fillStyle = br; g.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+      g.restore();
+      g.lineWidth = hv ? 5 : 3; g.strokeStyle = hv ? '#ffffff' : 'rgba(255,255,255,.45)'; g.beginPath(); g.arc(cx, cy, r - 2, 0, 7); g.stroke();
+      if (this.editaSites && !it.novo) { caixa(g, cx + R * 0.45, cy - R - 6, 56, 56, 28, '#e5485f'); texto(g, '✕', cx + R * 0.45 + 28, cy - R + 34, FONTE(900, 32), '#fff', 'center'); }
+      texto(g, it.novo ? 'Adicionar' : it.st.nome.slice(0, 14), cx, cy + R + 48, FONTE(800, 28), UI.txt, 'center');
     });
   },
   // ---------- Google: teclado no VR (aponte e faça a pinça, ou olhe) ----------
@@ -2317,6 +2396,15 @@ AFRAME.registerComponent('ryan-vr', {
 
   // ---------- teclado de mesa: teclado de luz deitado na sua frente (digite com os dedos) ----------
   teclaAcao(id) {
+    if (this.secao === 'sites' && this.addSite) {
+      const t = this.siteTexto || '';
+      if (id === 'vai') return this.salvaSite();
+      this.siteTexto = id === 'apaga' ? t.slice(0, -1) : id === 'limpa' ? '' : id === 'ponto-com' ? t + '.com' : id === 'espaco' ? t : id.length === 1 ? (t + id).slice(0, 80) : t;
+      this.teclaFlash = this.teclaFlash || {}; this.teclaFlash[id] = performance.now(); som('hover'); this.vibra(10);
+      this.pCentro.render(); if (this.pTeclado) this.pTeclado.render(); return;
+    }
+    if (id === 'limpa') { this.busca = ''; this.renderTudo(); return; }
+    if (id === 'ponto-com') id = '.';
     const b = this.busca || '';
     if (id === 'apaga') this.busca = b.slice(0, -1);
     else if (id === 'espaco') { if (b.length < 60) this.busca = b + ' '; }
@@ -2359,7 +2447,7 @@ AFRAME.registerComponent('ryan-vr', {
     g.save(); g.shadowColor = '#fff'; g.shadowBlur = 18; g.lineWidth = 5; g.strokeStyle = 'rgba(255,255,255,.95)'; g.beginPath(); g.roundRect(KW + 100, 14, W - KW - 114, H - 28, 34); g.stroke(); g.restore();
   },
   passoTeclado(dt) {
-    const quer = this.secao === 'google' && this.estado === 'saguao' && !this.detalhe && !this.posicionando && this.pCentro.el.object3D.visible;
+    const quer = (this.secao === 'google' || (this.secao === 'sites' && this.addSite)) && this.estado === 'saguao' && !this.detalhe && !this.posicionando && this.pCentro.el.object3D.visible;
     if (!quer) {
       if (this.pTeclado && this.pTeclado.el.object3D.visible) this.pTeclado.visivel = false;
       // saiu do Google: desliga a câmera escondida que ele ligou
@@ -3233,7 +3321,21 @@ AFRAME.registerComponent('ryan-vr', {
 
 
 // enquanto o navegador VR do app está aberto, a cena 3D para de desenhar (o celular fica livre para a página)
-window.__pausaCena = parar => { const s = document.querySelector('a-scene'); if (!s || !s.renderer) return; s.renderer.setAnimationLoop(parar ? null : s.render); if (!parar) { const c = s.components['ryan-vr']; c && c.aviso('De volta ao Ryan VR'); } };
+window.__pausaCena = parar => {
+  const s = document.querySelector('a-scene'); if (!s || !s.renderer) return; const c = s.components['ryan-vr'];
+  s.renderer.setAnimationLoop(parar ? null : s.render);
+  clearInterval(window.__maoNavId);
+  // a cena para de desenhar, mas a mão continua sendo lida e vira o mouse do navegador VR
+  if (parar && window.RyanApp && window.RyanApp.maoNav) window.__maoNavId = setInterval(() => {
+    try {
+      if (MAO.hl && c && c.camVideo && AJ.maos) MAO.r.detecta(MAO.hl, c.camVideo);
+      const m = MAO.r.principal;
+      if (m && MAO.r.visivel(m)) window.RyanApp.maoNav((m.lm[4].x + m.lm[8].x) / 2, (m.lm[4].y + m.lm[8].y) / 2, !!m.pinca); // ponto da pinça: não pula quando você aperta
+      else window.RyanApp.maoNav(-1, -1, false);
+    } catch (e) {}
+  }, 40);
+  if (!parar && c) c.aviso('De volta ao Ryan VR');
+};
 // botão voltar do celular: no jogo abre a pausa; com a pausa aberta, sai do jogo
 window.__voltar = () => {
   const s = document.querySelector('a-scene'), c = s && s.components['ryan-vr']; if (!c) return false;
@@ -3297,7 +3399,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const k = e.key.toLowerCase();
     if (k === 'escape') { if (window.__voltar && !window.__voltar() && a.detalhe) { a.detalhe = null; a.renderTudo(); } e.preventDefault(); return; }
     // Google: o teclado do computador digita na busca
-    if (a.secao === 'google' && a.estado === 'saguao' && !a.detalhe) {
+    if ((a.secao === 'google' || (a.secao === 'sites' && a.addSite)) && a.estado === 'saguao' && !a.detalhe) {
       if (k === 'enter') a.teclaAcao('vai');
       else if (k === 'backspace') a.teclaAcao('apaga');
       else if (k === ' ') a.teclaAcao('espaco');
@@ -3329,7 +3431,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 3.0' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 3.1' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 
