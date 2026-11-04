@@ -83,7 +83,7 @@
       <button id="btn-pc" class="sec">🖥️ Modo Computador <small>mouse e teclado</small></button>
     </div>
     <p class="nota">Computador: arraste o mouse para olhar, clique para apertar; no Google digite no teclado; Esc pausa os jogos; na Corrida use ← → (ou A e D) e espaço para o turbo. Sem óculos: toque direto nos botões e arraste o dedo (ou mexa o celular) para olhar em volta. No Cardboard: olhe para um botão até o anel encher, ou aperte o botão do óculos. Toque longo centraliza a visão.</p>
-    <p class="nota" id="versao">Ryan VR 3.3</p>
+    <p class="nota" id="versao">Ryan VR 3.4</p>
   </div>
 </div>
 <div id="toque-vr" hidden><div>Aperte o botão do Cardboard<br>para continuar<small>(ou toque na tela)</small></div></div>
@@ -314,6 +314,21 @@ function aplicaVolume() {
 }
 const AMBIENTES = [{ id: 'saguao', nome: 'Sala Ryan', ic: '🏠' }, { id: 'praia', nome: 'Praia', ic: '🏖️' }, { id: 'montanhas', nome: 'Montanhas', ic: '🏔️' }, { id: 'lua', nome: 'Lua', ic: '🌙' }, { id: 'espaco', nome: 'Espaço', ic: '🌌' }, { id: 'floresta', nome: 'Floresta', ic: '🌲' }];
 const PPT_IC = { pedra: '✊', papel: '✋', tesoura: '✌️' }, PPT_NOME = { pedra: 'pedra', papel: 'papel', tesoura: 'tesoura' };
+// apps do celular que têm versão em site: abrem o SITE dentro do VR (duas telas, a mão vira o mouse)
+const WEB_DOS_APPS = {
+  'com.whatsapp': ['https://web.whatsapp.com', true], 'com.whatsapp.w4b': ['https://web.whatsapp.com', true],
+  'com.spotify.music': ['https://open.spotify.com', true], 'com.google.android.youtube': ['https://m.youtube.com'],
+  'com.google.android.apps.youtube.kids': ['https://www.youtubekids.com'], 'com.instagram.android': ['https://www.instagram.com'],
+  'com.zhiliaoapp.musically': ['https://www.tiktok.com'], 'com.ss.android.ugc.trill': ['https://www.tiktok.com'],
+  'com.netflix.mediaclient': ['https://www.netflix.com'], 'com.facebook.katana': ['https://m.facebook.com'], 'com.facebook.orca': ['https://www.messenger.com', true],
+  'com.discord': ['https://discord.com/app', true], 'com.twitter.android': ['https://x.com'], 'com.roblox.client': ['https://www.roblox.com'],
+  'com.google.android.gm': ['https://mail.google.com'], 'com.google.android.apps.maps': ['https://www.google.com/maps'],
+  'com.google.android.apps.photos': ['https://photos.google.com'], 'com.android.chrome': ['https://www.google.com/?safe=active'],
+  'com.google.android.googlequicksearchbox': ['https://www.google.com/?safe=active'], 'tv.twitch.android.app': ['https://m.twitch.tv'],
+  'com.duolingo': ['https://www.duolingo.com'], 'org.telegram.messenger': ['https://web.telegram.org', true], 'com.pinterest': ['https://www.pinterest.com'],
+  'com.amazon.avod.thirdpartyclient': ['https://www.primevideo.com'], 'com.disney.disneyplus': ['https://www.disneyplus.com'], 'com.kwai.video': ['https://www.kwai.com'],
+  'com.google.android.apps.docs': ['https://drive.google.com'], 'com.google.android.keep': ['https://keep.google.com'], 'com.google.android.calendar': ['https://calendar.google.com']
+};
 const RADIO = [{ id: 'saguao', nome: 'Sala calma', ic: '🌙' }, { id: 'montanha', nome: 'Aventura', ic: '⛰️' }, { id: 'mar', nome: 'Oceano', ic: '🌊' }, { id: 'espaco', nome: 'Galáxia', ic: '🪐' }, { id: 'aurora', nome: 'Aurora', ic: '✨' }];
 function som(tipo) {
   const a = audio(); if (!a) return;
@@ -967,8 +982,16 @@ AFRAME.registerComponent('ryan-vr', {
     } else {
       const A = this.carregaApps();
       if (!window.RyanApp || !window.RyanApp.listarApps) { quebra(g, 'Os apps do celular aparecem aqui quando você usa o app Android do Ryan VR (RyanVR.apk). No navegador, use a aba 🌐 Sites.', 60, 260, W - 120, 46, FONTE(700, 32), UI.sub, 4); return; }
-      texto(g, A.length + ' apps · abrem fora do VR (o botão voltar traz você de volta)', 58, 136, FONTE(700, 26), UI.sub);
-      itens = A.map(a => ({ nome: a.nome, img: a.img, ic: a.nome.charAt(0).toUpperCase(), cor: ['#8f7bff', '#5a46c8'], abre: () => this.abreApp(a) }));
+      texto(g, A.length + ' apps · com o selo VR abrem dentro do óculos (duas telas, com a mão)', 58, 136, FONTE(700, 26), UI.sub);
+      itens = A.map(a => {
+        const w = WEB_DOS_APPS[a.pacote];
+        if (w) return { nome: a.nome, img: a.img, ic: a.nome.charAt(0).toUpperCase(), cor: ['#8f7bff', '#5a46c8'], vr: true, abre: () => this.abreSite({ nome: a.nome, url: w[0], pc: !!w[1] }) };
+        // sem versão em site: avisa antes, porque o app abre fora do VR
+        return { nome: a.nome, img: a.img, ic: a.nome.charAt(0).toUpperCase(), cor: ['#8f7bff', '#5a46c8'], abre: () => {
+          if (this.confirmaApp === a.pacote && performance.now() - this.confirmaAppT < 5000) { this.confirmaApp = null; this.abreApp(a); }
+          else { this.confirmaApp = a.pacote; this.confirmaAppT = performance.now(); this.aviso(a.nome + ' não tem versão VR: toque de novo para abrir fora do jogo'); }
+        } };
+      });
     }
     const cols = 8, linhas = 3, porPag = cols * linhas, pags = Math.max(1, Math.ceil(itens.length / porPag)), pag = Math.min(this.paginaApps || 0, pags - 1);
     const R = 64, dx = (W - 112) / cols;
@@ -980,6 +1003,7 @@ AFRAME.registerComponent('ryan-vr', {
       else { const gr = g.createLinearGradient(cx, cy - r, cx, cy + r); gr.addColorStop(0, it.cor[0]); gr.addColorStop(1, it.cor[1]); g.fillStyle = gr; g.fillRect(cx - r, cy - r, 2 * r, 2 * r); g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = it.ic.length === 1 && /[A-Z0-9]/.test(it.ic) ? FONTE_T(Math.round(r)) : `${Math.round(r * 0.95)}px serif`; g.fillText(it.ic, cx, cy + 4); }
       g.restore();
       g.lineWidth = hv ? 5 : 3; g.strokeStyle = hv ? '#ffffff' : 'rgba(255,255,255,.4)'; g.beginPath(); g.arc(cx, cy, r - 1, 0, 7); g.stroke();
+      if (it.vr) { caixa(g, cx + R * 0.35, cy - R - 4, 58, 34, 17, '#2ed47a'); texto(g, 'VR', cx + R * 0.35 + 29, cy - R + 22, FONTE(900, 22), '#ffffff', 'center'); }
       g.font = FONTE(800, 24); const fs = Math.min(24, Math.floor(24 * (dx - 14) / Math.max(1, g.measureText(it.nome).width)));
       texto(g, it.nome, cx, cy + R + 44, FONTE(800, Math.max(16, fs)), UI.txt, 'center');
     });
@@ -3484,7 +3508,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 3.3' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 3.4' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 

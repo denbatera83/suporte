@@ -127,6 +127,9 @@ public class MainActivity extends Activity {
         s.setLoadWithOverviewMode(true);
         s.setUseWideViewPort(true);
         web.setWebViewClient(new WebViewClient() {
+            // links que tentam abrir outro app (whatsapp://, intent://...) não tiram você do Ryan VR
+            public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) { String u = r.getUrl().toString().toLowerCase(); return !(u.startsWith("http") || u.startsWith("file:") || u.startsWith("about:") || u.startsWith("data:") || u.startsWith("blob:")); }
+            @Override public boolean shouldOverrideUrlLoading(WebView v, String url) { String u = url == null ? "" : url.toLowerCase(); return !(u.startsWith("http") || u.startsWith("file:") || u.startsWith("about:") || u.startsWith("data:") || u.startsWith("blob:")); }
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest req) {
                 Uri u = req.getUrl();

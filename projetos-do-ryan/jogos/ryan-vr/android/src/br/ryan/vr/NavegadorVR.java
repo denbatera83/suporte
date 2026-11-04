@@ -73,7 +73,11 @@ public class NavegadorVR extends FrameLayout implements SensorEventListener {
         CookieManager.getInstance().setAcceptThirdPartyCookies(nav, true);
         // desenhado em imagem (software) para poder aparecer nos dois olhos ao mesmo tempo
         nav.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-        nav.setWebViewClient(new WebViewClient());
+        nav.setWebViewClient(new WebViewClient() {
+            // o site fica SEMPRE aqui dentro: links que tentam abrir o app (whatsapp://, intent://...) não saem do VR
+            public boolean shouldOverrideUrlLoading(WebView v, android.webkit.WebResourceRequest r) { return segura(v, r.getUrl().toString()); }
+            @Override public boolean shouldOverrideUrlLoading(WebView v, String url) { return segura(v, url); }
+        });
         nav.setWebChromeClient(new WebChromeClient() {
             @Override public void onProgressChanged(WebView v, int n) { progresso = n; invalidate(); }
             // música protegida (ex.: Spotify) pede licença de mídia; câmera e microfone ficam com o Ryan VR
@@ -87,6 +91,15 @@ public class NavegadorVR extends FrameLayout implements SensorEventListener {
         sm = (SensorManager) a.getSystemService(Context.SENSOR_SERVICE);
     }
 
+    private static boolean segura(WebView v, String url) {
+        if (url == null) return true;
+        String u = url.toLowerCase();
+        if (u.startsWith("http://") || u.startsWith("https://") || u.startsWith("about:") || u.startsWith("data:") || u.startsWith("blob:")) return false; // carrega aqui mesmo
+        if (u.startsWith("intent:")) { // usa o endereço de site que vem junto, se tiver
+            try { android.content.Intent i = android.content.Intent.parseUri(url, android.content.Intent.URI_INTENT_SCHEME); String f = i.getStringExtra("browser_fallback_url"); if (f != null) v.loadUrl(f); } catch (Exception e) {}
+        }
+        return true; // whatsapp://, market://, etc.: não abre o app de fora
+    }
     public boolean voltar() { if (teclado) { teclado = false; return true; } if (nav.canGoBack()) { nav.goBack(); return true; } return false; }
     public void fechar() {
         if (sm != null) sm.unregisterListener(this);
