@@ -1,5 +1,5 @@
 // Guarda o jogo no celular para abrir mesmo sem internet (depois da primeira vez).
-const CACHE = 'ryanvr-v18';
+const CACHE = 'ryanvr-v19';
 const ARQUIVOS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', '../blocos-vr/index.html', '../comum/maos-vr.js',
   'https://cdn.jsdelivr.net/npm/aframe@1.6.0/dist/aframe-v1.6.0.min.js'];
 self.addEventListener('install', e => {
