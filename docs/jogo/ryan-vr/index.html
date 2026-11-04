@@ -301,9 +301,9 @@ const APP = /\bwv\b/.test(navigator.userAgent);
 const Q = new URLSearchParams(location.search);
 const AJ = (() => { // ajustes guardados no celular (valem também para o Blocos VR)
   const g = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
-  return { ipd: g('ryanvr-ipd', 0.064), lente: g('ryanvr-lente', true), fuse: g('ryanvr-fuse', 1.2), musica: g('ryanvr-musica', true), maos: g('ryanvr-maos', true), camFov: g('ryanvr-camfov2', 0), distTV: g('ryanvr-disttv', 2.2), suave: g('ryanvr-suave2', false), graficos: g('ryanvr-graficos', g('ryanvr-suave2', false) ? 'baixo' : 'medio'), ambiente: g('ryanvr-ambiente', 'saguao'), imersao: g('ryanvr-imersao', 1), volume: g('ryanvr-volume', 0.8), miopia: g('ryanvr-miopia', true), maoVisual: g('ryanvr-maovisual', 'esqueleto'), brilho: g('ryanvr-brilho', 1) };
+  return { ipd: g('ryanvr-ipd', 0.064), lente: g('ryanvr-lente', true), fuse: g('ryanvr-fuse', 1.2), musica: g('ryanvr-musica', true), maos: g('ryanvr-maos', true), camFov: g('ryanvr-camfov2', 0), distTV: g('ryanvr-disttv', 2.2), suave: g('ryanvr-suave2', false), graficos: g('ryanvr-graficos', g('ryanvr-suave2', false) ? 'baixo' : 'medio'), ambiente: g('ryanvr-ambiente', 'saguao'), imersao: g('ryanvr-imersao', 1), volume: g('ryanvr-volume', 0.8), miopia: g('ryanvr-miopia', true), maoVisual: g('ryanvr-maovisual2', '3d'), brilho: g('ryanvr-brilho', 1) };
 })();
-const salva = () => { try { localStorage.setItem('ryanvr-ipd', JSON.stringify(AJ.ipd)); localStorage.setItem('ryanvr-lente', JSON.stringify(AJ.lente)); localStorage.setItem('ryanvr-fuse', JSON.stringify(AJ.fuse)); localStorage.setItem('ryanvr-musica', JSON.stringify(AJ.musica)); localStorage.setItem('ryanvr-maos', JSON.stringify(AJ.maos)); localStorage.setItem('ryanvr-camfov2', JSON.stringify(AJ.camFov)); localStorage.setItem('ryanvr-disttv', JSON.stringify(AJ.distTV)); localStorage.setItem('ryanvr-suave2', JSON.stringify(AJ.suave)); localStorage.setItem('ryanvr-graficos', JSON.stringify(AJ.graficos)); localStorage.setItem('ryanvr-ambiente', JSON.stringify(AJ.ambiente)); localStorage.setItem('ryanvr-imersao', JSON.stringify(AJ.imersao)); localStorage.setItem('ryanvr-volume', JSON.stringify(AJ.volume)); localStorage.setItem('ryanvr-miopia', JSON.stringify(AJ.miopia)); localStorage.setItem('ryanvr-maovisual', JSON.stringify(AJ.maoVisual)); localStorage.setItem('ryanvr-brilho', JSON.stringify(AJ.brilho)); } catch (e) {} };
+const salva = () => { try { localStorage.setItem('ryanvr-ipd', JSON.stringify(AJ.ipd)); localStorage.setItem('ryanvr-lente', JSON.stringify(AJ.lente)); localStorage.setItem('ryanvr-fuse', JSON.stringify(AJ.fuse)); localStorage.setItem('ryanvr-musica', JSON.stringify(AJ.musica)); localStorage.setItem('ryanvr-maos', JSON.stringify(AJ.maos)); localStorage.setItem('ryanvr-camfov2', JSON.stringify(AJ.camFov)); localStorage.setItem('ryanvr-disttv', JSON.stringify(AJ.distTV)); localStorage.setItem('ryanvr-suave2', JSON.stringify(AJ.suave)); localStorage.setItem('ryanvr-graficos', JSON.stringify(AJ.graficos)); localStorage.setItem('ryanvr-ambiente', JSON.stringify(AJ.ambiente)); localStorage.setItem('ryanvr-imersao', JSON.stringify(AJ.imersao)); localStorage.setItem('ryanvr-volume', JSON.stringify(AJ.volume)); localStorage.setItem('ryanvr-miopia', JSON.stringify(AJ.miopia)); localStorage.setItem('ryanvr-maovisual2', JSON.stringify(AJ.maoVisual)); localStorage.setItem('ryanvr-brilho', JSON.stringify(AJ.brilho)); } catch (e) {} };
 // ---------- conta do óculos: fica só neste aparelho (nada vai para a internet) ----------
 // a senha nunca é guardada: só um "resumo" (SHA-256 com sal), que não dá para desfazer
 function sha256(s) {
@@ -1433,8 +1433,8 @@ AFRAME.registerComponent('ryan-vr', {
       linha(270, 'Correção da lente', AJ.lente ? 'Ligada' : 'Desligada', () => muda('lente', !AJ.lente), () => muda('lente', !AJ.lente));
       linha(380, 'Distância da TV', AJ.distTV.toFixed(1) + ' m', () => { muda('distTV', Math.max(1.4, +(AJ.distTV - 0.2).toFixed(1))); this.raioAtual = 0; this.aplicaDistancia(); }, () => { muda('distTV', Math.min(3.2, +(AJ.distTV + 0.2).toFixed(1))); this.raioAtual = 0; this.aplicaDistancia(); });
       linha(490, 'Modo Casa (câmera)', this.casa ? 'Ligado' : 'Desligado', () => this.ligarCasa(!this.casa), () => this.ligarCasa(!this.casa));
-      const MODOS = [['desligada', 'Desligada'], ['esqueleto', 'Esqueleto'], ['colorida', 'Colorida'], ['cubos', 'Cubos'], ['oculta', 'Invisível']];
-      const mi = AJ.maos ? Math.max(1, MODOS.findIndex(m => m[0] === (AJ.maoVisual || 'esqueleto'))) : 0;
+      const MODOS = [['desligada', 'Desligada'], ['3d', 'Mão 3D'], ['esqueleto', 'Esqueleto'], ['colorida', 'Colorida'], ['cubos', 'Cubos'], ['oculta', 'Invisível']];
+      const mi = AJ.maos ? Math.max(1, MODOS.findIndex(m => m[0] === (AJ.maoVisual || '3d'))) : 0;
       const poeModo = n => { const m = MODOS[(n + MODOS.length) % MODOS.length][0]; if (m === 'desligada') muda('maos', false); else { AJ.maoVisual = m; muda('maos', true); if (this.casa || this.camSo) this.ligaMaos(); } };
       linha(600, 'Mão', MODOS[mi][1], () => poeModo(mi - 1), () => poeModo(mi + 1));
       const fovAtual = AJ.camFov || 0;
@@ -1836,7 +1836,47 @@ AFRAME.registerComponent('ryan-vr', {
   },
 
   // ---------- braço de cubos: palma, dedos e antebraço em caixas 3D (quadradinhos) ----------
-  modoMao() { return (this.estado === 'mini' && this.mi && this.mi.def.mao) || AJ.maoVisual || 'esqueleto'; },
+  modoMao() { return (this.estado === 'mini' && this.mi && this.mi.def.mao) || AJ.maoVisual || '3d'; },
+  // ---------- mão 3D: dedos arredondados, juntas com brilho e palma, que seguem a forma 3D da sua mão ----------
+  desenhaMao3D(k, m, Q, tam, fraca) {
+    if (!this.maos3D) {
+      const geoE = new THREE.SphereGeometry(1, 16, 12), geoC = new THREE.CylinderGeometry(1, 1, 1, 14, 1, false);
+      this.maos3D = [0, 1].map(lado => {
+        const pele = new THREE.MeshStandardMaterial({ color: lado ? 0x6366f1 : 0x8b5cf6, roughness: 0.35, metalness: 0.45, emissive: lado ? 0x1e1b4b : 0x2e1065, transparent: true });
+        const junta = new THREE.MeshStandardMaterial({ color: 0x9ff3ff, roughness: 0.2, metalness: 0.2, emissive: 0x38bdf8, emissiveIntensity: 0.9, transparent: true });
+        const ossos = new THREE.InstancedMesh(geoC, pele, 17), juntas = new THREE.InstancedMesh(geoE, junta, 21), palma = new THREE.InstancedMesh(geoE, pele, 2);
+        [ossos, juntas, palma].forEach(o => { o.frustumCulled = false; o.renderOrder = 49; });
+        const g = new THREE.Group(); g.add(palma, ossos, juntas); g.visible = false; this.el.object3D.add(g);
+        return { g, ossos, juntas, palma, pele, junta };
+      });
+      this.m3V = Array.from({ length: 8 }, () => new THREE.Vector3()); this.m3M = new THREE.Matrix4(); this.m3Q = new THREE.Quaternion();
+    }
+    const C = this.maos3D[k]; C.g.visible = true;
+    C.pele.opacity = fraca ? 0.3 : 1; C.junta.opacity = fraca ? 0.35 : 1; C.pele.depthWrite = !fraca;
+    let P = Q; // a forma de verdade da mão em 3D (o scanner dá em metros), presa onde a mão aparece na vista
+    if (m.w3) {
+      const w = m.w3, s = tam / Math.max(0.02, Math.hypot(w[0].x - w[9].x, w[0].y - w[9].y, w[0].z - w[9].z)), qc = this.cam.object3D.getWorldQuaternion(this.m3Q);
+      P = w.map(p => new THREE.Vector3((p.x - w[9].x) * s, -(p.y - w[9].y) * s, -(p.z - w[9].z) * s).applyQuaternion(qc).add(Q[9]));
+    }
+    const [ex, ey, ez, c, d, lado] = this.m3V, M = this.m3M;
+    const base = (centro, eixo, sx, sy, sz) => { ey.copy(eixo).normalize(); ex.copy(lado).addScaledVector(ey, -lado.dot(ey)); if (ex.lengthSq() < 1e-10) ex.set(1, 0, 0); ex.normalize(); ez.crossVectors(ex, ey); M.makeBasis(ex.multiplyScalar(sx), ey.multiplyScalar(sy), ez.multiplyScalar(sz)); M.setPosition(centro); return M; };
+    const larg = P[5].distanceTo(P[17]) || tam * 0.7, alt = P[0].distanceTo(P[9]) || tam, r = larg * 0.105;
+    lado.subVectors(P[17], P[5]); if (lado.lengthSq() < 1e-10) lado.set(1, 0, 0);
+    // palma (um "ovo" achatado) e o pulso
+    c.set(0, 0, 0); [0, 5, 9, 13, 17].forEach(i => c.add(P[i])); c.multiplyScalar(0.2);
+    C.palma.setMatrixAt(0, base(c, d.subVectors(P[9], P[0]), larg * 0.58, alt * 0.6, larg * 0.2));
+    const bra = d.subVectors(P[0], P[9]).normalize().clone(); c.copy(P[0]).addScaledVector(bra, alt * 0.16);
+    C.palma.setMatrixAt(1, base(c, bra, larg * 0.3, alt * 0.24, larg * 0.19));
+    // ossos dos dedos (cilindros que afinam na ponta) e juntas brilhando
+    let n = 0;
+    [[0, 1], [1, 2], [2, 3], [3, 4], [5, 6], [6, 7], [7, 8], [9, 10], [10, 11], [11, 12], [13, 14], [14, 15], [15, 16], [17, 18], [18, 19], [19, 20], [5, 17]].forEach(([a, b], j) => {
+      const len = P[a].distanceTo(P[b]); c.addVectors(P[a], P[b]).multiplyScalar(0.5);
+      const ponta = [3, 6, 9, 12, 15].includes(j), rr = j === 16 ? r * 0.9 : r * (ponta ? 0.85 : 1);
+      C.ossos.setMatrixAt(n++, base(c, d.subVectors(P[b], P[a]), rr, len, rr));
+    });
+    for (let i = 0; i < 21; i++) { const rj = r * ([4, 8, 12, 16, 20].includes(i) ? 1.05 : i === 0 ? 1.4 : 1.12); M.makeScale(rj, rj, rj); M.setPosition(P[i]); C.juntas.setMatrixAt(i, M); }
+    C.ossos.instanceMatrix.needsUpdate = C.juntas.instanceMatrix.needsUpdate = C.palma.instanceMatrix.needsUpdate = true;
+  },
   desenhaMaoCubos(k, m, Q, tam) {
     if (!this.maosCubo) {
       const px = (cs, s) => this.minaPx((g, r) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { g.fillStyle = cs[Math.floor(r() * cs.length)]; g.fillRect(x, y, 1, 1); } }, s);
@@ -2950,9 +2990,11 @@ AFRAME.registerComponent('ryan-vr', {
     const fraca = this.estado === 'cubos' || this.estado === 'alvos';
     const D = 0.45, P = [];
     if (this.maosCubo && (!AJ.maos || !(this.casa || this.camSo))) this.maosCubo.forEach(c => { c.g.visible = false; });
+    if (this.maos3D && (!AJ.maos || !(this.casa || this.camSo))) this.maos3D.forEach(c => { c.g.visible = false; });
     MAO.r.maos.forEach((m, k) => {
       const viz = this.maosViz[k], vis = this.maoVisivel(m), modo = this.modoMao(), esq = modo === 'esqueleto';
-      viz.g.visible = vis && modo !== 'oculta' && modo !== 'cubos'; if (this.maosCubo) this.maosCubo[k].g.visible = false; if (!vis) return;
+      viz.g.visible = vis && modo !== 'oculta' && modo !== 'cubos' && modo !== '3d'; if (this.maosCubo) this.maosCubo[k].g.visible = false; if (this.maos3D) this.maos3D[k].g.visible = false; if (!vis) return;
+      if (modo === '3d') { const Qc = []; for (let i = 0; i < 21; i++) Qc.push(this.pontoNaImagem(m.lm[i].x, m.lm[i].y, 0.4)); this.desenhaMao3D(k, m, Qc, Qc[0].distanceTo(Qc[9]) || 0.07, fraca); if (m === MAO.r.principal) P.push(Qc); return; } // mão 3D
       if (modo === 'cubos') { const Qc = []; for (let i = 0; i < 21; i++) Qc.push(this.pontoNaImagem(m.lm[i].x, m.lm[i].y, 0.4)); this.desenhaMaoCubos(k, m, Qc, Qc[0].distanceTo(Qc[9]) || 0.07); if (m === MAO.r.principal) P.push(Qc); return; } // braço de cubos
       if (viz.modo !== modo) { viz.modo = modo; viz.matP.color.set(esq ? 0xffffff : k ? 0xd2f6ff : 0xffd0e0); viz.matL.color.set(esq ? 0xe8ecff : k ? 0x5aa8ff : 0xff6f9c); viz.palma.visible = !esq; }
       viz.matP.opacity = fraca ? 0.35 : 0.95; viz.matL.opacity = fraca ? 0.25 : esq ? 0.6 : 0.75; viz.matPalma.opacity = fraca ? 0.08 : 0.22;
@@ -5052,7 +5094,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 4.0' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 4.1' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 
