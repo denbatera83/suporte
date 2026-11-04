@@ -58,6 +58,20 @@ Na tela de entrada, **📺 Modo TV** entra no Cardboard, liga a câmera (você v
   - WhatsApp: na primeira vez, conecte pelo código (WhatsApp do celular → Aparelhos conectados → Conectar com número de telefone). O Spotify pode bloquear a reprodução dentro de apps.
 - **🧠 Scanner da mão mais preciso**: usa os pontos da mão em 3D (em metros) — a pinça é medida em centímetros (dedos a menos de 2,8 cm), a mão fechada e a curva dos dedos funcionam com a mão de lado ou girada, e a distância da mão se ajusta ao tamanho real dela (mão de criança). Detecções sem certeza são ignoradas (menos "mãos fantasmas"). Reconhece também quais dedos estão esticados.
 - **✊✋✌️ Pedra, Papel e Tesoura** (novo): contra o Robô Ryan. Ele conta 3, 2, 1, JÁ! e você mostra a mão: fechada = pedra, aberta = papel, dois dedos = tesoura. O jogo mostra qual gesto viu. Quem fizer 3 pontos vence. Sem câmera, olhe para um dos botões.
+- **🗂️ Jogos em setores** (versão 3.6): a janela de Jogos tem abas no alto — ⭐ Todos, ⚡ Ação, ✋ Mãos, 🏀 Esportes, 🎵 Música, 🧩 Criativo e 🖥️ Tela — com 8 jogos por página (◀ ▶ para passar). O Início mostra os destaques e o ícone **Todos os jogos**.
+- **10 jogos novos com as mãos** (versão 3.6), todos com recorde, pausa olhando para baixo e 🏠 Sair:
+  - **⭐ Pega Estrelas** (Mãos): estrelas caem do céu; pegue com a palma da mão (a arco-íris vale 3; a nuvem de chuva tira 2).
+  - **🫧 Bolhas de Sabão** (Mãos): estoure as bolhas com a ponta do dedo; bolha pequena vale 2.
+  - **🤖 Robôs Saltitantes** (Ação): robôs pulam dos buracos de uma mesa; ponha a mão em cima e feche a mão (ou pinça, ou bata) antes que se escondam. O dourado vale 3.
+  - **🎨 Pintura no Ar** (Criativo): faça a pinça e desenhe em 3D no ar; escolha a cor nas bolinhas, 🗑 limpa e 📸 tira foto (sem tempo, é para criar).
+  - **🥁 Tambores de Luz** (Música): três tambores; bata de cima para baixo quando o anel de luz encostar (no tempo certinho vale 20).
+  - **🥫 Derruba Latas** (Esportes): feche a mão para pegar a bola, mexa para a frente e abra para arremessar na pirâmide de latas (derrubar todas dá bônus).
+  - **🏀 Cesta de Basquete** (Esportes): feche a mão para pegar a bola, levante e abra para arremessar (a mira ajuda um pouquinho). Cesta vale 2; depois de 30 s a cesta se afasta e vale 3.
+  - **🌀 Labirinto Inclinado** (Criativo): mova a mão e o labirinto inclina junto; leve a bolinha até o buraco verde (3 labirintos, mais rápido = mais pontos).
+  - **🧱 Passa-Muro** (Ação): paredes com um buraco vêm na sua direção; a mão leva uma bola de luz até o buraco antes da parede chegar (3 vidas; fica mais rápido).
+  - **🖐️ Conta com os Dedos** (Mãos): resolva a continha da lousa mostrando o resultado com os dedos das duas mãos (até 10; mão fechada é zero).
+- **🌟 Gráficos Super** (em Ajustes, além de Baixo/Médio/Ultra): desenha com até 1,7× os pontos da tela, texturas com mipmaps e filtro anisotrópico 16×, mais nitidez na lente e câmera da casa em Full HD — o mais claro e nítido possível (use em celulares fortes).
+- **☀️ Brilho** (na Central de controle): deixa tudo mais claro ou mais escuro (60% a 180%), vale no VR e no Blocos VR.
 - **🏓 Paredão** (novo): rebata a bola de luz com a palma da mão (cada mão é uma raquete); 3 vidas, a bola acelera.
 - **🎹 Piano de Luz** (novo): toque as teclas com a ponta do dedo (toquinho para baixo ou pinça); a próxima nota de "Brilha, Brilha Estrelinha" brilha com uma estrela.
 - **Mãos em 3D**: juntas redondas, ossos em tubo e a palma de vidro (esquerda rosada, direita azulada).

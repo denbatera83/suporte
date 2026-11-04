@@ -18,7 +18,7 @@
 
   function novaMao(lado) {
     return { lado, lm: null, alvo: null, vistoEm: 0, vel: 0, tam: 0,
-      pinca: false, fechada: false, segura: false, gatilho: false, curva: [0, 0, 0, 0], dedos: [false, false, false, false], palma3D: 0, certeza: 1,
+      pinca: false, fechada: false, segura: false, gatilho: false, curva: [0, 0, 0, 0], dedos: [false, false, false, false], polegar: false, palma3D: 0, certeza: 1,
       // eventos: valem só no quadro em que aconteceram
       pincou: false, agarrou: false, soltou: false, atirou: false };
   }
@@ -117,6 +117,8 @@
       m.curva = DEDOS.map(([p, , b]) => Math.max(0, Math.min(1, 1.6 - dd(p, 0) / Math.max(1e-4, dd(b, 0)))));
       // quais dedos estão esticados (indicador, médio, anelar, mindinho): a ponta longe do pulso e o dedo reto
       m.dedos = DEDOS.map(([p, j, b]) => dd(p, 0) > dd(j, 0) * 1.08 && dd(p, 0) > dd(b, 0) * 1.45);
+      // dedão esticado: a ponta fica longe do meio da palma (dobrado, ela encosta perto do indicador)
+      m.polegar = dd(4, 9) > dd(0, 9) * 0.75 && dd(4, 5) > dd(3, 5) * 0.9;
       const segura = m.pinca || m.fechada;
       if (segura && !m.segura) m.agarrou = true;
       if (!segura && m.segura) m.soltou = true;
