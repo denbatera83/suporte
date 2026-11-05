@@ -16,6 +16,8 @@ cp "$J/comum/maos-vr.js" "$D/jogo/comum/"
 # Ajudante do Ryan (outro app, separado): APK e a versão para testar no navegador
 A="$(cd "$J/../ajudante" && pwd)"; mkdir -p "$D/ajudante"
 cp "$A/AjudanteDoRyan.apk" "$A/AjudanteDoRyan-Android.zip" "$D/"; cp "$A/index.html" "$A/icone.png" "$D/ajudante/"
+# Fuga dos Dinos (outro site, separado)
+mkdir -p "$D/fuga-dos-dinos"; cp "$J/../fuga-dos-dinos/index.html" "$D/fuga-dos-dinos/"
 touch "$D/.nojekyll"   # o GitHub Pages entrega os arquivos como estão
 printf 'User-agent: *\nAllow: /\nSitemap: https://denbatera83.github.io/suporte/sitemap.xml\n' > "$D/robots.txt"
 HOJE=$(date +%Y-%m-%d)

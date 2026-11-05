@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Fuga dos Dinos</title>
+<meta name="description" content="Corra de verdade na frente da câmera para fugir de um dinossauro gigante na selva. Pule troncos, desvie de pedras e pegue ovos.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@700;800;900&display=swap">
+<style>
+  :root { --selva: #0f2a1a; --folha: #3fae5a; --lava: #ff7a2a; --osso: #fff4dc; --sub: #cfe3c8; --perigo: #ff4d4d;
+    --titulo: "Bungee", "Arial Black", Impact, sans-serif; --texto: "Nunito", system-ui, sans-serif; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--selva); color: var(--osso); font-family: var(--texto); touch-action: none; user-select: none; -webkit-user-select: none; }
+  canvas#jogo { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  [hidden] { display: none !important; }
+  .hud { position: fixed; top: max(10px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right)); display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; pointer-events: none; z-index: 5; }
+  .placa { background: rgba(10,25,15,.72); border: 2px solid rgba(255,244,220,.25); border-radius: 14px; padding: 8px 14px; font-weight: 900; font-size: 18px; backdrop-filter: blur(6px); }
+  .placa small { display: block; font: 800 11px var(--texto); letter-spacing: .08em; text-transform: uppercase; color: var(--sub); }
+  #medidor { width: min(42vw, 320px); }
+  #barra { height: 14px; border-radius: 8px; background: rgba(255,255,255,.15); overflow: hidden; margin-top: 4px; }
+  #barra i { display: block; height: 100%; width: 50%; background: linear-gradient(90deg, var(--perigo), var(--lava), var(--folha)); transition: width .15s; }
+  #cam { position: fixed; left: max(12px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); width: 168px; height: 126px; border-radius: 14px; border: 2px solid rgba(255,244,220,.35); background: #000; z-index: 5; }
+  #camtxt { position: fixed; left: max(12px, env(safe-area-inset-left)); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 132px); width: 168px; font: 800 12px var(--texto); text-align: center; z-index: 5; text-shadow: 0 1px 3px #000; }
+  .toque { position: fixed; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(3, 64px); gap: 8px; z-index: 6; }
+  .toque button { height: 64px; border-radius: 16px; border: 2px solid rgba(255,244,220,.35); background: rgba(10,25,15,.7); color: var(--osso); font: 900 24px var(--texto); }
+  .toque button.correr { grid-column: 1 / span 3; background: var(--lava); color: #2a1206; border-color: transparent; font-size: 20px; }
+  .tela { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); overflow-y: auto;
+    background: radial-gradient(80% 70% at 30% 20%, rgba(255,122,42,.28), transparent 60%), rgba(8,20,12,.86); }
+  .caixa { width: min(620px, 100%); display: grid; gap: 14px; text-align: center; }
+  h1 { font: 400 clamp(40px, 9vw, 72px)/0.95 var(--titulo); margin: 0; color: var(--osso); text-shadow: 0 4px 0 #1f5a2c, 0 10px 30px rgba(0,0,0,.5); }
+  h1 em { font-style: normal; color: var(--lava); }
+  .caixa p { margin: 0; color: var(--sub); font-weight: 700; line-height: 1.45; }
+  .passos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .passos div { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 10px 8px; font-weight: 800; font-size: 14px; }
+  .passos b { display: block; font-size: 28px; }
+  .botao { border: 0; border-radius: 16px; padding: 16px; font: 900 19px var(--texto); cursor: pointer; }
+  .botao.forte { background: var(--lava); color: #2a1206; box-shadow: 0 6px 0 #a3461a; }
+  .botao.leve { background: rgba(255,255,255,.1); color: var(--osso); border: 1px solid rgba(255,255,255,.2); }
+  .botao:active { transform: translateY(3px); }
+  .botao:focus-visible, .toque button:focus-visible { outline: 3px solid var(--osso); outline-offset: 3px; }
+  .dica { font-size: 13px; color: var(--sub); }
+  #aviso { position: fixed; left: 50%; top: 32%; transform: translateX(-50%); z-index: 7; font: 400 clamp(22px, 5vw, 40px) var(--titulo); color: var(--osso); text-shadow: 0 3px 0 #000, 0 0 24px rgba(0,0,0,.6); pointer-events: none; text-align: center; white-space: nowrap; }
+  @media (max-width: 520px) { .passos { grid-template-columns: 1fr; } #cam { width: 120px; height: 90px; } #camtxt { width: 120px; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 96px); } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<canvas id="jogo" aria-label="Jogo Fuga dos Dinos"></canvas>
+<div class="hud" hidden id="hud">
+  <div class="placa"><small>Distância</small><span id="dist">0 m</span></div>
+  <div class="placa" id="medidor"><small id="dinotxt">🦖 O dino está longe</small><div id="barra"><i></i></div></div>
+  <div class="placa"><small>Pontos</small><span id="pts">0</span></div>
+</div>
+<canvas id="cam" width="320" height="240" hidden></canvas>
+<div id="camtxt" hidden></div>
+<div class="toque" id="toque" hidden>
+  <button id="b-esq" aria-label="Pista da esquerda">◀</button><button id="b-pula" aria-label="Pular">▲</button><button id="b-dir" aria-label="Pista da direita">▶</button>
+  <button class="correr" id="b-correr">🏃 Toque rápido para correr</button>
+</div>
+<div id="aviso" hidden></div>
+
+<section class="tela" id="inicio">
+  <div class="caixa">
+    <h1>Fuga dos <em>Dinos</em></h1>
+    <p>Um dinossauro gigante está atrás de você na selva! <b>Corra de verdade</b> na frente da câmera para fugir.</p>
+    <div class="passos">
+      <div><b>🏃</b>Corra no lugar para correr</div>
+      <div><b>🦘</b>Pule de verdade para pular os troncos</div>
+      <div><b>↔️</b>Dê um passo para o lado para desviar das pedras</div>
+    </div>
+    <button class="botao forte" id="com-camera">📷 Jogar com a câmera</button>
+    <button class="botao leve" id="sem-camera">⌨️ Jogar sem câmera</button>
+    <p class="dica">Com a câmera: apoie o celular ou o computador numa mesa ou cadeira, virado para você, a uns 2 ou 3 passos, para a câmera ver você <b>de corpo inteiro, com os pés</b>. Tire as coisas do caminho e corra no lugar com cuidado.<br>Sem câmera: segure ↑ (ou W) para correr, ← → para trocar de pista e espaço para pular. No celular, use os botões.</p>
+    <p class="dica" id="erro" hidden></p>
+  </div>
+</section>
+<section class="tela" id="fim" hidden>
+  <div class="caixa">
+    <h1>O dino te <em>pegou!</em></h1>
+    <p id="fimtxt"></p>
+    <button class="botao forte" id="de-novo">🏃 Correr de novo</button>
+    <button class="botao leve" id="voltar">Mudar o jeito de jogar</button>
+  </div>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const PISTAS = [-1.7, 0, 1.7];
+const ler = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } };
+const grava = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
+
+// ---------------- som ----------------
+let ac = null;
+const audio = () => { try { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch (e) {} return ac; };
+function som(tipo) {
+  const a = audio(); if (!a) return; const t = a.currentTime;
+  const tom = (f0, f1, d, tp, v, at = 0) => { const o = a.createOscillator(), g = a.createGain(); o.type = tp; o.frequency.setValueAtTime(f0, t + at); o.frequency.exponentialRampToValueAtTime(f1, t + at + d); g.gain.setValueAtTime(v, t + at); g.gain.exponentialRampToValueAtTime(0.001, t + at + d); o.connect(g); g.connect(a.destination); o.start(t + at); o.stop(t + at + d + 0.02); };
+  const ruido = (d, f, v) => { const n = a.createBufferSource(), b = a.createBuffer(1, Math.floor(a.sampleRate * d), a.sampleRate), c = b.getChannelData(0); for (let i = 0; i < c.length; i++) c[i] = (Math.random() * 2 - 1) * (1 - i / c.length); const fl = a.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = f; const g = a.createGain(); g.gain.value = v; n.buffer = b; n.connect(fl); fl.connect(g); g.connect(a.destination); n.start(t); };
+  if (tipo === 'rugido') { ruido(1.1, 500, 0.9); tom(150, 55, 1.0, 'sawtooth', 0.22); tom(95, 40, 1.1, 'square', 0.08); }
+  if (tipo === 'passo') ruido(0.06, 900, 0.25);
+  if (tipo === 'pulo') tom(300, 620, 0.18, 'triangle', 0.15);
+  if (tipo === 'ovo') [880, 1175, 1568].forEach((f, i) => tom(f, f, 0.15, 'triangle', 0.12, i * 0.05));
+  if (tipo === 'bate') { ruido(0.25, 300, 0.8); tom(120, 60, 0.25, 'sine', 0.3); }
+}
+
+// ---------------- cena 3D ----------------
+const canvas = $('jogo');
+const R = new THREE.WebGLRenderer({ canvas, antialias: true });
+R.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); R.outputEncoding = THREE.sRGBEncoding;
+const cena = new THREE.Scene(); cena.background = new THREE.Color(0xf2b27a); cena.fog = new THREE.Fog(0xf2b27a, 18, 75);
+const cam = new THREE.PerspectiveCamera(62, 1, 0.1, 200);
+cena.add(new THREE.HemisphereLight(0xfff1d6, 0x2a4a2a, 1.0));
+const sol = new THREE.DirectionalLight(0xffe2b8, 0.9); sol.position.set(-6, 12, 4); cena.add(sol);
+const mat = (c, extra) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.85, flatShading: true }, extra || {}));
+function textura(w, h, desenha, rx, ry) { const c = document.createElement('canvas'); c.width = w; c.height = h; desenha(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx || 1, ry || 1); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; return t; }
+// trilha de terra no meio, grama dos lados (a textura anda para dar a sensação de correr)
+const trilhaT = textura(128, 128, (g, w, h) => { g.fillStyle = '#9a6a3a'; g.fillRect(0, 0, w, h); for (let i = 0; i < 260; i++) { g.fillStyle = `rgba(${60 + Math.random() * 60},${35 + Math.random() * 30},15,.5)`; g.fillRect(Math.random() * w, Math.random() * h, 2 + Math.random() * 4, 2 + Math.random() * 4); } }, 2, 30);
+const gramaT = textura(128, 128, (g, w, h) => { g.fillStyle = '#3f8a3a'; g.fillRect(0, 0, w, h); for (let i = 0; i < 400; i++) { g.fillStyle = `rgba(${30 + Math.random() * 50},${100 + Math.random() * 70},${30 + Math.random() * 30},.7)`; g.fillRect(Math.random() * w, Math.random() * h, 2, 5); } }, 12, 30);
+const trilha = new THREE.Mesh(new THREE.PlaneGeometry(6, 160, 1, 40), new THREE.MeshStandardMaterial({ map: trilhaT, roughness: 1 })); trilha.rotation.x = -Math.PI / 2; trilha.position.z = -60; cena.add(trilha);
+const grama = new THREE.Mesh(new THREE.PlaneGeometry(120, 160, 20, 40), new THREE.MeshStandardMaterial({ map: gramaT, roughness: 1 })); grama.rotation.x = -Math.PI / 2; grama.position.set(0, -0.02, -60); cena.add(grama);
+// vulcão e montanhas no fundo
+const vulcao = new THREE.Mesh(new THREE.ConeGeometry(30, 34, 9, 1, true), mat(0x6a5a52)); vulcao.position.set(-30, 15, -150); cena.add(vulcao);
+const lava = new THREE.Mesh(new THREE.SphereGeometry(5, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffa040, fog: false })); lava.position.set(-30, 32, -150); cena.add(lava);
+for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(new THREE.ConeGeometry(18 + i * 3, 22 + i * 4, 6), mat(0x5a7a5a)); m.position.set(-90 + i * 36, 8, -160 - (i % 2) * 20); cena.add(m); }
+// árvores, palmeiras e samambaias dos dois lados (recicladas: quando passam, voltam lá para a frente)
+const tronco = mat(0x6a4a2a), copas = [mat(0x2f7a3a), mat(0x3f9a45), mat(0x5aaa3a)], cenario = [];
+for (let i = 0; i < 70; i++) {
+  const t = new THREE.Group(), lado = i % 2 ? 1 : -1, h = 2.5 + Math.random() * 3.5;
+  if (i % 7 === 0) { const s = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.7, 5), copas[i % 3]); s.position.y = 0.35; s.scale.set(1.6, 1, 1.6); t.add(s); }
+  else {
+    const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.24, h, 6), tronco); tr.position.y = h / 2; t.add(tr);
+    if (i % 3) { const c = new THREE.Mesh(new THREE.SphereGeometry(1.1 + Math.random(), 7, 6), copas[i % 3]); c.position.y = h + 0.5; c.scale.y = 0.8; t.add(c); }
+    else for (let k = 0; k < 6; k++) { const f = new THREE.Mesh(new THREE.ConeGeometry(0.28, 2.2, 4), copas[k % 3]); f.position.set(Math.cos(k) * 0.7, h, Math.sin(k) * 0.7); f.rotation.set(Math.sin(k) * 1.25, 0, Math.cos(k) * 1.25); t.add(f); }
+  }
+  t.position.set(lado * (4 + Math.random() * 14), 0, -Math.random() * 120 + 8); t.rotation.y = Math.random() * 6; cena.add(t); cenario.push(t);
+}
+
+// ---------------- o explorador (você) ----------------
+const eu = new THREE.Group(); cena.add(eu);
+const roupa = mat(0xd9b46a), calca = mat(0x5a4a3a), pele = mat(0xe8b08a), chapeu = mat(0x8a6a3a);
+const corpoEu = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.6, 0.3), roupa); corpoEu.position.y = 1.15; eu.add(corpoEu);
+const cabeca = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), pele); cabeca.position.y = 1.65; eu.add(cabeca);
+const aba = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.03, 16), chapeu); aba.position.y = 1.78; eu.add(aba);
+const copa = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.2, 0.16, 14), chapeu); copa.position.y = 1.86; eu.add(copa);
+const mochila = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.42, 0.18), mat(0x3f6a8a)); mochila.position.set(0, 1.18, 0.23); eu.add(mochila);
+const membro = (w, h, m, x, y) => { const g = new THREE.Group(); const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), m); b.position.y = -h / 2; g.add(b); g.position.set(x, y, 0); eu.add(g); return g; };
+const pernaE = membro(0.18, 0.85, calca, -0.13, 0.85), pernaD = membro(0.18, 0.85, calca, 0.13, 0.85), bracoE = membro(0.13, 0.55, roupa, -0.33, 1.42), bracoD = membro(0.13, 0.55, roupa, 0.33, 1.42);
+
+// ---------------- o dinossauro que corre atrás de você (desenho original) ----------------
+const dino = new THREE.Group(); cena.add(dino);
+const dinoM = mat(0x3f6a3a), barriga = mat(0xb8c48a), dente = mat(0xfff4dc), olhoM = new THREE.MeshBasicMaterial({ color: 0xffd23d });
+const pedaco = (geo, m, x, y, z, sx, sy, sz, rx) => { const e = new THREE.Mesh(geo, m); e.position.set(x, y, z); e.scale.set(sx || 1, sy || 1, sz || 1); if (rx) e.rotation.x = rx; dino.add(e); return e; };
+const esf = new THREE.SphereGeometry(1, 12, 10);
+pedaco(esf, dinoM, 0, 2.6, 0, 1.0, 1.0, 1.7); pedaco(esf, barriga, 0, 2.3, -0.3, 0.75, 0.75, 1.3);
+const pescoco = pedaco(new THREE.CylinderGeometry(0.55, 0.75, 1.4, 10), dinoM, 0, 3.4, -1.5, 1, 1, 1, 0.7);
+const cabecaD = new THREE.Group(); cabecaD.position.set(0, 3.9, -2.2); dino.add(cabecaD);
+const cranio = new THREE.Mesh(esf, dinoM); cranio.scale.set(0.62, 0.55, 1.0); cabecaD.add(cranio);
+const queixo = new THREE.Group(); queixo.position.set(0, -0.25, -0.1); cabecaD.add(queixo);
+const mand = new THREE.Mesh(esf, barriga); mand.scale.set(0.5, 0.2, 0.85); mand.position.z = -0.25; queixo.add(mand);
+for (let i = 0; i < 7; i++) { const d = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 4), dente); d.position.set(-0.36 + i * 0.12, -0.25, -0.55 - Math.abs(i - 3) * -0.03); d.rotation.x = Math.PI; cabecaD.add(d); }
+[-0.36, 0.36].forEach(x => { const o = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), olhoM); o.position.set(x, 0.2, -0.45); cabecaD.add(o); });
+const coxaE = new THREE.Group(), coxaD = new THREE.Group();
+[[coxaE, -0.7], [coxaD, 0.7]].forEach(([g, x]) => { g.position.set(x, 2.3, 0.2); const c = new THREE.Mesh(esf, dinoM); c.scale.set(0.42, 0.9, 0.55); c.position.y = -0.6; g.add(c); const p = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 1.3, 8), dinoM); p.position.set(0, -1.6, 0.15); g.add(p); const pe = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.18, 0.8), dinoM); pe.position.set(0, -2.25, -0.2); g.add(pe); dino.add(g); });
+[-0.55, 0.55].forEach(x => pedaco(new THREE.CylinderGeometry(0.07, 0.05, 0.6, 6), dinoM, x, 2.6, -1.4, 1, 1, 1, 1.1));
+const rabo = pedaco(new THREE.ConeGeometry(0.7, 3.4, 10), dinoM, 0, 2.6, 2.4, 1, 1, 1, -1.45);
+for (let i = 0; i < 6; i++) pedaco(new THREE.ConeGeometry(0.12, 0.35, 4), mat(0xd9822b), 0, 3.6 - i * 0.12, -0.9 + i * 0.6);
+
+// ---------------- obstáculos e ovos ----------------
+const troncoM = mat(0x7a5230), pedraM = mat(0x8a8a90), ovoM = [mat(0xfff4dc), mat(0xd8f0e0), mat(0xf0dcec)];
+let coisas = [];
+function cria(tipo, pista, z) {
+  let m;
+  if (tipo === 'tronco') { m = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 5.4, 10), troncoM); m.rotation.z = Math.PI / 2; m.position.set(0, 0.28, z); }
+  else if (tipo === 'pedra') { m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.75, 0), pedraM); m.scale.set(1, 1.3, 1); m.position.set(PISTAS[pista], 0.85, z); }
+  else { m = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 10), ovoM[Math.floor(Math.random() * 3)]); m.scale.set(1, 1.3, 1); m.position.set(PISTAS[pista], 0.7, z); }
+  cena.add(m); coisas.push({ tipo, pista, m, feito: false });
+}
+function poeTrecho(z) { // um pedacinho da trilha: tronco, pedras ou ovos
+  const r = Math.random();
+  if (r < 0.28) cria('tronco', 1, z);
+  else if (r < 0.75) { const p = Math.floor(Math.random() * 3); cria('pedra', p, z); if (Math.random() < 0.35) cria('pedra', (p + 1 + Math.floor(Math.random() * 2)) % 3, z); }
+  const po = Math.floor(Math.random() * 3); for (let k = 0; k < 3; k++) cria('ovo', po, z - 3 - k * 1.4);
+}
+
+// ---------------- estado do jogo ----------------
+const J = { rodando: false, v: 0, alvoV: 0, dist: 0, pts: 0, D: 16, vDino: 4.4, t: 0, pista: 1, x: 0, y: 0, vy: 0, fase: 0, tropeco: 0, prox: 6, ultimoRugido: 0, recorde: ler('fuga-recorde', 0), passos: [] };
+function comeca() {
+  coisas.forEach(c => cena.remove(c.m)); coisas = [];
+  Object.assign(J, { rodando: true, v: 0, alvoV: 0, dist: 0, pts: 0, D: 16, vDino: 4.4, t: 0, pista: 1, x: 0, y: 0, vy: 0, fase: 0, tropeco: 0, prox: 6, ultimoRugido: 0, passos: [] });
+  for (let z = -14; z > -70; z -= 12) poeTrecho(z);
+  $('inicio').hidden = true; $('fim').hidden = true; $('hud').hidden = false; $('toque').hidden = !semCamera; audio();
+  aviso('🦖 CORRA!', 1600); setTimeout(() => som('rugido'), 300);
+}
+function acaba() {
+  J.rodando = false; const m = Math.round(J.dist), nov = J.pts + m > J.recorde; if (nov) { J.recorde = J.pts + m; grava('fuga-recorde', J.recorde); }
+  $('fimtxt').textContent = `Você correu ${m} metros e pegou ${J.pts / 10} ovos: ${J.pts + m} pontos.${nov ? ' 🏆 Novo recorde!' : ' Recorde: ' + J.recorde}`;
+  $('fim').hidden = false; $('hud').hidden = true; $('toque').hidden = true; som('rugido');
+}
+let avisoT = 0; function aviso(t, ms) { const a = $('aviso'); a.textContent = t; a.hidden = false; clearTimeout(avisoT); avisoT = setTimeout(() => { a.hidden = true; }, ms || 1200); }
+const passo = () => { J.passos.push(performance.now()); som('passo'); };
+const pula = () => { if (J.y <= 0.001 && J.rodando) { J.vy = 8.5; som('pulo'); } };
+const vai = d => { if (!J.rodando) return; J.pista = Math.max(0, Math.min(2, J.pista + d)); };
+
+// ---------------- a câmera vê os seus pés: passos, pulo e lado ----------------
+let semCamera = true, video = null, pose = null, ultimoVideo = -1;
+const C = { pe: 0, ladoAnt: 0, hipBase: null, centro: null, visto: 0, pulouT: 0, ladoT: 0, lm: null };
+async function ligaCamera() {
+  $('erro').hidden = true; $('com-camera').disabled = true; $('com-camera').textContent = '⏳ Ligando a câmera…';
+  try {
+    video = document.createElement('video'); video.playsInline = true; video.muted = true;
+    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+    video.srcObject = s; await video.play();
+    if (window.__POSE_FAKE) pose = window.__POSE_FAKE;
+    else {
+      const base = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/';
+      const mp = await import(base + 'vision_bundle.mjs'), fs = await mp.FilesetResolver.forVisionTasks(base + 'wasm');
+      const op = d => ({ baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task', delegate: d }, runningMode: 'VIDEO', numPoses: 1 });
+      try { pose = await mp.PoseLandmarker.createFromOptions(fs, op('GPU')); } catch (e) { pose = await mp.PoseLandmarker.createFromOptions(fs, op('CPU')); }
+    }
+    semCamera = false; $('cam').hidden = false; $('camtxt').hidden = false; comeca();
+  } catch (e) {
+    $('erro').hidden = false; $('erro').textContent = '⚠️ Não deu para usar a câmera (' + (e && e.name === 'NotAllowedError' ? 'permissão negada' : (e && e.message || 'erro')) + '). Use "Jogar sem câmera" ou permita a câmera e tente de novo.';
+  }
+  $('com-camera').disabled = false; $('com-camera').textContent = '📷 Jogar com a câmera';
+}
+function lePose(agora) {
+  if (!pose || !video || video.readyState < 2) return;
+  if (video.currentTime === ultimoVideo && !window.__POSE_FAKE) return; ultimoVideo = video.currentTime;
+  let r; try { r = pose.detectForVideo(video, agora); } catch (e) { return; }
+  const lm = r && r.landmarks && r.landmarks[0]; C.lm = lm || null; desenhaCam(lm);
+  if (!lm) { $('camtxt').textContent = '🙋 Fique na frente da câmera'; return; }
+  const vis = i => lm[i] && (lm[i].visibility === undefined || lm[i].visibility > 0.5);
+  const tornozelo = vis(27) && vis(28), joelho = vis(25) && vis(26);
+  if (!tornozelo && !joelho) { $('camtxt').textContent = '👣 Afaste-se: a câmera precisa ver suas pernas'; return; }
+  $('camtxt').textContent = tornozelo ? '👣 Vendo seus pés!' : '🦵 Vendo seus joelhos';
+  // passo: um pé sobe e o outro desce (troca de lado = 1 passo)
+  const [a, b] = tornozelo ? [27, 28] : [25, 26], dif = lm[a].y - lm[b].y, lado = Math.abs(dif) > 0.025 ? Math.sign(dif) : 0;
+  if (lado && lado !== C.ladoAnt) { if (C.ladoAnt) passo(); C.ladoAnt = lado; }
+  // pulo: o quadril sobe de repente
+  const hipY = (lm[23].y + lm[24].y) / 2, hipX = 1 - (lm[23].x + lm[24].x) / 2; // a câmera da frente espelha
+  if (C.hipBase === null) { C.hipBase = hipY; C.centro = hipX; }
+  if (C.hipBase - hipY > 0.07 && agora - C.pulouT > 600) { C.pulouT = agora; pula(); }
+  C.hipBase += (hipY - C.hipBase) * 0.03; C.centro += (hipX - C.centro) * 0.002;
+  // lado: deu um passo para a esquerda ou para a direita
+  const off = hipX - C.centro, quer = off < -0.12 ? 0 : off > 0.12 ? 2 : (Math.abs(off) < 0.06 ? 1 : J.pista);
+  if (quer !== J.pista && agora - C.ladoT > 250) { C.ladoT = agora; J.pista = quer; }
+}
+const camCtx = $('cam').getContext('2d');
+function desenhaCam(lm) {
+  const g = camCtx, W = 320, H = 240; g.save(); g.translate(W, 0); g.scale(-1, 1); try { g.drawImage(video, 0, 0, W, H); } catch (e) { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); } g.restore();
+  if (!lm) return;
+  const P = i => [W - lm[i].x * W, lm[i].y * H], linha = (a, b, cor, l) => { g.strokeStyle = cor; g.lineWidth = l; g.beginPath(); g.moveTo(...P(a)); g.lineTo(...P(b)); g.stroke(); };
+  [[11, 12], [11, 23], [12, 24], [23, 24]].forEach(([a, b]) => linha(a, b, 'rgba(255,255,255,.7)', 3));
+  [[23, 25], [25, 27], [24, 26], [26, 28], [27, 31], [28, 32]].forEach(([a, b]) => linha(a, b, '#ff7a2a', 6)); // pernas em destaque
+  [27, 28].forEach(i => { if (!lm[i]) return; g.fillStyle = '#ffd23d'; g.beginPath(); g.arc(...P(i), 8, 0, 7); g.fill(); });
+}
+
+// ---------------- controles sem câmera ----------------
+const TECLAS = new Set();
+addEventListener('keydown', e => { const k = e.key.toLowerCase(); if (['arrowup', 'w'].includes(k) && !TECLAS.has(k)) passo(); TECLAS.add(k); if (k === ' ' || k === 'arrowup' && false) e.preventDefault(); if (k === ' ') pula(); if (k === 'arrowleft' || k === 'a') vai(-1); if (k === 'arrowright' || k === 'd') vai(1); });
+addEventListener('keyup', e => TECLAS.delete(e.key.toLowerCase()));
+let segurando = false;
+$('b-correr').addEventListener('pointerdown', e => { e.preventDefault(); passo(); segurando = true; });
+['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => $('b-correr').addEventListener(ev, () => { segurando = false; }));
+$('b-pula').addEventListener('pointerdown', e => { e.preventDefault(); pula(); });
+$('b-esq').addEventListener('pointerdown', e => { e.preventDefault(); vai(-1); });
+$('b-dir').addEventListener('pointerdown', e => { e.preventDefault(); vai(1); });
+$('com-camera').onclick = () => { audio(); ligaCamera(); };
+$('sem-camera').onclick = () => { semCamera = true; comeca(); };
+$('de-novo').onclick = () => { C.hipBase = null; comeca(); };
+$('voltar').onclick = () => { $('fim').hidden = true; $('inicio').hidden = false; };
+
+// ---------------- o jogo, a cada quadro ----------------
+let antes = performance.now();
+function quadro(agora) {
+  requestAnimationFrame(quadro);
+  const dt = Math.min(0.05, (agora - antes) / 1000); antes = agora;
+  lePose(agora);
+  const w = innerWidth, h = innerHeight; if (canvas.width !== Math.floor(w * R.getPixelRatio()) || canvas.height !== Math.floor(h * R.getPixelRatio())) { R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+  if (J.rodando) {
+    J.t += dt;
+    // sem câmera: segurar ↑ ou o botão também conta passos
+    if ((TECLAS.has('arrowup') || TECLAS.has('w') || segurando) && agora - (J.passos[J.passos.length - 1] || 0) > 190) passo();
+    J.passos = J.passos.filter(p => agora - p < 1500);
+    const ritmo = J.passos.length / 1.5; J.alvoV = Math.min(9.5, ritmo * 1.75);
+    if (J.tropeco > 0) { J.tropeco -= dt; J.alvoV = 0; }
+    J.v += (J.alvoV - J.v) * Math.min(1, dt * 3);
+    J.vDino = Math.min(7.6, 4.4 + J.t * 0.03);
+    J.D = Math.min(18, J.D + (J.v - J.vDino) * dt);
+    J.dist += J.v * dt;
+    // pulo e troca de pista
+    if (J.y > 0 || J.vy > 0) { J.vy -= 22 * dt; J.y = Math.max(0, J.y + J.vy * dt); if (J.y === 0) J.vy = 0; }
+    J.x += (PISTAS[J.pista] - J.x) * Math.min(1, dt * 10);
+    // o mundo vem na sua direção
+    const dz = J.v * dt;
+    trilhaT.offset.y += dz / 160 * 30; gramaT.offset.y += dz / 160 * 30;
+    cenario.forEach(t => { t.position.z += dz; if (t.position.z > 12) t.position.z -= 125; });
+    J.prox -= dz; if (J.prox <= 0) { J.prox = 10 + Math.random() * 5; poeTrecho(-70); }
+    coisas.slice().forEach(c => {
+      c.m.position.z += dz; if (c.tipo === 'ovo') c.m.rotation.y += dt * 2;
+      if (!c.feito && Math.abs(c.m.position.z) < 0.55) {
+        if (c.tipo === 'ovo' && c.pista === J.pista && J.y < 1.2) { c.feito = true; cena.remove(c.m); J.pts += 10; som('ovo'); }
+        else if (c.tipo === 'tronco' && J.y < 0.45) { c.feito = true; J.tropeco = 0.8; som('bate'); aviso('💥 Pule os troncos!'); }
+        else if (c.tipo === 'pedra' && c.pista === J.pista && J.y < 1.5) { c.feito = true; J.tropeco = 0.8; som('bate'); aviso('💥 Desvie das pedras!'); }
+      }
+      if (c.m.position.z > 10) { cena.remove(c.m); coisas.splice(coisas.indexOf(c), 1); }
+    });
+    if (J.D < 6 && agora - J.ultimoRugido > 3500) { J.ultimoRugido = agora; som('rugido'); aviso('🦖 Mais rápido!', 900); }
+    if (J.D <= 1.6) acaba();
+    // HUD
+    $('dist').textContent = Math.round(J.dist) + ' m'; $('pts').textContent = J.pts + Math.round(J.dist);
+    $('barra').firstElementChild.style.width = Math.max(0, Math.min(100, (J.D - 1.6) / (18 - 1.6) * 100)) + '%';
+    $('dinotxt').textContent = J.D < 5 ? '🦖 O DINO ESTÁ TE ALCANÇANDO!' : J.D < 10 ? `🦖 O dino está a ${Math.round(J.D)} m` : '🦖 O dino está longe';
+  }
+  // animação do explorador e do dino
+  J.fase += dt * (2 + J.v * 1.6);
+  const s = Math.sin(J.fase) * Math.min(1, J.v / 3 + (J.rodando ? 0 : 0));
+  pernaE.rotation.x = s * 0.9; pernaD.rotation.x = -s * 0.9; bracoE.rotation.x = -s * 0.8; bracoD.rotation.x = s * 0.8;
+  eu.position.set(J.x, J.y + Math.abs(s) * 0.06, 0); eu.rotation.z = (PISTAS[J.pista] - J.x) * -0.08;
+  const fd = J.t * 7.5 + 1; coxaE.rotation.x = Math.sin(fd) * 0.6; coxaD.rotation.x = -Math.sin(fd) * 0.6;
+  J.dinoX = (J.dinoX === undefined ? 2.6 : J.dinoX) + ((J.x > 0.5 ? -2.6 : J.x < -0.5 ? 2.6 : (J.dinoX > 0 ? 2.6 : -2.6)) - (J.dinoX || 0)) * Math.min(1, dt * 1.5); // corre ao lado da trilha, do lado oposto ao seu
+  dino.position.set(J.dinoX, Math.abs(Math.sin(fd)) * 0.12, J.D + 1.2); dino.rotation.y = -J.dinoX * 0.06; cabecaD.rotation.x = Math.sin(fd * 0.5) * 0.08; queixo.rotation.x = J.D < 7 ? 0.35 + Math.sin(agora / 90) * 0.1 : 0.12; rabo.rotation.y = Math.sin(fd * 0.5) * 0.2;
+  // a câmera fica atrás e acima: quando o dino chega perto, ele aparece embaixo da tela
+  const treme = J.rodando && J.D < 5 ? (5 - J.D) * 0.03 : 0;
+  const sobe = J.rodando && J.D < 9 ? (9 - J.D) * 0.32 : 0; // o dino perto: a câmera sobe para mostrar ele e você
+  cam.position.set(J.x * 0.5 + (Math.random() - 0.5) * treme, 4.3 + sobe + (Math.random() - 0.5) * treme, 8.2 + sobe * 0.4);
+  cam.lookAt(J.x * 0.6, 1.1, -6);
+  lava.scale.setScalar(1 + Math.sin(agora / 400) * 0.06);
+  R.render(cena, cam);
+}
+requestAnimationFrame(quadro);
+window.__J = J; window.__passo = passo; window.__pula = pula; window.__vai = vai; window.__C = C;
+})();
+</script>
+</body>
+</html>
