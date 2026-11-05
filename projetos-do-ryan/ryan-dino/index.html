@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Fuga dos Dinos</title>
+<title>Ryan Dino</title>
 <meta name="description" content="Corra de verdade na frente da câmera para fugir de um dinossauro gigante na selva. Pule troncos, desvie de pedras e pegue ovos.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@700;800;900&display=swap">
@@ -46,7 +46,7 @@
 </style>
 </head>
 <body>
-<canvas id="jogo" aria-label="Jogo Fuga dos Dinos"></canvas>
+<canvas id="jogo" aria-label="Jogo Ryan Dino"></canvas>
 <div class="hud" hidden id="hud">
   <div class="placa"><small>Distância</small><span id="dist">0 m</span></div>
   <div class="placa" id="medidor"><small id="dinotxt">🦖 O dino está longe</small><div id="barra"><i></i></div></div>
@@ -62,7 +62,7 @@
 
 <section class="tela" id="inicio">
   <div class="caixa">
-    <h1>Fuga dos <em>Dinos</em></h1>
+    <h1>Ryan <em>Dino</em></h1>
     <p>Um dinossauro gigante está atrás de você na selva! <b>Corra de verdade</b> na frente da câmera para fugir.</p>
     <div class="passos">
       <div><b>🏃</b>Corra no lugar para correr</div>
@@ -187,7 +187,7 @@ function poeTrecho(z) { // um pedacinho da trilha: tronco, pedras ou ovos
 }
 
 // ---------------- estado do jogo ----------------
-const J = { rodando: false, v: 0, alvoV: 0, dist: 0, pts: 0, D: 16, vDino: 4.4, t: 0, pista: 1, x: 0, y: 0, vy: 0, fase: 0, tropeco: 0, prox: 6, ultimoRugido: 0, recorde: ler('fuga-recorde', 0), passos: [] };
+const J = { rodando: false, v: 0, alvoV: 0, dist: 0, pts: 0, D: 16, vDino: 4.4, t: 0, pista: 1, x: 0, y: 0, vy: 0, fase: 0, tropeco: 0, prox: 6, ultimoRugido: 0, recorde: ler('ryandino-recorde', 0), passos: [] };
 function comeca() {
   coisas.forEach(c => cena.remove(c.m)); coisas = [];
   Object.assign(J, { rodando: true, v: 0, alvoV: 0, dist: 0, pts: 0, D: 16, vDino: 4.4, t: 0, pista: 1, x: 0, y: 0, vy: 0, fase: 0, tropeco: 0, prox: 6, ultimoRugido: 0, passos: [] });
@@ -196,7 +196,7 @@ function comeca() {
   aviso('🦖 CORRA!', 1600); setTimeout(() => som('rugido'), 300);
 }
 function acaba() {
-  J.rodando = false; const m = Math.round(J.dist), nov = J.pts + m > J.recorde; if (nov) { J.recorde = J.pts + m; grava('fuga-recorde', J.recorde); }
+  J.rodando = false; const m = Math.round(J.dist), nov = J.pts + m > J.recorde; if (nov) { J.recorde = J.pts + m; grava('ryandino-recorde', J.recorde); }
   $('fimtxt').textContent = `Você correu ${m} metros e pegou ${J.pts / 10} ovos: ${J.pts + m} pontos.${nov ? ' 🏆 Novo recorde!' : ' Recorde: ' + J.recorde}`;
   $('fim').hidden = false; $('hud').hidden = true; $('toque').hidden = true; som('rugido');
 }
