@@ -40,6 +40,9 @@
   .botao:active { transform: translateY(3px); }
   .botao:focus-visible, .toque button:focus-visible { outline: 3px solid var(--osso); outline-offset: 3px; }
   .dica { font-size: 13px; color: var(--sub); }
+  .camsel { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .camsel .botao { padding: 10px; font-size: 15px; }
+  .camsel .botao[aria-checked="true"] { background: var(--folha); color: #08210f; border-color: transparent; }
   #aviso { position: fixed; left: 50%; top: 32%; transform: translateX(-50%); z-index: 7; font: 400 clamp(22px, 5vw, 40px) var(--titulo); color: var(--osso); text-shadow: 0 3px 0 #000, 0 0 24px rgba(0,0,0,.6); pointer-events: none; text-align: center; white-space: nowrap; }
   @media (max-width: 520px) { .passos { grid-template-columns: 1fr; } #cam { width: 120px; height: 90px; } #camtxt { width: 120px; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 96px); } }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -69,9 +72,13 @@
       <div><b>🦘</b>Pule de verdade para pular os troncos</div>
       <div><b>↔️</b>Dê um passo para o lado para desviar das pedras</div>
     </div>
+    <div class="camsel" role="radiogroup" aria-label="Qual câmera">
+      <button class="botao leve" id="cam-tras" role="radio">📷 Câmera de trás</button>
+      <button class="botao leve" id="cam-frente" role="radio">🤳 Câmera da frente</button>
+    </div>
     <button class="botao forte" id="com-camera">📷 Jogar com a câmera</button>
     <button class="botao leve" id="sem-camera">⌨️ Jogar sem câmera</button>
-    <p class="dica">Com a câmera: apoie o celular ou o computador numa mesa ou cadeira, virado para você, a uns 2 ou 3 passos, para a câmera ver você <b>de corpo inteiro, com os pés</b>. Tire as coisas do caminho e corra no lugar com cuidado.<br>Sem câmera: segure ↑ (ou W) para correr, ← → para trocar de pista e espaço para pular. No celular, use os botões.</p>
+    <p class="dica">Com a câmera de trás (a mais nítida): apoie o celular com a câmera de trás virada para você (alguém pode segurar), ou use a da frente para ver a tela enquanto corre. Fique a uns 2 ou 3 passos, para a câmera ver você <b>de corpo inteiro, com os pés</b>. Tire as coisas do caminho e corra no lugar com cuidado.<br>Sem câmera: segure ↑ (ou W) para correr, ← → para trocar de pista e espaço para pular. No celular, use os botões.</p>
     <p class="dica" id="erro" hidden></p>
   </div>
 </section>
@@ -206,19 +213,24 @@ const pula = () => { if (J.y <= 0.001 && J.rodando) { J.vy = 8.5; som('pulo'); }
 const vai = d => { if (!J.rodando) return; J.pista = Math.max(0, Math.min(2, J.pista + d)); };
 
 // ---------------- a câmera vê os seus pés: passos, pulo e lado ----------------
-let semCamera = true, video = null, pose = null, ultimoVideo = -1;
+let semCamera = true, video = null, pose = null, ultimoVideo = -1, qualCam = ler('ryandino-camera', 'traseira');
+const marcaCam = () => { $('cam-tras').setAttribute('aria-checked', qualCam === 'traseira'); $('cam-frente').setAttribute('aria-checked', qualCam === 'frente'); };
+marcaCam(); $('cam-tras').onclick = () => { qualCam = 'traseira'; grava('ryandino-camera', qualCam); marcaCam(); }; $('cam-frente').onclick = () => { qualCam = 'frente'; grava('ryandino-camera', qualCam); marcaCam(); };
+// no app (APK) as bibliotecas vêm de dentro dele: funciona sem internet
+const NO_APP = location.hostname === 'appassets.androidplatform.net';
 const C = { pe: 0, ladoAnt: 0, hipBase: null, centro: null, visto: 0, pulouT: 0, ladoT: 0, lm: null };
 async function ligaCamera() {
   $('erro').hidden = true; $('com-camera').disabled = true; $('com-camera').textContent = '⏳ Ligando a câmera…';
   try {
+    if (video && video.srcObject) video.srcObject.getTracks().forEach(t => t.stop());
     video = document.createElement('video'); video.playsInline = true; video.muted = true;
-    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: qualCam === 'traseira' ? { ideal: 'environment' } : 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
     video.srcObject = s; await video.play();
     if (window.__POSE_FAKE) pose = window.__POSE_FAKE;
     else {
-      const base = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/';
+      const base = NO_APP ? '/lib/mediapipe/' : 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/';
       const mp = await import(base + 'vision_bundle.mjs'), fs = await mp.FilesetResolver.forVisionTasks(base + 'wasm');
-      const op = d => ({ baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task', delegate: d }, runningMode: 'VIDEO', numPoses: 1 });
+      const op = d => ({ baseOptions: { modelAssetPath: NO_APP ? '/lib/pose_landmarker_lite.task' : 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task', delegate: d }, runningMode: 'VIDEO', numPoses: 1 });
       try { pose = await mp.PoseLandmarker.createFromOptions(fs, op('GPU')); } catch (e) { pose = await mp.PoseLandmarker.createFromOptions(fs, op('CPU')); }
     }
     semCamera = false; $('cam').hidden = false; $('camtxt').hidden = false; comeca();

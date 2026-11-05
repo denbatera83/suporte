@@ -1,0 +1,64 @@
+<title>Ryan Dino</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Baixe o Ryan Dino: corra de verdade na frente da câmera para fugir de um dinossauro.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Nunito:wght@700;800;900&display=swap">
+<style>
+  /* Layout: uma página só, como a entrada de uma trilha: placa grande, dois caminhos (baixar ou jogar) e as regras */
+  :root { --selva: #0f2a1a; --selva2: #173b25; --folha: #3fae5a; --lava: #ff7a2a; --osso: #fff4dc; --sub: #cfe3c8; --linha: rgba(255,244,220,.16);
+    --titulo: "Bungee", "Arial Black", Impact, sans-serif; --texto: "Nunito", system-ui, sans-serif; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: radial-gradient(90% 60% at 20% 0%, rgba(255,122,42,.28), transparent 60%), var(--selva); color: var(--osso); font: 700 16px/1.5 var(--texto); }
+  .folha { max-width: 860px; margin: 0 auto; padding-block: 36px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 22px; }
+  header { display: grid; gap: 10px; justify-items: center; text-align: center; }
+  header img { width: 96px; height: 96px; border-radius: 26px; box-shadow: 0 10px 30px rgba(0,0,0,.4); }
+  h1 { margin: 0; font: 400 clamp(44px, 10vw, 76px)/.95 var(--titulo); text-shadow: 0 4px 0 #1f5a2c; text-wrap: balance; }
+  h1 em { font-style: normal; color: var(--lava); }
+  header p { margin: 0; color: var(--sub); max-width: 46ch; }
+  .caminhos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 620px) { .caminhos { grid-template-columns: 1fr; } }
+  .cartao { background: var(--selva2); border: 1px solid var(--linha); border-radius: 20px; padding: 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+  .cartao h2 { margin: 0; font: 400 22px var(--titulo); }
+  .cartao p { margin: 0; color: var(--sub); }
+  .botao { display: block; text-align: center; text-decoration: none; border-radius: 14px; padding: 14px; font: 900 18px var(--texto); }
+  .botao.forte { background: var(--lava); color: #2a1206; box-shadow: 0 5px 0 #a3461a; }
+  .botao.leve { background: rgba(255,255,255,.08); color: var(--osso); border: 1px solid var(--linha); }
+  .botao small { display: block; font-weight: 700; font-size: 13px; opacity: .85; }
+  .botao:focus-visible { outline: 3px solid var(--osso); outline-offset: 3px; }
+  ol { margin: 0; padding-left: 20px; color: var(--sub); display: grid; gap: 4px; }
+  .regras { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 620px) { .regras { grid-template-columns: 1fr; } }
+  .regras div { background: rgba(255,255,255,.05); border: 1px solid var(--linha); border-radius: 16px; padding: 14px; text-align: center; }
+  .regras b { display: block; font-size: 30px; }
+  .rodape { text-align: center; color: var(--sub); font-size: 14px; margin: 0; }
+</style>
+<div class="folha">
+  <header>
+    <img src="https://raw.githubusercontent.com/denbatera83/suporte/ccr-ac78b9fc-ev2jcd/projetos-do-ryan/ryan-dino/icone.png" alt="Ícone do Ryan Dino" width="96" height="96">
+    <h1>Ryan <em>Dino</em></h1>
+    <p>Um dinossauro gigante corre atrás de você na selva. Corra de verdade na frente da câmera para fugir!</p>
+  </header>
+  <section class="caminhos">
+    <article class="cartao">
+      <h2>📱 Celular Android</h2>
+      <a class="botao forte" href="https://github.com/denbatera83/suporte/raw/ccr-ac78b9fc-ev2jcd/projetos-do-ryan/ryan-dino/RyanDino.apk" target="_blank" rel="noopener">⬇ Baixar o app <small>APK · 24,9 MB · funciona sem internet</small></a>
+      <ol>
+        <li>Baixe e abra o <b>RyanDino.apk</b> (permita instalar apps desta fonte).</li>
+        <li>Se aparecer "pacote inválido", baixe de novo no Wi-Fi ou use o <a href="https://github.com/denbatera83/suporte/raw/ccr-ac78b9fc-ev2jcd/projetos-do-ryan/ryan-dino/RyanDino-Android.zip" target="_blank" rel="noopener" style="color:var(--lava)">.zip</a>.</li>
+        <li>Abra o Ryan Dino e permita a <b>câmera</b>.</li>
+      </ol>
+    </article>
+    <article class="cartao">
+      <h2>🌐 No navegador</h2>
+      <a class="botao leve" href="https://raw.githack.com/denbatera83/suporte/ccr-ac78b9fc-ev2jcd/projetos-do-ryan/ryan-dino/index.html" target="_blank" rel="noopener">▶ Jogar sem instalar <small>Chrome no celular ou no computador</small></a>
+      <p>Também dá para jogar sem câmera: segure ↑ para correr, ← → para trocar de pista e espaço para pular.</p>
+    </article>
+  </section>
+  <section class="regras" aria-label="Como jogar">
+    <div><b>🏃</b>Corra no lugar para correr</div>
+    <div><b>🦘</b>Pule de verdade para pular os troncos</div>
+    <div><b>↔️</b>Um passo para o lado desvia das pedras</div>
+  </section>
+  <p class="rodape">Usa a câmera de trás (pode trocar para a da frente). Deixe o celular apoiado a uns 2 ou 3 passos, vendo você de corpo inteiro, e jogue num lugar com espaço.</p>
+</div>
