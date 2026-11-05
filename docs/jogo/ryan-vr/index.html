@@ -92,7 +92,7 @@
       <div class="marca"><div class="oculos" aria-hidden="true"></div><h1>Ryan <em>VR</em></h1></div>
       <p class="ent-frase">Realidade virtual com as suas mãos: jogos, vídeos 360° e uma TV flutuando na sua casa.</p>
       <ul class="ent-chips" aria-label="Destaques">
-        <li>✋ Mãos de verdade</li><li>🎮 24 jogos</li><li>🌐 360°</li><li>📺 Sua casa</li>
+        <li>✋ Mãos de verdade</li><li>🎮 25 jogos</li><li>🌐 360°</li><li>📺 Sua casa</li>
       </ul>
       <p class="nota" id="versao">Ryan VR</p>
     </section>
@@ -1228,6 +1228,79 @@ MINI.nave = {
   }
 };
 
+// ===================== VALE DOS DINOS: alimente os dinossauros e choque os ovos =====================
+MINI.dinos = {
+  titulo: 'Vale dos Dinos', ic: '🦕', setor: 'aventura', tipo: 'Dê comida aos dinossauros com a mão', tags: ['Aventura', 'Mãos', '90 s'], dur: 90,
+  desc: 'Um vale cheio de dinossauros! Feche a mão (ou faça a pinça) para pegar uma folha, aponte para um dino e abra a mão para jogar: a mira ajuda um pouquinho. Dino alimentado ganha coraçõezinhos. No ninho na sua frente, toque nos ovos até rachar e um filhote nasce. Sem câmera, olhe para o dino e toque na tela.',
+  dica: 'Feche a mão para pegar a folha, abra para jogar no dino!', ceu: [[0, '#ffb070'], [0.45, '#ffe3b0'], [0.52, '#9ccf7a'], [1, '#2f5a2a']], chao: 0x4f8a3a, trilha: 'montanha', cores: ['#7cc96a', '#ff9a3d'],
+  monta(J) {
+    const G = J.G, Y = J.olhoY, plano = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.85, flatShading: true });
+    // floresta, samambaias, pedras e o vulcão no fundo
+    const tronco = plano(0x6a4a2a), copa = [plano(0x2f7a3a), plano(0x3f9a45), plano(0x5aaa3a)];
+    for (let i = 0; i < 46; i++) {
+      const a = Math.random() * Math.PI * 2, d = 9 + Math.random() * 22, t = new THREE.Group(), h = 2 + Math.random() * 3;
+      const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.2, h, 6), tronco); tr.position.y = h / 2; t.add(tr);
+      if (i % 3) { const c = new THREE.Mesh(new THREE.SphereGeometry(0.9 + Math.random() * 0.8, 7, 6), copa[i % 3]); c.position.y = h + 0.4; c.scale.y = 0.8; t.add(c); }
+      else for (let k = 0; k < 6; k++) { const f = new THREE.Mesh(new THREE.ConeGeometry(0.25, 1.8, 4), copa[k % 3]); f.position.set(Math.cos(k) * 0.6, h, Math.sin(k) * 0.6); f.rotation.set(Math.sin(k) * 1.2, 0, Math.cos(k) * 1.2); t.add(f); } // palmeira
+      t.position.set(Math.sin(a) * d, 0, -Math.cos(a) * d); G.add(t);
+    }
+    for (let i = 0; i < 30; i++) { const a = Math.random() * Math.PI * 2, d = 2.5 + Math.random() * 7, s = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.5, 5), copa[i % 3]); s.position.set(Math.sin(a) * d, 0.25, -Math.cos(a) * d); s.scale.set(1.5, 1, 1.5); G.add(s); }
+    const vulcao = new THREE.Mesh(new THREE.ConeGeometry(22, 26, 9, 1, true), plano(0x6a5a52)); vulcao.position.set(25, 12, -80); G.add(vulcao);
+    const lava = new THREE.Mesh(new THREE.SphereGeometry(4, 10, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(2, 0.7, 0.2), toneMapped: false })); lava.position.set(25, 25, -80); G.add(lava);
+    // o ninho com ovos na sua frente (na altura das mãos)
+    const pedra = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.36, Y - 0.38, 8), plano(0x8a8270)); pedra.position.set(0.25, (Y - 0.38) / 2, -0.55); G.add(pedra);
+    const ninho = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.05, 6, 12), plano(0x9a7a3a)); ninho.rotation.x = Math.PI / 2; ninho.position.set(0.25, Y - 0.36, -0.55); G.add(ninho);
+    J.ovoM = [0xf4ecd8, 0xd8f0e0, 0xf0dcec].map(c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.5 }));
+    J.ovos = [[-0.07, 0], [0.07, 0.02], [0, -0.07]].map(([x, z], i) => this.dinoOvo(J, new THREE.Vector3(0.25 + x, Y - 0.31, -0.55 + z), i));
+    // a cesta de folhas na esquerda
+    const cesta = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.09, 0.1, 10, 1, true), plano(0xb08a4a)); cesta.position.set(-0.3, Y - 0.38, -0.5); G.add(cesta);
+    J.folhaM = new THREE.MeshStandardMaterial({ color: 0x5fd04a, roughness: 0.6, side: THREE.DoubleSide, flatShading: true }); J.folhaG = new THREE.ConeGeometry(0.035, 0.11, 4);
+    for (let k = 0; k < 5; k++) { const f = new THREE.Mesh(J.folhaG, J.folhaM); f.position.set(-0.3 + (k - 2) * 0.03, Y - 0.32, -0.5); f.rotation.z = (k - 2) * 0.3; G.add(f); }
+    // os dinossauros
+    J.dinos = [
+      this.dinoCria(J, 'tri', 0x5aa04a, 3.6, -0.5, 0.18), this.dinoCria(J, 'tri', 0xd9822b, 4.4, 0.55, -0.14),
+      this.dinoCria(J, 'crista', 0x8a6ad0, 3.2, 0.1, 0.22), this.dinoCria(J, 'pescoco', 0x7a8aa0, 15, -0.2, 0.03)
+    ];
+    J.filhos = []; J.alimentados = 0; J.filhotes = 0; J.combo = 0;
+  },
+  passo(J, dt) {
+    const cria = () => { const m = new THREE.Mesh(J.folhaG, J.folhaM); m.scale.setScalar(1.3); return m; };
+    // ovos primeiro: a mão que bate num ovo não pega folha
+    J.ovos.forEach(o => {
+      if (o.nascendo) { if (J.t > o.volta) { o.nascendo = false; o.batidas = 0; o.m.visible = true; o.m.scale.set(1, 1.3, 1); } return; }
+      const h = J.maos.find(h => h.pegou && h.raioPalma.distanceToPoint(o.m.position) < 0.07);
+      if (h || (!J.maos.length && J.toque && J.olhar.distanceToPoint(o.m.position) < 0.06)) {
+        if (h) h.pegou = false; else J.toque = false;
+        o.batidas++; o.treme = 0.3; this.somCurto('bloco'); this.vibra(15);
+        if (o.batidas >= 3) this.dinoNasce(J, o);
+      }
+      if (o.treme > 0) { o.treme -= dt; o.m.rotation.z = Math.sin(J.t * 60) * 0.25 * (o.treme / 0.3); }
+    });
+    // mira: o dino mais perto da direção da mão (ou do olhar)
+    const ray = (J.maos.find(h => J.bola && h.k === J.bola.k) || J.maos[0] || {}).raio || J.olhar;
+    let alvo = null, md = 1e9; J.dinos.forEach(d => { if (!d.come) return; const c = d.boca(), dir = c.clone().sub(ray.origin).normalize(), a = dir.angleTo(ray.direction); if (a < md) { md = a; alvo = d; } });
+    const ponto = alvo ? alvo.boca() : ray.at(4, new THREE.Vector3());
+    if (J.maos.length || J.bola) this.bolaMini(J, ponto, cria, 3);
+    else if (J.toque) { const m = cria(); m.position.copy(J.olhar.origin).add(new THREE.Vector3(0, -0.15, 0)).addScaledVector(J.olhar.direction, 0.3); J.G.add(m); this.lancaMini(J, m, new THREE.Vector3(0, 0, -1), ponto, 1, 3); } // pelo olhar: vai reto no dino
+    J.dinos.forEach(d => d.anda(dt, J.t, J.bola ? 1 : J.voando && J.voando.length ? 2 : 0)); // com comida na mão ou voando, eles param e esperam
+    // folhas voando: caem pela gravidade; o dino abocanha
+    (J.voando || []).slice().forEach(b => {
+      b.v.y -= 5 * dt; b.m.position.addScaledVector(b.v, dt); b.m.rotation.x += dt * 8; b.vida -= dt;
+      const d = J.dinos.find(d => d.come && (b.m.position.distanceTo(d.boca()) < 0.6 * d.s || b.m.position.distanceTo(d.g.position.clone().add(new THREE.Vector3(0, (d.tipo === 'crista' ? 1.2 : 0.7) * d.s, 0))) < 0.85 * d.s)); // pegou na boca ou bateu no dino
+      if (d) {
+        J.G.remove(b.m); J.voando.splice(J.voando.indexOf(b), 1); J.combo++; J.alimentados++;
+        const pts = 10 + Math.min(4, J.combo - 1) * 5; J.pontos += pts; const w = this.mw(J, d.boca());
+        this.popup('❤️ +' + pts, w, '#ff8ad8'); this.faiscas(w, 0xff8ad8, 14, 1); this.somCurto('dino'); d.feliz = 1.2; d.s0 *= 1.03; return;
+      }
+      if (b.m.position.y < 0.05 || b.vida <= 0) { J.G.remove(b.m); J.voando.splice(J.voando.indexOf(b), 1); J.combo = 0; }
+    });
+    // filhotes correndo para a floresta
+    J.filhos.slice().forEach(f => { f.t += dt; f.g.position.addScaledVector(f.dir, dt * 0.9); f.g.position.y = f.y0 + Math.abs(Math.sin(f.t * 12)) * 0.04; if (f.t > 4) { J.G.remove(f.g); J.filhos.splice(J.filhos.indexOf(f), 1); } });
+    J.info = J.bola ? '🍃 mire num dino e abra a mão' : '✊ feche a mão: pega uma folha';
+    J.extra = `${J.alimentados} dinos alimentados · ${J.filhotes} filhotes`;
+  }
+};
+
 const JOGOS = [
   { id: 'corrida', titulo: 'Corrida VR', tipo: 'Dirija com a mão (câmera)', tags: ['Carro', 'Mão de verdade', '90 s'], desc: 'Você está dentro do carro numa estrada. Segure um volante imaginário com as duas mãos e gire para virar (ou gire uma mão só); faça a pinça para o turbo. Desvie dos carros e pegue moedas. Sem câmera, vire a cabeça para dirigir.', interno: true, vr: true },
   { id: 'cubos', titulo: 'Corta Cubos', tipo: 'Duas espadas de luz (câmera)', tags: ['Duas mãos', 'Ritmo', '90 s'], desc: 'Suas duas mãos viram espadas de luz! Cubos vêm na sua direção no ritmo da música: corte cada um ao meio com um golpe rápido. Vermelho é da mão esquerda e azul da direita (a cor certa vale mais e aumenta o combo); dourado vale muito. Não corte as minas espinhosas! Sem câmera, a espada fica na sua cabeça.', interno: true, vr: true },
@@ -1948,6 +2021,74 @@ AFRAME.registerComponent('ryan-vr', {
     R.socoK = Math.max(0, R.socoK - dt * 5); R.bD.position.z = R.socoK * 0.035; R.bD.rotation.x = -R.socoK * 1.2;
   },
 
+  // ---------- Vale dos Dinos: dinossauros de formas simples (corpo, cabeça, patas, rabo) que andam ----------
+  dinoCria(J, tipo, cor, R, a0, vel) {
+    const g = new THREE.Group(), m = new THREE.MeshStandardMaterial({ color: cor, roughness: 0.75, flatShading: true }), claro = new THREE.MeshStandardMaterial({ color: new THREE.Color(cor).lerp(new THREE.Color(0xfff2d8), 0.45), roughness: 0.8, flatShading: true });
+    const osso = new THREE.MeshStandardMaterial({ color: 0xf4ecd8, roughness: 0.5 }), olhoM = new THREE.MeshBasicMaterial({ color: 0x1a1208 });
+    const elip = (rx, ry, rz, x, y, z, mat) => { const e = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 9), mat || m); e.scale.set(rx, ry, rz); e.position.set(x, y, z); g.add(e); return e; };
+    const perna = (x, y, z, r, h) => { const p = new THREE.Group(); const c = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.85, h, 7), m); c.position.y = -h / 2; p.add(c); p.position.set(x, y, z); g.add(p); return p; };
+    const cone = (r, h, x, y, z, rx, mat) => { const c = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7), mat || m); c.position.set(x, y, z); c.rotation.x = rx; g.add(c); return c; };
+    const D = { g, tipo, R, a: a0, v: vel, s: 1, s0: 1, come: tipo !== 'pescoco', feliz: 0, pernas: [] };
+    if (tipo === 'tri') { // três chifres e uma gola
+      elip(0.42, 0.36, 0.72, 0, 0.72, 0); elip(0.3, 0.2, 0.55, 0, 0.62, 0, claro);
+      D.cabeca = new THREE.Group(); D.cabeca.position.set(0, 0.72, -0.72); g.add(D.cabeca);
+      const ca = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), m); ca.scale.set(0.24, 0.22, 0.3); D.cabeca.add(ca);
+      const gola = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.04, 14), claro); gola.rotation.x = 1.1; gola.position.set(0, 0.16, 0.12); D.cabeca.add(gola);
+      [[-0.1, 0.16, -0.12, 0.3], [0.1, 0.16, -0.12, 0.3], [0, 0.02, -0.3, 0.14]].forEach(([x, y, z, h]) => { const c = new THREE.Mesh(new THREE.ConeGeometry(0.035, h, 6), osso); c.position.set(x, y, z - h / 2 + 0.05); c.rotation.x = -1.2; D.cabeca.add(c); });
+      [-0.09, 0.09].forEach(x => { const o = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 5), olhoM); o.position.set(x, 0.08, -0.16); D.cabeca.add(o); });
+      [[-0.26, -0.42], [0.26, -0.42], [-0.26, 0.42], [0.26, 0.42]].forEach(([x, z]) => D.pernas.push(perna(x, 0.55, z, 0.09, 0.55)));
+      cone(0.22, 0.9, 0, 0.7, 0.95, -1.35); D.boca = new THREE.Vector3(0, 0.62, -1.05);
+    } else if (tipo === 'crista') { // anda em duas patas, crista na cabeça
+      elip(0.4, 0.42, 0.7, 0, 1.05, 0); elip(0.28, 0.3, 0.5, 0, 0.95, -0.1, claro);
+      const pes = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.7, 8), m); pes.position.set(0, 1.5, -0.55); pes.rotation.x = 0.55; g.add(pes);
+      D.cabeca = new THREE.Group(); D.cabeca.position.set(0, 1.85, -0.75); g.add(D.cabeca);
+      const ca = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), m); ca.scale.set(0.16, 0.15, 0.3); D.cabeca.add(ca);
+      const cr = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.5, 6), claro); cr.position.set(0, 0.17, 0.2); cr.rotation.x = 1.1; D.cabeca.add(cr);
+      [-0.08, 0.08].forEach(x => { const o = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 5), olhoM); o.position.set(x, 0.05, -0.08); D.cabeca.add(o); });
+      [[-0.22, 0.05], [0.22, 0.05]].forEach(([x, z]) => D.pernas.push(perna(x, 0.85, z, 0.12, 0.85)));
+      [[-0.2, -0.5], [0.2, -0.5]].forEach(([x, z]) => { const b = perna(x, 1.05, z, 0.04, 0.3); b.rotation.x = -0.6; });
+      cone(0.26, 1.4, 0, 1.0, 1.1, -1.45); D.boca = new THREE.Vector3(0, 1.82, -1.05);
+    } else { // pescoçudo gigante, passa ao longe
+      elip(1.2, 1.0, 2.0, 0, 2.6, 0); D.s = D.s0 = 1;
+      const pes = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.5, 4, 8), m); pes.position.set(0, 4.3, -2.6); pes.rotation.x = 0.7; g.add(pes);
+      D.cabeca = new THREE.Group(); D.cabeca.position.set(0, 5.9, -4.0); g.add(D.cabeca);
+      const ca = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), m); ca.scale.set(0.3, 0.28, 0.55); D.cabeca.add(ca);
+      [[-0.6, -1.2], [0.6, -1.2], [-0.6, 1.2], [0.6, 1.2]].forEach(([x, z]) => D.pernas.push(perna(x, 2.2, z, 0.32, 2.2)));
+      cone(0.5, 4, 0, 2.5, 3.6, -1.4); D.boca = new THREE.Vector3(0, 5.8, -4.5);
+    }
+    J.G.add(g);
+    D.boca0 = D.boca; D.boca = () => { g.updateMatrixWorld(true); return J.G.worldToLocal(g.localToWorld(D.boca0.clone())); };
+    D.anda = (dt, t, comida) => {
+      const espera = comida && D.come && D.R < 6; // com comida na sua mão, o dino para e olha para você
+      if (!espera) { D.a += D.v * dt / D.R * 1.6; if (Math.abs(D.a) > 1.15) { D.a = Math.sign(D.a) * 1.15; D.v = -D.v; } }
+      g.position.set(Math.sin(D.a) * D.R, 0, -Math.cos(D.a) * D.R);
+      const tx = Math.cos(D.a) * Math.sign(D.v), tz = Math.sin(D.a) * Math.sign(D.v);
+      const quer = espera ? (comida === 1 ? Math.atan2(g.position.x, g.position.z) : g.rotation.y) : Math.atan2(-tx, -tz); // folha no ar: fica parado esperando
+      let dif = quer - g.rotation.y; dif = Math.atan2(Math.sin(dif), Math.cos(dif)); g.rotation.y += dif * Math.min(1, dt * 3);
+      const passo = espera ? 0 : Math.sin(t * 6 * Math.abs(D.v) / (D.tipo === 'pescoco' ? 0.4 : 1));
+      D.pernas.forEach((p, i) => { p.rotation.x = passo * 0.45 * (i % 2 ? 1 : -1) * (i < 2 ? 1 : -1); });
+      if (D.cabeca) { D.cabeca.rotation.x = espera ? -0.25 + Math.sin(t * 3) * 0.05 : Math.sin(t * 2 + D.R) * 0.12; }
+      if (D.feliz > 0) { D.feliz -= dt; g.position.y = Math.abs(Math.sin(D.feliz * 9)) * 0.15; } else g.position.y = 0;
+      D.s += (D.s0 - D.s) * Math.min(1, dt * 3); g.scale.setScalar(D.s);
+    };
+    D.anda(0, 0, false); return D;
+  },
+  dinoOvo(J, pos, i) {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.04, 14, 10), J.ovoM[i % J.ovoM.length]); m.scale.set(1, 1.3, 1); m.position.copy(pos); J.G.add(m);
+    return { m, batidas: 0, treme: 0, i };
+  },
+  dinoNasce(J, o) {
+    o.nascendo = true; o.volta = J.t + 3.5; o.m.visible = false; J.filhotes++; J.pontos += 15;
+    const w = this.mw(J, o.m.position); this.faiscas(w, 0xfff2a8, 18, 1.2); this.popup('🐣 +15', w, '#fff2a8'); this.somCurto('ouro'); this.vibra([30, 30, 30]);
+    const g = new THREE.Group(), m = new THREE.MeshStandardMaterial({ color: [0x7ad05a, 0xffb36b, 0xb08aff][o.i % 3], roughness: 0.7, flatShading: true });
+    const corpo = new THREE.Mesh(new THREE.SphereGeometry(0.045, 10, 8), m); g.add(corpo);
+    const cab = new THREE.Mesh(new THREE.SphereGeometry(0.03, 10, 8), m); cab.position.set(0, 0.04, -0.045); g.add(cab);
+    const rabo = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.07, 6), m); rabo.position.set(0, 0.005, 0.06); rabo.rotation.x = -1.4; g.add(rabo);
+    g.position.copy(o.m.position); J.G.add(g);
+    const dir = new THREE.Vector3((Math.random() - 0.5) * 0.8, 0, -1).normalize(); g.rotation.y = Math.atan2(-dir.x, -dir.z);
+    J.filhos.push({ g, dir, t: 0, y0: o.m.position.y });
+    this.aviso('🐣 Nasceu um filhote!');
+  },
   // ---------- Mini Golfe: monta cada buraco ----------
   golfeBuraco(J) {
     const B = Object.assign({}, GOLFE_BURACOS[J.n]); J.b = B; B.obsAt = B.obs.map(o => o.slice()); if (B.move) B.obsAt.push(B.move.slice());
@@ -2611,8 +2752,8 @@ AFRAME.registerComponent('ryan-vr', {
     const W = p.W, agora = new Date();
     texto(g, (agora.getHours() < 5 ? 'Boa noite, ' : agora.getHours() < 12 ? 'Bom dia, ' : agora.getHours() < 18 ? 'Boa tarde, ' : 'Boa noite, ') + nomeConta(), 56, 96, FONTE_T(60), UI.txt);
     texto(g, 'Toque, olhe ou faça a pinça num app para abrir', 58, 138, FONTE(700, 27), UI.sub);
-    const CURTO = { tempo: 'Tempo Congelado', golfe: 'Mini Golfe', pingue: 'Pingue-pongue', nave: 'Nave Perdida', mina: 'Mina', estrelas: 'Estrelas', bolhas: 'Bolhas', robos: 'Robôs', pintura: 'Pintura', tambores: 'Tambores', latas: 'Latas', basquete: 'Basquete', labirinto: 'Labirinto', muro: 'Passa-Muro', dedos: 'Dedos', ppt: 'Pedra Papel', paredao: 'Paredão', piano: 'Piano de Luz', corrida: 'Corrida', cubos: 'Corta Cubos', alvos: 'Tiro ao Alvo', baloes: 'Balões', blocos: 'Blocos', turbo: 'Turbo', montanha: 'Montanha', mar: 'Fundo do Mar', espaco: 'Espaço', aurora: 'Aurora' };
-    const DESTAQUE = ['tempo', 'golfe', 'pingue', 'nave', 'mina', 'cubos', 'alvos', 'ppt'];
+    const CURTO = { dinos: 'Vale dos Dinos', tempo: 'Tempo Congelado', golfe: 'Mini Golfe', pingue: 'Pingue-pongue', nave: 'Nave Perdida', mina: 'Mina', estrelas: 'Estrelas', bolhas: 'Bolhas', robos: 'Robôs', pintura: 'Pintura', tambores: 'Tambores', latas: 'Latas', basquete: 'Basquete', labirinto: 'Labirinto', muro: 'Passa-Muro', dedos: 'Dedos', ppt: 'Pedra Papel', paredao: 'Paredão', piano: 'Piano de Luz', corrida: 'Corrida', cubos: 'Corta Cubos', alvos: 'Tiro ao Alvo', baloes: 'Balões', blocos: 'Blocos', turbo: 'Turbo', montanha: 'Montanha', mar: 'Fundo do Mar', espaco: 'Espaço', aurora: 'Aurora' };
+    const DESTAQUE = ['dinos', 'tempo', 'golfe', 'pingue', 'nave', 'mina', 'cubos', 'alvos'];
     const app = (id, nome, ic, cor) => ({ id, nome, ic, cor });
     // três fileiras com nome, como numa tela de início de verdade
     const GRUPOS = [
@@ -3705,6 +3846,7 @@ AFRAME.registerComponent('ryan-vr', {
     if (tipo === 'tiro') { ruido(0.22, 'lowpass', 2200, 0.75); tom(160, 55, 0.12, 'sine', 0.35); }
     if (tipo === 'acerto') { tom(1320, 1320, 0.12, 'sine', 0.12); tom(1760, 1760, 0.2, 'sine', 0.08, 0.04); }
     if (tipo === 'mosca') [1318, 1568, 2093].forEach((f, i) => tom(f, f, 0.22, 'triangle', 0.1, i * 0.06));
+    if (tipo === 'dino') { ruido(0.45, 'lowpass', 380, 0.6); tom(190, 70, 0.5, 'sawtooth', 0.1); tom(260, 120, 0.35, 'triangle', 0.08, 0.05); }
     if (tipo === 'bloco') { ruido(0.09, 'lowpass', 900, 0.6); tom(190, 90, 0.08, 'square', 0.05); }
     if (tipo === 'quebra') { ruido(0.22, 'bandpass', 1300, 0.8); tom(320, 110, 0.16, 'triangle', 0.12); }
     if (tipo === 'poe') { ruido(0.06, 'lowpass', 1500, 0.4); tom(440, 330, 0.08, 'sine', 0.15); }
@@ -5379,7 +5521,7 @@ window.addEventListener('error', e => mostraErro((e.message || 'erro') + (e.file
 window.addEventListener('unhandledrejection', e => mostraErro('promessa: ' + (e.reason && (e.reason.message || e.reason))));
 document.addEventListener('DOMContentLoaded', () => {
   const ok = document.getElementById('erros-ok'); if (ok) ok.onclick = () => { document.getElementById('erros').hidden = true; };
-  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 4.2' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
+  const v = document.getElementById('versao'); if (v) { const gl = (() => { try { return document.createElement('canvas').getContext('webgl2') ? 'WebGL2' : 'WebGL1'; } catch (e) { return 'sem WebGL'; } })(); const ch = (navigator.userAgent.match(/Chrome\/([0-9]+)/) || [])[1]; v.textContent = 'Ryan VR 4.3' + (ch ? ' · Chrome ' + ch : '') + ' · ' + gl; }
 });
 window.addEventListener('error', e => { const a = document.getElementById('vr-erro'); if (a && document.body.classList.contains('modo-vr')) { a.textContent = 'Erro: ' + (e.message || 'desconhecido'); a.hidden = false; } });
 
