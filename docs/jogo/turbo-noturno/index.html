@@ -2597,8 +2597,8 @@ function updateCamera(dt) {
   let want, look, lerpK = 6;
   if (camMode === 0) {
     const fly = player.pos.y > 0.5;
-    const back = 6.2 + sp * 0.025 + (fly ? 3 : 0);
-    want = new THREE.Vector3(player.pos.x - fx * back, 2.0 + sp * 0.006 + player.pos.y + (fly ? 1.5 : 0), player.pos.z - fz * back);
+    const back = 6.2 + (fly ? 3 : 0); // distância fixa: a câmera não se afasta com a velocidade
+    want = new THREE.Vector3(player.pos.x - fx * back, 2.0 + player.pos.y + (fly ? 1.5 : 0), player.pos.z - fz * back);
     look = new THREE.Vector3(player.pos.x + fx * 4, 1.0 + player.pos.y, player.pos.z + fz * 4);
   } else if (camMode === 1) {
     want = new THREE.Vector3(player.pos.x - fx * 11, 3.8 + player.pos.y, player.pos.z - fz * 11);
@@ -2612,8 +2612,11 @@ function updateCamera(dt) {
   }
   const lift = (player.car && player.car.camLift) || 0;
   if (want) want.y += lift; if (look) look.y += lift * 0.7;
-  if (lerpK) camPos.lerp(want, Math.min(1, lerpK * dt));
-  camLook.lerp(look, lerpK ? Math.min(1, 12 * dt) : 1);
+  if (lerpK) { // suaviza só a posição em volta do carro (não fica para trás quando ele corre)
+    camOff.lerp(want.sub(player.pos), Math.min(1, lerpK * dt));
+    camPos.copy(player.pos).add(camOff);
+    camLook.copy(look);
+  } else { camOff.copy(camPos).sub(player.pos); camLook.copy(look); }
   camera.position.copy(camPos);
   const vib = shake + (sp > 50 ? (sp - 50) * 0.0012 : 0) + (player.nitroOn ? 0.03 : 0);
   if (vib > 0) {
@@ -2621,10 +2624,11 @@ function updateCamera(dt) {
     shake = Math.max(0, shake - dt * 2);
   }
   camera.lookAt(camLook);
-  const fov = 60 + Math.min(1, sp / 85) * 12 + (player.nitroOn ? 6 : 0);
+  const fov = 60 + (player.nitroOn ? 3 : 0);
   camera.fov += (fov - camera.fov) * Math.min(1, 3 * dt);
   camera.updateProjectionMatrix();
 }
+const camOff = new THREE.Vector3(0, 2, -6.2);
 
 // =====================================================================
 // HUD
