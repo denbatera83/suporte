@@ -36,7 +36,7 @@
   #susto.on { opacity: 1; animation: tremer .09s linear infinite; }
   @keyframes tremer { 0% { transform: translate(4px, -3px); } 50% { transform: translate(-5px, 4px); } 100% { transform: translate(3px, 2px); } }
   #folego { position: fixed; z-index: 3; left: 50%; transform: translateX(-50%); bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 4px); width: min(240px, 40vw); height: 8px; border-radius: 4px; background: rgba(0,0,0,.4); border: 1px solid rgba(243,236,210,.35); display: none; pointer-events: none; }
-  body.jogando #folego { display: block; }
+
   #folego i { display: block; height: 100%; width: 100%; border-radius: 4px; background: var(--verde); }
   #folego.cansado i { background: #ff5a4a; }
   #n-vidas { color: #ff6a5a; letter-spacing: .1em; }
@@ -118,11 +118,11 @@
   <div class="cartao">
     <div class="rotulo">FITA ENCONTRADA · NOV 1996</div>
     <h1>SALAS<br>SEM FIM</h1>
-    <p>Você cochilou e acordou num lugar que não acaba: salas e mais salas, luz zumbindo e uma música antiga tocando longe. Ache <b>8 fitas cassete</b> espalhadas pelas salas, mas cuidado: <b>as Sombras</b> andam por aqui e vão te perseguir. Com as 8, uma <b>porta verde de SAÍDA</b> aparece e leva você para o próximo nível. Corra, fuja e não deixe elas te pegarem: você tem 3 vidas.</p>
+    <p>Você cochilou e acordou num lugar que não acaba: salas e mais salas, luz zumbindo e uma música antiga tocando longe. Ache <b>8 fitas cassete</b> espalhadas pelas salas, mas cuidado: <b>a Sombra</b> anda por aqui e vai te perseguir. Com as 8, uma <b>porta verde de SAÍDA</b> aparece e leva você para o próximo nível. Corra, fuja e não deixe ela te pegar: você tem 3 vidas.</p>
     <div class="teclas" id="lista-teclas">
       <kbd>W A S D</kbd><span>andar (ou as setas)</span>
       <kbd>Mouse</kbd><span>olhar em volta (clique na tela para prender o mouse)</span>
-      <kbd>Shift</kbd><span>correr (gasta o fôlego: a barra verde embaixo)</span>
+      <kbd>Shift</kbd><span>correr (sem limite)</span>
       <kbd>M</kbd><span>liga e desliga a música</span>
       <kbd>C</kbd><span>câmera de fora (veja o seu traje)</span>
       <kbd>T</kbd><span>liga e desliga o microfone (no aplicativo)</span>
@@ -558,7 +558,7 @@ function posLonge(min, max) { // um centro de sala longe do jogador
   }
   return [J.x + 40, J.z + 40];
 }
-function quantasSombras() { return Math.min(4, 1 + (J.fitas >= 3) + (J.fitas >= 6) + (salvo.nivel >= 2 ? 1 : 0)); }
+function quantasSombras() { return 1; } // só uma Sombra te persegue
 function criarSombraNoMundo() {
   const s = criarSombra(), [x, z] = posLonge(32, 44);
   const o = { s, x, z, a: 0, rota: null, rotaT: 0, presoT: 0, rosnaT: 2 + Math.random() * 4, ult: [x, z] };
@@ -645,6 +645,9 @@ function pego(o) {
 
 // ===================== SOM: música nostálgica feita na hora, zumbido das lâmpadas e passos =====================
 let A = null, musicaOn = true;
+const destravarSom = () => { if (A && A.ctx.state !== 'running') A.ctx.resume().catch(() => {}); else if (!A && jogando) iniciarSom(); };
+['pointerdown', 'touchend', 'keydown', 'click'].forEach(ev => addEventListener(ev, destravarSom, { capture: true, passive: true }));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) destravarSom(); });
 function iniciarSom() {
   if (A) { if (A.ctx.state === 'suspended') A.ctx.resume(); return; }
   try {
@@ -848,7 +851,7 @@ function atualizarRemoto(id, s) {
   NET.adotou = true;
   painelSala();
 }
-function removerRemoto(id) { const r = remotos.get(id); if (!r) return; cena.remove(r.e.g); if (r.voz) { try { r.voz.src.disconnect(); r.voz.el.srcObject = null; } catch (e) {} } remotos.delete(id); painelSala(); }
+function removerRemoto(id) { const r = remotos.get(id); if (!r) return; cena.remove(r.e.g); if (r.voz) { try { r.voz.el.pause(); r.voz.el.srcObject = null; r.voz.el.remove(); } catch (e) {} } remotos.delete(id); painelSala(); }
 function painelSala() {
   const el = $('h-sala'); if (!NET.modo) { el.hidden = true; return; }
   el.hidden = false;
@@ -1003,27 +1006,21 @@ function ligarVozComTodos() {
     } else if (NET.peer) { try { prepararChamada(NET.peer.call(id, micStream)); } catch (e) {} }
   }
 }
-function chiadoVoz(dest) { // estalo de estática quando a voz falha
+function chiadoVoz(dest, vol = 1) { // estalo de estática quando a voz falha
   if (!A) return; const t = A.ctx.currentTime, s = A.ctx.createBufferSource(), f = A.ctx.createBiquadFilter(), g = A.ctx.createGain();
   s.buffer = A.nb; f.type = 'bandpass'; f.frequency.value = 2500 + Math.random() * 2000; f.Q.value = 0.7;
-  g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12 + Math.random() * 0.1);
+  g.gain.setValueAtTime(0.35 * Math.max(0.05, vol), t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12 + Math.random() * 0.1);
   s.connect(f); f.connect(g); g.connect(dest); s.start(t, Math.random() * 3, 0.3);
 }
 function tocarVoz(id, stream) {
-  iniciarSom(); if (!A) return;
+  iniciarSom();
   let r = remotos.get(id);
   if (!r) { r = { x: 0, z: 0, a: 0 }; remotos.set(id, r); }
-  if (r.voz) { try { r.voz.src.disconnect(); } catch (e) {} }
-  const el = new Audio(); el.srcObject = stream; el.muted = true; el.play().catch(() => {}); // o Chrome só libera o áudio da chamada com um elemento tocando
-  const src = A.ctx.createMediaStreamSource(stream), pan = A.ctx.createPanner(), g = A.ctx.createGain();
-  // voz "bugada": som de rádio velho (só os médios), chiado digital e cortes de vez em quando
-  const radio = A.ctx.createBiquadFilter(); radio.type = 'bandpass'; radio.frequency.value = 1500; radio.Q.value = 0.9;
-  const quebra = A.ctx.createWaveShaper(), cv = new Float32Array(1024);
-  for (let i = 0; i < 1024; i++) { const x = i / 1023 * 2 - 1; cv[i] = Math.round(x * 7) / 7 * 0.75 + Math.tanh(x * 4) * 0.25; }
-  quebra.curve = cv; const corta = A.ctx.createGain();
-  pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 2.5; pan.maxDistance = 60; pan.rolloffFactor = 1.3;
-  g.gain.value = 2.2; src.connect(radio); radio.connect(quebra); quebra.connect(corta); corta.connect(pan); pan.connect(g); g.connect(A.mestre);
-  r.voz = { el, src, pan, g, corta, bugT: 0 };
+  if (r.voz) { try { r.voz.el.pause(); r.voz.el.srcObject = null; r.voz.el.remove(); } catch (e) {} }
+  // a voz toca direto num elemento de áudio: é o jeito que funciona em todo celular Android
+  const el = document.createElement('audio'); el.autoplay = true; el.setAttribute('playsinline', ''); el.srcObject = stream; el.volume = 1;
+  document.body.appendChild(el); el.play().catch(() => {});
+  r.voz = { el, bugT: 0 };
 }
 async function alternarMicrofone() {
   if (NET.modo === 'room') { mensagem('VOZ SÓ NO APLICATIVO', 'No link do Claude o microfone não funciona. Use o APK Salas Sem Fim.', 3.5); return; }
@@ -1050,11 +1047,13 @@ function atualizarRede(dt) {
     const mesmo = s.lv === salvo.nivel;
     r.e.g.visible = mesmo; r.e.g.position.set(r.x, 0, r.z); r.e.g.rotation.y = r.a + Math.PI;
     animarExplorador(r.e, Number(s.v) || 0, dt);
-    if (r.voz) {
-      if (r.voz.pan.positionX) { r.voz.pan.positionX.value = r.x; r.voz.pan.positionY.value = 1.6; r.voz.pan.positionZ.value = r.z; } else r.voz.pan.setPosition(r.x, 1.6, r.z);
-      r.voz.g.gain.value = mesmo ? 2.2 : 0;
-      if (r.voz.bugT > 0) r.voz.bugT -= dt; else if (Math.random() < dt * 0.9) { r.voz.bugT = 0.05 + Math.random() * 0.22; chiadoVoz(r.voz.pan); }
-      r.voz.corta.gain.value = r.voz.bugT > 0 ? (Math.random() < 0.55 ? 0 : 0.3) : 1;
+    if (r.voz) { // volume pela distância + voz "bugada" (picota e solta chiado de vez em quando)
+      const dist = Math.hypot(r.x - J.x, r.z - J.z);
+      let vol = mesmo ? Math.max(0.12, Math.min(1, 1.15 - dist / 28)) : 0;
+      if (r.voz.bugT > 0) { r.voz.bugT -= dt; vol *= Math.random() < 0.55 ? 0 : 0.3; }
+      else if (mesmo && Math.random() < dt * 0.9) { r.voz.bugT = 0.05 + Math.random() * 0.22; if (A) chiadoVoz(A.mestre, vol); }
+      if (r.voz.el.paused) r.voz.el.play().catch(() => {});
+      r.voz.el.volume = vol;
     }
   }
   if (A && A.ctx.listener) {
@@ -1064,6 +1063,7 @@ function atualizarRede(dt) {
   }
 }
 async function jogarJunto(criar, numero) {
+  iniciarSom(); // liga o som AGORA, ainda dentro do toque (o celular só deixa assim)
   if (NET.modo) { entrar(); return; }
   meuNome = limparNome($('nome').value) || 'Explorador'; $('nome').value = meuNome; minhaCor = corDe(meuNome);
   try { localStorage.setItem('salas-nome', meuNome); } catch (e) {}
@@ -1143,11 +1143,7 @@ function quadro(agora) {
     if (teclas.has('d') || teclas.has('arrowright')) s += 1; if (teclas.has('a') || teclas.has('arrowleft')) s -= 1;
     f -= joy.dy; s += joy.dx;
     const mag = Math.hypot(f, s); if (mag > 1) { f /= mag; s /= mag; }
-    const querCorrer = (teclas.has('shift') || correrToque) && mag > 0.1;
-    if (J.folego <= 0.01) J.cansado = true; if (J.folego > 0.35) J.cansado = false;
-    const correndo = querCorrer && !J.cansado;
-    J.folego = Math.max(0, Math.min(1, J.folego + (correndo ? -dt / 5.5 : dt / (mag > 0.1 ? 7 : 4))));
-    $('folego').firstChild.style.width = (J.folego * 100) + '%'; $('folego').classList.toggle('cansado', J.cansado);
+    const correndo = (teclas.has('shift') || correrToque) && mag > 0.1; // correr não cansa
     const vel = (correndo ? 5.6 : 3.2) * (noAgua() ? 0.65 : 1);
     const sy = Math.sin(J.yaw), cy = Math.cos(J.yaw);
     const ox = J.x, oz = J.z;
