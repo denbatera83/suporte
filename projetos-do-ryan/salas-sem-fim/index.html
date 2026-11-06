@@ -25,7 +25,7 @@
   #h-msg { left: 50%; top: 30%; transform: translateX(-50%); text-align: center; font-size: clamp(30px, 6vw, 58px); line-height: 1; opacity: 0; transition: opacity .5s; width: min(90vw, 900px); text-wrap: balance; }
   #h-msg small { display: block; font-size: .5em; margin-top: .35em; color: var(--ambar); }
   #mira { position: fixed; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255,250,230,.55); z-index: 3; pointer-events: none; }
-  #bussola { position: fixed; left: 50%; top: max(60px, calc(env(safe-area-inset-top, 0px) + 54px)); transform: translateX(-50%); z-index: 3; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 2px; font-family: var(--vhs); font-size: 22px; color: var(--verde); text-shadow: 0 0 10px rgba(80,255,160,.6); }
+  #bussola { position: fixed; left: 50%; top: max(64px, calc(env(safe-area-inset-top, 0px) + 60px)); transform: translateX(-50%); z-index: 3; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 2px; font-family: var(--vhs); font-size: 22px; color: var(--verde); text-shadow: 0 0 10px rgba(80,255,160,.6); }
   #seta { width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-bottom: 30px solid var(--verde); filter: drop-shadow(0 0 6px rgba(80,255,160,.8)); transition: transform .08s linear; }
   #escuro { position: fixed; inset: 0; background: #000; z-index: 5; opacity: 0; pointer-events: none; transition: opacity .9s; }
   /* tela inicial */
@@ -53,6 +53,11 @@
   .tb { font-family: var(--vhs); font-size: 22px; width: 92px; height: 56px; border-radius: 10px; background: rgba(0,0,0,.35); color: var(--tinta); border: 1px solid rgba(243,236,210,.4); padding: 0; }
   .tb.on { background: rgba(255,215,106,.35); }
   #h-sala { top: calc(max(14px, env(safe-area-inset-top, 0px)) + 34px); left: max(18px, env(safe-area-inset-left, 0px)); font-size: clamp(16px, 2.4vw, 22px); }
+  #b-sair { position: fixed; z-index: 4; top: max(10px, env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); width: 46px; height: 40px; padding: 0; font-family: var(--corpo); font-size: 20px; font-weight: 800; border-radius: 8px; background: rgba(10,8,4,.5); color: var(--tinta); border: 1px solid rgba(243,236,210,.45); display: none; }
+  body.jogando #b-sair { display: block; }
+  #h-fps { bottom: max(14px, env(safe-area-inset-bottom, 0px)); left: max(18px, env(safe-area-inset-left, 0px)); font-size: clamp(16px, 2.2vw, 22px); color: var(--verde); }
+  .q[aria-pressed="true"] { background: var(--ambar); color: #1d1606; border-color: var(--ambar); }
+  #q-info { font-size: 14px; line-height: 1.45; opacity: .85; }
   #h-sala b { color: var(--verde); font-weight: 400; }
   .multi { display: grid; gap: 8px; padding: 12px; border: 1px dashed rgba(243,236,210,.3); border-radius: 8px; }
   .multi .linha { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -73,6 +78,8 @@
 <div class="hud" id="h-sala" hidden></div>
 <div class="hud" id="h-play">▶ PLAY <b id="h-nivel">NÍVEL 1 · SALAS AMARELAS</b></div>
 <div class="hud" id="h-fitas">📼 <span id="n-fitas">0/8</span><br><small id="h-dist">0 m andados</small></div>
+<button id="b-sair" aria-label="Voltar ao menu" title="Menu (X)">✕</button>
+<div class="hud" id="h-fps" hidden>60 FPS</div>
 <div class="hud" id="h-data"><span id="h-hora">00:00:00</span><br>NOV 06 1996</div>
 <div class="hud" id="h-msg"></div>
 <div id="mira" aria-hidden="true"></div>
@@ -105,6 +112,11 @@
       <div class="linha"><button class="secundario" id="b-criar">CRIAR SALA</button><input id="codigo" maxlength="4" autocomplete="off" placeholder="CÓDIGO" aria-label="Código da sala"><button class="secundario" id="b-juntar">ENTRAR NA SALA</button></div>
       <div id="multi-status">Cada um aparece como um explorador de traje amarelo. No aplicativo dá para conversar pelo microfone.</div>
     </div>
+    <div class="multi">
+      <div class="rotulo">GRÁFICOS</div>
+      <div class="linha" role="group" aria-label="Qualidade gráfica"><button class="secundario q" data-q="0">BAIXO</button><button class="secundario q" data-q="1">NORMAL</button><button class="secundario q" data-q="2">ULTRA</button><button class="secundario" id="b-fps">FPS: LIGADO</button></div>
+      <div id="q-info"></div>
+    </div>
     <div class="botoes"><button class="principal" id="b-entrar">▶ ENTRAR</button><button class="secundario" id="b-novo" hidden>COMEÇAR DO NÍVEL 1</button></div>
   </div>
 </div>
@@ -122,7 +134,8 @@ if (toqueMode) {
 }
 
 // ===================== CONFIGURAÇÃO =====================
-const CELL = 6, ALT = 3, CH = 4, RAIO = 2, META = 8, PAREDE = 0.24, OLHO = 1.6;
+const CELL = 6, ALT = 3, CH = 4, META = 8, PAREDE = 0.24, OLHO = 1.6;
+let RAIO = 2; // quantos pedaços do mundo ficam carregados em volta (muda com a qualidade gráfica)
 let salvo = { nivel: 0, melhor: 0 };
 try { salvo = Object.assign(salvo, JSON.parse(localStorage.getItem('salas-sem-fim') || '{}')); } catch (e) {}
 const guardar = () => { try { localStorage.setItem('salas-sem-fim', JSON.stringify(salvo)); } catch (e) {} };
@@ -196,28 +209,45 @@ const texSaida = tex(256, 96, (g, w, hh) => { g.fillStyle = '#063a1c'; g.fillRec
 // ===================== CENA =====================
 const canvas = $('mundo');
 const R = new THREE.WebGLRenderer({ canvas, antialias: !toqueMode });
-R.setPixelRatio(Math.min(devicePixelRatio || 1, toqueMode ? 1.25 : 1.5)); R.outputEncoding = THREE.sRGBEncoding;
+R.outputEncoding = THREE.sRGBEncoding;
 R.toneMapping = THREE.ACESFilmicToneMapping; R.toneMappingExposure = 1.2;
 const cena = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(72, 1, 0.05, 120); camera.rotation.order = 'YXZ';
 const ceu = new THREE.HemisphereLight(0xffffff, 0x444444, 1); cena.add(ceu);
 const lanterna = new THREE.PointLight(0xfff0d0, 0.55, 16, 1.6); camera.add(lanterna); cena.add(camera);
+// QUALIDADE: 0 = BAIXO (computador fraco), 1 = NORMAL, 2 = ULTRA
+const QUAL = [
+  { nome: 'BAIXO', pr: 0.6, raio: 1, fog: 1.6, phong: false, lanterna: false, luzes: 0 },
+  { nome: 'NORMAL', pr: toqueMode ? 1.1 : 1.4, raio: 2, fog: 1, phong: true, lanterna: true, luzes: 0 },
+  { nome: 'ULTRA', pr: 2, raio: 3, fog: 0.7, phong: true, lanterna: true, luzes: 8 }
+];
+let gfx = 1, Q = QUAL[1];
+const luzesTeto = []; // no ULTRA, as lâmpadas mais perto acendem luz de verdade
+function aplicarQualidade() {
+  Q = QUAL[gfx]; RAIO = Q.raio;
+  R.setPixelRatio(gfx === 0 ? Q.pr : Math.min(devicePixelRatio || 1, Q.pr));
+  lanterna.visible = Q.lanterna;
+  while (luzesTeto.length < Q.luzes) { const l = new THREE.PointLight(0xffffff, 0.75, 9, 1.8); l.visible = false; cena.add(l); luzesTeto.push(l); }
+  while (luzesTeto.length > Q.luzes) cena.remove(luzesTeto.pop());
+}
 let tema, M = {};
 
+const mat = (base, brilho) => Q.phong ? new THREE.MeshPhongMaterial(Object.assign(base, brilho)) : new THREE.MeshLambertMaterial(base);
 function aplicarTema(n) {
   tema = TEMAS[n % TEMAS.length];
   for (const k of ['parede', 'chao', 'teto']) if (M[k]) M[k].map.dispose();
   Object.values(M).forEach(m => m.dispose());
   M = {
     // luz calculada em cada ponto (não só nos cantos), para o chão e o teto grandes não ficarem com triângulos
-    parede: new THREE.MeshPhongMaterial({ map: tema.parede(), vertexColors: true, shininess: 6, specular: 0x111111 }),
-    chao: new THREE.MeshPhongMaterial({ map: tema.chao(), vertexColors: true, shininess: tema.piscina ? 40 : 4, specular: tema.piscina ? 0x556066 : 0x0a0a0a }),
-    teto: new THREE.MeshPhongMaterial({ map: tema.teto(), vertexColors: true, shininess: 4, specular: 0x0a0a0a }),
+    // BAIXO usa luz simples (mais leve); NORMAL e ULTRA calculam a luz em cada ponto
+    parede: mat({ map: tema.parede(), vertexColors: true }, { shininess: 6, specular: 0x111111 }),
+    chao: mat({ map: tema.chao(), vertexColors: true }, { shininess: tema.piscina ? 40 : 4, specular: tema.piscina ? 0x556066 : 0x0a0a0a }),
+    teto: mat({ map: tema.teto(), vertexColors: true }, { shininess: 4, specular: 0x0a0a0a }),
     lampada: new THREE.MeshBasicMaterial({ color: new THREE.Color(...tema.lampada).multiplyScalar(1.6) }),
-    porta: new THREE.MeshPhongMaterial({ map: texPorta, shininess: 20, specular: 0x222222 }),
+    porta: mat({ map: texPorta }, { shininess: 20, specular: 0x222222 }),
     agua: new THREE.MeshPhongMaterial({ color: 0x1f9fcf, transparent: true, opacity: 0.72, shininess: 120, specular: 0xffffff })
   };
-  cena.fog = new THREE.FogExp2(tema.fog, tema.dens); R.setClearColor(tema.fog); R.toneMappingExposure = tema.exp || 1.2;
+  cena.fog = new THREE.FogExp2(tema.fog, tema.dens * Q.fog); R.setClearColor(tema.fog); R.toneMappingExposure = tema.exp || 1.2;
   ceu.color.setHex(tema.ceu[0]); ceu.groundColor.setHex(tema.ceu[1]); ceu.intensity = tema.ceu[2];
 }
 
@@ -259,7 +289,7 @@ const geoFita = new THREE.BoxGeometry(0.42, 0.07, 0.27);
 const matFita = new THREE.MeshBasicMaterial({ map: texFita });
 function criarPedaco(cx, cz) {
   const mP = new Malha(), mC = new Malha(), mT = new Malha(), mL = new Malha(), mD = new Malha(), mA = new Malha();
-  const col = [], fitas = [];
+  const col = [], fitas = [], lampadas = [];
   const X0 = cx * CH * CELL, Z0 = cz * CH * CELL, S = CH * CELL;
   // chão e teto em pedaços de 2 m (triângulos pequenos: sem emendas nem manchas de luz)
   for (let x = X0; x < X0 + S; x += 2) for (let z = Z0; z < Z0 + S; z += 2) {
@@ -295,6 +325,7 @@ function criarPedaco(cx, cz) {
     if (h(gi, gj, 12) < 0.8) {
       const cxl = X + CELL / 2, czl = Z + CELL / 2, lx = tema.portas ? 0.35 : tema.piscina ? 0.9 : 0.7, lz = tema.portas ? 0.35 : tema.piscina ? 0.9 : 0.32, y = ALT - 0.01;
       mL.quad([cxl - lx, y, czl - lz], [cxl + lx, y, czl - lz], [cxl + lx, y, czl + lz], [cxl - lx, y, czl + lz], [0, -1, 0], [0, 0], [1, 0], [1, 1], [0, 1]);
+      lampadas.push([cxl, czl]);
     }
     // piscina rasa
     if (tema.piscina && !perto && h(gi, gj, 13) < 0.24) {
@@ -314,7 +345,7 @@ function criarPedaco(cx, cz) {
     sp.scale.setScalar(1.6); g.add(sp); f.g = g; grupo.add(g);
   });
   cena.add(grupo);
-  return { grupo, col, fitas };
+  return { grupo, col, fitas, lampadas };
 }
 function apagarPedaco(k) {
   const p = pedacos.get(k); if (!p) return;
@@ -692,6 +723,12 @@ function ligarVozComTodos() {
     } else if (NET.peer) { try { prepararChamada(NET.peer.call(id, micStream)); } catch (e) {} }
   }
 }
+function chiadoVoz(dest) { // estalo de estática quando a voz falha
+  if (!A) return; const t = A.ctx.currentTime, s = A.ctx.createBufferSource(), f = A.ctx.createBiquadFilter(), g = A.ctx.createGain();
+  s.buffer = A.nb; f.type = 'bandpass'; f.frequency.value = 2500 + Math.random() * 2000; f.Q.value = 0.7;
+  g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.12 + Math.random() * 0.1);
+  s.connect(f); f.connect(g); g.connect(dest); s.start(t, Math.random() * 3, 0.3);
+}
 function tocarVoz(id, stream) {
   iniciarSom(); if (!A) return;
   let r = remotos.get(id);
@@ -699,9 +736,14 @@ function tocarVoz(id, stream) {
   if (r.voz) { try { r.voz.src.disconnect(); } catch (e) {} }
   const el = new Audio(); el.srcObject = stream; el.muted = true; el.play().catch(() => {}); // o Chrome só libera o áudio da chamada com um elemento tocando
   const src = A.ctx.createMediaStreamSource(stream), pan = A.ctx.createPanner(), g = A.ctx.createGain();
+  // voz "bugada": som de rádio velho (só os médios), chiado digital e cortes de vez em quando
+  const radio = A.ctx.createBiquadFilter(); radio.type = 'bandpass'; radio.frequency.value = 1500; radio.Q.value = 0.9;
+  const quebra = A.ctx.createWaveShaper(), cv = new Float32Array(1024);
+  for (let i = 0; i < 1024; i++) { const x = i / 1023 * 2 - 1; cv[i] = Math.round(x * 7) / 7 * 0.75 + Math.tanh(x * 4) * 0.25; }
+  quebra.curve = cv; const corta = A.ctx.createGain();
   pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 2.5; pan.maxDistance = 60; pan.rolloffFactor = 1.3;
-  g.gain.value = 1.6; src.connect(pan); pan.connect(g); g.connect(A.mestre);
-  r.voz = { el, src, pan, g };
+  g.gain.value = 2.2; src.connect(radio); radio.connect(quebra); quebra.connect(corta); corta.connect(pan); pan.connect(g); g.connect(A.mestre);
+  r.voz = { el, src, pan, g, corta, bugT: 0 };
 }
 async function alternarMicrofone() {
   if (NET.modo === 'room') { mensagem('VOZ SÓ NO APLICATIVO', 'No link do Claude o microfone não funciona. Use o APK Salas Sem Fim.', 3.5); return; }
@@ -730,7 +772,9 @@ function atualizarRede(dt) {
     animarExplorador(r.e, Number(s.v) || 0, dt);
     if (r.voz) {
       if (r.voz.pan.positionX) { r.voz.pan.positionX.value = r.x; r.voz.pan.positionY.value = 1.6; r.voz.pan.positionZ.value = r.z; } else r.voz.pan.setPosition(r.x, 1.6, r.z);
-      r.voz.g.gain.value = mesmo ? 1.6 : 0;
+      r.voz.g.gain.value = mesmo ? 2.2 : 0;
+      if (r.voz.bugT > 0) r.voz.bugT -= dt; else if (Math.random() < dt * 0.9) { r.voz.bugT = 0.05 + Math.random() * 0.22; chiadoVoz(r.voz.pan); }
+      r.voz.corta.gain.value = r.voz.bugT > 0 ? (Math.random() < 0.55 ? 0 : 0.3) : 1;
     }
   }
   if (A && A.ctx.listener) {
@@ -760,17 +804,36 @@ async function jogarJunto(criar) {
 // ===================== TELA INICIAL / PAUSA =====================
 function entrar() {
   iniciarSom();
-  $('inicio').hidden = true; jogando = true;
+  $('inicio').hidden = true; jogando = true; document.body.classList.add('jogando');
   if (!toqueMode && canvas.requestPointerLock) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
   if (!J.comecou) { J.comecou = true; mensagem(`NÍVEL ${salvo.nivel + 1}`, tema.nome, 4); }
 }
 function pausar() {
-  jogando = false; teclas.clear();
+  jogando = false; teclas.clear(); document.body.classList.remove('jogando');
+  if (travado && document.exitPointerLock) document.exitPointerLock();
   $('inicio').hidden = false; $('b-entrar').textContent = '▶ CONTINUAR';
   document.querySelector('#inicio .rotulo').textContent = `PAUSADO · NÍVEL ${salvo.nivel + 1} · ${Math.round(J.dist)} M ANDADOS`;
 }
 $('b-entrar').addEventListener('click', () => { if (!meuNome) { meuNome = limparNome($('nome').value) || 'Explorador'; minhaCor = corDe(meuNome); } entrar(); });
 $('b-criar').addEventListener('click', () => jogarJunto(true));
+$('b-sair').addEventListener('click', e => { e.stopPropagation(); pausar(); });
+$('b-sair').addEventListener('touchstart', e => e.stopPropagation(), { passive: true });
+addEventListener('keydown', e => { if (e.key.toLowerCase() === 'x' && jogando && e.target === document.body) pausar(); });
+const Q_INFO = ['Para computador fraco: menos detalhes, imagem mais leve e neblina mais perto. Bem mais FPS.', 'O equilíbrio: luz bonita e boa velocidade.', 'Para computador forte: imagem nítida, enxerga mais longe e as lâmpadas do teto iluminam de verdade.'];
+function escolherQualidade(n, rebuild) {
+  gfx = n; salvo.gfx = n; guardar();
+  document.querySelectorAll('.q').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.q === n)));
+  $('q-info').textContent = Q_INFO[n];
+  aplicarQualidade();
+  if (rebuild) { aplicarTema(salvo.nivel); limparMundo(); atualizarPedacos(); }
+}
+document.querySelectorAll('.q').forEach(b => b.addEventListener('click', () => escolherQualidade(+b.dataset.q, true)));
+let mostrarFps = salvo.fps !== false;
+function atualizarBotaoFps() { $('b-fps').textContent = 'FPS: ' + (mostrarFps ? 'LIGADO' : 'DESLIGADO'); $('h-fps').hidden = !mostrarFps; }
+$('b-fps').addEventListener('click', () => { mostrarFps = !mostrarFps; salvo.fps = mostrarFps; guardar(); atualizarBotaoFps(); });
+atualizarBotaoFps();
+gfx = typeof salvo.gfx === 'number' ? salvo.gfx : (toqueMode ? 0 : 1);
+escolherQualidade(gfx, false);
 $('b-juntar').addEventListener('click', () => jogarJunto(false));
 $('nome').value = meuNome;
 ['nome', 'codigo'].forEach(id => $(id).addEventListener('keydown', e => e.stopPropagation()));
@@ -779,7 +842,7 @@ if (salvo.nivel > 0) { $('b-entrar').textContent = `▶ CONTINUAR NÍVEL ${salvo
 addEventListener('keydown', e => { if (e.key === 'Escape' && jogando && !travado) pausar(); });
 
 // ===================== A CADA QUADRO =====================
-let antes = performance.now(), piscaT = 0;
+let antes = performance.now(), piscaT = 0, fpsN = 0, fpsT = 0, luzT = 0;
 comecarNivel();
 function quadro(agora) {
   requestAnimationFrame(quadro);
@@ -845,6 +908,17 @@ function quadro(agora) {
   // painel VHS
   if (msgT > 0) { msgT -= dt; if (msgT <= 0) $('h-msg').style.opacity = 0; }
   $('h-hora').textContent = `${dois(J.t / 3600)}:${dois(J.t / 60 % 60)}:${dois(J.t % 60)}`;
+  fpsN++; fpsT += dt; if (fpsT >= 0.5) { if (mostrarFps) $('h-fps').textContent = Math.round(fpsN / fpsT) + ' FPS · ' + Q.nome; fpsN = 0; fpsT = 0; }
+  if (luzesTeto.length) { // acende as lâmpadas mais próximas
+    luzT -= dt;
+    if (luzT <= 0) {
+      luzT = 0.2; const perto = [];
+      for (const [, p] of pedacos) for (const l of p.lampadas) { const d = (l[0] - J.x) ** 2 + (l[1] - J.z) ** 2; if (d < 400) perto.push([d, l]); }
+      perto.sort((a, b) => a[0] - b[0]);
+      luzesTeto.forEach((L, i) => { const it = perto[i]; L.visible = !!it; if (it) L.position.set(it[1][0], ALT - 0.4, it[1][1]); });
+    }
+    const cor = new THREE.Color(...tema.lampada); luzesTeto.forEach(L => { L.color.copy(cor); L.intensity = 0.75 * pisca; });
+  }
   $('h-dist').textContent = `${Math.round(J.dist)} m andados`;
   R.render(cena, camera);
 }
