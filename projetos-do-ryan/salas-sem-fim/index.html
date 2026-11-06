@@ -52,11 +52,25 @@
   #b-som { right: max(18px, env(safe-area-inset-right, 0px)); bottom: calc(max(18px, env(safe-area-inset-bottom, 0px)) + 120px); }
   .tb { font-family: var(--vhs); font-size: 22px; width: 92px; height: 56px; border-radius: 10px; background: rgba(0,0,0,.35); color: var(--tinta); border: 1px solid rgba(243,236,210,.4); padding: 0; }
   .tb.on { background: rgba(255,215,106,.35); }
+  #h-sala { top: calc(max(14px, env(safe-area-inset-top, 0px)) + 34px); left: max(18px, env(safe-area-inset-left, 0px)); font-size: clamp(16px, 2.4vw, 22px); }
+  #h-sala b { color: var(--verde); font-weight: 400; }
+  .multi { display: grid; gap: 8px; padding: 12px; border: 1px dashed rgba(243,236,210,.3); border-radius: 8px; }
+  .multi .linha { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .multi label { font-size: 14px; }
+  .multi input { font-family: var(--vhs); font-size: 24px; background: rgba(0,0,0,.35); color: var(--tinta); border: 1px solid rgba(243,236,210,.4); border-radius: 6px; padding: 2px 10px; width: 9ch; min-width: 0; text-transform: none; user-select: text; -webkit-user-select: text; }
+  .multi input#nome { width: 13ch; }
+  .multi input#codigo { text-transform: uppercase; width: 7ch; }
+  .multi input:focus-visible { outline: 3px solid var(--verde); outline-offset: 2px; }
+  .multi button { font-size: 22px; padding: 4px 14px; }
+  #multi-status { font-size: 14px; line-height: 1.45; color: var(--ambar); }
+  #b-mic { right: max(18px, env(safe-area-inset-right, 0px)); bottom: calc(max(18px, env(safe-area-inset-bottom, 0px)) + 194px); }
+  #b-cam { right: max(18px, env(safe-area-inset-right, 0px)); bottom: calc(max(18px, env(safe-area-inset-bottom, 0px)) + 268px); }
   @media (prefers-reduced-motion: reduce) { #h-msg, #escuro { transition: none; } }
 </style>
 
 <canvas id="mundo" aria-label="Salas sem fim em 3D"></canvas>
 <div class="vhs" aria-hidden="true"></div>
+<div class="hud" id="h-sala" hidden></div>
 <div class="hud" id="h-play">▶ PLAY <b id="h-nivel">NÍVEL 1 · SALAS AMARELAS</b></div>
 <div class="hud" id="h-fitas">📼 <span id="n-fitas">0/8</span><br><small id="h-dist">0 m andados</small></div>
 <div class="hud" id="h-data"><span id="h-hora">00:00:00</span><br>NOV 06 1996</div>
@@ -68,6 +82,8 @@
 <div class="toque" id="joy"><div class="base"><i></i></div></div>
 <button class="toque tb" id="b-correr">CORRER</button>
 <button class="toque tb on" id="b-som">♪ MÚSICA</button>
+<button class="toque tb" id="b-mic">🎤 VOZ</button>
+<button class="toque tb" id="b-cam">CÂMERA</button>
 
 <div id="inicio">
   <div class="cartao">
@@ -79,13 +95,22 @@
       <kbd>Mouse</kbd><span>olhar em volta (clique na tela para prender o mouse)</span>
       <kbd>Shift</kbd><span>correr</span>
       <kbd>M</kbd><span>liga e desliga a música</span>
+      <kbd>C</kbd><span>câmera de fora (veja o seu traje)</span>
+      <kbd>T</kbd><span>liga e desliga o microfone (no aplicativo)</span>
       <kbd>Esc</kbd><span>pausa</span>
+    </div>
+    <div class="multi">
+      <div class="rotulo">JOGAR COM AMIGOS</div>
+      <div class="linha"><label for="nome">Seu nome</label><input id="nome" maxlength="12" autocomplete="off" placeholder="Explorador"></div>
+      <div class="linha"><button class="secundario" id="b-criar">CRIAR SALA</button><input id="codigo" maxlength="4" autocomplete="off" placeholder="CÓDIGO" aria-label="Código da sala"><button class="secundario" id="b-juntar">ENTRAR NA SALA</button></div>
+      <div id="multi-status">Cada um aparece como um explorador de traje amarelo. No aplicativo dá para conversar pelo microfone.</div>
     </div>
     <div class="botoes"><button class="principal" id="b-entrar">▶ ENTRAR</button><button class="secundario" id="b-novo" hidden>COMEÇAR DO NÍVEL 1</button></div>
   </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
 (() => {
 'use strict';
@@ -93,7 +118,7 @@ const $ = id => document.getElementById(id);
 const toqueMode = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 if (toqueMode) {
   document.body.classList.add('touch');
-  $('lista-teclas').innerHTML = '<kbd>Esquerda</kbd><span>arraste para andar</span><kbd>Direita</kbd><span>arraste para olhar</span><kbd>CORRER</kbd><span>segure para correr</span>';
+  $('lista-teclas').innerHTML = '<kbd>Esquerda</kbd><span>arraste para andar</span><kbd>Direita</kbd><span>arraste para olhar</span><kbd>CORRER</kbd><span>segure para correr</span><kbd>CÂMERA</kbd><span>veja o seu traje de fora</span><kbd>🎤 VOZ</kbd><span>fale com os amigos (no aplicativo)</span>';
 }
 
 // ===================== CONFIGURAÇÃO =====================
@@ -303,6 +328,64 @@ function atualizarPedacos() {
 }
 function limparMundo() { for (const k of [...pedacos.keys()]) apagarPedaco(k); }
 
+// ===================== EXPLORADOR (boneco original de traje de proteção amarelo) =====================
+const CORES_JOG = [0xff4d4d, 0x3da5ff, 0x4dff8a, 0xc06bff, 0xff9a2e, 0xffffff];
+const matTraje = new THREE.MeshPhongMaterial({ color: 0xf0c018, shininess: 45, specular: 0x3a3420 });
+const matPreto = new THREE.MeshPhongMaterial({ color: 0x18191c, shininess: 25 });
+const matVisor = new THREE.MeshPhongMaterial({ color: 0x0a0d12, shininess: 140, specular: 0x9fb0c4 });
+const matCinza = new THREE.MeshPhongMaterial({ color: 0x5a5e66, shininess: 35 });
+const matFaixa = new THREE.MeshPhongMaterial({ color: 0xc8ccd2, shininess: 110, specular: 0xffffff, emissive: 0x2a2a2a });
+function etiqueta(txt, cor) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g = c.getContext('2d');
+  g.fillStyle = 'rgba(10,8,4,.62)'; g.fillRect(0, 8, 256, 48);
+  g.fillStyle = '#' + cor.toString(16).padStart(6, '0'); g.fillRect(0, 8, 8, 48);
+  g.fillStyle = '#f3ecd2'; g.font = '34px VT323, monospace'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, 132, 34);
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, fog: false }));
+  s.scale.set(1.3, 0.33, 1); s.position.y = 2.1; return s;
+}
+function criarExplorador(corIdx, nome) {
+  const cor = CORES_JOG[corIdx % CORES_JOG.length];
+  const g = new THREE.Group();
+  const m = (geo, mat, x, y, z, pai = g) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); pai.add(o); return o; };
+  // corpo: macacão largo, cinto e zíper (a frente é +z)
+  m(new THREE.CylinderGeometry(0.28, 0.25, 0.64, 18), matTraje, 0, 1.12, 0);
+  m(new THREE.SphereGeometry(0.28, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), matTraje, 0, 1.43, 0);
+  m(new THREE.CylinderGeometry(0.255, 0.26, 0.1, 18), matPreto, 0, 0.84, 0);
+  m(new THREE.BoxGeometry(0.025, 0.5, 0.02), matCinza, 0, 1.13, 0.275);
+  m(new THREE.BoxGeometry(0.11, 0.08, 0.01), new THREE.MeshPhongMaterial({ color: cor }), 0.14, 1.3, 0.262); // emblema com a cor do jogador
+  // capuz com visor escuro e respirador
+  const cab = new THREE.Group(); cab.position.set(0, 1.63, 0); g.add(cab);
+  m(new THREE.SphereGeometry(0.205, 20, 14), matTraje, 0, 0, 0, cab).scale.set(1, 1.1, 1.04);
+  m(new THREE.SphereGeometry(0.2, 20, 12), matVisor, 0, 0.035, 0.07, cab).scale.set(0.82, 0.55, 0.75);
+  m(new THREE.CylinderGeometry(0.055, 0.075, 0.09, 14).rotateX(Math.PI / 2), matCinza, 0, -0.1, 0.18, cab);
+  for (const s of [-1, 1]) { const f = m(new THREE.CylinderGeometry(0.048, 0.048, 0.07, 14).rotateZ(Math.PI / 2), matPreto, s * 0.105, -0.11, 0.14, cab); f.rotation.y = s * 0.5; }
+  m(new THREE.TorusGeometry(0.2, 0.018, 8, 24).rotateX(Math.PI / 2), matCinza, 0, -0.17, 0, cab);
+  // mochila com tanque
+  m(new THREE.BoxGeometry(0.36, 0.44, 0.16), matPreto, 0, 1.18, -0.31);
+  for (const s of [-1, 1]) m(new THREE.CylinderGeometry(0.06, 0.06, 0.46, 12), matCinza, s * 0.1, 1.22, -0.42);
+  // braços e pernas com articulação, faixas refletivas, luvas e botas
+  const membro = (x, y, raio, comp, fim, ehBraco) => {
+    const p = new THREE.Group(); p.position.set(x, y, 0); g.add(p);
+    m(new THREE.CylinderGeometry(raio, raio * 0.9, comp, 12), matTraje, 0, -comp / 2, 0, p);
+    m(new THREE.CylinderGeometry(raio * 1.04, raio * 1.04, 0.05, 12), matFaixa, 0, -comp * 0.55, 0, p);
+    if (ehBraco) m(new THREE.SphereGeometry(raio * 1.1, 10, 8), matPreto, 0, -comp - 0.03, 0, p);
+    else m(new THREE.BoxGeometry(0.17, 0.12, 0.28), matPreto, 0, -comp - 0.02, 0.045, p);
+    return p;
+  };
+  const bracos = [membro(-0.34, 1.42, 0.078, 0.56, 0, true), membro(0.34, 1.42, 0.078, 0.56, 0, true)];
+  m(new THREE.CylinderGeometry(0.086, 0.086, 0.07, 12), new THREE.MeshPhongMaterial({ color: cor, emissive: cor, emissiveIntensity: 0.25 }), 0, -0.18, 0, bracos[0]); // braçadeira
+  const pernas = [membro(-0.13, 0.84, 0.095, 0.72, 0, false), membro(0.13, 0.84, 0.095, 0.72, 0, false)];
+  const tag = etiqueta(nome || 'Explorador', cor); g.add(tag);
+  return { g, bracos, pernas, cab, tag, fase: Math.random() * 6 };
+}
+function animarExplorador(e, vel, dt) {
+  e.fase += dt * (4 + vel * 2.2);
+  const k = Math.min(1, vel / 3), a = Math.sin(e.fase) * 0.65 * k;
+  e.pernas[0].rotation.x = a; e.pernas[1].rotation.x = -a; e.bracos[0].rotation.x = -a * 0.8; e.bracos[1].rotation.x = a * 0.8;
+  e.g.children[0].position.y = 1.12 + Math.abs(Math.cos(e.fase)) * 0.03 * k;
+}
+
 // ===================== JOGADOR =====================
 const J = { x: CELL / 2, z: CELL / 2, yaw: Math.PI * 0.75, pitch: 0, fitas: 0, dist: 0, passo: 0, t: 0 };
 const teclas = new Set();
@@ -448,6 +531,8 @@ function noAgua() {
 // ===================== CONTROLES =====================
 addEventListener('keydown', e => {
   const k = e.key.toLowerCase(); teclas.add(k);
+  if (k === 'c' && jogando) { terceira = !terceira; $('b-cam').classList.toggle('on', terceira); }
+  if (k === 't' && jogando) alternarMicrofone();
   if (k === 'm') { musicaOn = !musicaOn; $('b-som').classList.toggle('on', musicaOn); mensagem(musicaOn ? '♪ MÚSICA LIGADA' : 'MÚSICA DESLIGADA', '', 1.4); }
   if (k.startsWith('arrow') || k === ' ') e.preventDefault();
 });
@@ -490,6 +575,187 @@ let correrToque = false;
 $('b-correr').addEventListener('pointerdown', e => { e.preventDefault(); correrToque = true; $('b-correr').classList.add('on'); });
 ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => $('b-correr').addEventListener(ev, () => { correrToque = false; $('b-correr').classList.remove('on'); }));
 $('b-som').addEventListener('click', () => { musicaOn = !musicaOn; $('b-som').classList.toggle('on', musicaOn); });
+$('b-mic').addEventListener('click', () => alternarMicrofone());
+$('b-cam').addEventListener('click', () => { terceira = !terceira; $('b-cam').classList.toggle('on', terceira); });
+
+// ===================== MULTIPLAYER E VOZ =====================
+// No link do Claude: sala compartilhada (room). No app/arquivo: conexão direta entre aparelhos (PeerJS) com voz pelo microfone.
+const NET = { modo: null, codigo: '', eu: null, host: false, peer: null, conns: new Map(), room: null, envT: 0, ids: [], adotou: false };
+const remotos = new Map();
+let meuNome = '', minhaCor = 0, velAtual = 0, terceira = false, micStream = null, micLigado = false, silencio = null;
+const chamadas = new Map();
+try { meuNome = localStorage.getItem('salas-nome') || ''; } catch (e) {}
+const limparNome = s => String(s || '').replace(/[^\p{L}\p{N} _-]/gu, '').trim().slice(0, 12);
+const corDe = s => { let h2 = 0; for (const ch of String(s)) h2 = (h2 * 31 + ch.codePointAt(0)) >>> 0; return h2 % CORES_JOG.length; };
+const eu = criarExplorador(0, 'Você'); eu.g.visible = false; cena.add(eu.g);
+function estadoLocal() { return { n: meuNome || 'Explorador', x: +J.x.toFixed(2), z: +J.z.toFixed(2), a: +J.yaw.toFixed(2), lv: salvo.nivel, c: minhaCor, v: +velAtual.toFixed(1), m: micLigado ? 1 : 0 }; }
+function atualizarRemoto(id, s) {
+  if (!s || typeof s !== 'object' || typeof s.x !== 'number' || typeof s.z !== 'number') return;
+  let r = remotos.get(id);
+  const nome = limparNome(s.n) || 'Explorador', cor = Number(s.c) % CORES_JOG.length || 0;
+  if (!r || r.nome !== nome || r.cor !== cor) {
+    if (r) { cena.remove(r.e.g); }
+    const e = criarExplorador(cor, nome); cena.add(e.g);
+    r = Object.assign(r || { x: s.x, z: s.z, a: s.a || 0 }, { e, nome, cor });
+    remotos.set(id, r);
+  }
+  r.s = s; r.visto = performance.now();
+  if (!NET.adotou && typeof s.lv === 'number' && s.lv !== salvo.nivel && s.lv >= 0 && s.lv < 999) { // entra no mesmo nível de quem já está na sala
+    NET.adotou = true; salvo.nivel = s.lv; guardar(); comecarNivel(); mensagem(`NÍVEL ${salvo.nivel + 1}`, 'Você entrou no nível dos seus amigos', 3);
+  }
+  NET.adotou = true;
+  painelSala();
+}
+function removerRemoto(id) { const r = remotos.get(id); if (!r) return; cena.remove(r.e.g); if (r.voz) { try { r.voz.src.disconnect(); r.voz.el.srcObject = null; } catch (e) {} } remotos.delete(id); painelSala(); }
+function painelSala() {
+  const el = $('h-sala'); if (!NET.modo) { el.hidden = true; return; }
+  el.hidden = false;
+  const aqui = [...remotos.values()].filter(r => r.s && r.s.lv === salvo.nivel).length;
+  el.innerHTML = `👥 ${remotos.size + 1} NA SALA <b>${NET.codigo}</b>${remotos.size && aqui < remotos.size ? ` · ${aqui} neste nível` : ''}${NET.modo === 'peer' ? ` · ${micLigado ? '🎤 LIGADO' : '🎤 DESLIGADO'}${toqueMode ? '' : ' (T)'}` : ''}`;
+}
+// ---------- sala do Claude ----------
+async function conectarRoom(codigo) {
+  try {
+    const room = await window.claude.use('room'); if (!room) return 'Não foi possível abrir a sala aqui.';
+    const r = await room.join('salas-' + codigo.toLowerCase());
+    NET.room = r; NET.modo = 'room'; NET.codigo = codigo;
+    r.onPeers(ch => {
+      for (const p of ch.peers) if (!p.sameTab && p.kind === 'viewer') atualizarRemoto(p.peer, p.presence);
+      for (const p of ch.left) removerRemoto(p.peer);
+    });
+    return null;
+  } catch (e) { return 'Não foi possível entrar na sala (' + (e && e.code || 'erro') + ').'; }
+}
+// ---------- conexão direta (app e arquivo) ----------
+function conectarPeer(codigo, criar) {
+  return new Promise(res => {
+    if (!window.Peer) { res('Não deu para carregar a conexão. Confira a internet.'); return; }
+    let feito = false; const fim = msg => { if (!feito) { feito = true; clearTimeout(tm); res(msg); } };
+    const hostId = 'salas-sem-fim-' + codigo.toLowerCase();
+    const tm = setTimeout(() => fim('A conexão demorou demais. Confira a internet.'), 15000);
+    let peer; try { peer = criar ? new window.Peer(hostId) : new window.Peer(); } catch (e) { fim('Conexão indisponível neste aparelho.'); return; }
+    NET.peer = peer; NET.host = criar;
+    peer.on('open', id => {
+      NET.eu = id;
+      if (criar) { NET.modo = 'peer'; NET.codigo = codigo; fim(null); return; }
+      const c = peer.connect(hostId); ligarConexao(c);
+      c.on('open', () => { NET.modo = 'peer'; NET.codigo = codigo; fim(null); });
+    });
+    peer.on('connection', c => ligarConexao(c));
+    peer.on('call', atenderChamada);
+    peer.on('error', e => {
+      const t = e && e.type;
+      fim(t === 'unavailable-id' ? 'Esse código já está em uso. Crie outra sala.' : t === 'peer-unavailable' ? 'Sala não encontrada. Confira o código.' : 'Erro de conexão (' + t + ').');
+    });
+  });
+}
+function ligarConexao(c) {
+  c.on('open', () => {
+    NET.conns.set(c.peer, c);
+    if (NET.host) difundir({ t: 'ids', ids: [NET.eu, ...NET.conns.keys()] });
+    painelSala();
+  });
+  c.on('data', d => receber(c.peer, d));
+  c.on('close', () => { NET.conns.delete(c.peer); removerRemoto(c.peer); fecharChamada(c.peer); if (NET.host) difundir({ t: 'sai', id: c.peer }); });
+}
+function difundir(msg, exceto) { for (const [k, c] of NET.conns) if (k !== exceto && c.open) { try { c.send(msg); } catch (e) {} } }
+function receber(de, d) {
+  if (!d || typeof d !== 'object') return;
+  if (d.t === 'st') { const id = NET.host ? de : String(d.id || de); if (id === NET.eu) return; atualizarRemoto(id, d.s); if (NET.host) difundir({ t: 'st', id: de, s: d.s }, de); }
+  else if (d.t === 'sai' && !NET.host) { removerRemoto(String(d.id)); fecharChamada(String(d.id)); }
+  else if (d.t === 'ids' && Array.isArray(d.ids)) { NET.ids = d.ids.map(String).filter(i => i !== NET.eu); if (micLigado) ligarVozComTodos(); }
+}
+function enviarEstado() {
+  const s = estadoLocal();
+  if (NET.modo === 'room' && NET.room) NET.room.presence(s).catch(() => {});
+  else if (NET.modo === 'peer') { if (NET.host) difundir({ t: 'st', id: NET.eu, s }); else difundir({ t: 'st', s }); }
+}
+// ---------- voz com som 3D: mais alto quando o amigo está perto ----------
+function idsVoz() { return NET.host ? [...NET.conns.keys()] : NET.ids; }
+function streamSilencio() { if (!silencio) { iniciarSom(); silencio = A.ctx.createMediaStreamDestination().stream; } return silencio; }
+function atenderChamada(call) {
+  call.answer(micStream || streamSilencio());
+  prepararChamada(call);
+}
+function prepararChamada(call) {
+  chamadas.set(call.peer, call);
+  call.on('stream', s => tocarVoz(call.peer, s));
+  call.on('close', () => { if (chamadas.get(call.peer) === call) chamadas.delete(call.peer); });
+  call.on('error', () => {});
+}
+function fecharChamada(id) { const c = chamadas.get(id); if (c) { try { c.close(); } catch (e) {} chamadas.delete(id); } }
+function ligarVozComTodos() {
+  for (const id of idsVoz()) {
+    const c = chamadas.get(id);
+    if (c) { // já existe: troca o silêncio pelo microfone
+      try { const tr = micStream.getAudioTracks()[0]; c.peerConnection.getSenders().forEach(sd => { if (sd.track && sd.track.kind === 'audio') sd.replaceTrack(tr); }); } catch (e) {}
+    } else if (NET.peer) { try { prepararChamada(NET.peer.call(id, micStream)); } catch (e) {} }
+  }
+}
+function tocarVoz(id, stream) {
+  iniciarSom(); if (!A) return;
+  let r = remotos.get(id);
+  if (!r) { r = { x: 0, z: 0, a: 0 }; remotos.set(id, r); }
+  if (r.voz) { try { r.voz.src.disconnect(); } catch (e) {} }
+  const el = new Audio(); el.srcObject = stream; el.muted = true; el.play().catch(() => {}); // o Chrome só libera o áudio da chamada com um elemento tocando
+  const src = A.ctx.createMediaStreamSource(stream), pan = A.ctx.createPanner(), g = A.ctx.createGain();
+  pan.panningModel = 'HRTF'; pan.distanceModel = 'inverse'; pan.refDistance = 2.5; pan.maxDistance = 60; pan.rolloffFactor = 1.3;
+  g.gain.value = 1.6; src.connect(pan); pan.connect(g); g.connect(A.mestre);
+  r.voz = { el, src, pan, g };
+}
+async function alternarMicrofone() {
+  if (NET.modo === 'room') { mensagem('VOZ SÓ NO APLICATIVO', 'No link do Claude o microfone não funciona. Use o APK Salas Sem Fim.', 3.5); return; }
+  if (NET.modo !== 'peer') { mensagem('ENTRE NUMA SALA PRIMEIRO', 'Crie ou entre numa sala com seus amigos', 2.5); return; }
+  if (micStream) { micLigado = !micLigado; micStream.getAudioTracks().forEach(t => t.enabled = micLigado); }
+  else {
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      micLigado = true; ligarVozComTodos();
+    } catch (e) { mensagem('MICROFONE BLOQUEADO', 'Permita o microfone nas configurações do aparelho', 3); return; }
+  }
+  $('b-mic').classList.toggle('on', micLigado); mensagem(micLigado ? '🎤 MICROFONE LIGADO' : 'MICROFONE DESLIGADO', micLigado ? 'Fale com seus amigos: quanto mais perto, mais alto' : '', 2); painelSala();
+}
+function atualizarRede(dt) {
+  if (!NET.modo) return;
+  NET.envT -= dt; if (NET.envT <= 0) { NET.envT = 0.1; enviarEstado(); }
+  const agora = performance.now();
+  for (const [id, r] of remotos) {
+    if (!r.e || !r.s) continue;
+    if (NET.modo === 'peer' && agora - r.visto > 8000) { removerRemoto(id); continue; }
+    const s = r.s, k = Math.min(1, dt * 10);
+    const dx = s.x - r.x, dz = s.z - r.z; if (Math.hypot(dx, dz) > 12) { r.x = s.x; r.z = s.z; } else { r.x += dx * k; r.z += dz * k; }
+    let da = (s.a - r.a); da = Math.atan2(Math.sin(da), Math.cos(da)); r.a += da * k;
+    const mesmo = s.lv === salvo.nivel;
+    r.e.g.visible = mesmo; r.e.g.position.set(r.x, 0, r.z); r.e.g.rotation.y = r.a + Math.PI;
+    animarExplorador(r.e, Number(s.v) || 0, dt);
+    if (r.voz) {
+      if (r.voz.pan.positionX) { r.voz.pan.positionX.value = r.x; r.voz.pan.positionY.value = 1.6; r.voz.pan.positionZ.value = r.z; } else r.voz.pan.setPosition(r.x, 1.6, r.z);
+      r.voz.g.gain.value = mesmo ? 1.6 : 0;
+    }
+  }
+  if (A && A.ctx.listener) {
+    const L = A.ctx.listener, fx = -Math.sin(J.yaw), fz = -Math.cos(J.yaw);
+    if (L.positionX) { L.positionX.value = J.x; L.positionY.value = 1.6; L.positionZ.value = J.z; L.forwardX.value = fx; L.forwardY.value = 0; L.forwardZ.value = fz; L.upX.value = 0; L.upY.value = 1; L.upZ.value = 0; }
+    else { L.setPosition(J.x, 1.6, J.z); L.setOrientation(fx, 0, fz, 0, 1, 0); }
+  }
+}
+const novoCodigo = () => { const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; let s = ''; for (let i = 0; i < 4; i++) s += L[Math.floor(Math.random() * L.length)]; return s; };
+async function jogarJunto(criar) {
+  meuNome = limparNome($('nome').value) || 'Explorador'; $('nome').value = meuNome; minhaCor = corDe(meuNome);
+  try { localStorage.setItem('salas-nome', meuNome); } catch (e) {}
+  const codigo = criar ? novoCodigo() : String($('codigo').value || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  if (!criar && codigo.length !== 4) { $('multi-status').textContent = 'Digite o código de 4 letras que o seu amigo recebeu.'; return; }
+  $('multi-status').textContent = criar ? 'Criando a sala...' : 'Entrando na sala ' + codigo + '...';
+  $('b-criar').disabled = $('b-juntar').disabled = true;
+  const naClaude = !!(window.claude && typeof window.claude.use === 'function');
+  const erro = naClaude ? await conectarRoom(codigo) : await conectarPeer(codigo, criar);
+  $('b-criar').disabled = $('b-juntar').disabled = false;
+  if (erro) { $('multi-status').textContent = erro; return; }
+  if (criar) NET.adotou = true;
+  $('multi-status').textContent = `Você está na sala ${codigo}. Passe o código para seus amigos.`;
+  painelSala(); entrar();
+  mensagem(`SALA ${codigo}`, criar ? 'Passe este código para seus amigos entrarem' : 'Você entrou! Procure seus amigos de traje amarelo', 5);
+}
 
 // ===================== TELA INICIAL / PAUSA =====================
 function entrar() {
@@ -503,7 +769,11 @@ function pausar() {
   $('inicio').hidden = false; $('b-entrar').textContent = '▶ CONTINUAR';
   document.querySelector('#inicio .rotulo').textContent = `PAUSADO · NÍVEL ${salvo.nivel + 1} · ${Math.round(J.dist)} M ANDADOS`;
 }
-$('b-entrar').addEventListener('click', entrar);
+$('b-entrar').addEventListener('click', () => { if (!meuNome) { meuNome = limparNome($('nome').value) || 'Explorador'; minhaCor = corDe(meuNome); } entrar(); });
+$('b-criar').addEventListener('click', () => jogarJunto(true));
+$('b-juntar').addEventListener('click', () => jogarJunto(false));
+$('nome').value = meuNome;
+['nome', 'codigo'].forEach(id => $(id).addEventListener('keydown', e => e.stopPropagation()));
 $('b-novo').addEventListener('click', () => { salvo.nivel = 0; guardar(); comecarNivel(); $('b-novo').hidden = true; entrar(); });
 if (salvo.nivel > 0) { $('b-entrar').textContent = `▶ CONTINUAR NÍVEL ${salvo.nivel + 1}`; $('b-novo').hidden = false; }
 addEventListener('keydown', e => { if (e.key === 'Escape' && jogando && !travado) pausar(); });
@@ -529,7 +799,7 @@ function quadro(agora) {
     const ox = J.x, oz = J.z;
     J.x += (-sy * f + cy * s) * vel * dt; J.z += (-cy * f - sy * s) * vel * dt;
     colidir();
-    const andou = Math.hypot(J.x - ox, J.z - oz); J.dist += andou;
+    const andou = Math.hypot(J.x - ox, J.z - oz); J.dist += andou; velAtual = dt > 0 ? andou / dt : 0;
     const passoAntes = Math.floor(J.passo / Math.PI); J.passo += andou * (correndo ? 2.3 : 2.6);
     if (Math.floor(J.passo / Math.PI) !== passoAntes) somPasso();
     atualizarPedacos();
@@ -560,8 +830,18 @@ function quadro(agora) {
   M.agua.opacity = 0.68 + Math.sin(J.t * 1.3) * 0.05;
   // câmera com balanço dos passos
   const bob = Math.sin(J.passo * 2) * 0.045, lado = Math.cos(J.passo) * 0.02;
-  camera.position.set(J.x + Math.cos(J.yaw) * lado, OLHO + bob - (noAgua() ? 0.12 : 0), J.z - Math.sin(J.yaw) * lado);
-  camera.rotation.set(J.pitch, J.yaw, 0);
+  if (!jogando || entrando) velAtual = 0;
+  eu.g.visible = terceira; 
+  if (terceira) { // câmera de fora: vê o próprio traje
+    eu.g.position.set(J.x, noAgua() ? -0.12 : 0, J.z); eu.g.rotation.y = J.yaw + Math.PI; animarExplorador(eu, velAtual, dt);
+    const atras = 2.6, sobe = 2.05 - J.pitch * 1.2;
+    camera.position.set(J.x + Math.sin(J.yaw) * atras, Math.min(ALT - 0.25, sobe), J.z + Math.cos(J.yaw) * atras);
+    camera.rotation.set(J.pitch - 0.22, J.yaw, 0);
+  } else {
+    camera.position.set(J.x + Math.cos(J.yaw) * lado, OLHO + bob - (noAgua() ? 0.12 : 0), J.z - Math.sin(J.yaw) * lado);
+    camera.rotation.set(J.pitch, J.yaw, 0);
+  }
+  atualizarRede(dt);
   // painel VHS
   if (msgT > 0) { msgT -= dt; if (msgT <= 0) $('h-msg').style.opacity = 0; }
   $('h-hora').textContent = `${dois(J.t / 3600)}:${dois(J.t / 60 % 60)}:${dois(J.t % 60)}`;
@@ -569,6 +849,6 @@ function quadro(agora) {
   R.render(cena, camera);
 }
 requestAnimationFrame(quadro);
-window.__salas = { J, pedacos, criarPorta, proximoNivel, salvo, entrar };
+window.__salas = { J, pedacos, criarPorta, proximoNivel, salvo, entrar, NET, remotos, atualizarRemoto, eu };
 })();
 </script>
