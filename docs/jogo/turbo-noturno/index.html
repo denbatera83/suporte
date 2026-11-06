@@ -673,6 +673,11 @@ function applyParts(L = save.parts, model = save.look.model) {
   if (CAR.kart) { CAR.m = 180; CAR.Iz = 140; CAR.tq *= 0.32; CAR.final = 6.4; CAR.drag = 0.18; CAR.Cf = 15000; CAR.Cr = 17000; CAR.mu = Math.max(CAR.mu, 1.45); CAR.down = 0.4; CAR.shift = 0.05; }
   if (CAR.monster) { CAR.m = 2600; CAR.Iz = 4400; CAR.tq *= 1.6; CAR.final = 3.9; CAR.drag = 0.6; CAR.Cf *= 1.7; CAR.Cr *= 1.8; CAR.hcg = 0.9; CAR.brake = Math.max(CAR.brake, 1.2); }
   if (CAR.classico) { CAR.tq *= 1.3; CAR.final = 3.4; CAR.drag = 0.45; CAR.mu = Math.min(CAR.mu, 1.15); CAR.Cr *= 0.85; }
+  if (model === 'seda') { CAR.tq *= 1.05; CAR.m += 160; CAR.Iz = 2300; CAR.drag = 0.36; CAR.mu = Math.min(CAR.mu * 0.98, 1.4); }
+  if (model === 'hatch') { CAR.tq *= 0.95; CAR.m -= 170; CAR.Iz = 1700; CAR.final = 3.95; CAR.shift = Math.min(CAR.shift, 0.1); }
+  if (model === 'perua') { CAR.tq *= 1.1; CAR.m += 230; CAR.Iz = 2500; CAR.drag = 0.4; CAR.Cr *= 1.08; }
+  if (model === 'suv') { CAR.tq *= 1.3; CAR.m += 480; CAR.Iz = 2900; CAR.drag = 0.5; CAR.hcg = Math.max(CAR.hcg, 0.62); CAR.mu *= 0.95; CAR.brake = Math.max(CAR.brake, 1.2); }
+  if (model === 'gran') { CAR.tq *= 1.5; CAR.final = 3.0; CAR.drag = 0.32; CAR.m += 120; CAR.Iz = 2300; CAR.down = Math.max(CAR.down, 2.6); CAR.mu = Math.max(CAR.mu, 1.35); }
   if (CAR.touro) { CAR.tq *= 1.75; CAR.final = 2.8; CAR.drag = 0.3; CAR.mu = Math.max(CAR.mu, 1.5); CAR.down = Math.max(CAR.down, 3.2); CAR.m -= 100; CAR.Iz = 1900; CAR.shift = Math.min(CAR.shift, 0.08); }
   if (CAR.moto) { CAR.m = 260; CAR.Iz = 320; CAR.tq *= 0.55; CAR.final = 3.2; CAR.drag = 0.2; CAR.Cf = 21000; CAR.Cr = 24000; CAR.down = 0.25; CAR.shift = Math.min(CAR.shift, 0.08); }
   if (CAR.electric) { CAR.tq *= 1.12; CAR.shift = 0.02; }
@@ -692,8 +697,8 @@ function carStats() {
 // ---------------- VISUAL (pintura e acessórios) ----------------
 const PAINTS = ['#0b4fd6', '#1a8cff', '#00b3a4', '#0f8f4a', '#7ac70c', '#f2b200', '#ff7a00', '#d43a00', '#b00a14', '#e0115f', '#8a2be2', '#3b1d6e', '#e8e8e8', '#9aa0a8', '#3a3d42', '#0c0c0e'];
 const STYLE = [
-  { key: 'model', title: 'Carro', hint: 'Roadster Foguete: elétrico e voa (tecla V na Cidade Livre). Blindado X: picape de aço, mais de 350 km/h, antiderrapante, voa e gruda na parede. Touro V12: o mais rápido, quase 400 km/h. Moto Relâmpago: leve e deita nas curvas. Kart Faísca: pequeno e muito ágil. Monstro: rodas gigantes, passa por cima de tudo. Clássico 70: motor V8 e traseira solta. Cada um libera com o seu anúncio.', opts: [
-    { id: 'esportivo', name: 'Esportivo GT', price: 0 }, { id: 'foguete', name: '🚀 Roadster Foguete', price: 0, ad: true }, { id: 'blindado', name: '⚡ Blindado X', price: 0, ad: true }, { id: 'touro', name: '🐂 Touro V12', price: 0, ad: true }, { id: 'moto', name: '🏍️ Moto Relâmpago', price: 0, ad: true }, { id: 'kart', name: '🏎️ Kart Faísca', price: 0, ad: true }, { id: 'monstro', name: '🛻 Monstro', price: 0, ad: true }, { id: 'classico', name: '🚘 Clássico 70', price: 0, ad: true }] },
+  { key: 'model', title: 'Carro', hint: 'Roadster Foguete: elétrico e voa (tecla V na Cidade Livre). Blindado X: picape de aço, mais de 350 km/h, antiderrapante, voa e gruda na parede. Touro V12: o mais rápido, quase 400 km/h. Moto Relâmpago: leve e deita nas curvas. Kart Faísca: pequeno e muito ágil. Monstro: rodas gigantes, passa por cima de tudo. Clássico 70: motor V8 e traseira solta. Sedã Executivo e Hatch Turbo: carros de rua, já liberados. Perua Família: espaçosa e estável. SUV Trilha: alto e pesado. Gran Turismo V8: capô longo e muita força. Cada um libera com o seu anúncio.', opts: [
+    { id: 'esportivo', name: 'Esportivo GT', price: 0 }, { id: 'foguete', name: '🚀 Roadster Foguete', price: 0, ad: true }, { id: 'blindado', name: '⚡ Blindado X', price: 0, ad: true }, { id: 'touro', name: '🐂 Touro V12', price: 0, ad: true }, { id: 'moto', name: '🏍️ Moto Relâmpago', price: 0, ad: true }, { id: 'kart', name: '🏎️ Kart Faísca', price: 0, ad: true }, { id: 'monstro', name: '🛻 Monstro', price: 0, ad: true }, { id: 'classico', name: '🚘 Clássico 70', price: 0, ad: true }, { id: 'seda', name: '🚗 Sedã Executivo', price: 0 }, { id: 'hatch', name: '🚙 Hatch Turbo', price: 0 }, { id: 'perua', name: '🧳 Perua Família', price: 0, ad: true }, { id: 'suv', name: '🏔️ SUV Trilha', price: 0, ad: true }, { id: 'gran', name: '🏁 Gran Turismo V8', price: 0, ad: true }] },
   { key: 'finish', title: 'Acabamento da pintura', opts: [
     { id: 'metal', name: 'Metálico', price: 0 }, { id: 'fosco', name: 'Fosco', price: 800 },
     { id: 'perola', name: 'Perolado', price: 1500 }, { id: 'cromo', name: 'Cromado', price: 5000 }] },
@@ -1716,6 +1721,24 @@ MODELS.monstro = Object.assign({}, MODELS.esportivo, { special: true });
 MODELS.classico = { TOP: [[-2.36, 0.64], [-2.3, 0.84], [-1.8, 0.88], [-0.9, 0.9], [0.9, 0.9], [2.2, 0.86], [2.38, 0.7]], BOT: BODY_BOT,
   W: [[-2.36, 0.88], [-2.24, 0.95], [2.24, 0.95], [2.38, 0.9]],
   ROOF: [[-1.5, 0], [-1.25, 0.3], [-0.5, 0.39], [0.35, 0.37], [0.72, 0.18], [0.92, 0]], cab: [-1.5, 0.92], roofZ: [-1.2, 0.42] };
+// sedã de quatro portas: porta-malas separado e teto comprido
+MODELS.seda = { TOP: [[-2.32, 0.7], [-2.26, 0.9], [-2.0, 0.97], [-1.5, 0.99], [-0.4, 0.97], [1.0, 0.93], [1.7, 0.86], [2.2, 0.74], [2.38, 0.55]], BOT: BODY_BOT,
+  W: [[-2.32, 0.84], [-2.1, 0.9], [-1.38, 0.93], [0, 0.92], [1.42, 0.93], [2.1, 0.88], [2.38, 0.7]],
+  ROOF: [[-1.62, 0], [-1.25, 0.3], [-0.7, 0.44], [0.2, 0.45], [0.75, 0.25], [1.15, 0]], cab: [-1.62, 1.15], roofZ: [-1.25, 0.5] };
+// hatch compacto: traseira quase reta
+MODELS.hatch = { TOP: [[-2.32, 0.7], [-2.28, 0.9], [-2.1, 0.96], [-1.0, 0.97], [1.0, 0.92], [1.8, 0.84], [2.25, 0.7], [2.38, 0.52]], BOT: BODY_BOT,
+  W: [[-2.32, 0.84], [-2.15, 0.9], [-1.38, 0.93], [0, 0.9], [1.42, 0.92], [2.1, 0.86], [2.38, 0.68]],
+  ROOF: [[-2.2, 0], [-2.1, 0.32], [-1.7, 0.47], [-0.2, 0.5], [0.6, 0.3], [1.05, 0]], cab: [-2.2, 1.05], roofZ: [-1.9, 0.35] };
+// SUV: carroceria alta e teto até o fim
+MODELS.suv = { TOP: [[-2.32, 0.86], [-2.28, 1.08], [-2.0, 1.14], [0, 1.15], [1.4, 1.1], [2.15, 0.98], [2.38, 0.74]], BOT: BODY_BOT,
+  W: [[-2.32, 0.92], [-2.2, 0.98], [-1.38, 1.0], [0, 0.99], [1.42, 1.0], [2.15, 0.96], [2.38, 0.82]],
+  ROOF: [[-2.2, 0], [-2.12, 0.44], [-1.8, 0.58], [0, 0.6], [0.6, 0.44], [1.12, 0]], cab: [-2.2, 1.12], roofZ: [-1.95, 0.42] };
+// perua: sedã com teto que vai até a traseira
+MODELS.perua = Object.assign({}, MODELS.seda, { ROOF: [[-2.2, 0], [-2.12, 0.38], [-1.8, 0.45], [0.2, 0.45], [0.75, 0.25], [1.15, 0]], cab: [-2.2, 1.15], roofZ: [-2.0, 0.5] });
+// gran turismo: capô enorme, cabine recuada e teto em gota
+MODELS.gran = { TOP: [[-2.32, 0.62], [-2.25, 0.82], [-1.9, 0.88], [-1.0, 0.86], [0.6, 0.8], [1.6, 0.7], [2.2, 0.58], [2.38, 0.46]], BOT: BODY_BOT,
+  W: [[-2.32, 0.88], [-2.0, 0.98], [-1.38, 1.0], [-0.5, 0.93], [0.6, 0.95], [1.42, 1.0], [2.1, 0.9], [2.38, 0.66]],
+  ROOF: [[-1.9, 0], [-1.4, 0.12], [-0.8, 0.3], [-0.2, 0.36], [0.4, 0.28], [0.85, 0.1], [1.12, 0]], cab: [-1.9, 1.12], roofZ: [-1.1, 0.3] };
 const MODEL_GEO = {};
 for (const [k, M] of Object.entries(MODELS)) MODEL_GEO[k] = (M.bike || M.special) ? MODEL_GEO.esportivo || { body: CARGEO.body, cabin: CARGEO.cabin, roof: CARGEO.roof } : M.armor ? { body: loft(armBody, -2.42, 2.42, 70), cabin: loft(armGlass, -1.55, 1.05, 40), roof: loft(armSpine, -2.3, 2.15, 40) } : k === 'esportivo' ? { body: CARGEO.body, cabin: CARGEO.cabin, roof: CARGEO.roof } :
   { body: loft(z => bodySection(z, M), -2.32, 2.38, 64), cabin: loft(z => cabinSection(z, M), M.cab[0], M.cab[1], 40), roof: loft(z => roofSection(z, M), M.roofZ[0], M.roofZ[1], 20) };
@@ -1813,6 +1836,23 @@ function makeCarBase(look, opts = {}) {
   mesh(MG.body, paint);
   mesh(MG.cabin, glassMat);
   mesh(MG.roof, paint);
+  const MM = MODELS[mk];
+  if (!lite && !armor && MM.cab && !settings.weak) {
+    const quatro = mk === 'seda' || mk === 'perua' || mk === 'suv' || mk === 'hatch';
+    const zFrente = MM.cab[1] - 0.22, zPorta = quatro ? [[zFrente - 0.05, -0.15], [-0.15, MM.cab[0] + 0.5]] : [[zFrente - 0.05, MM.cab[0] + 0.55]];
+    for (const sx of [1, -1]) {
+      const wz = bodyW(zFrente, MM), yt = bodyTop(zFrente, MM);
+      const casca = mesh(new THREE.BoxGeometry(0.07, 0.1, 0.17), paint, sx * (wz * 0.86 + 0.12), yt + 0.09, zFrente);
+      casca.rotation.y = sx * 0.12;
+      mesh(new THREE.BoxGeometry(0.012, 0.1, 0.16), MAT.chrome, sx * (wz * 0.86 + 0.12 - 0.04), yt + 0.09, zFrente - 0.005).rotation.y = sx * 0.12;
+      mesh(new THREE.BoxGeometry(0.12, 0.04, 0.06), MAT.trim, sx * (wz * 0.86 + 0.05), yt + 0.06, zFrente + 0.02);
+      for (const [z1, z0] of zPorta) {
+        const zm = z0 + 0.22, wm = bodyW(zm, MM);
+        mesh(new THREE.BoxGeometry(0.03, 0.035, 0.16), MAT.chrome, sx * (wm + 0.005), bodyTop(zm, MM) - 0.1, zm); // maçaneta
+        for (const zl of [z1, z0]) { const wl = bodyW(zl, MM), tl = bodyTop(zl, MM); mesh(new THREE.BoxGeometry(0.006, tl - archY(zl, MM) - 0.06, 0.008), MAT.trim, sx * (wl * 0.995 + 0.002), (tl + archY(zl, MM)) / 2, zl); }
+      }
+    }
+  }
 
   // faixas
   if (!lite && !armor && look.stripes && look.stripes !== 'none') {
@@ -2079,7 +2119,8 @@ function rivalLook(k, seedN) {
     color: pick(PAINTS, 1), finish: pick(['metal', 'metal', 'fosco', 'perola'], 2),
     rimStyle: pick(['5', '10', 'multi', 'disco'], 3), rimColor: pick(['prata', 'preto', 'bronze', 'dourado'], 4),
     spoiler: pick(['lip', 'duck', 'gt', 'none'], 5), stripes: pick(['none', 'none', 'duplas', 'central'], 6), stripeColor: pick(['#ffffff', '#111111', '#ffcc00'], 7),
-    neon: seedN > 6 ? pick(['none', 'none', 'azul', 'rosa', 'verde'], 8) : 'none', tint: 'escuro', head: pick(['branco', 'xenon'], 9), exhaust: pick(['duplo', 'quadruplo', 'central'], 10)
+    neon: seedN > 6 ? pick(['none', 'none', 'azul', 'rosa', 'verde'], 8) : 'none', tint: 'escuro', head: pick(['branco', 'xenon'], 9), exhaust: pick(['duplo', 'quadruplo', 'central'], 10),
+    model: pick(['esportivo', 'esportivo', 'gran', 'seda', 'hatch', 'touro', 'classico'], 11)
   };
 }
 
@@ -3012,7 +3053,8 @@ function buildCity() {
     else if ((i === 5 || i === 6) && (j === 5 || j === 6)) type = 'parque';
     else if (r < 0.09) type = 'parque';
     else if (r < 0.16) type = 'estacionamento';
-    lots.push({ i, j, x0, x1, z0, z1, type, solid: type === 'predio' || type === 'oficina' || type === 'cinema', trees: [], h: type === 'oficina' ? 9.3 : type === 'cinema' ? 14.3 : 0 });
+    else if (i === 0 || j === 0 || i === NB - 1 || j === NB - 1 || r > 0.82) type = 'bairro'; // casas nas bordas da cidade
+    lots.push({ i, j, x0, x1, z0, z1, type, solid: type === 'predio' || type === 'bairro' || type === 'oficina' || type === 'cinema', trees: [], h: type === 'oficina' ? 9.3 : type === 'cinema' ? 14.3 : 0 });
   }
 
   // asfalto da cidade inteira e grama em volta
@@ -3083,6 +3125,109 @@ function buildCity() {
       L.h = Math.max(L.h, h + 0.4);
     }
   });
+  // ---------- bairro residencial: casas com telhado, garagem, muro, jardim e luz na varanda ----------
+  const bairros = lots.filter(L => L.type === 'bairro');
+  if (bairros.length) {
+    const casas = [];
+    bairros.forEach(L => {
+      L.h = 9.5;
+      const n = 3, w = (L.x1 - L.x0) / n;
+      for (const lado of [-1, 1]) for (let k = 0; k < n; k++) {
+        const dois = rnd() < 0.45, cw = w - 5.4 - rnd() * 0.8, cd = 7 + rnd() * 1.5, hh = dois ? 5.8 : 3.1, gl = rnd() < 0.5 ? -1 : 1, px = L.x0 + w * (k + 0.5);
+        const fz = lado < 0 ? L.z0 + 3.2 : L.z1 - 3.2; // fachada virada para a rua
+        const c = { x: px - gl * 2, px, pw: w, z: fz - lado * cd / 2, fz, lado, w: cw, d: cd, h: hh, dois,
+          cor: Math.floor(rnd() * 8), telha: Math.floor(rnd() * 4), garagem: rnd() < 0.7, gl, chamine: rnd() < 0.45, arvore: rnd() < 0.7 };
+        c.gx = c.x + gl * (cw / 2 + 1.95); casas.push(c);
+      }
+    });
+    const quarto = (g, x, y, ww, hh, luz) => { // janela com moldura, vidro e cortina
+      g.fillStyle = '#f4f1ea'; g.fillRect(x - 3, y - 3, ww + 6, hh + 6);
+      const gr = g.createLinearGradient(x, y, x, y + hh);
+      if (luz) { gr.addColorStop(0, '#ffd88a'); gr.addColorStop(1, '#ffb44a'); } else { gr.addColorStop(0, '#5c6f86'); gr.addColorStop(1, '#22303f'); }
+      g.fillStyle = gr; g.fillRect(x, y, ww, hh);
+      g.fillStyle = luz ? 'rgba(255,240,210,.55)' : 'rgba(220,225,235,.25)'; g.fillRect(x, y, ww * 0.22, hh); g.fillRect(x + ww * 0.78, y, ww * 0.22, hh);
+      g.fillStyle = '#e8e4da'; g.fillRect(x + ww / 2 - 1.5, y, 3, hh); g.fillRect(x, y + hh / 2 - 1.5, ww, 3);
+      g.fillStyle = '#cfc9bc'; g.fillRect(x - 5, y + hh + 3, ww + 10, 5); // peitoril
+    };
+    const reboco = g => { // parede branca com textura de reboco (a cor vem da instância)
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, 512, 256);
+      for (let i = 0; i < 9000; i++) { const c = 225 + Math.random() * 30; g.fillStyle = `rgb(${c},${c},${c})`; g.fillRect(Math.random() * 512, Math.random() * 256, 2, 2); }
+      g.fillStyle = '#9a9188'; g.fillRect(0, 238, 512, 18); // rodapé de pedra
+    };
+    const fachada = (dois, emis) => canvasTex(512, 256, (g, W, H) => {
+      if (emis) { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); } else reboco(g);
+      const andares = dois ? 2 : 1, ah = 230 / andares;
+      for (let a = 0; a < andares; a++) {
+        const y = 230 - ah * (a + 1) + ah * 0.22, jh = ah * 0.45;
+        const jan = (x, ww) => { if (emis) { if (Math.random() < 0.55) { g.fillStyle = '#ffc870'; g.fillRect(x, y, ww, jh); } } else quarto(g, x, y, ww, jh, false); };
+        if (a === 0) {
+          jan(40, 110); jan(360, 110);
+          if (!emis) { // porta de madeira com maçaneta e degrau
+            g.fillStyle = '#e9e5dc'; g.fillRect(222, 230 - ah * 0.78 - 6, 68, ah * 0.78 + 6);
+            const pg = g.createLinearGradient(228, 0, 284, 0); pg.addColorStop(0, '#5a3418'); pg.addColorStop(0.5, '#7a4a24'); pg.addColorStop(1, '#5a3418');
+            g.fillStyle = pg; g.fillRect(228, 230 - ah * 0.78, 56, ah * 0.78);
+            g.strokeStyle = 'rgba(30,15,5,.6)'; g.lineWidth = 2; g.strokeRect(234, 230 - ah * 0.72, 44, ah * 0.3); g.strokeRect(234, 230 - ah * 0.36, 44, ah * 0.3);
+            g.fillStyle = '#d8b04a'; g.beginPath(); g.arc(274, 230 - ah * 0.4, 3, 0, 7); g.fill();
+            g.fillStyle = '#8c857c'; g.fillRect(214, 230, 84, 8);
+          } else { g.fillStyle = '#ffdca0'; g.fillRect(236, 230 - ah * 0.7, 10, 10); }
+        } else { jan(40, 110); jan(200, 110); jan(360, 110); }
+      }
+    });
+    const lateral = (dois, emis) => canvasTex(512, 256, (g, W, H) => {
+      if (emis) { g.fillStyle = '#000'; g.fillRect(0, 0, W, H); } else reboco(g);
+      const andares = dois ? 2 : 1, ah = 230 / andares;
+      for (let a = 0; a < andares; a++) { const y = 230 - ah * (a + 1) + ah * 0.25, jh = ah * 0.4;
+        for (const x of [90, 330]) { if (emis) { if (Math.random() < 0.4) { g.fillStyle = '#ffc870'; g.fillRect(x, y, 90, jh); } } else quarto(g, x, y, 90, jh, false); } }
+    });
+    const CORES_CASA = [0xf3ead8, 0xe9d3b0, 0xcfe0e8, 0xf0c9b4, 0xdfe6cf, 0xf7f3ee, 0xd9c7e0, 0xf2dc9c];
+    const TELHAS = [0x9a3b22, 0x6b2f22, 0x4a4d55, 0x5a4434];
+    const parede = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+    [false, true].forEach(dois => {
+      const lista = casas.filter(c => c.dois === dois); if (!lista.length) return;
+      const ff = fachada(dois, false), fe = fachada(dois, true), lf = lateral(dois, false), le = lateral(dois, true);
+      const mt = (map, em) => new THREE.MeshStandardMaterial({ map, emissiveMap: em, emissive: 0xffffff, emissiveIntensity: timeCfg.windows * 0.9, roughness: 0.92 });
+      const lado = mt(lf, le), frente = mt(ff, fe), topo = new THREE.MeshStandardMaterial({ color: 0x777777, roughness: 1 });
+      const inst = instanced(parede, [lado, lado, topo, topo, frente, lado], lista, c => { q.setFromAxisAngle(yAxis, c.lado < 0 ? Math.PI : 0); m4.compose(v3.set(c.x, 0.18, c.z), q, sc.set(c.w, c.h, c.d)); });
+      if (inst) lista.forEach((c, k) => inst.setColorAt(k, tint.setHex(CORES_CASA[c.cor])));
+    });
+    // telhado de duas águas com telhas
+    const tri = new THREE.Shape(); tri.moveTo(-0.5, 0); tri.lineTo(0.5, 0); tri.lineTo(0, 1); tri.lineTo(-0.5, 0);
+    const telhado = new THREE.ExtrudeGeometry(tri, { depth: 1, bevelEnabled: false }); telhado.translate(0, 0, -0.5); telhado.rotateY(Math.PI / 2);
+    const telhaTex = canvasTex(256, 256, (g, W, H) => {
+      g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H);
+      for (let y = 0; y < H; y += 16) { g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(0, y + 13, W, 3); for (let x = (y / 16 % 2) * 12; x < W; x += 24) { g.fillStyle = `rgba(0,0,0,${0.05 + Math.random() * 0.12})`; g.fillRect(x, y, 22, 13); g.fillStyle = 'rgba(0,0,0,.2)'; g.fillRect(x + 22, y, 2, 13); } }
+    });
+    telhaTex.wrapS = telhaTex.wrapT = THREE.RepeatWrapping; telhaTex.repeat.set(3, 3);
+    const tInst = instanced(telhado, new THREE.MeshStandardMaterial({ map: telhaTex, roughness: 0.75 }), casas, c => { q.setFromAxisAngle(yAxis, 0); m4.compose(v3.set(c.x, c.h + 0.18, c.z), q, sc.set(c.w + 0.9, 2 + c.w * 0.06, c.d + 0.9)); });
+    if (tInst) casas.forEach((c, k) => tInst.setColorAt(k, tint.setHex(TELHAS[c.telha])));
+    // chaminés, garagens com portão, muros, gramado, entrada de carro, caixa de correio e luz da varanda
+    const caixa = new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0);
+    const pedra = new THREE.MeshStandardMaterial({ color: 0x8a6f5c, roughness: 0.95 });
+    instanced(caixa, pedra, casas.filter(c => c.chamine), c => m4.compose(v3.set(c.x + c.w * 0.25, c.h + 0.18, c.z), q.identity(), sc.set(0.7, 2.6 + c.w * 0.06, 0.7)));
+    const gar = casas.filter(c => c.garagem);
+    const portaoTex = canvasTex(256, 256, (g, W, H) => { g.fillStyle = '#e6e6e2'; g.fillRect(0, 0, W, H); for (let y = 8; y < H; y += 24) { g.fillStyle = '#bdbdb7'; g.fillRect(0, y, W, 3); g.fillStyle = '#fafaf6'; g.fillRect(0, y + 3, W, 2); } });
+    const garMat = new THREE.MeshStandardMaterial({ map: portaoTex, roughness: 0.5, metalness: 0.3 }), garParede = new THREE.MeshStandardMaterial({ color: 0xece6da, roughness: 0.9 });
+    const gInst = instanced(caixa, [garParede, garParede, garParede, garParede, garMat, garParede], gar, c => { q.setFromAxisAngle(yAxis, c.lado < 0 ? Math.PI : 0); m4.compose(v3.set(c.gx, 0.18, c.fz - c.lado * 3.2), q, sc.set(3.8, 2.7, 6.2)); });
+    const muro = [];
+    casas.forEach(c => { // muro baixo na frente do lote, com vão para o caminho e para a garagem
+      const vaos = [[c.x - 0.8, c.x + 0.8]]; if (c.garagem) vaos.push([c.gx - 1.9, c.gx + 1.9]); vaos.sort((a, b) => a[0] - b[0]);
+      let x = c.px - c.pw / 2 + 0.3; const fim = c.px + c.pw / 2 - 0.3;
+      for (const [a, b] of vaos.concat([[fim, fim]])) { if (a - x > 0.3) muro.push({ x: (x + a) / 2, z: c.fz + c.lado * 2.6, w: a - x }); x = Math.max(x, b); }
+    });
+    instanced(caixa, new THREE.MeshStandardMaterial({ color: 0xd8d2c6, roughness: 0.95 }), muro, m => m4.compose(v3.set(m.x, 0.18, m.z), q.identity(), sc.set(m.w, 0.95, 0.25)));
+    const gramaTex = noiseTex('#3d6b2f', ['rgba(70,110,50,.6)', 'rgba(40,80,30,.5)', 'rgba(90,120,60,.4)']); gramaTex.wrapS = gramaTex.wrapT = THREE.RepeatWrapping; gramaTex.repeat.set(10, 10);
+    instanced(flat, new THREE.MeshLambertMaterial({ map: gramaTex }), bairros, L => m4.compose(v3.set((L.x0 + L.x1) / 2, 0.205, (L.z0 + L.z1) / 2), q.identity(), sc.set(L.x1 - L.x0, 1, L.z1 - L.z0)), false);
+    instanced(flat, new THREE.MeshStandardMaterial({ color: 0x9c9a95, roughness: 0.9 }), gar, c => m4.compose(v3.set(c.gx, 0.215, c.fz + c.lado * 1.3), q.identity(), sc.set(3.4, 1, 2.6)), false);
+    instanced(flat, new THREE.MeshStandardMaterial({ color: 0xb8b2a6, roughness: 0.9 }), casas, c => m4.compose(v3.set(c.x, 0.215, c.fz + c.lado * 1.3), q.identity(), sc.set(1.4, 1, 2.6)), false);
+    instanced(caixa, new THREE.MeshStandardMaterial({ color: 0x1d3f8a, roughness: 0.4, metalness: 0.4 }), casas, c => m4.compose(v3.set(c.x + 1.3, 0.18, c.fz + c.lado * 2.3), q.identity(), sc.set(0.35, 1.15, 0.45)));
+    instanced(new THREE.SphereGeometry(0.16, 10, 8), new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 0.75, 0.4).multiplyScalar(timeCfg.lamps ? 4 : 0.8) }), casas,
+      c => m4.compose(v3.set(c.x + 0.9, 2.45, c.fz + c.lado * 0.12), q.identity(), sc.set(1, 1, 1)), false);
+    // árvores dos jardins
+    const jard = casas.filter(c => c.arvore).map(c => ({ x: c.x - c.gl * (c.w / 2 - 1), z: c.fz - c.lado * (c.d + 4), s: 0.7 + rnd() * 0.5, r: rnd() * 6 }));
+    const cj = instanced(crownGeo, new THREE.MeshLambertMaterial({ color: 0xffffff }), jard, setT);
+    instanced(trunkGeo, new THREE.MeshLambertMaterial({ color: 0x3a2a1c }), jard, setT);
+    if (cj) jard.forEach((t, k) => cj.setColorAt(k, tint.setHSL(0.27 + rnd() * 0.08, 0.45, 0.18 + rnd() * 0.1)));
+  }
   const winTex = warm => canvasTex(128, 256, (g, w, h) => {
     g.fillStyle = '#0b0d16'; g.fillRect(0, 0, w, h);
     for (let y = 6; y < h - 6; y += 12) for (let x = 5; x < w - 5; x += 10) {
@@ -3265,7 +3410,8 @@ const randomLane = () => {
 const TRAFFIC_COLORS = ['#e8e8e8', '#202022', '#9aa0a8', '#b00a14', '#0b4fd6', '#1a5e3a', '#c8b48a', '#6a1b9a', '#f2b200', '#4a4f57', '#7a2e12'];
 function trafficLook() {
   return { color: pick(TRAFFIC_COLORS), finish: pick(['metal', 'metal', 'fosco']), rimStyle: '5', rimColor: pick(['prata', 'preto']), spoiler: pick(['none', 'none', 'lip', 'duck']),
-    stripes: 'none', stripeColor: '#ffffff', neon: 'none', tint: pick(['normal', 'escuro']), head: pick(['branco', 'branco', 'amarelo']), exhaust: 'duplo' };
+    stripes: 'none', stripeColor: '#ffffff', neon: 'none', tint: pick(['normal', 'escuro']), head: pick(['branco', 'branco', 'amarelo']), exhaust: 'duplo',
+    model: pick(['seda', 'seda', 'hatch', 'hatch', 'suv', 'perua', 'esportivo', 'classico']) };
 }
 function spawnTraffic(farFromPlayer = true) {
   let p;
@@ -5526,6 +5672,10 @@ const AD_SETS = {
     { k: 'Traseira solta', t: 'FEITO PARA <em>DERRAPAR</em>', d: 'Puxe o freio de mão e saia de lado.' },
     { k: 'Lenda das ruas', t: 'O VOVÔ <em>RÁPIDO</em>', d: 'Velho, mas ainda deixa muito carro para trás.' }, GET] }
 };
+['perua|Perua Família|#7fd0ff|ESPAÇO PARA <em>TODOS</em>|Porta-malas gigante e viagem tranquila.', 'suv|SUV Trilha|#9bd36a|ALTO E <em>FORTE</em>|Passa por qualquer rua da cidade.', 'gran|Gran Turismo V8|#ff4d3d|CAPÔ <em>LONGO</em>|V8 na frente e muita força.'].forEach(l => {
+  const [id, label, accent, t, d] = l.split("|"), base = AD_SETS.classico.scenes;
+  AD_SETS[id] = { label, model: id, accent, scenes: [{ k: label, t, d }, { k: "Feito para a cidade", t: "PARECE DE <em>VERDADE</em>", d: "Retrovisores, maçanetas e pintura brilhante." }, base[base.length - 1]] };
+});
 let adFly = false, adTimer = null, adCar = null, adCtx = null;
 const adBase = new THREE.Vector3();
 function playAd(onReward, model = 'foguete', label, opts = {}) {
