@@ -666,18 +666,19 @@ function applyParts(L = save.parts, model = save.look.model) {
   CAR.nitroDrain = [0.3, 0.23, 0.17][L.nitro];
   CAR.m = [1350, 1260, 1170][L.peso];
   CAR.Iz = 2100 * CAR.m / 1350;
+  CAR.red = 7800; CAR.gran = model === 'gran'; CAR.som = model === 'seda' || model === 'monstro';
   CAR.electric = model === 'foguete' || model === 'blindado';
   CAR.armor = model === 'blindado';
   CAR.touro = model === 'touro'; CAR.moto = model === 'moto';
   CAR.kart = model === 'kart'; CAR.monster = model === 'monstro'; CAR.classico = model === 'classico';
   if (CAR.kart) { CAR.m = 180; CAR.Iz = 140; CAR.tq *= 0.32; CAR.final = 6.4; CAR.drag = 0.18; CAR.Cf = 15000; CAR.Cr = 17000; CAR.mu = Math.max(CAR.mu, 1.45); CAR.down = 0.4; CAR.shift = 0.05; }
   if (CAR.monster) { CAR.m = 2600; CAR.Iz = 4400; CAR.tq *= 1.6; CAR.final = 3.9; CAR.drag = 0.6; CAR.Cf *= 1.7; CAR.Cr *= 1.8; CAR.hcg = 0.9; CAR.brake = Math.max(CAR.brake, 1.2); }
-  if (CAR.classico) { CAR.tq *= 1.3; CAR.final = 3.4; CAR.drag = 0.45; CAR.mu = Math.min(CAR.mu, 1.15); CAR.Cr *= 0.85; }
+  if (CAR.classico) { CAR.tq *= 2.2; CAR.final = 3.3; CAR.drag = 0.44; CAR.mu = clamp(CAR.mu, 1.2, 1.3); CAR.Cr *= 0.88; } // V8 grandão com compressor: o mais forte de todos
   if (model === 'seda') { CAR.tq *= 1.05; CAR.m += 160; CAR.Iz = 2300; CAR.drag = 0.36; CAR.mu = Math.min(CAR.mu * 0.98, 1.4); }
   if (model === 'hatch') { CAR.tq *= 0.95; CAR.m -= 170; CAR.Iz = 1700; CAR.final = 3.95; CAR.shift = Math.min(CAR.shift, 0.1); }
   if (model === 'perua') { CAR.tq *= 1.1; CAR.m += 230; CAR.Iz = 2500; CAR.drag = 0.4; CAR.Cr *= 1.08; }
   if (model === 'suv') { CAR.tq *= 1.3; CAR.m += 480; CAR.Iz = 2900; CAR.drag = 0.5; CAR.hcg = Math.max(CAR.hcg, 0.62); CAR.mu *= 0.95; CAR.brake = Math.max(CAR.brake, 1.2); }
-  if (model === 'gran') { CAR.tq *= 1.5; CAR.final = 3.0; CAR.drag = 0.32; CAR.m += 120; CAR.Iz = 2300; CAR.down = Math.max(CAR.down, 2.6); CAR.mu = Math.max(CAR.mu, 1.35); }
+  if (model === 'gran') { CAR.tq *= 1.85; CAR.red = 8700; CAR.final = 2.95; CAR.drag = 0.32; CAR.m += 120; CAR.Iz = 2300; CAR.down = Math.max(CAR.down, 2.6); CAR.mu = Math.max(CAR.mu, 1.35); }
   if (CAR.touro) { CAR.tq *= 1.75; CAR.final = 2.8; CAR.drag = 0.3; CAR.mu = Math.max(CAR.mu, 1.5); CAR.down = Math.max(CAR.down, 3.2); CAR.m -= 100; CAR.Iz = 1900; CAR.shift = Math.min(CAR.shift, 0.08); }
   if (CAR.moto) { CAR.m = 260; CAR.Iz = 320; CAR.tq *= 0.55; CAR.final = 3.2; CAR.drag = 0.2; CAR.Cf = 21000; CAR.Cr = 24000; CAR.down = 0.25; CAR.shift = Math.min(CAR.shift, 0.08); }
   if (CAR.electric) { CAR.tq *= 1.12; CAR.shift = 0.02; }
@@ -697,8 +698,8 @@ function carStats() {
 // ---------------- VISUAL (pintura e acessórios) ----------------
 const PAINTS = ['#0b4fd6', '#1a8cff', '#00b3a4', '#0f8f4a', '#7ac70c', '#f2b200', '#ff7a00', '#d43a00', '#b00a14', '#e0115f', '#8a2be2', '#3b1d6e', '#e8e8e8', '#9aa0a8', '#3a3d42', '#0c0c0e'];
 const STYLE = [
-  { key: 'model', title: 'Carro', hint: 'Roadster Foguete: elétrico e voa (tecla V na Cidade Livre). Blindado X: picape de aço, mais de 350 km/h, antiderrapante, voa e gruda na parede. Touro V12: o mais rápido, quase 400 km/h. Moto Relâmpago: leve e deita nas curvas. Kart Faísca: pequeno e muito ágil. Monstro: rodas gigantes, passa por cima de tudo. Clássico 70: motor V8 e traseira solta. Sedã Executivo e Hatch Turbo: carros de rua, já liberados. Perua Família: espaçosa e estável. SUV Trilha: alto e pesado. Gran Turismo V8: capô longo e muita força. Cada um libera com o seu anúncio.', opts: [
-    { id: 'esportivo', name: 'Esportivo GT', price: 0 }, { id: 'foguete', name: '🚀 Roadster Foguete', price: 0, ad: true }, { id: 'blindado', name: '⚡ Blindado X', price: 0, ad: true }, { id: 'touro', name: '🐂 Touro V12', price: 0, ad: true }, { id: 'moto', name: '🏍️ Moto Relâmpago', price: 0, ad: true }, { id: 'kart', name: '🏎️ Kart Faísca', price: 0, ad: true }, { id: 'monstro', name: '🛻 Monstro', price: 0, ad: true }, { id: 'classico', name: '🚘 Clássico 70', price: 0, ad: true }, { id: 'seda', name: '🚗 Sedã Executivo', price: 0 }, { id: 'hatch', name: '🚙 Hatch Turbo', price: 0 }, { id: 'perua', name: '🧳 Perua Família', price: 0, ad: true }, { id: 'suv', name: '🏔️ SUV Trilha', price: 0, ad: true }, { id: 'gran', name: '🏁 Gran Turismo V8', price: 0, ad: true }] },
+  { key: 'model', title: 'Carro', hint: 'Roadster Foguete: elétrico e voa (tecla V na Cidade Livre). Blindado X: picape de aço, mais de 350 km/h, antiderrapante, voa e gruda na parede. Touro V12: o mais rápido, quase 400 km/h. Moto Relâmpago: leve e deita nas curvas. Kart Faísca: pequeno e muito ágil. Monstro: rodas gigantes, passa por cima de tudo. Clássico 70: V8 grandão com compressor, o motor mais forte do jogo. Gran Turismo V12: motor V12 de supercarro italiano que gira até 8.700 rpm. Sedã Executivo e Monstro: caixa de som gigante atrás que toca o rádio com grave forte (tecla O troca a música). Hatch Turbo: carro de rua, já liberado. Perua Família: espaçosa e estável. SUV Trilha: alto e pesado. Cada um libera com o seu anúncio.', opts: [
+    { id: 'esportivo', name: 'Esportivo GT', price: 0 }, { id: 'foguete', name: '🚀 Roadster Foguete', price: 0, ad: true }, { id: 'blindado', name: '⚡ Blindado X', price: 0, ad: true }, { id: 'touro', name: '🐂 Touro V12', price: 0, ad: true }, { id: 'moto', name: '🏍️ Moto Relâmpago', price: 0, ad: true }, { id: 'kart', name: '🏎️ Kart Faísca', price: 0, ad: true }, { id: 'monstro', name: '🛻 Monstro', price: 0, ad: true }, { id: 'classico', name: '🚘 Clássico 70', price: 0, ad: true }, { id: 'seda', name: '🚗 Sedã Executivo', price: 0 }, { id: 'hatch', name: '🚙 Hatch Turbo', price: 0 }, { id: 'perua', name: '🧳 Perua Família', price: 0, ad: true }, { id: 'suv', name: '🏔️ SUV Trilha', price: 0, ad: true }, { id: 'gran', name: '🏁 Gran Turismo V12', price: 0, ad: true }] },
   { key: 'finish', title: 'Acabamento da pintura', opts: [
     { id: 'metal', name: 'Metálico', price: 0 }, { id: 'fosco', name: 'Fosco', price: 800 },
     { id: 'perola', name: 'Perolado', price: 1500 }, { id: 'cromo', name: 'Cromado', price: 5000 }] },
@@ -2001,7 +2002,8 @@ function makeCarBase(look, opts = {}) {
     }
     mesh(new THREE.BoxGeometry(1.5, 0.08, 0.3), MAT.trim, 0, 0.36, 2.36);
   }
-  return { group: g, body, wheels, steer, flames, paint, tail, pool, headColor: hc, rocket, armor, pivots, jets, mainJet, fold: 0 };
+  const boom = mk === 'seda' && !lite ? makeBoombox(body, 1.3, 0.42, 0, bodyTop(-1.95, MODELS.seda) - 0.02, -1.95) : null; // som gigante em cima do porta-malas
+  return { group: g, body, wheels, steer, flames, paint, tail, pool, headColor: hc, rocket, armor, pivots, jets, mainJet, fold: 0, woofers: boom && boom.woofers, boomLed: boom && boom.led };
 }
 function mergeChildren(group) {
   const U = THREE.BufferGeometryUtils;
@@ -2384,7 +2386,7 @@ function updatePlayer(dt) {
 
   player.shiftT -= dt;
   if (player.gear > 0 && player.shiftT <= 0) {
-    if (player.rpm > 7300 && player.gear < 6 && player.spin < 0.2) { player.gear++; player.shiftT = CAR.shift; shiftSound(); }
+    if (player.rpm > CAR.red - 500 && player.gear < 6 && player.spin < 0.2) { player.gear++; player.shiftT = CAR.shift; shiftSound(); }
     else if (player.gear > 1) {
       const lower = Math.abs(player.vF) / CAR.rw * CAR.gears[player.gear - 2] * CAR.final * RPM_K;
       if (lower < 6200 && player.rpm < 3600) player.gear--;
@@ -2716,10 +2718,10 @@ let hudT = 0;
 function updateHUD(dt) {
   $('speed-num').textContent = Math.round(Math.abs(player.vF) * 3.6);
   $('gear').textContent = player.gear === -1 ? 'R' : (Math.abs(player.vF) < 0.5 && !input.gas ? 'N' : player.gear);
-  $('gear').style.color = player.rpmVis > 7200 ? '#ff4040' : '#fff';
+  $('gear').style.color = player.rpmVis > CAR.red - 600 ? '#ff4040' : '#fff';
   $('nitro-bar').style.width = (player.nitro * 100) + '%';
   $('time').textContent = fmt(raceTime);
-  drawTach(player.rpmVis, player.rpmVis > 7200 && player.gear > 0 && player.gear < 6);
+  drawTach(player.rpmVis, player.rpmVis > CAR.red - 600 && player.gear > 0 && player.gear < 6);
   $('assist').textContent = [player.tcs && 'TCS', player.esc && 'ESC', player.abs && 'ABS'].filter(Boolean).join(' · ');
   hudT -= dt;
   if (hudT <= 0) {
@@ -2788,7 +2790,10 @@ function initV8(ctx, master) {
   // sub-grave na frequência de explosão (sente mais do que ouve)
   const sub = ctx.createOscillator(); sub.type = 'sine'; const subLp = ctx.createBiquadFilter(); subLp.type = 'lowpass'; subLp.frequency.value = 150;
   const subG = ctx.createGain(); subG.gain.value = 0; sub.connect(subLp); subLp.connect(subG); subG.connect(out); sub.start();
-  return { out, lp, sat, on: mk(true), off: mk(false), sub, subG, load: 0, rpmS: 900, lastGasT: -9, popT: 0, dipUntil: 0, prevGas: 0 };
+  // assobio do compressor (Clássico 70)
+  const whine = ctx.createOscillator(); whine.type = 'triangle'; const wBp = ctx.createBiquadFilter(); wBp.type = 'bandpass'; wBp.Q.value = 6;
+  const whineG = ctx.createGain(); whineG.gain.value = 0; whine.connect(wBp); wBp.connect(whineG); whineG.connect(master); whine.start();
+  return { out, lp, sat, on: mk(true), off: mk(false), sub, subG, whine, wBp, whineG, load: 0, rpmS: 900, lastGasT: -9, popT: 0, dipUntil: 0, prevGas: 0 };
 }
 function v8Pop(ctx, dest, when, big) { // estalo do escape ao tirar o pé
   const len = 0.09, buf = ctx.createBuffer(1, Math.round(ctx.sampleRate * len), ctx.sampleRate), d = buf.getChannelData(0);
@@ -2802,7 +2807,7 @@ function updateV8(on, rpmIn, gas) {
   const ctx = audio.ctx, t = ctx.currentTime;
   const dt = clamp(t - (V.lastT || t), 0, 0.1); V.lastT = t;
   // multiplicador de "cilindros": V12 mais agudo, moto e kart bem mais rápidos, Monstro e Clássico mais graves
-  const mult = CAR.touro ? 1.5 : CAR.moto ? 1.9 : CAR.kart ? 2.4 : CAR.monster ? 0.75 : CAR.classico ? 0.85 : 1;
+  const mult = CAR.touro || CAR.gran ? 1.5 : CAR.moto ? 1.9 : CAR.kart ? 2.4 : CAR.monster ? 0.75 : CAR.classico ? 0.85 : 1;
   V.rpmS += (rpmIn - V.rpmS) * (1 - Math.exp(-dt * 20));
   V.load += ((gas > 0.05 ? 1 : 0) - V.load) * (1 - Math.exp(-dt * 8));
   const rpm = Math.max(500, V.rpmS);
@@ -2822,7 +2827,9 @@ function updateV8(on, rpmIn, gas) {
   const dip = t < V.dipUntil ? 0.55 : 1;
   const vol = (0.55 + 0.45 * clamp((rpm - 800) / 6400, 0, 1)) * (0.75 + 0.25 * V.load);
   V.out.gain.setTargetAtTime(on ? 0.16 * vol * cut * dip : 0, t, limiter ? 0.004 : 0.04);
-  V.lp.frequency.setTargetAtTime(700 + rpm * 0.55 + V.load * 1600, t, 0.04);
+  V.lp.frequency.setTargetAtTime((CAR.gran ? 1400 + rpm * 0.8 : 700 + rpm * 0.55) + V.load * 1600, t, 0.04);
+  const wf = 260 + rpm * 0.34; V.whine.frequency.setTargetAtTime(wf, t, 0.03); V.wBp.frequency.setTargetAtTime(wf, t, 0.03);
+  V.whineG.gain.setTargetAtTime(on && CAR.classico ? (0.012 + 0.05 * V.load) * clamp(rpm / 6000, 0.2, 1.2) : 0, t, 0.05);
   V.sub.frequency.setTargetAtTime(rpm / 15 * mult, t, 0.03);
   V.subG.gain.setTargetAtTime(on ? 0.12 * V.load : 0, t, 0.06);
   // estalos: tirou o pé de repente em giro alto
@@ -2873,7 +2880,7 @@ function updateSound() {
   const onFoot = mode === 'city' && city && !city.driving;
   const rpm = player.rpmVis || CAR.idle;
   const thr = onFoot ? 0.1 : state === 'countdown' ? (input.gas ? 1 : 0.1) : (input.gas || 0.15);
-  const f = CAR.electric && !onFoot ? 70 + Math.abs(player.vF) * 6.5 : rpm / 60 * 2 * (onFoot ? 1 : CAR.touro ? 1.5 : CAR.moto ? 1.9 : CAR.kart ? 2.4 : CAR.monster ? 0.7 : CAR.classico ? 0.8 : 1);
+  const f = CAR.electric && !onFoot ? 70 + Math.abs(player.vF) * 6.5 : rpm / 60 * 2 * (onFoot ? 1 : CAR.touro || CAR.gran ? 1.5 : CAR.moto ? 1.9 : CAR.kart ? 2.4 : CAR.monster ? 0.7 : CAR.classico ? 0.8 : 1);
   audio.oscs.forEach(({ o, mult }) => o.frequency.setTargetAtTime(f * mult, t, 0.03));
   audio.eFilt.frequency.setTargetAtTime(300 + rpm * 0.28 + thr * 900, t, 0.04);
   // motor a combustão usa o V8 sintetizado; o zumbido antigo fica só para elétricos e para quem está a pé
@@ -4025,7 +4032,7 @@ function updateCityHUD(dt) {
     $('speed-num').textContent = Math.round(Math.abs(player.vF) * 3.6);
     $('gear').textContent = player.gear === -1 ? 'R' : (Math.abs(player.vF) < 0.5 && !input.gas ? 'N' : player.gear);
     $('nitro-bar').style.width = (player.nitro * 100) + '%';
-    drawTach(player.rpmVis, player.rpmVis > 7200 && player.gear > 0 && player.gear < 6);
+    drawTach(player.rpmVis, player.rpmVis > CAR.red - 600 && player.gear > 0 && player.gear < 6);
   }
   const stars = Math.ceil(city.heat - 1e-6);
   $('stars').innerHTML = [1, 2, 3, 4, 5].map(k => `<span class="${k <= stars ? 'on' : ''}">★</span>`).join('');
@@ -4807,7 +4814,8 @@ function makeMonster(look, opts = {}) {
     mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.64, 18).rotateZ(Math.PI / 2), B.rimMat, 0, 0, 0, wg);
     wheels.push(wg); if (z > 0) steer.push(pivot);
   }
-  return finishSpecial(B, wheels, steer, pivots, { monster: true, wheelR: 0.85, camLift: 1.3 });
+  const boom = opts.lite ? null : makeBoombox(lift, 1.6, 0.62, 0, 0.84, -1.75); // paredão de som na caçamba
+  return finishSpecial(B, wheels, steer, pivots, { monster: true, wheelR: 0.85, camLift: 1.3, woofers: boom && boom.woofers, boomLed: boom && boom.led });
 }
 
 // =====================================================================
@@ -4988,13 +4996,47 @@ function radioStep(S, step, t) {
 function radioSchedule() {
   if (!audio || !RADIO.st) return;
   const S = STATIONS[RADIO.st], ctx = audio.ctx;
-  RADIO.out.gain.setTargetAtTime(soundOn ? 0.16 : 0, ctx.currentTime, 0.1);
+  const forte = boomOn();
+  RADIO.out.gain.setTargetAtTime(soundOn ? (forte ? 0.3 : 0.16) : 0, ctx.currentTime, 0.1);
+  RADIO.bass.gain.setTargetAtTime(forte ? 11 : 0, ctx.currentTime, 0.2);
   while (RADIO.next < ctx.currentTime + 0.25) { radioStep(S, RADIO.step, RADIO.next); RADIO.next += 60 / S.bpm / 4; RADIO.step++; }
+}
+// caixa de som gigante (Sedã Executivo e Monstro): liga o rádio sozinha e os alto-falantes pulsam com a batida
+const boomOn = () => !!(CAR.som && player.car && player.car.woofers && (state === 'race' || state === 'countdown' || state === 'city') && !(mode === 'city' && city && !city.driving));
+function updateBoombox() {
+  const car = player.car; if (!car || !car.woofers) { RADIO.auto = false; return; }
+  if (audio && soundOn && !RADIO.st && !RADIO.auto && boomOn()) { RADIO.auto = true; setRadio(1); }
+  let lvl = 0;
+  if (RADIO.meter && RADIO.st) { RADIO.meter.getByteTimeDomainData(RADIO.meterBuf); for (const v of RADIO.meterBuf) lvl = Math.max(lvl, Math.abs(v - 128) / 128); }
+  car.boomLvl = Math.max(lvl * 1.6, (car.boomLvl || 0) * 0.82);
+  car.woofers.forEach(c => { c.position.z = c.userData.z0 - car.boomLvl * 0.05 * c.userData.big; });
+  if (car.boomLed) car.boomLed.color.setRGB(0.2 + car.boomLvl * 2.5, 0.4 + car.boomLvl, 3 + car.boomLvl * 4);
+}
+function makeBoombox(parent, w, h, x, y, z) { // caixa virada para trás, com 2 subwoofers, 2 cornetas e luz azul
+  const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g);
+  const carpete = new THREE.MeshStandardMaterial({ color: 0x17181c, roughness: 1 }), rubber = new THREE.MeshStandardMaterial({ color: 0x0c0c0e, roughness: 0.7 });
+  const cone = new THREE.MeshStandardMaterial({ color: 0x2b2d33, roughness: 0.45, metalness: 0.3 }), led = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.2, 0.4, 3) });
+  const m = (geo, mat, px, py, pz) => { const o = new THREE.Mesh(geo, mat); o.position.set(px, py, pz); g.add(o); return o; };
+  m(new THREE.BoxGeometry(w, h, 0.42), carpete, 0, h / 2, 0);
+  m(new THREE.BoxGeometry(w + 0.02, 0.025, 0.02), led, 0, h - 0.03, -0.215); m(new THREE.BoxGeometry(w + 0.02, 0.025, 0.02), led, 0, 0.03, -0.215);
+  const r = Math.min(h * 0.4, w * 0.2), woofers = [];
+  for (const sx of [-1, 1]) {
+    const cx = sx * w * 0.26;
+    m(new THREE.TorusGeometry(r, r * 0.12, 8, 28), rubber, cx, h / 2, -0.215);
+    const c = m(new THREE.ConeGeometry(r * 0.92, r * 0.5, 28, 1, true).rotateX(Math.PI / 2), cone, cx, h / 2, -0.12); c.material.side = THREE.DoubleSide;
+    const cap = m(new THREE.SphereGeometry(r * 0.28, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2).rotateX(-Math.PI / 2), MAT.chrome, cx, h / 2, -0.2);
+    c.userData = { z0: c.position.z, big: 1 }; cap.userData = { z0: cap.position.z, big: 1.2 }; woofers.push(c, cap);
+  }
+  for (const sx of [-1, 1]) m(new THREE.CylinderGeometry(r * 0.22, r * 0.15, 0.06, 16).rotateX(Math.PI / 2), MAT.chrome, sx * w * 0.47 - sx * r * 0.2, h * 0.8, -0.22);
+  return { woofers, led };
 }
 function setRadio(st) {
   initAudio(); if (!audio) return;
   if (!RADIO.out) {
-    RADIO.out = audio.ctx.createGain(); RADIO.out.gain.value = 0.16; RADIO.out.connect(audio.master);
+    RADIO.out = audio.ctx.createGain(); RADIO.out.gain.value = 0.16;
+    RADIO.bass = audio.ctx.createBiquadFilter(); RADIO.bass.type = 'lowshelf'; RADIO.bass.frequency.value = 130; RADIO.bass.gain.value = 0;
+    RADIO.meter = audio.ctx.createAnalyser(); RADIO.meter.fftSize = 256; RADIO.meterBuf = new Uint8Array(RADIO.meter.fftSize);
+    RADIO.out.connect(RADIO.bass); RADIO.bass.connect(audio.master); RADIO.bass.connect(RADIO.meter);
     const ctx = audio.ctx, b = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate), d = b.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; RADIO.nb = b;
   }
@@ -5672,11 +5714,11 @@ const AD_SETS = {
     { k: 'Faróis no teto', t: 'ILUMINA A <em>NOITE</em>', d: 'Quatro faróis em cima da cabine.' }, GET] },
   classico: { label: 'Clássico 70', model: 'classico', accent: '#ffb21f', scenes: [
     { k: 'Anos 70', t: 'CLÁSSICO <em>70</em>', d: 'Cromados, faróis redondos e muito estilo.' },
-    { k: 'Motor V8', t: 'RONCO <em>GROSSO</em>', d: 'O som mais grave da cidade.' },
+    { k: 'V8 com compressor', t: 'O MAIS <em>FORTE</em>', d: 'Ronco grosso e o assobio do compressor.' },
     { k: 'Traseira solta', t: 'FEITO PARA <em>DERRAPAR</em>', d: 'Puxe o freio de mão e saia de lado.' },
     { k: 'Lenda das ruas', t: 'O VOVÔ <em>RÁPIDO</em>', d: 'Velho, mas ainda deixa muito carro para trás.' }, GET] }
 };
-['perua|Perua Família|#7fd0ff|ESPAÇO PARA <em>TODOS</em>|Porta-malas gigante e viagem tranquila.', 'suv|SUV Trilha|#9bd36a|ALTO E <em>FORTE</em>|Passa por qualquer rua da cidade.', 'gran|Gran Turismo V8|#ff4d3d|CAPÔ <em>LONGO</em>|V8 na frente e muita força.'].forEach(l => {
+['perua|Perua Família|#7fd0ff|ESPAÇO PARA <em>TODOS</em>|Porta-malas gigante e viagem tranquila.', 'suv|SUV Trilha|#9bd36a|ALTO E <em>FORTE</em>|Passa por qualquer rua da cidade.', 'gran|Gran Turismo V12|#ff4d3d|MOTOR <em>V12</em>|Motor de supercarro italiano: grita até 8.700 rpm.'].forEach(l => {
   const [id, label, accent, t, d] = l.split("|"), base = AD_SETS.classico.scenes;
   AD_SETS[id] = { label, model: id, accent, scenes: [{ k: label, t, d }, { k: "Feito para a cidade", t: "PARECE DE <em>VERDADE</em>", d: "Retrovisores, maçanetas e pintura brilhante." }, base[base.length - 1]] };
 });
@@ -6032,7 +6074,7 @@ function frame() {
   if ((state === 'race' || state === 'city') && player.vF * 3.6 > 300) { ach('v300'); if (player.vF * 3.6 > 400) ach('v400'); }
   mpTick(dt);
   updateWeather(dt);
-  updateSound();
+  updateSound(); updateBoombox();
   if (useComposer()) composer.render(); else renderer.render(scene, camera);
 }
 frame();
