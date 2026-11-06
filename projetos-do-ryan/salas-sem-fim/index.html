@@ -27,6 +27,16 @@
   #mira { position: fixed; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; border-radius: 50%; background: rgba(255,250,230,.55); z-index: 3; pointer-events: none; }
   #bussola { position: fixed; left: 50%; top: max(64px, calc(env(safe-area-inset-top, 0px) + 60px)); transform: translateX(-50%); z-index: 3; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 2px; font-family: var(--vhs); font-size: 22px; color: var(--verde); text-shadow: 0 0 10px rgba(80,255,160,.6); }
   #seta { width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-bottom: 30px solid var(--verde); filter: drop-shadow(0 0 6px rgba(80,255,160,.8)); transition: transform .08s linear; }
+  #perigo { position: fixed; inset: 0; z-index: 2; pointer-events: none; opacity: 0; transition: opacity .3s; background: radial-gradient(ellipse at center, transparent 45%, rgba(120,0,0,.75) 100%); }
+  #susto { position: fixed; inset: 0; z-index: 6; pointer-events: none; display: grid; place-items: center; opacity: 0; background: radial-gradient(circle, rgba(0,0,0,.2), rgba(150,0,0,.92)); }
+  #susto b { font-family: var(--vhs); font-weight: 400; font-size: clamp(70px, 18vw, 180px); color: #fff3e0; text-shadow: 6px 0 rgba(255,0,0,.8), -6px 0 rgba(0,200,255,.6); }
+  #susto.on { opacity: 1; animation: tremer .09s linear infinite; }
+  @keyframes tremer { 0% { transform: translate(4px, -3px); } 50% { transform: translate(-5px, 4px); } 100% { transform: translate(3px, 2px); } }
+  #folego { position: fixed; z-index: 3; left: 50%; transform: translateX(-50%); bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 4px); width: min(240px, 40vw); height: 8px; border-radius: 4px; background: rgba(0,0,0,.4); border: 1px solid rgba(243,236,210,.35); display: none; pointer-events: none; }
+  body.jogando #folego { display: block; }
+  #folego i { display: block; height: 100%; width: 100%; border-radius: 4px; background: var(--verde); }
+  #folego.cansado i { background: #ff5a4a; }
+  #n-vidas { color: #ff6a5a; letter-spacing: .1em; }
   #escuro { position: fixed; inset: 0; background: #000; z-index: 5; opacity: 0; pointer-events: none; transition: opacity .9s; }
   /* tela inicial */
   #inicio { position: fixed; inset: 0; z-index: 6; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, rgba(60,48,14,.55), rgba(8,7,3,.94) 70%);
@@ -76,14 +86,14 @@
   #multi-status { font-size: 14px; line-height: 1.45; color: var(--ambar); }
   #b-mic { right: max(18px, env(safe-area-inset-right, 0px)); bottom: calc(max(18px, env(safe-area-inset-bottom, 0px)) + 194px); }
   #b-cam { right: max(18px, env(safe-area-inset-right, 0px)); bottom: calc(max(18px, env(safe-area-inset-bottom, 0px)) + 268px); }
-  @media (prefers-reduced-motion: reduce) { #h-msg, #escuro { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { #h-msg, #escuro, #perigo { transition: none; } #susto.on { animation: none; } }
 </style>
 
 <canvas id="mundo" aria-label="Salas sem fim em 3D"></canvas>
 <div class="vhs" aria-hidden="true"></div>
 <div class="hud" id="h-sala" hidden></div>
 <div class="hud" id="h-play">▶ PLAY <b id="h-nivel">NÍVEL 1 · SALAS AMARELAS</b></div>
-<div class="hud" id="h-fitas">📼 <span id="n-fitas">0/8</span><br><small id="h-dist">0 m andados</small></div>
+<div class="hud" id="h-fitas"><span id="n-vidas">❤❤❤</span> 📼 <span id="n-fitas">0/8</span><br><small id="h-dist">0 m andados</small></div>
 <button id="b-sair" aria-label="Voltar ao menu" title="Menu (X)">✕</button>
 <div class="hud" id="h-fps" hidden>60 FPS</div>
 <div class="hud" id="h-data"><span id="h-hora">00:00:00</span><br>NOV 06 1996</div>
@@ -91,6 +101,9 @@
 <div id="mira" aria-hidden="true"></div>
 <div id="bussola" hidden><div id="seta"></div><span id="b-dist">SAÍDA</span></div>
 <div id="escuro"></div>
+<div id="perigo" aria-hidden="true"></div>
+<div id="susto" aria-hidden="true"><b>PEGO!</b></div>
+<div id="folego" aria-hidden="true"><i></i></div>
 
 <div class="toque" id="joy"><div class="base"><i></i></div></div>
 <button class="toque tb" id="b-correr">CORRER</button>
@@ -102,11 +115,11 @@
   <div class="cartao">
     <div class="rotulo">FITA ENCONTRADA · NOV 1996</div>
     <h1>SALAS<br>SEM FIM</h1>
-    <p>Você cochilou e acordou num lugar que não acaba: salas e mais salas, luz zumbindo e uma música antiga tocando longe. Ache <b>8 fitas cassete</b> espalhadas pelas salas. Com todas, uma <b>porta verde de SAÍDA</b> aparece e leva você para o próximo nível.</p>
+    <p>Você cochilou e acordou num lugar que não acaba: salas e mais salas, luz zumbindo e uma música antiga tocando longe. Ache <b>8 fitas cassete</b> espalhadas pelas salas, mas cuidado: <b>as Sombras</b> andam por aqui e vão te perseguir. Com as 8, uma <b>porta verde de SAÍDA</b> aparece e leva você para o próximo nível. Corra, fuja e não deixe elas te pegarem: você tem 3 vidas.</p>
     <div class="teclas" id="lista-teclas">
       <kbd>W A S D</kbd><span>andar (ou as setas)</span>
       <kbd>Mouse</kbd><span>olhar em volta (clique na tela para prender o mouse)</span>
-      <kbd>Shift</kbd><span>correr</span>
+      <kbd>Shift</kbd><span>correr (gasta o fôlego: a barra verde embaixo)</span>
       <kbd>M</kbd><span>liga e desliga a música</span>
       <kbd>C</kbd><span>câmera de fora (veja o seu traje)</span>
       <kbd>T</kbd><span>liga e desliga o microfone (no aplicativo)</span>
@@ -443,6 +456,172 @@ function colidir() {
   }
 }
 
+// ===================== MONSTROS: as Sombras (criatura original do jogo) =====================
+const matSombra = new THREE.MeshLambertMaterial({ color: 0x050506 });
+const texOlho = tex(64, 64, (g, w) => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,235,1)'); gr.addColorStop(0.25, 'rgba(255,240,170,.9)'); gr.addColorStop(1, 'rgba(255,200,80,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, w); }, false);
+function criarSombra() {
+  const g = new THREE.Group();
+  const m = (geo, x, y, z, pai = g) => { const o = new THREE.Mesh(geo, matSombra); o.position.set(x, y, z); pai.add(o); return o; };
+  m(new THREE.CylinderGeometry(0.16, 0.06, 1.3, 8), 0, 1.55, 0);                 // tronco fino
+  m(new THREE.SphereGeometry(0.2, 10, 8), 0, 2.2, 0).scale.set(1, 0.7, 0.8);     // ombros curvados
+  const cab = new THREE.Group(); cab.position.set(0, 2.45, 0.08); g.add(cab);
+  m(new THREE.SphereGeometry(0.17, 12, 10), 0, 0, 0, cab).scale.set(0.85, 1.5, 0.9); // cabeça comprida
+  const olhos = [];
+  for (const s of [-1, 1]) {
+    const o = new THREE.Sprite(new THREE.SpriteMaterial({ map: texOlho, color: 0xfff6d0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+    o.position.set(s * 0.065, 0.06, 0.15); o.scale.setScalar(0.17); cab.add(o); olhos.push(o);
+  }
+  const bracos = [];
+  for (const s of [-1, 1]) { // braços compridos que chegam quase no chão
+    const p = new THREE.Group(); p.position.set(s * 0.22, 2.15, 0); g.add(p);
+    m(new THREE.CylinderGeometry(0.045, 0.025, 1.5, 6), 0, -0.75, 0, p);
+    for (let k = 0; k < 3; k++) { const d = m(new THREE.CylinderGeometry(0.012, 0.004, 0.28, 4), (k - 1) * 0.04, -1.6, 0, p); d.rotation.x = 0.2; }
+    p.rotation.z = s * 0.12; bracos.push(p);
+  }
+  const pernas = [];
+  for (const s of [-1, 1]) { const p = new THREE.Group(); p.position.set(s * 0.09, 0.95, 0); g.add(p); m(new THREE.CylinderGeometry(0.05, 0.03, 0.95, 6), 0, -0.47, 0, p); pernas.push(p); }
+  return { g, cab, bracos, pernas, olhos };
+}
+const sombras = [];
+const VIDAS = 3;
+J.vidas = VIDAS; J.folego = 1; J.cansado = false; J.inicioNivel = 0;
+let cacaAvisada = false, sustoT = 0, coracaoT = 0;
+// passagem entre duas salas vizinhas (igual às paredes que o mundo gera)
+function passagem(gi, gj, lado) {
+  if (gi >= -1 && gi <= 0 && gj >= -1 && gj <= 0) return CELL / 2;
+  if (h(gi, gj, 1 + lado) >= tema.pW) return CELL / 2;
+  if (h(gi, gj, 3 + lado) < tema.vao) return 1.2 + h(gi, gj, 5 + lado) * (CELL - 2.4);
+  return -1;
+}
+function vizinhos(i, j) {
+  const v = [], X = i * CELL, Z = j * CELL; let c;
+  if ((c = passagem(i, j, 0)) >= 0) v.push([i + 1, j, X + CELL, Z + c]);
+  if ((c = passagem(i - 1, j, 0)) >= 0) v.push([i - 1, j, X, Z + c]);
+  if ((c = passagem(i, j, 1)) >= 0) v.push([i, j + 1, X + c, Z + CELL]);
+  if ((c = passagem(i, j - 1, 1)) >= 0) v.push([i, j - 1, X + c, Z]);
+  return v;
+}
+// caminho pelas salas até o jogador (busca em largura numa janela em volta)
+function caminho(de, ate) {
+  const [ai, aj] = de, [bi, bj] = ate, M = 5;
+  const x0 = Math.min(ai, bi) - M, x1 = Math.max(ai, bi) + M, z0 = Math.min(aj, bj) - M, z1 = Math.max(aj, bj) + M;
+  if ((x1 - x0) * (z1 - z0) > 900) return null;
+  const chave = (i, j) => i + ',' + j, veio = new Map([[chave(ai, aj), null]]), fila = [[ai, aj]];
+  while (fila.length) {
+    const [i, j] = fila.shift();
+    if (i === bi && j === bj) break;
+    for (const [ni, nj, px, pz] of vizinhos(i, j)) {
+      if (ni < x0 || ni > x1 || nj < z0 || nj > z1) continue;
+      const k = chave(ni, nj); if (veio.has(k)) continue;
+      veio.set(k, [i, j, px, pz]); fila.push([ni, nj]);
+    }
+  }
+  if (!veio.has(chave(bi, bj))) return null;
+  const pts = []; let k = chave(bi, bj);
+  while (veio.get(k)) { const [i, j, px, pz] = veio.get(k); pts.unshift([px, pz]); k = chave(i, j); }
+  return pts;
+}
+function colidirObj(o, r) {
+  for (const [, p] of pedacos) for (const [x0, x1, z0, z1] of p.col) {
+    if (o.x < x0 - r || o.x > x1 + r || o.z < z0 - r || o.z > z1 + r) continue;
+    const cx = Math.max(x0, Math.min(o.x, x1)), cz = Math.max(z0, Math.min(o.z, z1)), dx = o.x - cx, dz = o.z - cz, d = Math.hypot(dx, dz);
+    if (d < r && d > 1e-5) { o.x = cx + dx / d * r; o.z = cz + dz / d * r; }
+  }
+}
+function posLonge(min, max) { // um centro de sala longe do jogador
+  for (let k = 0; k < 30; k++) {
+    const a = Math.random() * Math.PI * 2, d = min + Math.random() * (max - min);
+    const gi = Math.floor((J.x + Math.sin(a) * d) / CELL), gj = Math.floor((J.z + Math.cos(a) * d) / CELL);
+    if (gi >= -1 && gi <= 0 && gj >= -1 && gj <= 0) continue;
+    return [gi * CELL + CELL / 2, gj * CELL + CELL / 2];
+  }
+  return [J.x + 40, J.z + 40];
+}
+function quantasSombras() { return Math.min(4, 1 + (J.fitas >= 3) + (J.fitas >= 6) + (salvo.nivel >= 2 ? 1 : 0)); }
+function criarSombraNoMundo() {
+  const s = criarSombra(), [x, z] = posLonge(32, 44);
+  const o = { s, x, z, a: 0, rota: null, rotaT: 0, presoT: 0, rosnaT: 2 + Math.random() * 4, ult: [x, z] };
+  s.g.position.set(x, 0, z); cena.add(s.g); sombras.push(o);
+}
+function limparSombras() { while (sombras.length) cena.remove(sombras.pop().s.g); }
+function velSombra() { return Math.min(4.5, 3.6 + salvo.nivel * 0.15); }
+// ---------- sons de terror ----------
+function somEm(x, z, criar) { // toca um som saindo de um ponto do mundo
+  if (!A) return; const p = A.ctx.createPanner(); p.panningModel = 'HRTF'; p.distanceModel = 'inverse'; p.refDistance = 3; p.rolloffFactor = 1.2;
+  if (p.positionX) { p.positionX.value = x; p.positionY.value = 2; p.positionZ.value = z; } else p.setPosition(x, 2, z);
+  p.connect(A.mestre); p.connect(A.eco); criar(p);
+}
+function rosnar(o) {
+  somEm(o.x, o.z, dest => {
+    const t = A.ctx.currentTime, os = A.ctx.createOscillator(), f = A.ctx.createBiquadFilter(), g = A.ctx.createGain(), lfo = A.ctx.createOscillator(), lg = A.ctx.createGain();
+    os.type = 'sawtooth'; os.frequency.setValueAtTime(70 + Math.random() * 20, t); os.frequency.linearRampToValueAtTime(48, t + 1.4);
+    lfo.frequency.value = 9; lg.gain.value = 14; lfo.connect(lg); lg.connect(os.frequency);
+    f.type = 'lowpass'; f.frequency.value = 420; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.25); g.gain.exponentialRampToValueAtTime(0.001, t + 1.5);
+    os.connect(f); f.connect(g); g.connect(dest); os.start(t); lfo.start(t); os.stop(t + 1.6); lfo.stop(t + 1.6);
+  });
+}
+function batidaCoracao(forca) {
+  if (!A) return; const t = A.ctx.currentTime;
+  for (const [dt2, v] of [[0, 1], [0.18, 0.7]]) { const o = A.ctx.createOscillator(), g = A.ctx.createGain(); o.frequency.setValueAtTime(62, t + dt2); o.frequency.exponentialRampToValueAtTime(38, t + dt2 + 0.15); g.gain.setValueAtTime(0.5 * forca * v, t + dt2); g.gain.exponentialRampToValueAtTime(0.001, t + dt2 + 0.2); o.connect(g); g.connect(A.mestre); o.start(t + dt2); o.stop(t + dt2 + 0.22); }
+}
+function grito() {
+  if (!A) return; const t = A.ctx.currentTime, s = A.ctx.createBufferSource(), f = A.ctx.createBiquadFilter(), g = A.ctx.createGain(), o = A.ctx.createOscillator(), g2 = A.ctx.createGain();
+  s.buffer = A.nb; f.type = 'bandpass'; f.frequency.setValueAtTime(2400, t); f.frequency.exponentialRampToValueAtTime(500, t + 1); f.Q.value = 0.8;
+  g.gain.setValueAtTime(2.2, t); g.gain.exponentialRampToValueAtTime(0.001, t + 1.1); s.connect(f); f.connect(g); g.connect(A.mestre); s.start(t, 0, 1.2);
+  o.type = 'sawtooth'; o.frequency.setValueAtTime(900, t); o.frequency.exponentialRampToValueAtTime(120, t + 0.9); g2.gain.setValueAtTime(0.25, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 1); o.connect(g2); g2.connect(A.mestre); o.start(t); o.stop(t + 1.05);
+}
+// ---------- a cada quadro ----------
+function atualizarSombras(dt) {
+  const seguro = J.t - J.inicioNivel < 15; // 15 segundos de paz no começo de cada nível
+  if (!seguro && !cacaAvisada) { cacaAvisada = true; mensagem('ALGO ESTÁ TE CAÇANDO', 'Se ouvir o rosnado... CORRA! (Shift)', 4); }
+  if (!seguro) while (sombras.length < quantasSombras()) criarSombraNoMundo();
+  let maisPerto = 1e9;
+  const pi = Math.floor(J.x / CELL), pj = Math.floor(J.z / CELL), v = velSombra();
+  for (const o of sombras) {
+    const dx = J.x - o.x, dz = J.z - o.z, d = Math.hypot(dx, dz); maisPerto = Math.min(maisPerto, d);
+    if (d > 70) { const [x, z] = posLonge(32, 44); o.x = x; o.z = z; o.rota = null; } // ficou muito longe: reaparece mais perto
+    // decide para onde andar: pelas passagens entre as salas
+    o.rotaT -= dt;
+    const oi = Math.floor(o.x / CELL), oj = Math.floor(o.z / CELL);
+    if (o.rotaT <= 0) { o.rotaT = 0.45; o.rota = (oi === pi && oj === pj) ? [] : caminho([oi, oj], [pi, pj]); }
+    let alvo = [J.x, J.z];
+    if (o.rota && o.rota.length && d > 2.2) { alvo = o.rota[0]; if (Math.hypot(alvo[0] - o.x, alvo[1] - o.z) < 0.35) { o.rota.shift(); alvo = o.rota[0] || [J.x, J.z]; } }
+    const ax = alvo[0] - o.x, az = alvo[1] - o.z, ad = Math.hypot(ax, az) || 1;
+    const passo = v * (d < 6 ? 1.12 : 1) * dt;
+    o.x += ax / ad * passo; o.z += az / ad * passo; colidirObj(o, 0.3);
+    // preso numa parede: tenta de novo ou reaparece
+    o.presoT += dt; if (o.presoT > 2) { if (Math.hypot(o.x - o.ult[0], o.z - o.ult[1]) < 0.8) { o.rota = null; o.rotaT = 0; if (d > 14) { const [x, z] = posLonge(26, 36); o.x = x; o.z = z; } } o.presoT = 0; o.ult = [o.x, o.z]; }
+    // visual: vira para você, treme e anda esticando os braços
+    o.a = Math.atan2(J.x - o.x, J.z - o.z);
+    o.s.g.position.set(o.x, 0, o.z); o.s.g.rotation.y = o.a;
+    const f = J.t * 7 + o.x;
+    o.s.pernas[0].rotation.x = Math.sin(f) * 0.5; o.s.pernas[1].rotation.x = -Math.sin(f) * 0.5;
+    o.s.bracos.forEach((b, k) => { b.rotation.x = -0.9 - (d < 8 ? 0.5 : 0) + Math.sin(f + k) * 0.15; });
+    o.s.cab.rotation.z = Math.random() < 0.08 ? (Math.random() - 0.5) * 0.6 : o.s.cab.rotation.z * 0.9; // tremida
+    o.rosnaT -= dt; if (o.rosnaT <= 0 && d < 30) { o.rosnaT = 3 + Math.random() * 4; rosnar(o); }
+    if (d < 0.95 && sustoT <= 0) pego(o);
+  }
+  // coração acelera quando uma Sombra chega perto
+  if (maisPerto < 18) { coracaoT -= dt; if (coracaoT <= 0) { const k = 1 - maisPerto / 18; coracaoT = 1.1 - k * 0.7; batidaCoracao(0.4 + k * 0.6); } }
+  $('perigo').style.opacity = maisPerto < 14 ? Math.min(0.85, (1 - maisPerto / 14) * 0.9) : 0;
+  return maisPerto;
+}
+function pego(o) {
+  sustoT = 1.6; grito(); J.vidas--;
+  J.yaw = Math.atan2(J.x - o.x, J.z - o.z); J.pitch = 0.25;
+  $('susto').classList.add('on'); setTimeout(() => $('susto').classList.remove('on'), 900);
+  setTimeout(() => {
+    limparSombras();
+    if (J.vidas <= 0) { // sem vidas: recomeça o nível
+      J.vidas = VIDAS; coletadas.clear(); limparMundo(); J.fitas = 0;
+      if (porta) { cena.remove(porta.g); porta = null; $('bussola').hidden = true; }
+      mensagem('A SOMBRA TE PEGOU', 'Sem vidas: o nível recomeçou e as fitas voltaram', 4);
+    } else mensagem('VOCÊ FOI PEGO!', `Restam ${J.vidas} ${J.vidas === 1 ? 'vida' : 'vidas'}`, 3);
+    Object.assign(J, { x: CELL / 2, z: CELL / 2, pitch: 0 }); J.inicioNivel = J.t - 7; cacaAvisada = true;
+    atualizarPedacos(); atualizarPainel();
+  }, 1000);
+}
+
 // ===================== SOM: música nostálgica feita na hora, zumbido das lâmpadas e passos =====================
 let A = null, musicaOn = true;
 function iniciarSom() {
@@ -515,6 +694,7 @@ let msgT = 0;
 function mensagem(txt, sub = '', dur = 3) { $('h-msg').innerHTML = txt + (sub ? `<small>${sub}</small>` : ''); $('h-msg').style.opacity = 1; msgT = dur; }
 function atualizarPainel() {
   $('n-fitas').textContent = Math.min(J.fitas, META) + '/' + META;
+  $('n-vidas').textContent = '❤'.repeat(Math.max(0, J.vidas)) + '♡'.repeat(Math.max(0, VIDAS - J.vidas));
   $('h-nivel').textContent = `NÍVEL ${salvo.nivel + 1} · ${tema.nome}`;
 }
 const dois = n => String(Math.floor(n)).padStart(2, '0');
@@ -558,7 +738,8 @@ function comecarNivel() {
   limparMundo(); coletadas.clear();
   semente = 1 + salvo.nivel * 7919;
   aplicarTema(salvo.nivel);
-  Object.assign(J, { x: CELL / 2, z: CELL / 2, yaw: Math.PI * 0.75, pitch: 0, fitas: 0 });
+  Object.assign(J, { x: CELL / 2, z: CELL / 2, yaw: Math.PI * 0.75, pitch: 0, fitas: 0, vidas: VIDAS, folego: 1, inicioNivel: J.t });
+  if (typeof limparSombras === 'function') limparSombras(); cacaAvisada = false;
   atualizarPedacos(); atualizarPainel();
 }
 function noAgua() {
@@ -926,6 +1107,7 @@ if (salvo.nivel > 0) { $('b-entrar').textContent = `▶ CONTINUAR NÍVEL ${salvo
 addEventListener('keydown', e => { if (e.key === 'Escape' && jogando && !travado) pausar(); });
 
 // ===================== A CADA QUADRO =====================
+let perigoPerto = 1e9;
 let antes = performance.now(), piscaT = 0, fpsN = 0, fpsT = 0, luzT = 0;
 comecarNivel();
 function quadro(agora) {
@@ -940,7 +1122,11 @@ function quadro(agora) {
     if (teclas.has('d') || teclas.has('arrowright')) s += 1; if (teclas.has('a') || teclas.has('arrowleft')) s -= 1;
     f -= joy.dy; s += joy.dx;
     const mag = Math.hypot(f, s); if (mag > 1) { f /= mag; s /= mag; }
-    const correndo = teclas.has('shift') || correrToque;
+    const querCorrer = (teclas.has('shift') || correrToque) && mag > 0.1;
+    if (J.folego <= 0.01) J.cansado = true; if (J.folego > 0.35) J.cansado = false;
+    const correndo = querCorrer && !J.cansado;
+    J.folego = Math.max(0, Math.min(1, J.folego + (correndo ? -dt / 5.5 : dt / (mag > 0.1 ? 7 : 4))));
+    $('folego').firstChild.style.width = (J.folego * 100) + '%'; $('folego').classList.toggle('cansado', J.cansado);
     const vel = (correndo ? 5.6 : 3.2) * (noAgua() ? 0.65 : 1);
     const sy = Math.sin(J.yaw), cy = Math.cos(J.yaw);
     const ox = J.x, oz = J.z;
@@ -950,6 +1136,7 @@ function quadro(agora) {
     const passoAntes = Math.floor(J.passo / Math.PI); J.passo += andou * (correndo ? 2.3 : 2.6);
     if (Math.floor(J.passo / Math.PI) !== passoAntes) somPasso();
     atualizarPedacos();
+    perigoPerto = sustoT > 0 ? 0 : atualizarSombras(dt);
     // pegar fitas
     for (const [, p] of pedacos) for (const fi of p.fitas) {
       if (fi.pega) continue;
@@ -971,7 +1158,8 @@ function quadro(agora) {
   }
   // luzes piscam de vez em quando
   piscaT -= dt;
-  if (piscaT <= 0 && Math.random() < dt * 0.06) piscaT = 0.35;
+  if (piscaT <= 0 && Math.random() < dt * (perigoPerto < 15 ? 0.9 : 0.06)) piscaT = perigoPerto < 15 ? 0.6 : 0.35; // luzes piscam mais com a Sombra perto
+  if (sustoT > 0) sustoT -= dt;
   const pisca = piscaT > 0 && Math.sin(J.t * 70) > 0 ? 0.45 : 1;
   ceu.intensity = tema.ceu[2] * pisca; M.lampada.color.setRGB(...tema.lampada).multiplyScalar(1.6 * pisca);
   M.agua.opacity = 0.68 + Math.sin(J.t * 1.3) * 0.05;
