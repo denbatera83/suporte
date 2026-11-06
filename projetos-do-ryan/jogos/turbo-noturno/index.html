@@ -712,7 +712,7 @@ function carStats() {
 // ---------------- VISUAL (pintura e acessórios) ----------------
 const PAINTS = ['#0b4fd6', '#1a8cff', '#00b3a4', '#0f8f4a', '#7ac70c', '#f2b200', '#ff7a00', '#d43a00', '#b00a14', '#e0115f', '#8a2be2', '#3b1d6e', '#e8e8e8', '#9aa0a8', '#3a3d42', '#0c0c0e'];
 const STYLE = [
-  { key: 'model', title: 'Carro', hint: 'Roadster Foguete: elétrico e voa (tecla V na Cidade Livre). Blindado X: picape de aço, mais de 350 km/h, antiderrapante, voa e gruda na parede. Touro V12: o mais rápido, quase 400 km/h. Moto Relâmpago: leve e deita nas curvas. Kart Faísca: pequeno e muito ágil. Monstro: rodas gigantes, passa por cima de tudo. Clássico 70: V8 grandão com compressor, o motor mais forte do jogo. Gran Turismo V12: motor V12 de supercarro italiano que gira até 8.700 rpm. Sedã Executivo e Monstro: caixa de som gigante atrás que toca o rádio com grave forte (tecla O troca a música). Hatch Turbo: carro de rua, já liberado. Perua Família: espaçosa e estável. SUV Trilha: alto e pesado. Hiper X9 Xtreme: elétrico de 4 motores e quase 3.000 cv, chega a 496 km/h, faz 0 a 100 em cerca de 2 s e pula com a suspensão (tecla J). Modo Luz (tecla L): dispara a 2.000 km/h e o velocímetro chega à velocidade da luz. Cada um libera com o seu anúncio.', opts: [
+  { key: 'model', title: 'Carro', hint: 'Roadster Foguete: elétrico e voa (tecla V na Cidade Livre). Blindado X: picape de aço, mais de 350 km/h, antiderrapante, voa e gruda na parede. Touro V12: o mais rápido, quase 400 km/h. Moto Relâmpago: leve e deita nas curvas. Kart Faísca: pequeno e muito ágil. Monstro: rodas gigantes, passa por cima de tudo. Clássico 70: V8 grandão com compressor, o motor mais forte do jogo. Gran Turismo V12: motor V12 de supercarro italiano que gira até 8.700 rpm. Sedã Executivo e Monstro: caixa de som gigante atrás que toca o rádio com grave forte (tecla O troca a música). Hatch Turbo: carro de rua, já liberado. Perua Família: espaçosa e estável. SUV Trilha: alto e pesado. Hiper X9 Xtreme: elétrico de 4 motores e quase 3.000 cv, chega a 496 km/h, faz 0 a 100 em cerca de 2 s e pula com a suspensão (tecla J). Modo Luz (tecla L): dispara a 2.000 km/h e o velocímetro chega à velocidade da luz; segurando na velocidade da luz, ele viaja no tempo para uma corrida de 1970. Cada um libera com o seu anúncio.', opts: [
     { id: 'esportivo', name: 'Esportivo GT', price: 0 }, { id: 'foguete', name: '🚀 Roadster Foguete', price: 0, ad: true }, { id: 'blindado', name: '⚡ Blindado X', price: 0, ad: true }, { id: 'touro', name: '🐂 Touro V12', price: 0, ad: true }, { id: 'moto', name: '🏍️ Moto Relâmpago', price: 0, ad: true }, { id: 'kart', name: '🏎️ Kart Faísca', price: 0, ad: true }, { id: 'monstro', name: '🛻 Monstro', price: 0, ad: true }, { id: 'classico', name: '🚘 Clássico 70', price: 0, ad: true }, { id: 'seda', name: '🚗 Sedã Executivo', price: 0 }, { id: 'hatch', name: '🚙 Hatch Turbo', price: 0 }, { id: 'perua', name: '🧳 Perua Família', price: 0, ad: true }, { id: 'suv', name: '🏔️ SUV Trilha', price: 0, ad: true }, { id: 'gran', name: '🏁 Gran Turismo V12', price: 0, ad: true }, { id: 'hiper', name: '⚡ Hiper X9 Xtreme', price: 0, ad: true }] },
   { key: 'finish', title: 'Acabamento da pintura', opts: [
     { id: 'metal', name: 'Metálico', price: 0 }, { id: 'fosco', name: 'Fosco', price: 800 },
@@ -2205,7 +2205,8 @@ function setupRace() {
   player.pos.set(tmp.x, 0, tmp.z);
   rivals = RIVALS.map((name, k) => {
     const g = grid[k];
-    const car = makeCar(rivalLook(k, phase.n), { lite: !!settings.weak }); car.pool.material.opacity *= 0.45;
+    const look = rivalLook(k, phase.n); if (phase.past) { look.model = 'classico'; look.neon = 'none'; look.stripes = k % 2 ? 'duplas' : 'none'; } // carros dos anos 70
+    const car = makeCar(look, { lite: !!settings.weak }); car.pool.material.opacity *= 0.45;
     return { name, car, s: g.idx - N, lat: g.lat, laneBase: g.lat * 0.5, speed: 0, prevSpeed: 0,
       skill: phase.skill * (0.95 + k * 0.012 + Math.random() * 0.015), phase: Math.random() * 10, finished: false, finishTime: 0,
       pos: new THREE.Vector3(), h: angleAt(g.idx), steerVis: 0, yawRate: 0 };
@@ -2256,6 +2257,7 @@ $('t-action').addEventListener('touchstart', e => { e.preventDefault(); cityActi
 const LUZ_V = 555, LUZ_C = 1079252849; // 2.000 km/h reais · velocidade da luz em km/h
 function toggleLuz() {
   if (!CAR.hiper || !(state === 'race' || state === 'city' || state === 'countdown')) return;
+  if (RM.id === 'passado' && !RM.voltar) { showMessage('SEM ENERGIA!', 1.4, 'Termine a corrida para recarregar o Modo Luz'); return; }
   player.luz = !player.luz; player.luzShow = 0;
   showMessage(player.luz ? '⚡ MODO LUZ LIGADO' : 'MODO LUZ DESLIGADO', 1.2, player.luz ? 'Acelere para chegar à velocidade da luz!' : '');
   const b = $('t-luz'); if (b) b.classList.toggle('on', !!player.luz);
@@ -2270,10 +2272,14 @@ function updateLuz(dt) {
   const kmh = Math.abs(player.vF) * 3.6, on = !!player.luz && kmh > 300;
   player.luzFx = (player.luzFx || 0) + ((on ? Math.min(1, (kmh - 300) / 1500) : 0) - (player.luzFx || 0)) * Math.min(1, dt * 3);
   // velocímetro: acima de 1.500 km/h no Modo Luz, o número cresce rápido até a velocidade da luz
-  if (player.luz && kmh > 1500 && input.gas) player.luzShow = Math.min(LUZ_C, Math.max(kmh, (player.luzShow || kmh) * Math.exp(dt * 4.2)));
+  const volta = RM.id === 'passado' && RM.voltar, lim = volta ? 60 : 1500; // na volta basta acelerar: as curvas da pista de 1970 seguram o carro
+  if (player.luz && kmh > lim && input.gas) player.luzShow = Math.min(LUZ_C, Math.max(kmh, (player.luzShow || kmh) * Math.exp(dt * (volta ? 6.5 : 4.2))));
   else player.luzShow = Math.max(kmh, (player.luzShow || 0) * Math.exp(-dt * 3));
   if (player.luzShow >= LUZ_C && !player.luzMsg) { player.luzMsg = true; showMessage('VELOCIDADE DA LUZ!', 2.2, '1.079.252.849 km/h'); const f = $('luz-flash'); if (f) { f.style.opacity = 1; setTimeout(() => f.style.opacity = 0, 120); } }
   if (player.luzShow < LUZ_C * 0.5) player.luzMsg = false;
+  // viagem no tempo: segurando na velocidade da luz, o carro vai para o passado (ou volta para o presente)
+  player.luzHold = player.luz && player.luzShow >= LUZ_C && input.gas ? (player.luzHold || 0) + dt : 0;
+  if (!TT.busy && player.luzHold > (volta ? 0.8 : 2.5)) { if (RM.id !== 'passado') irPassado(); else if (RM.voltar) voltarPresente(); }
   const fx = player.luzFx; luzLines.visible = fx > 0.02;
   if (!luzLines.visible) return;
   luzLines.material.opacity = fx;
@@ -2284,6 +2290,36 @@ function updateLuz(dt) {
     luzPos.set([p[0], p[1], p[2], p[0], p[1], p[2] - len], i * 6);
   });
   luzGeo.attributes.position.needsUpdate = true;
+}
+// ---------------- VIAGEM NO TEMPO ----------------
+const TT = { busy: false, from: null };
+const PAST_PHASE = { n: 70, name: 'Corrida de 1970', theme: 'cidade', time: 'entardecer', weather: 'limpo', laps: 2, seed: 0, vmax: 66, alat: 9.2, skill: 0.92, prize: 0, past: true };
+function flashTempo() { const f = $('luz-flash'); if (!f) return; f.style.transition = 'none'; f.style.opacity = 1; setTimeout(() => { f.style.transition = 'opacity 1.4s'; f.style.opacity = 0; }, 450); }
+function setPassadoVisual(on) { renderer.domElement.style.filter = on ? 'sepia(.72) saturate(.85) contrast(1.06)' : ''; document.body.classList.toggle('passado', on); }
+function irPassado() {
+  TT.busy = true;
+  TT.from = mode === 'city' ? { kind: 'city' } : RM.id === 'teste' ? { kind: 'teste' } : { kind: 'race', rm: Object.assign({}, RM), idx: Math.max(0, PHASES.indexOf(phase)) };
+  flashTempo(); showMessage('VIAGEM NO TEMPO!', 2, 'Você correu tanto que voltou para 1970...');
+  setTimeout(() => {
+    player.luz = false; player.luzShow = 0; player.luzHold = 0; const b = $('t-luz'); if (b) b.classList.remove('on');
+    RM = { id: 'passado', laps: PAST_PHASE.laps, voltar: false };
+    setPassadoVisual(true); TT.busy = false;
+    startRace(0);
+  }, 1400);
+}
+function voltarPresente() {
+  TT.busy = true;
+  const posTxt = RM.pos ? RM.pos + 'º lugar' : '';
+  flashTempo(); showMessage('DE VOLTA AO PRESENTE!', 2, 'Viagem no tempo completa');
+  setTimeout(() => {
+    player.luz = false; player.luzShow = 0; player.luzHold = 0; const b = $('t-luz'); if (b) b.classList.remove('on');
+    setPassadoVisual(false); TT.busy = false;
+    const f = TT.from || { kind: 'teste' }; TT.from = null;
+    if (f.kind === 'city') startCity();
+    else if (f.kind === 'teste') startMode('teste');
+    else { RM = f.rm; startRace(f.idx); }
+    setTimeout(() => note('⏳', 'Você voltou para onde estava!', 'Corrida de 1970: ' + posTxt), 1200);
+  }, 1400);
 }
 function hiperHop() { // suspensão ativa: o carro pula parado ou andando
   if (!CAR.hiper || !(state === 'race' || state === 'city') || (player.hopT || 0) > 0) return;
@@ -2550,6 +2586,7 @@ function completeLap(lapNum) {
   try { const old = parseFloat(localStorage.getItem(key)); if (!old || lt < old) { localStorage.setItem(key, lt); rec = ' · RECORDE!'; } } catch (e) {}
   $('best').textContent = fmtBest();
   rec += modeLap(lt);
+  if (RM.id === 'passado' && RM.voltar) return;
   if (lapNum >= lapsN()) { finishRace(); return; }
   showMessage(lapNum === lapsN() - 1 ? 'ÚLTIMA VOLTA!' : 'VOLTA ' + (lapNum + 1), 1.8, fmt(lt) + rec);
 }
@@ -4440,6 +4477,7 @@ function startCity() {
   withLoading('Cidade Livre', startCityNow);
 }
 function startCityNow() {
+  setPassadoVisual(false); if (RM.id === 'passado' || RM.id === 'teste') RM = { id: 'carreira' };
   if (settings.radio && !RADIO.st) setRadio(settings.radio);
   applyGraphics();
   leaveCity();
@@ -5262,6 +5300,10 @@ function modeUpdate(dt) {
   if (RM.id === 'carreira') return;
   const hud = $('mode-hud');
   const racing = state === 'race' && !player.finished;
+  if (RM.id === 'passado') {
+    hud.innerHTML = RM.voltar ? '<span>⚡ <b>ACELERE ATÉ A VELOCIDADE DA LUZ</b> PARA VOLTAR AO PRESENTE</span>' : '<span>⏳ <b>CORRIDA DE 1970</b> · TERMINE A CORRIDA PARA RECARREGAR O MODO LUZ</span>';
+    return;
+  }
   if (RM.id === 'teste') {
     const kmh = Math.abs(player.vF) * 3.6, mostra = Math.max(kmh, player.shown || 0);
     if (racing) {
@@ -5779,7 +5821,7 @@ function ensureWorld() {
   state = 'menu';
 }
 function openMenu() {
-  RM = { id: 'carreira' };
+  RM = { id: 'carreira' }; setPassadoVisual(false); TT.from = null; TT.busy = false;
   ensureWorld();
   refreshMenu(); showScreen('menu');
 }
@@ -6012,6 +6054,13 @@ function renderGarage() {
 }
 
 function finishRace() {
+  if (RM.id === 'passado') { // terminou a corrida do passado: o Modo Luz recarrega para voltar
+    if (RM.voltar) return;
+    RM.voltar = true; RM.pos = standings().findIndex(e => e.me) + 1;
+    player.luz = true; player.luzShow = 0; const b = $('t-luz'); if (b) b.classList.add('on');
+    showMessage(RM.pos === 1 ? 'VITÓRIA EM 1970!' : RM.pos + 'º LUGAR EM 1970', 3, '⚡ Modo Luz recarregado: acelere até a velocidade da luz para voltar!');
+    return;
+  }
   player.finished = true; player.finishTime = raceTime;
   state = 'finished';
   const pos = standings().findIndex(e => e.me) + 1;
@@ -6066,17 +6115,18 @@ function startRace(idx = save.current, mp = false) {
   persist();
   MP.inRace = !!mp;
   if (mp) RM = { id: 'carreira' };
-  const ph = !mp && RM.id === 'teste' ? TESTE_PHASE : PHASES[idx];
+  const ph = !mp && RM.id === 'teste' ? TESTE_PHASE : !mp && RM.id === 'passado' ? PAST_PHASE : PHASES[idx];
+  if (RM.id !== 'passado') setPassadoVisual(false);
   if (settings.radio && !RADIO.st) setRadio(settings.radio);
   state = 'loading';
-  withLoading(`Fase ${ph.n} · ${ph.name}`, () => {
+  withLoading(ph.past ? '⏳ Viajando para 1970...' : ph.teste ? '🏁 Teste de carros' : `Fase ${ph.n} · ${ph.name}`, () => {
     leaveCity();
     applyGraphics();
     buildWorld(ph);
     setupRace();
     if (mp) mpGrid();
     countdown = 3.999; state = 'countdown';
-    $('phase-tag').textContent = ph.teste ? '🏁 TESTE DE CARROS · RETA DE 20 KM' : modeTag() + `FASE ${ph.n} · ${ph.name.toUpperCase()}  ${phaseIcons(ph)}`;
+    $('phase-tag').textContent = ph.past ? '⏳ CORRIDA DE 1970 · TERMINE PARA VOLTAR AO PRESENTE' : ph.teste ? '🏁 TESTE DE CARROS · RETA DE 20 KM' : modeTag() + `FASE ${ph.n} · ${ph.name.toUpperCase()}  ${phaseIcons(ph)}`;
     showScreen(null);
     $('message').innerHTML = ''; lastCount = 4;
   });
