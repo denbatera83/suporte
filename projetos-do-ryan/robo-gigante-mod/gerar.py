@@ -3,7 +3,7 @@ import json, os, shutil, zipfile
 from PIL import Image, ImageDraw
 U = dict(bp='7c1e4a52-3d1b-4b7e-9a51-1f0c2b8e6a01', bpd='7c1e4a52-3d1b-4b7e-9a51-1f0c2b8e6a02', bps='7c1e4a52-3d1b-4b7e-9a51-1f0c2b8e6a03',
          rp='7c1e4a52-3d1b-4b7e-9a51-1f0c2b8e6a04', rpr='7c1e4a52-3d1b-4b7e-9a51-1f0c2b8e6a05')
-V = [1, 0, 0]; MIN = [1, 21, 0]
+V = [1, 0, 1]; MIN = [1, 21, 0]  # versão nova: o Minecraft troca o pacote antigo
 def w(p, d):
     os.makedirs(os.path.dirname(p), exist_ok=True)
     if isinstance(d, (dict, list)): d = json.dumps(d, indent=2, ensure_ascii=False)
@@ -30,9 +30,10 @@ w(f'{BP}/entities/bomba.json', {"format_version": "1.20.80", "minecraft:entity":
   "description": {"identifier": "ryan:bomba", "is_spawnable": False, "is_summonable": True, "is_experimental": False},
   "components": {"minecraft:collision_box": {"width": 0.5, "height": 0.5}, "minecraft:physics": {}, "minecraft:health": {"value": 1, "max": 1},
     "minecraft:pushable": {"is_pushable": False, "is_pushable_by_piston": False}, "minecraft:damage_sensor": {"triggers": [{"cause": "all", "deals_damage": False}]}}}})
-w(f'{BP}/items/controle_robo.json', {"format_version": "1.20.80", "minecraft:item": {
+w(f'{BP}/items/controle_robo.json', {"format_version": "1.20.50", "minecraft:item": {
   "description": {"identifier": "ryan:controle_robo", "menu_category": {"category": "equipment"}},
-  "components": {"minecraft:icon": "ryan_controle", "minecraft:display_name": {"value": "Controle do Robô (atirar bomba)"}, "minecraft:max_stack_size": 1, "minecraft:hand_equipped": True}}})
+  "components": {"minecraft:icon": {"texture": "ryan_controle"}, "minecraft:display_name": {"value": "Controle do Robô (atirar bomba)"}, "minecraft:max_stack_size": 1, "minecraft:hand_equipped": True}}})
+w(f'{BP}/functions/robo.mcfunction', 'summon ryan:robo_gigante ~3 ~ ~\ngive @s ryan:controle_robo 1\n')
 w(f'{BP}/scripts/main.js', r'''import { world, system, ItemStack } from "@minecraft/server";
 // Robô Gigante: montado no robô, use o Controle (toque e segure no celular / botão direito no PC) para atirar uma bomba.
 const ROBO = "ryan:robo_gigante", BOMBA = "ryan:bomba", CONTROLE = "ryan:controle_robo";
@@ -45,8 +46,11 @@ function roboDe(jogador) {
   return e && e.typeId === ROBO ? e : undefined;
 }
 
+function atirar(jogador) { try { atirarAgora(jogador); } catch (e) { console.warn("[Robô Gigante] " + e); } }
 world.afterEvents.itemUse.subscribe(({ source: jogador, itemStack }) => {
-  if (!itemStack || itemStack.typeId !== CONTROLE) return;
+  if (itemStack && itemStack.typeId === CONTROLE) system.run(() => atirar(jogador));
+});
+function atirarAgora(jogador) {
   const robo = roboDe(jogador);
   if (!robo) { jogador.onScreenDisplay.setActionBar("§eEntre no Robô Gigante para atirar!"); return; }
   if ((espera.get(jogador.id) || 0) > system.currentTick) return;
@@ -56,10 +60,11 @@ world.afterEvents.itemUse.subscribe(({ source: jogador, itemStack }) => {
   const b = robo.dimension.spawnEntity(BOMBA, saida);
   b.applyImpulse({ x: d.x * 2.2, y: d.y * 2.2 + 0.35, z: d.z * 2.2 });
   bombas.set(b.id, { e: b, idade: 0, robo: robo.id });
-  robo.dimension.playSound("mob.blaze.shoot", saida);
-});
+  try { robo.dimension.playSound("mob.blaze.shoot", saida); } catch (e) {}
+}
 
-system.runInterval(() => { // bomba explode quando bate no chão, num bicho, ou depois de 6 segundos
+system.runInterval(() => { try { tickBombas(); } catch (e) { console.warn("[Robô Gigante] " + e); } }, 2);
+function tickBombas() { // bomba explode quando bate no chão, num bicho, ou depois de 6 segundos
   for (const [id, b] of bombas) {
     const e = b.e; b.idade += 2;
     if (!e.isValid()) { bombas.delete(id); continue; }
@@ -71,16 +76,17 @@ system.runInterval(() => { // bomba explode quando bate no chão, num bicho, ou 
       dim.createExplosion(l, 3, { breaksBlocks: true, causesFire: false });
     }
   }
-}, 2);
+}
 
-system.runInterval(() => { // quem entra no robô ganha o controle
+system.runInterval(() => { try { darControle(); } catch (e) {} }, 40);
+function darControle() { // quem entra no robô ganha o controle
   for (const j of world.getAllPlayers()) {
     if (!roboDe(j)) continue;
     const inv = j.getComponent("minecraft:inventory").container; let tem = false;
     for (let i = 0; i < inv.size; i++) { const it = inv.getItem(i); if (it && it.typeId === CONTROLE) { tem = true; break; } }
     if (!tem) { inv.addItem(new ItemStack(CONTROLE, 1)); j.onScreenDisplay.setActionBar("§aVocê ganhou o Controle do Robô! Use para atirar bombas."); }
   }
-}, 40);
+}
 ''')
 
 # ---------------- aparência ----------------
