@@ -67,9 +67,15 @@
   .multi label { font-size: 14px; }
   .multi input { font-family: var(--vhs); font-size: 24px; background: rgba(0,0,0,.35); color: var(--tinta); border: 1px solid rgba(243,236,210,.4); border-radius: 6px; padding: 2px 10px; width: 9ch; min-width: 0; text-transform: none; user-select: text; -webkit-user-select: text; }
   .multi input#nome { width: 13ch; }
-  .multi input#codigo { text-transform: uppercase; width: 7ch; }
+  .multi input#codigo { width: 5ch; text-align: center; }
   .multi input:focus-visible { outline: 3px solid var(--verde); outline-offset: 2px; }
   .multi button { font-size: 22px; padding: 4px 14px; }
+  .lista-salas { display: grid; gap: 6px; max-height: 190px; overflow-y: auto; }
+  .lista-salas .vazio { font-size: 14px; opacity: .8; }
+  .sala { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; text-align: left; font-size: 22px; padding: 6px 12px; background: rgba(125,255,178,.08); color: var(--tinta); border: 1px solid rgba(125,255,178,.45); }
+  .sala b { color: var(--verde); font-weight: 400; }
+  .sala span { font-family: var(--corpo); font-size: 14px; }
+  .sala:hover { background: rgba(125,255,178,.18); }
   #multi-status { font-size: 14px; line-height: 1.45; color: var(--ambar); }
   #b-mic { right: max(18px, env(safe-area-inset-right, 0px)); bottom: calc(max(18px, env(safe-area-inset-bottom, 0px)) + 194px); }
   #b-cam { right: max(18px, env(safe-area-inset-right, 0px)); bottom: calc(max(18px, env(safe-area-inset-bottom, 0px)) + 268px); }
@@ -112,7 +118,10 @@
     <div class="multi">
       <div class="rotulo">JOGAR COM AMIGOS</div>
       <div class="linha"><label for="nome">Seu nome</label><input id="nome" maxlength="12" autocomplete="off" placeholder="Explorador"></div>
-      <div class="linha"><button class="secundario" id="b-criar">CRIAR SALA</button><input id="codigo" maxlength="4" autocomplete="off" placeholder="CÓDIGO" aria-label="Código da sala"><button class="secundario" id="b-juntar">ENTRAR NA SALA</button></div>
+      <div class="linha"><button class="secundario" id="b-criar">CRIAR SALA</button><button class="secundario" id="b-procurar">🔄 PROCURAR SALAS</button></div>
+      <div class="rotulo">SALAS ABERTAS</div>
+      <div id="lista-salas" class="lista-salas"><span class="vazio">Toque em PROCURAR SALAS para ver quem está jogando.</span></div>
+      <div class="linha"><label for="codigo">Ou digite o número</label><input id="codigo" maxlength="2" inputmode="numeric" autocomplete="off" placeholder="Nº"><button class="secundario" id="b-juntar">ENTRAR</button></div>
       <div id="multi-status">Cada um aparece como um explorador de traje amarelo. No aplicativo dá para conversar pelo microfone.</div>
     </div>
     <div class="multi">
@@ -663,14 +672,36 @@ function painelSala() {
   const el = $('h-sala'); if (!NET.modo) { el.hidden = true; return; }
   el.hidden = false;
   const aqui = [...remotos.values()].filter(r => r.s && r.s.lv === salvo.nivel).length;
-  el.innerHTML = `👥 ${remotos.size + 1} NA SALA <b>${NET.codigo}</b>${remotos.size && aqui < remotos.size ? ` · ${aqui} neste nível` : ''}${NET.modo === 'peer' ? ` · ${micLigado ? '🎤 LIGADO' : '🎤 DESLIGADO'}${toqueMode ? '' : ' (T)'}` : ''}`;
+  el.innerHTML = `👥 ${remotos.size + 1} NA <b>SALA ${NET.codigo}</b>${remotos.size && aqui < remotos.size ? ` · ${aqui} neste nível` : ''}${NET.modo === 'peer' ? ` · ${micLigado ? '🎤 LIGADO' : '🎤 DESLIGADO'}${toqueMode ? '' : ' (T)'}` : ''}`;
 }
-// ---------- sala do Claude ----------
-async function conectarRoom(codigo) {
+// ---------- salas numeradas (1 a 30) ----------
+const MAX_SALAS = 30;
+const idSala = n => 'salas-sem-fim-sala-' + n;
+const naClaude = () => !!(window.claude && typeof window.claude.use === 'function');
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+const embaralhar = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const numeros = () => Array.from({ length: MAX_SALAS }, (_, i) => i + 1);
+// ---------- sala do Claude: o saguão mostra em que sala cada um está ----------
+let lobby = null;
+async function abrirLobby() {
+  if (lobby) return lobby;
+  try { const room = await window.claude.use('room'); if (room) { lobby = room; lobby.onPeers(() => { if (!jogando) mostrarSalas(salasDoLobby()); }); } } catch (e) {}
+  return lobby;
+}
+function salasDoLobby() {
+  const m = new Map(); if (!lobby) return [];
+  for (const p of lobby.peers()) {
+    const pr = p.presence || {}, n = pr.sala; if (typeof n !== 'number' || p.sameTab) continue;
+    const it = m.get(n) || { n, dono: '', qtd: 0, lv: 0 }; it.qtd++; if (!it.dono) it.dono = limparNome(pr.nome); it.lv = Number(pr.lv) || 0; m.set(n, it);
+  }
+  return [...m.values()].sort((a, b) => a.n - b.n);
+}
+async function conectarRoom(n) {
   try {
-    const room = await window.claude.use('room'); if (!room) return 'Não foi possível abrir a sala aqui.';
-    const r = await room.join('salas-' + codigo.toLowerCase());
-    NET.room = r; NET.modo = 'room'; NET.codigo = codigo;
+    const room = await abrirLobby(); if (!room) return 'Não foi possível abrir a sala aqui.';
+    const r = await room.join('salas-n' + n);
+    NET.room = r; NET.modo = 'room'; NET.codigo = n;
+    room.presence({ sala: n, nome: meuNome, lv: salvo.nivel }).catch(() => {});
     r.onPeers(ch => {
       for (const p of ch.peers) if (!p.sameTab && p.kind === 'viewer') atualizarRemoto(p.peer, p.presence);
       for (const p of ch.left) removerRemoto(p.peer);
@@ -678,30 +709,77 @@ async function conectarRoom(codigo) {
     return null;
   } catch (e) { return 'Não foi possível entrar na sala (' + (e && e.code || 'erro') + ').'; }
 }
-// ---------- conexão direta (app e arquivo) ----------
-function conectarPeer(codigo, criar) {
+// ---------- conexão direta pela internet (app e arquivo) ----------
+const textoErro = t => t === 'network' || t === 'server-error' || t === 'socket-error' ? 'Sem conexão com o servidor. Confira a internet.' : t === 'browser-incompatible' ? 'Este navegador não aceita jogar junto.' : t || 'Erro de conexão.';
+function novoPeer(id) {
   return new Promise(res => {
-    if (!window.Peer) { res('Não deu para carregar a conexão. Confira a internet.'); return; }
-    let feito = false; const fim = msg => { if (!feito) { feito = true; clearTimeout(tm); res(msg); } };
-    const hostId = 'salas-sem-fim-' + codigo.toLowerCase();
-    const tm = setTimeout(() => fim('A conexão demorou demais. Confira a internet.'), 15000);
-    let peer; try { peer = criar ? new window.Peer(hostId) : new window.Peer(); } catch (e) { fim('Conexão indisponível neste aparelho.'); return; }
-    NET.peer = peer; NET.host = criar;
-    peer.on('open', id => {
-      NET.eu = id;
-      if (criar) { NET.modo = 'peer'; NET.codigo = codigo; fim(null); return; }
-      const c = peer.connect(hostId); ligarConexao(c);
-      c.on('open', () => { NET.modo = 'peer'; NET.codigo = codigo; fim(null); });
-    });
-    peer.on('connection', c => ligarConexao(c));
-    peer.on('call', atenderChamada);
-    peer.on('error', e => {
-      const t = e && e.type;
-      fim(t === 'unavailable-id' ? 'Esse código já está em uso. Crie outra sala.' : t === 'peer-unavailable' ? 'Sala não encontrada. Confira o código.' : 'Erro de conexão (' + t + ').');
-    });
+    if (!window.Peer) { res({ erro: 'Não deu para carregar a conexão. Confira a internet.' }); return; }
+    let p, aberto = false; try { p = id ? new window.Peer(id) : new window.Peer(); } catch (e) { res({ erro: 'Conexão indisponível neste aparelho.' }); return; }
+    const tm = setTimeout(() => { if (!aberto) { try { p.destroy(); } catch (e) {} res({ erro: 'A conexão demorou demais. Confira a internet.' }); } }, 12000);
+    p.on('open', () => { aberto = true; clearTimeout(tm); res({ peer: p }); });
+    p.on('error', e => { if (aberto) return; clearTimeout(tm); try { p.destroy(); } catch (er) {} res({ erro: e && e.type }); });
   });
 }
+async function criarSalaPeer() {
+  for (const n of embaralhar(numeros()).slice(0, 10)) { // pega o primeiro número livre
+    const r = await novoPeer(idSala(n));
+    if (r.peer) {
+      const peer = r.peer; Object.assign(NET, { peer, host: true, eu: peer.id, modo: 'peer', codigo: n });
+      peer.on('connection', ligarConexao); peer.on('call', atenderChamada); peer.on('error', () => {});
+      return null;
+    }
+    if (r.erro !== 'unavailable-id') return textoErro(r.erro);
+  }
+  return 'Muitas salas abertas agora. Tente de novo.';
+}
+async function entrarSalaPeer(n) {
+  const r = await novoPeer(); if (!r.peer) return textoErro(r.erro);
+  const peer = r.peer; Object.assign(NET, { peer, host: false, eu: peer.id });
+  peer.on('connection', ligarConexao); peer.on('call', atenderChamada);
+  const erro = await new Promise(res => {
+    const tm = setTimeout(() => res('A sala ' + n + ' não respondeu.'), 9000);
+    peer.on('error', e => { if (e && e.type === 'peer-unavailable') { clearTimeout(tm); res('A sala ' + n + ' não existe agora. Procure as salas abertas.'); } });
+    const c = peer.connect(idSala(n), { metadata: { nome: meuNome } }); ligarConexao(c);
+    c.on('open', () => { clearTimeout(tm); NET.modo = 'peer'; NET.codigo = n; res(null); });
+  });
+  if (erro) { try { peer.destroy(); } catch (e) {} NET.peer = null; }
+  return erro;
+}
+async function procurarSalasPeer() { // pergunta para cada número se tem alguém jogando
+  const r = await novoPeer(); if (!r.peer) return { erro: textoErro(r.erro) };
+  const peer = r.peer, achadas = []; peer.on('error', () => {});
+  for (const n of numeros()) {
+    const c = peer.connect(idSala(n), { metadata: { sonda: true } });
+    c.on('open', () => { try { c.send({ t: 'info?' }); } catch (e) {} });
+    c.on('data', d => { if (d && d.t === 'info' && !achadas.some(a => a.n === n)) achadas.push({ n, dono: limparNome(d.dono), qtd: Number(d.qtd) || 1, lv: Number(d.lv) || 0 }); try { c.close(); } catch (e) {} });
+  }
+  await esperar(5000); try { peer.destroy(); } catch (e) {}
+  return { salas: achadas.sort((a, b) => a.n - b.n) };
+}
+// ---------- lista de salas abertas no menu ----------
+function mostrarSalas(lista) {
+  const el = $('lista-salas'); el.innerHTML = '';
+  if (!lista.length) { el.innerHTML = '<span class="vazio">Nenhuma sala aberta agora. Crie uma e chame seus amigos!</span>'; return; }
+  for (const s of lista) {
+    const b = document.createElement('button'); b.className = 'sala';
+    const num = document.createElement('b'); num.textContent = 'SALA ' + s.n;
+    const info = document.createElement('span'); info.textContent = `${s.dono || 'Explorador'} · ${s.qtd} jogando · nível ${s.lv + 1}`;
+    b.append(num, info); b.addEventListener('click', () => jogarJunto(false, s.n)); el.appendChild(b);
+  }
+}
+let procurando = false;
+async function procurarSalas() {
+  if (procurando || NET.modo) return; procurando = true;
+  $('b-procurar').disabled = true; $('lista-salas').innerHTML = '<span class="vazio">Procurando salas abertas...</span>';
+  if (naClaude()) { await abrirLobby(); await esperar(1500); mostrarSalas(salasDoLobby()); }
+  else { const r = await procurarSalasPeer(); if (r.erro) $('lista-salas').innerHTML = '<span class="vazio"></span>', $('lista-salas').firstChild.textContent = r.erro; else mostrarSalas(r.salas); }
+  $('b-procurar').disabled = false; procurando = false;
+}
 function ligarConexao(c) {
+  if (c.metadata && c.metadata.sonda) {
+    c.on('data', d => { if (d && d.t === 'info?' && NET.host) { try { c.send({ t: 'info', dono: meuNome, qtd: NET.conns.size + 1, lv: salvo.nivel }); } catch (e) {} setTimeout(() => { try { c.close(); } catch (e) {} }, 800); } });
+    return;
+  }
   c.on('open', () => {
     NET.conns.set(c.peer, c);
     if (NET.host) difundir({ t: 'ids', ids: [NET.eu, ...NET.conns.keys()] });
@@ -804,22 +882,26 @@ function atualizarRede(dt) {
     else { L.setPosition(J.x, 1.6, J.z); L.setOrientation(fx, 0, fz, 0, 1, 0); }
   }
 }
-const novoCodigo = () => { const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; let s = ''; for (let i = 0; i < 4; i++) s += L[Math.floor(Math.random() * L.length)]; return s; };
-async function jogarJunto(criar) {
+async function jogarJunto(criar, numero) {
+  if (NET.modo) { entrar(); return; }
   meuNome = limparNome($('nome').value) || 'Explorador'; $('nome').value = meuNome; minhaCor = corDe(meuNome);
   try { localStorage.setItem('salas-nome', meuNome); } catch (e) {}
-  const codigo = criar ? novoCodigo() : String($('codigo').value || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
-  if (!criar && codigo.length !== 4) { $('multi-status').textContent = 'Digite o código de 4 letras que o seu amigo recebeu.'; return; }
-  $('multi-status').textContent = criar ? 'Criando a sala...' : 'Entrando na sala ' + codigo + '...';
+  let n = numero || (criar ? 0 : parseInt($('codigo').value, 10));
+  if (!criar && !(n >= 1 && n <= MAX_SALAS)) { $('multi-status').textContent = `Toque numa sala da lista ou digite um número de 1 a ${MAX_SALAS}.`; return; }
+  $('multi-status').textContent = criar ? 'Criando a sala...' : 'Entrando na sala ' + n + '...';
   $('b-criar').disabled = $('b-juntar').disabled = true;
-  const naClaude = !!(window.claude && typeof window.claude.use === 'function');
-  const erro = naClaude ? await conectarRoom(codigo) : await conectarPeer(codigo, criar);
+  let erro;
+  if (naClaude()) {
+    if (criar) { await abrirLobby(); const usados = new Set(salasDoLobby().map(x => x.n)); n = embaralhar(numeros().filter(x => !usados.has(x)))[0] || 1; }
+    erro = await conectarRoom(n);
+  } else erro = criar ? await criarSalaPeer() : await entrarSalaPeer(n);
   $('b-criar').disabled = $('b-juntar').disabled = false;
   if (erro) { $('multi-status').textContent = erro; return; }
+  n = NET.codigo;
   if (criar) NET.adotou = true;
-  $('multi-status').textContent = `Você está na sala ${codigo}. Passe o código para seus amigos.`;
+  $('multi-status').textContent = `Você está na SALA ${n}. Seus amigos acham ela em "Procurar salas".`;
   painelSala(); entrar();
-  mensagem(`SALA ${codigo}`, criar ? 'Passe este código para seus amigos entrarem' : 'Você entrou! Procure seus amigos de traje amarelo', 5);
+  mensagem(`SALA ${n}`, criar ? 'Seus amigos acham esta sala na lista do menu' : 'Você entrou! Procure seus amigos de traje amarelo', 5);
 }
 
 // ===================== TELA INICIAL / PAUSA =====================
@@ -856,6 +938,8 @@ atualizarBotaoFps();
 gfx = typeof salvo.gfx === 'number' ? salvo.gfx : (toqueMode ? 0 : 1);
 escolherQualidade(gfx, false);
 $('b-juntar').addEventListener('click', () => jogarJunto(false));
+$('b-procurar').addEventListener('click', () => procurarSalas());
+setTimeout(() => { if (!NET.modo && (naClaude() || navigator.onLine !== false)) procurarSalas(); }, 1200);
 $('nome').value = meuNome;
 ['nome', 'codigo'].forEach(id => $(id).addEventListener('keydown', e => e.stopPropagation()));
 $('b-novo').addEventListener('click', () => { salvo.nivel = 0; guardar(); comecarNivel(); $('b-novo').hidden = true; entrar(); });
