@@ -2857,7 +2857,18 @@ function rotateStart() {
   const rot = arr => { const r = arr.slice(best).concat(arr.slice(0, best)); arr.splice(0, arr.length, ...r); };
   rot(P); rot(T); rot(S);
 }
+const TESTE_RETA = 20000, TESTE_R = 700;
+function testeTrack() {
+  const L = TESTE_RETA, R = TESTE_R, pts = [];
+  for (let z = 1500; z <= L; z += 250) pts.push([0, z]);
+  for (let a = 8; a < 180; a += 8) { const r = a * Math.PI / 180; pts.push([R - Math.cos(r) * R, L + Math.sin(r) * R]); }
+  for (let z = L; z >= 0; z -= 250) pts.push([2 * R, z]);
+  for (let a = 8; a < 180; a += 8) { const r = a * Math.PI / 180; pts.push([R + Math.cos(r) * R, -Math.sin(r) * R]); }
+  for (let z = 0; z < 1500; z += 250) pts.push([0, z]);
+  buildTrackFrom(pts);
+}
 function generateTrack(seed) {
+  if (seed === -1) { testeTrack(); return; }
   if (seed === 0) { buildTrackFrom(ORIGINAL); return; }
   let s = seed * 7919 + 13;
   const r = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
@@ -2987,7 +2998,7 @@ function buildWorld(ph) {
   const groundTex = noiseTex(gBase, gSpots);
   groundTex.wrapS = groundTex.wrapT = THREE.RepeatWrapping;
   const island = theme === 'praia' || theme === 'porto';
-  let gSize = 2600;
+  let gSize = ph.teste ? 24000 : 2600;
   if (island) { gSize = 0; P.forEach(p => { gSize = Math.max(gSize, Math.hypot(p.x - trackCenter.x, p.z - trackCenter.z)); }); gSize += 150; }
   groundTex.repeat.set(gSize / 16, gSize / 16);
   const groundGeo = island ? new THREE.CircleGeometry(gSize, 96) : new THREE.PlaneGeometry(gSize * 2, gSize * 2);
@@ -3058,6 +3069,19 @@ function buildWorld(ph) {
     addMesh(geo, fenceMat);
   }
 
+  if (ph.teste) { // placas de quilômetro nas duas retas
+    const placa = km => canvasTex(256, 128, (g, w, h) => { g.fillStyle = '#0d47a1'; g.fillRect(0, 0, w, h); g.strokeStyle = '#fff'; g.lineWidth = 8; g.strokeRect(6, 6, w - 12, h - 12); g.fillStyle = '#fff'; g.font = '800 64px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(km + ' km', w / 2, h / 2 + 4); });
+    const poste = new THREE.MeshStandardMaterial({ color: 0x9aa0a8, metalness: 0.6, roughness: 0.4 });
+    const volta1 = (TESTE_RETA - 1500 + Math.PI * TESTE_R) / 1000;
+    const marcos = [];
+    for (let z = 2500; z <= TESTE_RETA; z += 1000) marcos.push([-WALL - 3, z, (z - 1500) / 1000, Math.PI]);       // reta de ida
+    for (let z = TESTE_RETA - 1000; z >= 0; z -= 1000) marcos.push([2 * TESTE_R + WALL + 3, z, volta1 + (TESTE_RETA - z) / 1000, 0]); // reta de volta
+    marcos.forEach(([x, z, km, rot]) => {
+      const tab = addMesh(new THREE.PlaneGeometry(4, 2), new THREE.MeshBasicMaterial({ map: placa(Math.round(km)), side: THREE.DoubleSide }));
+      tab.position.set(x, 4, z); tab.rotation.y = rot;
+      addMesh(new THREE.CylinderGeometry(0.12, 0.12, 4, 8), poste).position.set(x, 2, z);
+    });
+  }
   // largada: faixa quadriculada e pórtico com o nome da fase
   const checker = canvasTex(256, 64, (g, w, h) => {
     const s = 16;
@@ -4571,7 +4595,7 @@ function updateHUD(dt) {
     hudT = 0.1;
     const st = standings();
     $('pos').textContent = (st.findIndex(e => e.me) + 1) + '/' + st.length;
-    $('lap').textContent = RM.id === 'arrancada' ? '1/1' : Math.min(lapsN(), Math.max(1, Math.floor(player.progress / N) + 1)) + '/' + lapsN();
+    $('lap').textContent = RM.id === 'teste' ? '∞' : RM.id === 'arrancada' ? '1/1' : Math.min(lapsN(), Math.max(1, Math.floor(player.progress / N) + 1)) + '/' + lapsN();
     $('board').innerHTML = st.map((e, i) => `<div class="${e.me ? 'me' : ''}">${i + 1}. ${escHtml(e.name)}</div>`).join('');
     drawMinimap();
   }
@@ -6923,6 +6947,7 @@ const MODES = [
   { id: 'tempo', icon: '⏱️', name: 'Contra o relógio', desc: 'Sozinho na pista, 3 voltas. O fantasma mostra a sua melhor volta para você bater.' },
   { id: 'policia', icon: '🚓', name: 'Fuga da polícia', desc: 'Complete 2 voltas sem deixar as viaturas te cercarem. Se ficar parado perto delas, é pego!' },
   { id: 'arrancada', icon: '🚦', name: 'Arrancada', desc: '400 metros contra um rival, lado a lado. Acelere no VAI e use o nitro!' },
+  { id: 'teste', icon: '🏁', name: 'Teste de carros', desc: 'Reta de 20 km sem rivais e sem fim (no final tem uma curva bem aberta e outra reta de volta). Teste a velocidade máxima, o 0 a 100 e o 0 a 200.' },
   { id: 'drift', icon: '💨', name: 'Desafio de drift', desc: '2 voltas derrapando nas curvas para fazer pontos. Use o freio de mão. Bater no muro zera o combo.' }
 ];
 const CUPS = [
@@ -6952,7 +6977,8 @@ function modeSetup() {
   if (ghostCar) { disposeCar(ghostCar); ghostCar = null; }
   ghostData = null;
   const hud = $('mode-hud'); hud.classList.toggle('hidden', RM.id === 'carreira'); hud.innerHTML = '';
-  if (RM.id === 'tempo' || RM.id === 'drift') { rivals.forEach(r => disposeCar(r.car)); rivals = []; }
+  if (RM.id === 'tempo' || RM.id === 'drift' || RM.id === 'teste') { rivals.forEach(r => disposeCar(r.car)); rivals = []; }
+  if (RM.id === 'teste') Object.assign(RM, { top: 0, t0: null, t100: null, t200: null, t300: null, t400: null, km: 0 });
   if (RM.id === 'tempo') { ghostData = loadGhost(phase.n); if (ghostData) { ghostCar = makeGhost(); ghostCar.group.visible = false; } }
   if (RM.id === 'arrancada') {
     rivals.slice(1).forEach(r => disposeCar(r.car)); rivals = rivals.slice(0, 1);
@@ -6993,6 +7019,20 @@ function modeUpdate(dt) {
   if (RM.id === 'carreira') return;
   const hud = $('mode-hud');
   const racing = state === 'race' && !player.finished;
+  if (RM.id === 'teste') {
+    const kmh = Math.abs(player.vF) * 3.6;
+    if (racing) {
+      RM.km += Math.abs(player.vF) * dt / 1000;
+      if (kmh < 2) Object.assign(RM, { t0: null, t100: null, t200: null, t300: null, t400: null }); // parou: o cronômetro zera para medir de novo
+      else if (RM.t0 === null) RM.t0 = raceTime;
+      if (RM.t0 !== null) for (const v of [100, 200, 300, 400]) if (RM['t' + v] === null && kmh >= v) RM['t' + v] = raceTime - RM.t0;
+      if (kmh > RM.top) { RM.top = kmh; let rec = 0; try { rec = +localStorage.getItem('tn3-vmax-' + save.look.model) || 0; } catch (e) {} if (kmh > rec + 0.5) { try { localStorage.setItem('tn3-vmax-' + save.look.model, Math.round(kmh)); } catch (e) {} RM.newRec = true; } }
+    }
+    const f = t => t === null ? '--' : t.toFixed(2) + ' s';
+    let rec = 0; try { rec = +localStorage.getItem('tn3-vmax-' + save.look.model) || 0; } catch (e) {}
+    hud.innerHTML = `<span>MÁXIMA <b>${Math.round(RM.top)} km/h</b></span><span>RECORDE DO CARRO <b>${Math.round(rec)} km/h</b></span><span>0-100 <b>${f(RM.t100)}</b></span><span>0-200 <b>${f(RM.t200)}</b></span><span>0-300 <b>${f(RM.t300)}</b></span><span>0-400 <b>${f(RM.t400)}</b></span><span>DISTÂNCIA <b>${RM.km.toFixed(1)} km</b></span>`;
+    return;
+  }
   if (RM.id === 'tempo') {
     if (racing) { RM.recT -= dt; if (RM.recT <= 0) { RM.recT += 0.1; RM.cur.push([+player.pos.x.toFixed(2), +player.pos.z.toFixed(2), +player.h.toFixed(3)]); } }
     if (ghostCar && ghostData) {
@@ -7127,6 +7167,7 @@ function startMode(id, extra = {}) {
   if (id === 'tempo') RM.laps = 3;
   if (id === 'drift' || id === 'policia') RM.laps = 2;
   if (id === 'arrancada') RM.laps = 99;
+  if (id === 'teste') RM.laps = 9999;
   if (id === 'campeonato') { startRace(CUPS[RM.cup].ph[RM.race]); return; }
   startRace(modeTrack);
 }
@@ -7776,12 +7817,13 @@ function togglePause() {
   if (state === 'paused') { state = stateBeforePause; showScreen(null); }
   else { stateBeforePause = state; state = 'paused'; showScreen('pause'); }
 }
+const TESTE_PHASE = { n: 99, name: 'Teste de Carros', theme: 'deserto', time: 'dia', weather: 'limpo', laps: 9999, seed: -1, vmax: 140, alat: 25, skill: 1, prize: 0, teste: true };
 function startRace(idx = save.current, mp = false) {
   initAudio();
   persist();
   MP.inRace = !!mp;
   if (mp) RM = { id: 'carreira' };
-  const ph = PHASES[idx];
+  const ph = !mp && RM.id === 'teste' ? TESTE_PHASE : PHASES[idx];
   if (settings.radio && !RADIO.st) setRadio(settings.radio);
   state = 'loading';
   withLoading(`Fase ${ph.n} · ${ph.name}`, () => {
@@ -7791,7 +7833,7 @@ function startRace(idx = save.current, mp = false) {
     setupRace();
     if (mp) mpGrid();
     countdown = 3.999; state = 'countdown';
-    $('phase-tag').textContent = modeTag() + `FASE ${ph.n} · ${ph.name.toUpperCase()}  ${phaseIcons(ph)}`;
+    $('phase-tag').textContent = ph.teste ? '🏁 TESTE DE CARROS · RETA DE 20 KM' : modeTag() + `FASE ${ph.n} · ${ph.name.toUpperCase()}  ${phaseIcons(ph)}`;
     showScreen(null);
     $('message').innerHTML = ''; lastCount = 4;
   });
