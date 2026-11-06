@@ -3471,7 +3471,8 @@ const archY = (z, M = MDEF) => { let y = interp(M.BOT, z); for (const wz of WHEE
 function bodySection(z, M = MDEF) {
   const yb = interp(M.BOT, z), ya = archY(z, M), yt = bodyTop(z, M), w = bodyW(z, M);
   const L = (a, b, t) => a + (b - a) * t;
-  return [[0, yb], [0.5 * w, yb], [0.6 * w, ya], [0.96 * w, ya], [w, L(ya, yt, 0.3)], [0.995 * w, L(ya, yt, 0.68)], [0.95 * w, yt - 0.035], [0.8 * w, yt - 0.006], [0.45 * w, yt + 0.012], [0, yt + 0.02]];
+  const yf = Math.max(yt, ya + 0.08); // para-lama sobe acima da roda nos carros baixos (sem buraco em cima do pneu)
+  return [[0, yb], [0.5 * w, yb], [0.6 * w, ya], [0.96 * w, ya], [w, L(ya, yf, 0.3)], [0.995 * w, L(ya, yf, 0.68)], [0.95 * w, yf - 0.035], [0.8 * w, L(yt, yf, 0.75) - 0.006], [0.45 * w, yt + 0.012], [0, yt + 0.02]];
 }
 function cabinSection(z, M = MDEF) {
   const belt = bodyTop(z, M) - 0.01, h = interp(M.ROOF, z), roof = belt + h, w = bodyW(z, M);
@@ -3533,6 +3534,8 @@ const CARGEO = {
   caliper: new THREE.BoxGeometry(0.07, 0.14, 0.16),
   face: new THREE.CylinderGeometry(0.2, 0.2, 0.01, 20).rotateZ(Math.PI / 2)
 };
+const MIRROR_GEO = new THREE.SphereGeometry(1, 16, 10).scale(0.045, 0.055, 0.075); // concha do retrovisor
+const MIRROR_GLASS = new THREE.CircleGeometry(1, 16).scale(0.036, 0.044, 1).rotateY(Math.PI);
 const STRIPE_GEO = {};
 const stripeGeo = (kind, x, w, mk = 'esportivo') => {
   const k = kind + x + '_' + w + mk, M = MODELS[mk] || MDEF;
@@ -3607,7 +3610,7 @@ const aoTex = canvasTex(64, 128, (g, w, h) => {
 });
 
 function paintMaterial(color, finish) {
-  if (settings.weak) return new THREE.MeshLambertMaterial({ color });
+  if (settings.weak) { const w = { metal: [0.6, 0.3], fosco: [0.1, 0.75], perola: [0.4, 0.22], cromo: [1, 0.08] }[finish] || [0.6, 0.3]; return new THREE.MeshStandardMaterial({ color, metalness: w[0], roughness: w[1], envMapIntensity: 1.3 }); }
   const p = { metal: [0.55, 0.32, 1, 0.04, 1.25], fosco: [0.05, 0.78, 0, 0.5, 0.5], perola: [0.3, 0.2, 1, 0.02, 1.4], cromo: [1, 0.07, 1, 0.02, 1.7] }[finish] || [0.55, 0.32, 1, 0.04, 1.25];
   const m = new THREE.MeshPhysicalMaterial({ color, metalness: p[0], roughness: p[1], clearcoat: p[2], clearcoatRoughness: p[3], envMapIntensity: p[4] });
   if (finish === 'perola' && m.sheen !== undefined) m.sheen = new THREE.Color(0.55, 0.55, 0.7);
@@ -3685,23 +3688,29 @@ function makeCarBase(look, opts = {}) {
   const drlMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(...hc).multiplyScalar(3) });
   const tail = new THREE.MeshBasicMaterial({ color: new THREE.Color(1, 0.03, 0.03).multiplyScalar(1.6) });
   const glass = { normal: [0x0d141c, 0.85, 0.05], escuro: [0x030405, 0.9, 0.05], espelhado: [0x9aa8b8, 1, 0.02] }[look.tint] || [0x0d141c, 0.85, 0.05];
-  const glassMat = settings.weak ? new THREE.MeshLambertMaterial({ color: 0x0a0e14 }) : new THREE.MeshPhysicalMaterial({ color: glass[0], metalness: glass[1], roughness: glass[2], clearcoat: 1, envMapIntensity: 1.6 });
+  const glassMat = settings.weak ? new THREE.MeshStandardMaterial({ color: glass[0], metalness: 0.9, roughness: 0.08 }) : new THREE.MeshPhysicalMaterial({ color: glass[0], metalness: glass[1], roughness: glass[2], clearcoat: 1, envMapIntensity: 1.6 });
   const mk = MODELS[look.model] ? look.model : 'esportivo', MG = MODEL_GEO[mk], armor = mk === 'blindado', rocket = mk === 'foguete' || armor;
   if (armor && paint.flatShading !== undefined) { paint.flatShading = true; paint.needsUpdate = true; }
   const mesh = (geo, mat, x = 0, y = 0, z = 0, parent = body) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = !lite || geo === MG.body; parent.add(m); return m; };
+  // encaixa uma peça feita para o Esportivo GT na lataria deste modelo (mesma posição relativa de altura e largura)
+  const MM0 = MODELS[mk], fit = !armor && MM0 && MM0.TOP && mk !== 'esportivo';
+  const fy = (y, z) => fit ? 0.3 + (y - 0.3) * (bodyTop(z, MM0) - 0.3) / Math.max(0.05, bodyTop(z, MDEF) - 0.3) : y;
+  const fx = (x, z) => fit ? x * bodyW(z, MM0) / bodyW(z, MDEF) : x;
+  const fit3 = (x, y, z) => [fx(x, z), fy(y, z), z];
+  const fitTop = (y, z) => fit ? y + bodyTop(z, MM0) - bodyTop(z, MDEF) : y; // peças em cima da tampa (aerofólio)
   mesh(MG.body, paint);
   mesh(MG.cabin, glassMat);
   mesh(MG.roof, paint);
   const MM = MODELS[mk];
-  if (!lite && !armor && MM.cab && !settings.weak) {
+  if (!lite && !armor && MM.cab) {
     const quatro = mk === 'seda' || mk === 'perua' || mk === 'suv' || mk === 'hatch';
     const zFrente = MM.cab[1] - 0.22, zPorta = quatro ? [[zFrente - 0.05, -0.15], [-0.15, MM.cab[0] + 0.5]] : [[zFrente - 0.05, MM.cab[0] + 0.55]];
     for (const sx of [1, -1]) {
       const wz = bodyW(zFrente, MM), yt = bodyTop(zFrente, MM);
-      const casca = mesh(new THREE.BoxGeometry(0.07, 0.1, 0.17), paint, sx * (wz * 0.86 + 0.12), yt + 0.09, zFrente);
-      casca.rotation.y = sx * 0.12;
-      mesh(new THREE.BoxGeometry(0.012, 0.1, 0.16), MAT.chrome, sx * (wz * 0.86 + 0.12 - 0.04), yt + 0.09, zFrente - 0.005).rotation.y = sx * 0.12;
-      mesh(new THREE.BoxGeometry(0.12, 0.04, 0.06), MAT.trim, sx * (wz * 0.86 + 0.05), yt + 0.06, zFrente + 0.02);
+      const mx = sx * (wz * 0.9 + 0.1), my = yt + 0.07;
+      const casca = mesh(MIRROR_GEO, paint, mx, my, zFrente); casca.rotation.y = sx * 0.15;
+      const vidro = mesh(MIRROR_GLASS, MAT.chrome, mx - sx * 0.005, my, zFrente - 0.062); vidro.rotation.y = sx * 0.15;
+      const haste = mesh(new THREE.BoxGeometry(0.11, 0.025, 0.05), MAT.trim, sx * (wz * 0.9 + 0.035), yt + 0.035, zFrente + 0.02); haste.rotation.z = -sx * 0.35;
       for (const [z1, z0] of zPorta) {
         const zm = z0 + 0.22, wm = bodyW(zm, MM);
         mesh(new THREE.BoxGeometry(0.03, 0.035, 0.16), MAT.chrome, sx * (wm + 0.005), bodyTop(zm, MM) - 0.1, zm); // maçaneta
@@ -3721,15 +3730,29 @@ function makeCarBase(look, opts = {}) {
     }
   }
   // frente e faróis
-  mesh(new THREE.BoxGeometry(1.6, 0.14, 0.1), MAT.trim, 0, 0.38, 2.4);
-  if (!lite) mesh(new THREE.BoxGeometry(0.9, 0.08, 0.06), MAT.trim, 0, 0.55, 2.42);
+  const nariz = fit ? Math.min(1, 2 * bodyW(2.36, MM0) / 1.75) : 1, bicoBaixo = fit && bodyTop(2.33, MM0) < 0.52; // carros de bico baixo usam faróis finos de LED
+  mesh(new THREE.BoxGeometry(1.6, 0.14, 0.1), MAT.trim, 0, 0.38, fit ? 2.36 : 2.4).scale.x = nariz;
+  if (!lite && !bicoBaixo) mesh(new THREE.BoxGeometry(0.9, 0.08, 0.06), MAT.trim, ...fit3(0, 0.55, 2.42)).scale.x = nariz;
   const poolMat = new THREE.MeshBasicMaterial({ map: beamPoolTex, color: new THREE.Color(...hc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.8 * Math.max(0.15, timeCfg.dark), polygonOffset: true, polygonOffsetFactor: -2 });
   const coneMat = new THREE.MeshBasicMaterial({ map: beamConeTex, color: new THREE.Color(...hc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.1 * timeCfg.dark, side: THREE.DoubleSide });
   const flareMat = new THREE.SpriteMaterial({ map: flareTex, color: new THREE.Color(...hc), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.2 + 0.8 * timeCfg.dark });
-  if (lite) for (const s of [1, -1]) mesh(new THREE.BoxGeometry(0.4, 0.09, 0.05), headMat, s * 0.62, 0.64, 2.38);
+  if (lite) for (const s of [1, -1]) mesh(new THREE.BoxGeometry(0.4, 0.09, 0.05), headMat, ...(bicoBaixo ? [s * (bodyW(2.3, MM0) - 0.34), bodyTop(2.3, MM0) - 0.02, 2.3] : fit3(s * 0.62, 0.64, 2.38)));
+  else if (bicoBaixo) for (const s of [1, -1]) { // farol fino de LED encostado no capô
+    const zf = 2.2, xf = s * (bodyW(zf, MM0) - 0.34), yf = bodyTop(zf, MM0) - 0.02;
+    const hg = new THREE.Group(); hg.position.set(xf, yf, zf); hg.rotation.set(-0.35, s * 0.28, 0); body.add(hg);
+    const hm = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); hg.add(m); return m; };
+    hm(new THREE.BoxGeometry(0.46, 0.05, 0.2), MAT.housing, 0, 0, 0);
+    hm(new THREE.BoxGeometry(0.4, 0.022, 0.03), headMat, 0, 0.005, 0.09);
+    hm(new THREE.BoxGeometry(0.44, 0.012, 0.02), drlMat, 0, -0.02, 0.1);
+    hm(new THREE.BoxGeometry(0.47, 0.052, 0.012), MAT.headGlass, 0, 0, 0.106);
+    const cone = new THREE.Mesh(beamConeGeo, coneMat); cone.position.set(xf, yf, zf + 0.15); cone.rotation.x = 0.06; cone.renderOrder = 2; g.add(cone);
+    const flare = new THREE.Sprite(flareMat); flare.position.set(xf, yf, zf + 0.2); flare.scale.setScalar(0.14 + 0.12 * timeCfg.dark); g.add(flare);
+    mesh(new THREE.BoxGeometry(0.03, 0.08, 1.7), MAT.trim, s * 0.925, 0.33, 0.02);  // saia lateral
+  }
   else for (const s of [1, -1]) {
     // farol completo: carcaça escura, refletores cromados, dois projetores com lente, LED diurno em "L", seta âmbar e vidro por cima
-    const hg = new THREE.Group(); hg.position.set(s * 0.62, 0.635, 2.33); hg.rotation.y = s * 0.18; body.add(hg);
+    const hg = new THREE.Group(); hg.position.set(...fit3(s * 0.62, 0.635, 2.33)); hg.rotation.y = s * 0.18; body.add(hg);
+    if (fit) { const k = Math.min(1, (bodyTop(2.33, MM0) - 0.3) / (bodyTop(2.33, MDEF) - 0.3)); hg.scale.set(Math.min(0.9, fx(0.9, 2.33)), Math.max(0.5, k), 0.7); hg.position.z -= 0.06 + (1 - k) * 0.1; hg.position.x = s * Math.min(Math.abs(hg.position.x), bodyW(2.3, MM0) - 0.32); }
     const hm = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); hg.add(m); return m; };
     hm(new THREE.BoxGeometry(0.58, 0.16, 0.22), MAT.housing, 0, 0, -0.06);
     for (const [px, k] of [[-0.12 * s, 0], [0.1 * s, 1]]) {
@@ -3741,42 +3764,42 @@ function makeCarBase(look, opts = {}) {
     hm(new THREE.BoxGeometry(0.018, 0.1, 0.02), drlMat, 0.22 * s, -0.015, 0.075);
     hm(new THREE.BoxGeometry(0.05, 0.05, 0.02), MAT.amber, 0.255 * s, 0.045, 0.06);
     hm(new THREE.BoxGeometry(0.6, 0.17, 0.02), MAT.headGlass, 0, 0, 0.1);
-    const cone = new THREE.Mesh(beamConeGeo, coneMat); cone.position.set(s * 0.62, 0.64, 2.45); cone.rotation.x = 0.06; cone.renderOrder = 2; g.add(cone);
-    for (const fx of [-0.12, 0.1]) { const flare = new THREE.Sprite(flareMat); flare.position.set(s * 0.62 + Math.cos(s * 0.18) * fx * s, 0.64, 2.47); flare.scale.setScalar(0.14 + 0.12 * timeCfg.dark); g.add(flare); }
-    mesh(new THREE.BoxGeometry(0.16, 0.08, 0.2), paint, s * 0.96, 0.98, 0.92);      // retrovisor
+    const cone = new THREE.Mesh(beamConeGeo, coneMat); cone.position.set(...fit3(s * 0.62, 0.64, 2.45)); cone.rotation.x = 0.06; cone.renderOrder = 2; g.add(cone);
+    for (const fxo of [-0.12, 0.1]) { const flare = new THREE.Sprite(flareMat); flare.position.set(fx(s * 0.62, 2.47) + Math.cos(s * 0.18) * fxo * s, fy(0.64, 2.47), 2.47); flare.scale.setScalar(0.14 + 0.12 * timeCfg.dark); g.add(flare); }
     mesh(new THREE.BoxGeometry(0.03, 0.08, 1.7), MAT.trim, s * 0.925, 0.33, 0.02);  // saia lateral
   }
   // traseira
-  mesh(new THREE.BoxGeometry(1.5, 0.05, 0.05), tail, 0, 0.8, -2.4);
-  if (lite) for (const s of [1, -1]) mesh(new THREE.BoxGeometry(0.34, 0.1, 0.06), tail, s * 0.7, 0.77, -2.4);
+  if (mk !== 'hiper') mesh(new THREE.BoxGeometry(1.5, 0.05, 0.05), tail, ...fit3(0, 0.8, -2.4)).scale.x = fx(1, -2.4);
+  if (lite) for (const s of [1, -1]) mesh(new THREE.BoxGeometry(0.34, 0.1, 0.06), tail, ...fit3(s * 0.7, 0.77, -2.4));
   else for (const s of [1, -1]) {
     // lanterna: moldura escura, LEDs em camadas (acendem mais na freada), ré branca, seta âmbar e vidro vermelho
-    mesh(new THREE.BoxGeometry(0.42, 0.15, 0.05), MAT.housing, s * 0.7, 0.77, -2.39);
-    for (const [y, w] of [[0.815, 0.36], [0.775, 0.3], [0.735, 0.24]]) mesh(new THREE.BoxGeometry(w, 0.016, 0.03), tail, s * (0.7 + (0.36 - w) / 2), y, -2.415);
-    mesh(new THREE.BoxGeometry(0.016, 0.1, 0.03), tail, s * 0.885, 0.775, -2.415);
-    mesh(new THREE.BoxGeometry(0.08, 0.035, 0.03), MAT.reverse, s * 0.56, 0.735, -2.412);
-    mesh(new THREE.BoxGeometry(0.06, 0.035, 0.03), MAT.amber, s * 0.84, 0.735, -2.412);
-    mesh(new THREE.BoxGeometry(0.43, 0.16, 0.015), MAT.tailGlass, s * 0.7, 0.77, -2.428);
+    mesh(new THREE.BoxGeometry(0.42, 0.15, 0.05), MAT.housing, ...fit3(s * 0.7, 0.77, -2.39));
+    for (const [y, w] of [[0.815, 0.36], [0.775, 0.3], [0.735, 0.24]]) mesh(new THREE.BoxGeometry(w, 0.016, 0.03), tail, ...fit3(s * (0.7 + (0.36 - w) / 2), y, -2.415));
+    mesh(new THREE.BoxGeometry(0.016, 0.1, 0.03), tail, ...fit3(s * 0.885, 0.775, -2.415));
+    mesh(new THREE.BoxGeometry(0.08, 0.035, 0.03), MAT.reverse, ...fit3(s * 0.56, 0.735, -2.412));
+    mesh(new THREE.BoxGeometry(0.06, 0.035, 0.03), MAT.amber, ...fit3(s * 0.84, 0.735, -2.412));
+    mesh(new THREE.BoxGeometry(0.43, 0.16, 0.015), MAT.tailGlass, ...fit3(s * 0.7, 0.77, -2.428));
   }
   if (!lite) {
-    mesh(new THREE.BoxGeometry(1.6, 0.12, 0.2), MAT.trim, 0, 0.38, -2.36);
-    mesh(new THREE.BoxGeometry(0.52, 0.12, 0.02), MAT.plate, 0, 0.57, -2.42);
+    mesh(new THREE.BoxGeometry(1.6, 0.12, 0.2), MAT.trim, 0, 0.38, -2.36).scale.x = fx(1, -2.36);
+    mesh(new THREE.BoxGeometry(0.52, 0.12, 0.02), MAT.plate, ...fit3(0, 0.57, -2.42));
   }
   // escapamento
   const exX = look.exhaust === 'quadruplo' ? [0.38, -0.38, 0.55, -0.55] : look.exhaust === 'central' ? [0.09, -0.09] : [0.45, -0.45];
   const exR = look.exhaust === 'central' ? 0.08 : 0.06;
   if (!lite && !rocket) exX.forEach(x => mesh(new THREE.CylinderGeometry(exR, exR, 0.18, 12).rotateX(Math.PI / 2), MAT.chrome, x, 0.36, -2.38));
-  // aerofólio
-  if (look.spoiler === 'lip') {
-    const sp = mesh(new THREE.BoxGeometry(1.7, 0.04, 0.3), paint, 0, 1.12, -2.0); sp.rotation.x = 0.12;
-    for (const s of [1, -1]) mesh(new THREE.BoxGeometry(0.05, 0.2, 0.14), MAT.trim, s * 0.6, 1.0, -2.0);
+  // aerofólio (o Hiper X9 já tem a asa dele)
+  if (mk === 'hiper') {}
+  else if (look.spoiler === 'lip') {
+    const sp = mesh(new THREE.BoxGeometry(1.7, 0.04, 0.3), paint, 0, fitTop(1.12, -2.0), -2.0); sp.rotation.x = 0.12;
+    for (const s of [1, -1]) mesh(new THREE.BoxGeometry(0.05, 0.2, 0.14), MAT.trim, s * 0.6, fitTop(1.0, -2.0), -2.0);
   } else if (look.spoiler === 'duck') {
-    const sp = mesh(new THREE.BoxGeometry(1.75, 0.05, 0.3), paint, 0, 0.99, -2.17); sp.rotation.x = -0.45;
+    const sp = mesh(new THREE.BoxGeometry(1.75, 0.05, 0.3), paint, 0, fitTop(0.99, -2.17), -2.17); sp.rotation.x = -0.45;
   } else if (look.spoiler === 'gt') {
-    const sp = mesh(new THREE.BoxGeometry(1.95, 0.05, 0.42), MAT.trim, 0, 1.38, -2.05); sp.rotation.x = 0.1;
+    const sp = mesh(new THREE.BoxGeometry(1.95, 0.05, 0.42), MAT.trim, 0, fitTop(1.38, -2.05), -2.05); sp.rotation.x = 0.1;
     for (const s of [1, -1]) {
-      mesh(new THREE.BoxGeometry(0.05, 0.48, 0.16), MAT.trim, s * 0.55, 1.14, -2.0);
-      mesh(new THREE.BoxGeometry(0.03, 0.22, 0.5), paint, s * 0.98, 1.36, -2.05);
+      mesh(new THREE.BoxGeometry(0.05, 0.48, 0.16), MAT.trim, s * 0.55, fitTop(1.14, -2.0), -2.0);
+      mesh(new THREE.BoxGeometry(0.03, 0.22, 0.5), paint, s * 0.98, fitTop(1.36, -2.05), -2.05);
     }
   }
   // neon embaixo do carro
@@ -3853,17 +3876,16 @@ function makeCarBase(look, opts = {}) {
       const inl = mesh(new THREE.BoxGeometry(0.05, 0.22, 0.7), MAT.trim, sx * 1.0, 0.62, -0.75); inl.rotation.y = sx * 0.12; // entrada de ar
       const y1 = mesh(new THREE.BoxGeometry(0.34, 0.04, 0.04), tail, sx * 0.62, 0.66, -2.36); y1.rotation.z = sx * 0.5;     // lanterna em Y
       const y2 = mesh(new THREE.BoxGeometry(0.34, 0.04, 0.04), tail, sx * 0.62, 0.56, -2.36); y2.rotation.z = -sx * 0.5;
-      const hl = mesh(new THREE.BoxGeometry(0.42, 0.03, 0.05), headMat, sx * 0.62, 0.5, 2.24); hl.rotation.z = sx * 0.25;
     }
-    mesh(new THREE.BoxGeometry(1.5, 0.08, 0.3), MAT.trim, 0, 0.36, 2.36);
+    mesh(new THREE.BoxGeometry(2 * bodyW(2.3, MM0) - 0.1, 0.06, 0.28), MAT.trim, 0, 0.34, 2.3);
   }
   if (mk === 'hiper') {
     const carbono = new THREE.MeshStandardMaterial({ color: 0x15161a, roughness: 0.35, metalness: 0.4 });
     mesh(new THREE.BoxGeometry(2.1, 0.05, 0.42), carbono, 0, 1.28, -2.05);                       // asa traseira
     for (const sx of [1, -1]) { mesh(new THREE.BoxGeometry(0.05, 0.36, 0.5), carbono, sx * 1.04, 1.18, -2.05); mesh(new THREE.BoxGeometry(0.05, 0.5, 0.08), carbono, sx * 0.45, 0.98, -2.0); }
-    mesh(new THREE.BoxGeometry(1.86, 0.035, 0.03), tail, 0, 0.62, -2.33);                       // lanterna inteiriça
-    mesh(new THREE.BoxGeometry(1.5, 0.025, 0.03), drlMat, 0, 0.5, 2.36);                          // faixa de luz da frente
-    mesh(new THREE.BoxGeometry(1.9, 0.06, 0.32), carbono, 0, 0.3, 2.3);                           // splitter
+    mesh(new THREE.BoxGeometry(1.8, 0.035, 0.03), tail, 0, bodyTop(-2.32, MODELS.hiper) - 0.06, -2.335);   // lanterna inteiriça
+    mesh(new THREE.BoxGeometry(1.2, 0.025, 0.03), drlMat, 0, bodyTop(2.36, MODELS.hiper) - 0.03, 2.37);       // faixa de luz da frente
+    mesh(new THREE.BoxGeometry(2 * bodyW(2.3, MODELS.hiper) - 0.08, 0.05, 0.3), carbono, 0, 0.3, 2.28);   // splitter
     mesh(new THREE.BoxGeometry(1.7, 0.14, 0.3), carbono, 0, 0.36, -2.2);                          // difusor
   }
   const boom = mk === 'seda' && !lite ? makeBoombox(body, 1.3, 0.42, 0, bodyTop(-1.95, MODELS.seda) - 0.02, -1.95) : null; // som gigante em cima do porta-malas
