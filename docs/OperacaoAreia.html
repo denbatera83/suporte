@@ -84,7 +84,7 @@
   <div class="bloco">
     <div class="tag">OPERAÇÃO · SETOR 7</div>
     <h1>Operação Areia</h1>
-    <p>Uma cidade antiga no deserto, em ruínas. Avance pelas ruas, use os muros como proteção e vença as ondas de soldados inimigos. Cada onda é maior que a anterior. Sua vida volta sozinha se você ficar alguns segundos sem levar tiro.</p>
+    <p>Máquinas alienígenas invadiram a Terra. Numa cidade antiga do deserto, enfrente as Sentinelas, os drones e o gigantesco Colosso. Cuidado: eles armam emboscadas e aparecem atrás de você a qualquer momento. Desvie dos tiros de plasma e mire nos pontos que brilham. Sua vida volta sozinha se você ficar alguns segundos sem levar tiro.</p>
     <div class="teclas" id="teclas">
       <kbd>W A S D</kbd><span>andar</span>
       <kbd>MOUSE</kbd><span>olhar (clique na tela para prender)</span>
@@ -1089,57 +1089,177 @@ for (const [x, z, r] of [[2.2, 30, 0.2], [-2, -22, 2.9], [16, 10, 1.5]]) { const
 const fumacas = [];
 for (const [x, z] of [[-30, -60], [40, -30], [-55, 30]]) for (let i = 0; i < 14; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tFumaca, transparent: true, depthWrite: false, opacity: 0.6 })); s.userData = { x, z, t: i / 14 }; cena.add(s); fumacas.push(s); }
 
-// ===================== ARMA (fuzil original com luneta) =====================
+// nave-mãe alienígena parada no céu
+const nave = new THREE.Group(); nave.position.set(-80, 210, -420); nave.scale.setScalar(0.75); cena.add(nave);
+{ const mN = new THREE.MeshStandardMaterial({ color: 0x6d7078, roughness: 0.7, metalness: 0.5, fog: false, transparent: true, opacity: 0.85 });
+  const d = new THREE.Mesh(new THREE.CylinderGeometry(140, 90, 18, 48), mN); nave.add(d); const t = new THREE.Mesh(new THREE.SphereGeometry(60, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), mN); t.position.y = 8; nave.add(t);
+  for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2, s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tClarao, color: 0x66e8ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); s.position.set(Math.cos(a) * 118, -8, Math.sin(a) * 118); s.scale.setScalar(14); nave.add(s); }
+  nave.traverse(o => { if (o.material) o.material.fog = false; }); }
+cena.fog.color.setHex(0xc4b8a8);
+
+// ===================== ARMA (fuzil original com luneta, bem detalhado) =====================
 const arma = new THREE.Group(); camera.add(arma);
-const mPolimero = new THREE.MeshStandardMaterial({ color: 0x0e0f11, roughness: 0.7, metalness: 0.2 }), mAco = new THREE.MeshStandardMaterial({ color: 0x1c1e22, roughness: 0.4, metalness: 0.7 }), mLuva = new THREE.MeshStandardMaterial({ color: 0x262a1e, roughness: 0.95 }), mLente = new THREE.MeshStandardMaterial({ color: 0x182a3a, roughness: 0.05, metalness: 0.9, emissive: 0x0a1a28 });
-const pa = (geo, mat, x, y, z, rx = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.x = rx; arma.add(m); return m; };
-pa(new THREE.BoxGeometry(0.07, 0.09, 0.42), mPolimero, 0, 0, -0.05);            // corpo
-pa(new THREE.BoxGeometry(0.06, 0.07, 0.32), mPolimero, 0, 0.005, -0.4);          // guarda-mão
-for (let k = 0; k < 4; k++) pa(new THREE.BoxGeometry(0.065, 0.012, 0.04), mAco, 0, 0.045, -0.3 - k * 0.06);
-pa(new THREE.CylinderGeometry(0.012, 0.012, 0.32, 10), mAco, 0, 0.005, -0.68, Math.PI / 2); // cano
-pa(new THREE.CylinderGeometry(0.02, 0.02, 0.06, 10), mAco, 0, 0.005, -0.85, Math.PI / 2);  // quebra-chamas
-pa(new THREE.BoxGeometry(0.05, 0.13, 0.06), mPolimero, 0, -0.1, -0.12).rotation.x = 0.2; // carregador
-pa(new THREE.BoxGeometry(0.045, 0.11, 0.05), mPolimero, 0, -0.09, 0.07).rotation.x = -0.35; // empunhadura
-pa(new THREE.BoxGeometry(0.05, 0.08, 0.22), mPolimero, 0, -0.01, 0.25);          // coronha
-pa(new THREE.CylinderGeometry(0.027, 0.027, 0.26, 16), mAco, 0, 0.095, -0.06, Math.PI / 2); // luneta
-pa(new THREE.CylinderGeometry(0.036, 0.03, 0.07, 16), mAco, 0, 0.095, -0.22, Math.PI / 2);
-pa(new THREE.CylinderGeometry(0.033, 0.03, 0.05, 16), mAco, 0, 0.095, 0.09, Math.PI / 2);
-pa(new THREE.CircleGeometry(0.03, 16), mLente, 0, 0.095, -0.256);
-pa(new THREE.BoxGeometry(0.02, 0.05, 0.02), mAco, 0, 0.06, -0.12); pa(new THREE.BoxGeometry(0.02, 0.05, 0.02), mAco, 0, 0.06, 0.0);
-pa(new THREE.BoxGeometry(0.075, 0.07, 0.11), mLuva, -0.02, -0.07, 0.07);         // mão no cabo
-pa(new THREE.BoxGeometry(0.09, 0.06, 0.12), mLuva, -0.04, -0.035, -0.42);        // mão de apoio
-const clarao = new THREE.Sprite(new THREE.SpriteMaterial({ map: tClarao, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); clarao.position.set(0, 0.005, -0.92); clarao.scale.setScalar(0.25); clarao.visible = false; arma.add(clarao);
-const luzTiro = new THREE.PointLight(0xffb060, 0, 8); luzTiro.position.set(0, 0, -1); arma.add(luzTiro);
-arma.traverse(o => { if (o.isMesh) o.castShadow = false; });
+const mPolimero = new THREE.MeshStandardMaterial({ color: 0x15161a, roughness: 0.72, metalness: 0.15 });
+const mAco = new THREE.MeshStandardMaterial({ color: 0x23262b, roughness: 0.38, metalness: 0.85 });
+const mGasto = new THREE.MeshStandardMaterial({ color: 0x55585e, roughness: 0.45, metalness: 0.9 });
+const mLuva = new THREE.MeshStandardMaterial({ color: 0x2e2a22, roughness: 0.95 });
+const mManga = new THREE.MeshStandardMaterial({ color: 0x6b6450, roughness: 1 });
+const mLente = new THREE.MeshStandardMaterial({ color: 0x0c1c2c, roughness: 0.02, metalness: 1, emissive: 0x08304a, emissiveIntensity: 0.6 });
+const pa = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0, pai = arma) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz); pai.add(m); return m; };
+const cil = (r1, r2, h, s = 14) => new THREE.CylinderGeometry(r1, r2, h, s);
+const caixa = (x, y, z) => new THREE.BoxGeometry(x, y, z);
+// corpo superior e inferior, janela de ejeção, alavanca de manejo
+pa(caixa(0.062, 0.05, 0.36), mAco, 0, 0.022, -0.05); pa(caixa(0.058, 0.045, 0.3), mPolimero, 0, -0.025, -0.02);
+pa(caixa(0.004, 0.02, 0.06), mGasto, 0.032, 0.02, -0.02); pa(caixa(0.03, 0.012, 0.04), mAco, 0, 0.05, 0.12);
+// trilho com dentes
+pa(caixa(0.03, 0.012, 0.6), mAco, 0, 0.052, -0.25); for (let k = 0; k < 24; k++) pa(caixa(0.034, 0.006, 0.012), mGasto, 0, 0.061, 0.03 - k * 0.024);
+// guarda-mão com furos e trilhos laterais
+pa(caixa(0.07, 0.07, 0.34), mPolimero, 0, 0.012, -0.42); for (let k = 0; k < 6; k++) for (const s of [-1, 1]) pa(cil(0.009, 0.009, 0.01, 8), mAco, s * 0.036, 0.012, -0.31 - k * 0.045, 0, 0, Math.PI / 2);
+for (const s of [-1, 1]) pa(caixa(0.008, 0.014, 0.28), mAco, s * 0.038, -0.012, -0.42);
+// cano, bloco de gás e quebra-chamas com fendas
+pa(cil(0.011, 0.011, 0.3), mAco, 0, 0.012, -0.72, Math.PI / 2); pa(caixa(0.03, 0.03, 0.03), mAco, 0, 0.018, -0.62);
+pa(cil(0.018, 0.018, 0.08), mAco, 0, 0.012, -0.88, Math.PI / 2); for (let k = 0; k < 4; k++) pa(caixa(0.004, 0.038, 0.05), mPolimero, Math.cos(k * 1.57) * 0.018, 0.012 + Math.sin(k * 1.57) * 0.018, -0.88, 0, 0, k * 1.57);
+// carregador curvo (três partes) e trava
+for (let k = 0; k < 3; k++) pa(caixa(0.045, 0.06, 0.07), mPolimero, 0, -0.07 - k * 0.05, -0.1 - k * 0.022, 0.25 + k * 0.12);
+pa(caixa(0.05, 0.03, 0.09), mAco, 0, -0.055, -0.1);
+// empunhadura com textura, guarda-mato e gatilho
+pa(caixa(0.042, 0.11, 0.05), mPolimero, 0, -0.09, 0.075, -0.32); pa(caixa(0.006, 0.006, 0.08), mAco, 0, -0.062, 0.015); pa(caixa(0.008, 0.025, 0.008), mGasto, 0, -0.05, 0.01, 0.4);
+// coronha ajustável com tubo e soleira
+pa(cil(0.016, 0.016, 0.16), mAco, 0, 0.0, 0.2, Math.PI / 2); pa(caixa(0.05, 0.085, 0.14), mPolimero, 0, -0.01, 0.29); pa(caixa(0.052, 0.095, 0.02), mLuva, 0, -0.01, 0.365);
+// luneta com torres de ajuste, anéis e protetor de sol
+pa(cil(0.024, 0.024, 0.22, 20), mAco, 0, 0.1, -0.06, Math.PI / 2); pa(cil(0.034, 0.026, 0.08, 20), mAco, 0, 0.1, -0.21, Math.PI / 2); pa(cil(0.035, 0.035, 0.04, 20), mAco, 0, 0.1, -0.27, Math.PI / 2);
+pa(cil(0.03, 0.025, 0.06, 20), mAco, 0, 0.1, 0.08, Math.PI / 2); pa(new THREE.CircleGeometry(0.031, 20), mLente, 0, 0.1, -0.291, 0, Math.PI);
+pa(cil(0.012, 0.012, 0.025, 12), mGasto, 0, 0.13, -0.06); pa(cil(0.012, 0.012, 0.025, 12), mGasto, 0.03, 0.1, -0.06, 0, 0, Math.PI / 2);
+for (const z of [-0.13, 0.02]) { pa(caixa(0.05, 0.05, 0.022), mAco, 0, 0.075, z); }
+// mão do gatilho (luva com dedos) e mão de apoio, com manga da farda
+const maoG = new THREE.Group(); maoG.position.set(-0.005, -0.08, 0.06); arma.add(maoG);
+pa(caixa(0.07, 0.075, 0.09), mLuva, 0, 0, 0, -0.3, 0, 0, maoG); for (let k = 0; k < 3; k++) pa(cil(0.011, 0.01, 0.06, 8), mLuva, 0.035, 0.02 - k * 0.022, -0.035, 0, 0, Math.PI / 2, maoG);
+pa(cil(0.01, 0.01, 0.05, 8), mLuva, 0.02, 0.05, -0.06, 0.6, 0, 0, maoG);
+const maoA = new THREE.Group(); maoA.position.set(-0.03, -0.035, -0.44); arma.add(maoA);
+pa(caixa(0.06, 0.07, 0.1), mLuva, 0, -0.01, 0, 0, 0, 0.3, maoA); for (let k = 0; k < 4; k++) pa(cil(0.01, 0.009, 0.07, 8), mLuva, 0.04, 0.015, -0.035 + k * 0.022, 0, 0, Math.PI / 2 + 0.3, maoA);
+const clarao = new THREE.Sprite(new THREE.SpriteMaterial({ map: tClarao, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); clarao.position.set(0, 0.012, -0.95); clarao.scale.setScalar(0.28); clarao.visible = false; arma.add(clarao);
+const luzTiro = new THREE.PointLight(0xffb060, 0, 9); luzTiro.position.set(0, 0, -1); arma.add(luzTiro);
 arma.scale.setScalar(0.8);
-const POS_QUADRIL = new THREE.Vector3(0.19, -0.2, -0.46), POS_MIRA = new THREE.Vector3(0, -0.076, -0.3);
+const POS_QUADRIL = new THREE.Vector3(0.19, -0.2, -0.46), POS_MIRA = new THREE.Vector3(0, -0.08, -0.3);
 
-// ===================== INIMIGOS (soldados originais) =====================
-const mFarda = new THREE.MeshStandardMaterial({ color: 0x8a7a58, roughness: 0.9 }), mColete = new THREE.MeshStandardMaterial({ color: 0x4f4a3a, roughness: 0.85 }), mCapacete = new THREE.MeshStandardMaterial({ color: 0x5c5440, roughness: 0.7 }), mPele = new THREE.MeshStandardMaterial({ color: 0x3a2f28, roughness: 0.9 }), mOculos = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.1, metalness: 0.6 });
+// ===================== INVASORES (máquinas alienígenas originais) =====================
+const mCasco = new THREE.MeshStandardMaterial({ color: 0x2b2f36, roughness: 0.32, metalness: 0.88 });
+const mCasco2 = new THREE.MeshStandardMaterial({ color: 0x4a4038, roughness: 0.5, metalness: 0.7 });
+const mJunta = new THREE.MeshStandardMaterial({ color: 0x111316, roughness: 0.6, metalness: 0.5 });
+const mBrilho = new THREE.MeshStandardMaterial({ color: 0x5ff3ff, emissive: 0x2ee6ff, emissiveIntensity: 2.2, roughness: 0.2 });
+const mNucleo = new THREE.MeshStandardMaterial({ color: 0xff5030, emissive: 0xff3010, emissiveIntensity: 2.6, roughness: 0.2 });
+const tBrilhoAz = tex(64, 64, g => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(230,255,255,1)'); gr.addColorStop(.35, 'rgba(60,220,255,.8)'); gr.addColorStop(1, 'rgba(0,120,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
+const tBrilhoVm = tex(64, 64, g => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,250,220,1)'); gr.addColorStop(.35, 'rgba(255,90,40,.85)'); gr.addColorStop(1, 'rgba(255,40,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
+const brilhoSpr = (t, s) => { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); sp.scale.setScalar(s); return sp; };
 const inimigos = [];
-function criarSoldado() {
-  const g = new THREE.Group(), m = (geo, mat, x, y, z, pai = g) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.castShadow = true; pai.add(o); return o; };
-  const quadril = new THREE.Group(); quadril.position.y = 0.95; g.add(quadril);
-  const pernas = [-1, 1].map(s => { const p = new THREE.Group(); p.position.set(s * 0.12, 0, 0); quadril.add(p); m(new THREE.BoxGeometry(0.16, 0.9, 0.18), mFarda, 0, -0.45, 0, p); m(new THREE.BoxGeometry(0.17, 0.12, 0.28), mColete, 0, -0.9, 0.04, p); return p; });
-  const tronco = new THREE.Group(); tronco.position.y = 0.95; g.add(tronco);
-  m(new THREE.BoxGeometry(0.42, 0.6, 0.24), mFarda, 0, 0.3, 0, tronco); m(new THREE.BoxGeometry(0.46, 0.42, 0.3), mColete, 0, 0.36, 0.01, tronco);
-  const cab = m(new THREE.SphereGeometry(0.13, 12, 10), mPele, 0, 0.76, 0, tronco); cab.userData.cabeca = true;
-  m(new THREE.SphereGeometry(0.155, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), mCapacete, 0, 0.79, 0, tronco);
-  m(new THREE.BoxGeometry(0.2, 0.05, 0.05), mOculos, 0, 0.78, 0.12, tronco);
-  const bracos = new THREE.Group(); bracos.position.set(0, 0.55, 0.05); tronco.add(bracos);
-  m(new THREE.BoxGeometry(0.1, 0.1, 0.4), mFarda, -0.2, 0, 0.18, bracos); m(new THREE.BoxGeometry(0.1, 0.1, 0.4), mFarda, 0.2, -0.04, 0.22, bracos);
-  m(new THREE.BoxGeometry(0.06, 0.09, 0.7), mPolimero, 0.08, 0.02, 0.35, bracos);
-  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.85, 0.5), new THREE.MeshBasicMaterial({ visible: false })); hit.position.y = 0.92; g.add(hit);
-  const hitC = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), new THREE.MeshBasicMaterial({ visible: false })); hitC.position.y = 1.72; hitC.userData.cabeca = true; g.add(hitC);
-  return { g, pernas, tronco, bracos, hit, hitC };
+const mk = (pai, geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.castShadow = true; pai.add(o); return o; };
+const hitbox = (pai, geo, x, y, z, e, fraco = false) => { const h = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ visible: false })); h.position.set(x, y, z); h.userData.ini = e; h.userData.cabeca = fraco; pai.add(h); e.alvos.push(h); return h; };
+// --- Sentinela: soldado-robô de 2,3 m, pernas para trás e canhão de plasma no braço
+function criarSentinela(e) {
+  const g = new THREE.Group();
+  const pernas = [-1, 1].map(s => {
+    const coxa = new THREE.Group(); coxa.position.set(s * 0.2, 1.15, 0); g.add(coxa);
+    mk(coxa, caixa(0.16, 0.6, 0.2), mCasco, 0, -0.28, 0.05, -0.35);
+    const canela = new THREE.Group(); canela.position.set(0, -0.55, 0.2); coxa.add(canela);
+    mk(canela, caixa(0.12, 0.55, 0.14), mCasco2, 0, -0.25, -0.1, 0.55); mk(canela, cil(0.07, 0.07, 0.16, 10), mJunta, 0, 0, 0, 0, 0, Math.PI / 2);
+    for (const dz of [-0.06, 0.1]) mk(canela, caixa(0.06, 0.05, 0.22), mJunta, 0, -0.55, dz + 0.02);
+    return { coxa, canela };
+  });
+  mk(g, caixa(0.48, 0.2, 0.3), mJunta, 0, 1.2, 0);
+  const tronco = new THREE.Group(); tronco.position.y = 1.3; g.add(tronco);
+  mk(tronco, new THREE.DodecahedronGeometry(0.38, 0), mCasco, 0, 0.42, 0.02).scale.set(1.1, 1.05, 0.75);
+  mk(tronco, caixa(0.5, 0.12, 0.34), mCasco2, 0, 0.12, 0); mk(tronco, caixa(0.18, 0.18, 0.04), mBrilho, 0, 0.45, 0.3);
+  for (const s of [-1, 1]) mk(tronco, new THREE.SphereGeometry(0.17, 12, 8), mCasco2, s * 0.42, 0.66, 0).scale.set(1.2, 0.8, 1);
+  const cab = new THREE.Group(); cab.position.set(0, 0.95, 0.08); tronco.add(cab);
+  mk(cab, new THREE.SphereGeometry(0.16, 16, 12), mCasco, 0, 0, 0).scale.set(0.9, 0.8, 1.35); mk(cab, caixa(0.22, 0.035, 0.05), mBrilho, 0, 0.01, 0.18);
+  for (const s of [-1, 1]) mk(cab, cil(0.012, 0.006, 0.3, 6), mJunta, s * 0.08, 0.12, -0.12, -0.8);
+  const bracoE = new THREE.Group(); bracoE.position.set(-0.45, 0.6, 0); tronco.add(bracoE);
+  mk(bracoE, caixa(0.12, 0.55, 0.13), mCasco2, 0, -0.27, 0); mk(bracoE, caixa(0.1, 0.45, 0.11), mCasco, 0, -0.7, 0.05, -0.2);
+  const bracoD = new THREE.Group(); bracoD.position.set(0.45, 0.6, 0); tronco.add(bracoD);
+  mk(bracoD, caixa(0.13, 0.4, 0.14), mCasco2, 0, -0.2, 0); const canhao = new THREE.Group(); canhao.position.set(0, -0.4, 0.05); bracoD.add(canhao);
+  mk(canhao, cil(0.08, 0.1, 0.62, 12), mCasco, 0, 0, 0.22, Math.PI / 2); mk(canhao, cil(0.05, 0.05, 0.04, 12), mBrilho, 0, 0, 0.54, Math.PI / 2);
+  const boca = new THREE.Object3D(); boca.position.set(0, 0, 0.6); canhao.add(boca);
+  hitbox(g, caixa(0.7, 2.1, 0.6), 0, 1.05, 0, e); hitbox(cab, new THREE.SphereGeometry(0.24, 8, 6), 0, 0, 0, e, true);
+  return { g, pernas, tronco, bracoD, canhao, boca };
 }
-function posSpawn() { for (let k = 0; k < 60; k++) { const x = rnd(-85, 85), z = rnd(-88, 92); if (Math.hypot(x - J.x, z - J.z) < 45 || colide(x, z, 0.5)) continue; return [x, z]; } return [rnd(-60, 60), -80]; }
-function novoInimigo() {
-  const s = criarSoldado(), [x, z] = posSpawn(); s.g.position.set(x, 0, z); cena.add(s.g);
-  const e = { s, x, z, hp: 100, estado: 'patrulha', alvo: [x + rnd(-15, 15), z + rnd(-15, 15)], cd: rnd(1, 2), rajada: 0, fase: rnd(0, 6), morto: 0, ang: 0 };
-  s.hit.userData.ini = e; s.hitC.userData.ini = e; inimigos.push(e);
+// --- Drone voador
+function criarDrone(e) {
+  const g = new THREE.Group();
+  mk(g, new THREE.SphereGeometry(0.45, 18, 12), mCasco, 0, 0, 0).scale.set(1, 0.7, 1);
+  mk(g, new THREE.TorusGeometry(0.75, 0.06, 8, 32), mCasco2, 0, 0, 0, Math.PI / 2);
+  for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2; mk(g, caixa(0.5, 0.04, 0.1), mJunta, Math.cos(a) * 0.55, 0, Math.sin(a) * 0.55, 0, -a, 0); mk(g, cil(0.2, 0.2, 0.02, 14), mJunta, Math.cos(a) * 0.8, 0.06, Math.sin(a) * 0.8); }
+  mk(g, new THREE.SphereGeometry(0.14, 12, 10), mNucleo, 0, -0.12, 0.38); const luz = brilhoSpr(tBrilhoVm, 0.7); luz.position.set(0, -0.12, 0.45); g.add(luz);
+  const boca = new THREE.Object3D(); boca.position.set(0, -0.15, 0.5); g.add(boca);
+  hitbox(g, new THREE.SphereGeometry(0.85, 8, 6), 0, 0, 0, e); hitbox(g, new THREE.SphereGeometry(0.22, 8, 6), 0, -0.12, 0.38, e, true);
+  return { g, boca };
 }
-
+// --- Colosso: máquina gigante de quatro pernas (uns 18 m de altura) com núcleo vermelho embaixo
+function criarColosso(e) {
+  const g = new THREE.Group(), corpo = new THREE.Group(); corpo.position.y = 15; g.add(corpo);
+  mk(corpo, new THREE.SphereGeometry(4.2, 28, 16), mCasco, 0, 0, 0).scale.set(1.35, 0.5, 1);
+  mk(corpo, new THREE.CylinderGeometry(4.6, 5.6, 0.8, 28), mCasco2, 0, -0.6, 0); mk(corpo, new THREE.TorusGeometry(5.0, 0.25, 8, 40), mJunta, 0, -0.2, 0, Math.PI / 2);
+  for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; mk(corpo, caixa(0.6, 0.25, 1.6), mJunta, Math.cos(a) * 4.4, 0.9, Math.sin(a) * 3.2, 0, -a, 0); mk(corpo, new THREE.SphereGeometry(0.18, 8, 6), mBrilho, Math.cos(a) * 5.3, -0.5, Math.sin(a) * 4.0); }
+  const nucleo = mk(corpo, new THREE.SphereGeometry(1.1, 20, 14), mNucleo, 0, -1.8, 0); const halo = brilhoSpr(tBrilhoVm, 6); halo.position.copy(nucleo.position); corpo.add(halo);
+  const canhao = new THREE.Group(); canhao.position.set(0, -0.4, 4.6); corpo.add(canhao);
+  mk(canhao, cil(0.7, 0.9, 3.2, 16), mCasco, 0, 0, 1.2, Math.PI / 2); mk(canhao, cil(0.45, 0.45, 0.2, 16), mNucleo, 0, 0, 2.8, Math.PI / 2);
+  const boca = new THREE.Object3D(); boca.position.set(0, 0, 3.0); canhao.add(boca);
+  const pernas = [];
+  for (let k = 0; k < 4; k++) {
+    const a = Math.PI / 4 + k * Math.PI / 2, quadril = new THREE.Group(); quadril.position.set(Math.cos(a) * 4.2, 0, Math.sin(a) * 3.2); quadril.rotation.y = -a + Math.PI / 2; corpo.add(quadril);
+    const coxa = new THREE.Group(); quadril.add(coxa); mk(coxa, cil(1.0, 0.75, 7, 12), mCasco2, 0, 2.2, 3.0, 1.15); mk(coxa, caixa(1.6, 0.4, 5.5), mCasco, 0, 2.9, 2.8, 1.15 - Math.PI / 2 + 0.05); mk(coxa, new THREE.SphereGeometry(0.8, 12, 10), mJunta, 0, 0, 0);
+    const joelho = new THREE.Group(); joelho.position.set(0, 3.9, 6.1); coxa.add(joelho); mk(joelho, new THREE.SphereGeometry(0.75, 12, 10), mJunta, 0, 0, 0);
+    mk(joelho, cil(0.85, 0.55, 19, 12), mCasco, 0, -9.4, 0.6, 0.06); for (let q = 0; q < 4; q++) mk(joelho, caixa(1.9 - q * 0.2, 2.4, 0.35), mCasco2, 0, -3 - q * 4, 1.3 + q * 0.03, 0.06); mk(joelho, new THREE.CylinderGeometry(1.0, 1.6, 1.2, 10), mJunta, 0, -18.6, 1.2); mk(joelho, new THREE.SphereGeometry(1.1, 12, 10), mJunta, 0, 0, 0);
+    pernas.push({ coxa, joelho, fase: k % 2 ? Math.PI : 0, a });
+  }
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  hitbox(corpo, new THREE.SphereGeometry(5.6, 10, 8), 0, 0, 0, e); hitbox(corpo, new THREE.SphereGeometry(1.6, 10, 8), 0, -1.8, 0, e, true);
+  return { g, corpo, pernas, canhao, boca, nucleo };
+}
+const TIPOS = {
+  sentinela: { hp: 140, criar: criarSentinela, pontos: 120, vel: 2.6, cad: [1.3, 2.4], rajada: [2, 4], dano: [9, 15], proj: 48, explode: 0 },
+  drone: { hp: 70, criar: criarDrone, pontos: 150, vel: 6, cad: [1.6, 2.8], rajada: [1, 3], dano: [6, 10], proj: 55, explode: 0 },
+  colosso: { hp: 2600, criar: criarColosso, pontos: 3000, vel: 1.6, cad: [2.6, 3.6], rajada: [1, 1], dano: [30, 45], proj: 34, explode: 6 }
+};
+function posSpawn(min = 45) { for (let k = 0; k < 60; k++) { const x = rnd(-85, 85), z = rnd(-88, 92); if (Math.hypot(x - J.x, z - J.z) < min || colide(x, z, 0.6)) continue; return [x, z]; } return [rnd(-60, 60), -80]; }
+function novoInimigo(tipo, pos) {
+  const T = TIPOS[tipo], e = { tipo, T, hp: T.hp, alvos: [], estado: 'patrulha', cd: rnd(1, 2.5), rajada: 0, fase: rnd(0, 6), morto: 0, ang: 0, y: 0 };
+  const [x, z] = pos || posSpawn(tipo === 'colosso' ? 70 : 45); e.x = x; e.z = z; e.alvo = [x + rnd(-15, 15), z + rnd(-15, 15)];
+  if (tipo === 'drone') e.y = rnd(5, 9);
+  e.s = T.criar(e); e.s.g.position.set(x, e.y, z); cena.add(e.s.g); inimigos.push(e); return e;
+}
+// --- tiros de plasma (dá para ver e desviar)
+const projeteis = [];
+function dispararPlasma(e, de, alvo) {
+  const T = e.T, cor = e.tipo === 'sentinela' ? tBrilhoAz : tBrilhoVm, s = brilhoSpr(cor, e.tipo === 'colosso' ? 3 : 0.9);
+  const d = alvo.clone().sub(de).normalize(); s.position.copy(de); cena.add(s);
+  const luz = e.tipo === 'colosso' ? new THREE.PointLight(0xff5020, 3, 25) : null; if (luz) s.add(luz);
+  projeteis.push({ s, v: d.multiplyScalar(T.proj), dano: rnd(T.dano[0], T.dano[1]), explode: T.explode, vida: 4, luz });
+  somPlasma(e.tipo, Math.hypot(e.x - J.x, e.z - J.z));
+}
+function explosao(p, raio, dano) {
+  for (let i = 0; i < 18; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: i < 6 ? tClarao : tFumaca, transparent: true, depthWrite: false, blending: i < 6 ? THREE.AdditiveBlending : THREE.NormalBlending })); sp.position.copy(p); sp.scale.setScalar(raio * 0.3); cena.add(sp); efeitos.push({ s: sp, v: new THREE.Vector3(rnd(-4, 4), rnd(2, 7), rnd(-4, 4)), t: 0, vida: rnd(0.6, 1.4), cresce: raio * 0.9 }); }
+  const L = new THREE.PointLight(0xff8a30, 6, raio * 6); L.position.copy(p); cena.add(L); setTimeout(() => cena.remove(L), 140);
+  const d = Math.hypot(p.x - J.x, p.y - (J.y + 1), p.z - J.z);
+  tremor = Math.max(tremor, Math.max(0, 1.4 - d / (raio * 4)));
+  if (dano && d < raio) machucar(dano * (1 - d / raio * 0.6));
+  somExplosao(d);
+}
+function atualizarProjeteis(dt) {
+  for (let i = projeteis.length - 1; i >= 0; i--) {
+    const p = projeteis[i], antes = p.s.position.clone(); p.s.position.addScaledVector(p.v, dt); p.vida -= dt;
+    const pos = p.s.position, corpo = new THREE.Vector3(J.x, J.y + (J.agachado ? 0.8 : 1.2), J.z);
+    // passou perto do corpo do jogador?
+    const seg = pos.clone().sub(antes), t = Math.max(0, Math.min(1, corpo.clone().sub(antes).dot(seg) / Math.max(1e-6, seg.lengthSq()))), mais = antes.clone().addScaledVector(seg, t);
+    let bateu = false;
+    if (mais.distanceTo(corpo) < (p.explode ? 1.2 : 0.55)) { if (!p.explode) machucar(p.dano); bateu = true; }
+    if (pos.y <= 0.05) bateu = true;
+    for (const [x0, x1, z0, z1, h] of caixas) if (pos.x > x0 && pos.x < x1 && pos.z > z0 && pos.z < z1 && pos.y < h) { bateu = true; break; }
+    if (bateu || p.vida <= 0) {
+      if (p.explode) explosao(pos.clone(), p.explode, p.dano); else if (bateu) poeira(pos.clone(), 4, 0x6fe8ff);
+      cena.remove(p.s); p.s.material.dispose(); projeteis.splice(i, 1);
+    }
+  }
+}
 // ===================== JOGADOR =====================
 const J = { x: 0, z: 78, y: 0, vy: 0, yaw: 0, pitch: 0, vida: 100, pente: 30, reserva: 120, rec: 0, cd: 0, mira: 0, agachado: false, semDano: 0, pontos: 0, onda: 0, abates: 0 };
 const ALT = 1.65;
@@ -1166,6 +1286,14 @@ function estampido(vol = 1, freq = 1400, dist = 0) {
 }
 function clique(f = 2200, v = 0.15, at = 0) { if (!AC) return; const t = AC.currentTime + at, o = AC.createOscillator(), g = AC.createGain(); o.type = 'square'; o.frequency.value = f; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.04); o.connect(g); g.connect(mestre); o.start(t); o.stop(t + 0.05); }
 
+function somPlasma(tipo, dist) {
+  if (!AC) return; const t = AC.currentTime, o = AC.createOscillator(), g = AC.createGain(), f0 = tipo === 'colosso' ? 300 : tipo === 'drone' ? 1400 : 900, v = Math.max(0.03, 0.4 / (1 + dist / 20));
+  o.type = 'sawtooth'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * 0.25, t + 0.25); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3); o.connect(g); g.connect(mestre); g.connect(eco); o.start(t); o.stop(t + 0.32);
+}
+function somExplosao(dist) { if (!AC) return; const t = AC.currentTime, v = Math.max(0.1, 1.6 / (1 + dist / 25)), s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain(); s.buffer = ruidoB; f.type = 'lowpass'; f.frequency.value = 600; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 1.4); s.connect(f); f.connect(g); g.connect(mestre); g.connect(eco); s.start(t, 0, 1.5); const o = AC.createOscillator(), og = AC.createGain(); o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(25, t + 0.8); og.gain.setValueAtTime(v * 0.8, t); og.gain.exponentialRampToValueAtTime(0.001, t + 0.9); o.connect(og); og.connect(mestre); o.start(t); o.stop(t + 1); }
+function somPasso(dist) { if (!AC) return; const t = AC.currentTime, v = Math.max(0.05, 1.2 / (1 + dist / 30)), o = AC.createOscillator(), g = AC.createGain(); o.frequency.setValueAtTime(48, t); o.frequency.exponentialRampToValueAtTime(22, t + 0.5); g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.6); o.connect(g); g.connect(mestre); o.start(t); o.stop(t + 0.65); }
+function somAlarme() { if (!AC) return; const t = AC.currentTime; for (let k = 0; k < 3; k++) { const o = AC.createOscillator(), g = AC.createGain(); o.type = 'square'; o.frequency.setValueAtTime(1300, t + k * 0.22); o.frequency.exponentialRampToValueAtTime(500, t + k * 0.22 + 0.18); g.gain.setValueAtTime(0.12, t + k * 0.22); g.gain.exponentialRampToValueAtTime(0.001, t + k * 0.22 + 0.2); o.connect(g); g.connect(mestre); o.start(t + k * 0.22); o.stop(t + k * 0.22 + 0.22); } }
+
 // ===================== EFEITOS =====================
 const efeitos = [];
 function poeira(p, n = 6, cor = 0xd2be96) { for (let i = 0; i < n; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tPoeira, color: cor, transparent: true, depthWrite: false })); s.position.copy(p); s.scale.setScalar(0.15); cena.add(s); efeitos.push({ s, v: new THREE.Vector3(rnd(-1, 1), rnd(0.5, 2), rnd(-1, 1)), t: 0, vida: rnd(0.4, 0.8) }); } }
@@ -1181,15 +1309,15 @@ function atirar() {
   J.pente--; J.cd = 0.1; estampido(1); clarao.visible = true; clarao.material.rotation = rnd(0, 6); luzTiro.intensity = 2.5; setTimeout(() => { clarao.visible = false; luzTiro.intensity = 0; }, 45);
   const esp = J.mira > 0.8 ? 0.002 : (0.025 + (moveu ? 0.03 : 0)) * (J.agachado ? 0.6 : 1);
   centro.set(rnd(-esp, esp), rnd(-esp, esp)); ray.setFromCamera(centro, camera); ray.far = 400;
-  const alvos = [...solidos, chao]; for (const e of inimigos) if (!e.morto) alvos.push(e.s.hit, e.s.hitC);
+  const alvos = [...solidos, chao]; for (const e of inimigos) if (!e.morto) alvos.push(...e.alvos);
   const hits = ray.intersectObjects(alvos, false);
   let hit = hits[0];
   if (hit && hit.object.userData.ini) { // preferir a cabeça quando as duas caixas foram atingidas
     const cab = hits.find(h => h.object.userData.cabeca && h.object.userData.ini === hit.object.userData.ini && h.distance - hit.distance < 0.6); if (cab) hit = cab;
     const e = hit.object.userData.ini, cabeca = !!hit.object.userData.cabeca;
-    e.hp -= cabeca ? 100 : rnd(34, 40); e.estado = 'combate'; acertoT = 0.15; $('acerto').classList.toggle('cabeca', cabeca); clique(cabeca ? 3000 : 2200, 0.12);
+    e.hp -= rnd(30, 36) * (cabeca ? (e.tipo === 'colosso' ? 4 : 2.6) : 1); e.estado = 'combate'; acertoT = 0.15; $('acerto').classList.toggle('cabeca', cabeca); clique(cabeca ? 3000 : 2200, 0.12);
     poeira(hit.point, 4, 0x9a8a70);
-    if (e.hp <= 0) { e.morto = 0.001; J.abates++; J.pontos += cabeca ? 150 : 100; atualizarPlacar(); if (cabeca) aviso('NA CABEÇA', '+150', 1); }
+    if (e.hp <= 0) { e.morto = 0.001; J.abates++; const pts = e.T.pontos + (cabeca ? 50 : 0); J.pontos += pts; atualizarPlacar(); if (e.tipo === 'colosso') { aviso('COLOSSO DERRUBADO!', '+' + pts, 3); explosao(new THREE.Vector3(e.x, 12, e.z), 10, 0); } else if (cabeca) aviso('PONTO FRACO!', '+' + pts, 1); else if (e.tipo === 'drone') explosao(hit.point.clone(), 2.5, 0); }
   } else if (hit) { poeira(hit.point, 6); }
   // coice
   J.pitch += J.mira > 0.8 ? 0.004 : 0.012; J.yaw += rnd(-0.004, 0.004); recuo = 1;
@@ -1197,46 +1325,77 @@ function atirar() {
 let recuo = 0, moveu = false;
 function recarregar() { if (J.rec > 0 || J.pente === 30 || J.reserva <= 0) return; J.rec = 2.1; clique(700, 0.15); clique(500, 0.15, 0.9); clique(1300, 0.15, 1.8); }
 
-// ===================== IA =====================
+// ===================== IA DOS INVASORES =====================
 const rayIA = new THREE.Raycaster();
-function veJogador(e) { const de = new THREE.Vector3(e.x, 1.6, e.z), para = new THREE.Vector3(J.x, J.y + (J.agachado ? 1.0 : ALT), J.z), d = para.clone().sub(de), dist = d.length(); rayIA.set(de, d.normalize()); rayIA.far = dist; return rayIA.intersectObjects(solidos, false).length === 0; }
+function veJogador(de) { const para = new THREE.Vector3(J.x, J.y + (J.agachado ? 1.0 : ALT), J.z), d = para.clone().sub(de), dist = d.length(); rayIA.set(de, d.normalize()); rayIA.far = dist; return rayIA.intersectObjects(solidos, false).length === 0; }
+let tremor = 0, emboscadaT = rnd(25, 40), trocandoOnda = false;
 function atualizarInimigos(dt) {
   for (const e of inimigos) {
-    if (e.morto) { if (e.morto < 1) { e.morto = Math.min(1, e.morto + dt * 2.5); e.s.g.rotation.x = -e.morto * Math.PI / 2 * 0.98; e.s.g.position.y = e.morto * 0.15; } continue; }
-    const dx = J.x - e.x, dz = J.z - e.z, d = Math.hypot(dx, dz);
-    e.vtT = (e.vtT || 0) - dt; if (e.vtT <= 0) { e.vtT = 0.25; e.vendo = d < 90 && veJogador(e); }
+    if (e.morto) { morrendo(e, dt); continue; }
+    const dx = J.x - e.x, dz = J.z - e.z, d = Math.hypot(dx, dz) || 0.01;
+    const olho = new THREE.Vector3(e.x, e.tipo === 'colosso' ? 14 : e.tipo === 'drone' ? e.y : 2.1, e.z);
+    e.vtT = (e.vtT || 0) - dt; if (e.vtT <= 0) { e.vtT = 0.25; e.vendo = d < (e.tipo === 'colosso' ? 140 : 95) && (e.tipo === 'colosso' || veJogador(olho)); }
     if (e.vendo) e.estado = 'combate';
     let ax = 0, az = 0, vel = 0;
-    if (e.estado === 'patrulha') { const tx = e.alvo[0] - e.x, tz = e.alvo[1] - e.z, td = Math.hypot(tx, tz); if (td < 1) e.alvo = [e.x + rnd(-18, 18), e.z + rnd(-18, 18)]; else { ax = tx / td; az = tz / td; vel = 1.4; } }
-    else {
-      if (!e.vendo || d > 35) { ax = dx / d; az = dz / d; vel = 3; }       // avança até ver e chegar perto
-      else if (d < 12) { ax = -dx / d; az = -dz / d; vel = 1.5; }          // recua um pouco
-      if (e.vendo) {
-        e.cd -= dt;
-        if (e.cd <= 0) { e.rajada = Math.floor(rnd(2, 5)); e.cd = rnd(1.4, 2.6); }
-        if (e.rajada > 0) { e.rtT = (e.rtT || 0) - dt; if (e.rtT <= 0) { e.rtT = 0.14; e.rajada--; tiroInimigo(e, d); } }
-      }
+    if (e.tipo === 'colosso') { // anda sempre em direção ao jogador, devagar, e para a uns 35 m
+      if (d > 35) { ax = dx / d; az = dz / d; vel = e.T.vel; }
+    } else if (e.estado === 'patrulha') { const tx = e.alvo[0] - e.x, tz = e.alvo[1] - e.z, td = Math.hypot(tx, tz); if (td < 1) e.alvo = [e.x + rnd(-18, 18), e.z + rnd(-18, 18)]; else { ax = tx / td; az = tz / td; vel = e.T.vel * 0.5; } }
+    else if (e.tipo === 'drone') { const lado = Math.sin(J.t * 0.7 + e.fase); ax = dx / d * (d > 18 ? 1 : -0.3) + (-dz / d) * lado; az = dz / d * (d > 18 ? 1 : -0.3) + (dx / d) * lado; vel = e.T.vel; }
+    else { if (!e.vendo || d > 30) { ax = dx / d; az = dz / d; vel = e.T.vel; } else if (d < 10) { ax = -dx / d; az = -dz / d; vel = 1.6; } else { ax = -dz / d * Math.sin(J.t + e.fase); az = dx / d * Math.sin(J.t + e.fase); vel = 1.2; } }
+    if (vel) {
+      const nx = e.x + ax * vel * dt, nz = e.z + az * vel * dt;
+      if (e.tipo !== 'sentinela') { e.x = nx; e.z = nz; }
+      else { if (!colide(nx, e.z, 0.4)) e.x = nx; else e.alvo = [e.x + rnd(-15, 15), e.z + rnd(-15, 15)]; if (!colide(e.x, nz, 0.4)) e.z = nz; }
+      e.x = Math.max(-92, Math.min(92, e.x)); e.z = Math.max(-92, Math.min(97, e.z));
     }
-    if (vel) { const nx = e.x + ax * vel * dt, nz = e.z + az * vel * dt; if (!colide(nx, e.z, 0.35)) e.x = nx; else e.alvo = [e.x + rnd(-15, 15), e.z + rnd(-15, 15)]; if (!colide(e.x, nz, 0.35)) e.z = nz; }
-    const olhaX = e.estado === 'combate' ? dx : ax, olhaZ = e.estado === 'combate' ? dz : az; if (olhaX || olhaZ) e.ang = Math.atan2(olhaX, olhaZ);
-    e.s.g.position.set(e.x, 0, e.z); e.s.g.rotation.y = e.ang;
-    e.fase += dt * vel * 3.2; const a = vel ? Math.sin(e.fase) * 0.6 : 0; e.s.pernas[0].rotation.x = a; e.s.pernas[1].rotation.x = -a;
-    e.s.bracos.rotation.x = e.vendo ? -0.05 : 0.5;
+    // atirar
+    if (e.vendo && e.estado === 'combate') {
+      e.cd -= dt;
+      if (e.cd <= 0) { e.rajada = Math.floor(rnd(e.T.rajada[0], e.T.rajada[1] + 1)); e.cd = rnd(e.T.cad[0], e.T.cad[1]); }
+      if (e.rajada > 0) { e.rtT = (e.rtT || 0) - dt; if (e.rtT <= 0) { e.rtT = e.tipo === 'colosso' ? 0.6 : 0.22; e.rajada--; const de = new THREE.Vector3(); e.s.boca.getWorldPosition(de); const erro = d * (moveu ? 0.06 : 0.035) * (J.agachado ? 1.3 : 1); dispararPlasma(e, de, new THREE.Vector3(J.x + rnd(-erro, erro), J.y + 1.1 + rnd(-erro, erro) * 0.5, J.z + rnd(-erro, erro))); } }
+    }
+    // visual
+    const olhaX = e.estado === 'combate' ? dx : ax, olhaZ = e.estado === 'combate' ? dz : az; if (olhaX || olhaZ) { const alvoA = Math.atan2(olhaX, olhaZ); let da = alvoA - e.ang; da = Math.atan2(Math.sin(da), Math.cos(da)); e.ang += da * Math.min(1, dt * (e.tipo === 'colosso' ? 0.8 : 6)); }
+    e.fase += dt * (vel ? vel * (e.tipo === 'colosso' ? 0.55 : 2.6) : 0.5);
+    if (e.tipo === 'sentinela') {
+      e.s.g.position.set(e.x, Math.abs(Math.sin(e.fase)) * 0.05, e.z); e.s.g.rotation.y = e.ang;
+      const a = vel ? Math.sin(e.fase) * 0.5 : 0; e.s.pernas[0].coxa.rotation.x = a; e.s.pernas[1].coxa.rotation.x = -a; e.s.pernas[0].canela.rotation.x = Math.max(0, -a) * 0.8; e.s.pernas[1].canela.rotation.x = Math.max(0, a) * 0.8;
+      e.s.bracoD.rotation.x = e.vendo ? -1.45 : -0.2; const alt = new THREE.Vector3(J.x, J.y + 1.2, J.z); if (e.vendo) e.s.tronco.rotation.x = -Math.atan2(alt.y - 2.2, d) * 0.5;
+    } else if (e.tipo === 'drone') { e.y += (rnd(6, 8) - e.y) * dt * 0.3; e.s.g.position.set(e.x, e.y + Math.sin(J.t * 2 + e.fase) * 0.3, e.z); e.s.g.rotation.set(0.2, e.ang, Math.sin(J.t + e.fase) * 0.15); }
+    else { // colosso: pernas andando e passos que tremem o chão
+      e.s.g.position.set(e.x, 0, e.z); e.s.g.rotation.y = e.ang; e.s.corpo.position.y = 15 + Math.sin(e.fase * 2) * 0.35; e.s.corpo.rotation.z = Math.sin(e.fase) * 0.03;
+      for (const p of e.s.pernas) { const s = Math.sin(e.fase + p.fase); p.coxa.rotation.x = vel ? -0.12 + s * 0.16 : -0.12; p.joelho.rotation.x = vel ? Math.max(0, -s) * 0.2 : 0; }
+      const passo = Math.floor((e.fase + Math.PI / 2) / Math.PI); if (vel && passo !== e.passo) { e.passo = passo; const dd = d; tremor = Math.max(tremor, Math.max(0, 0.8 - dd / 120)); somPasso(dd); }
+      e.s.nucleo.material.emissiveIntensity = 2.2 + Math.sin(J.t * 4) * 0.6;
+    }
   }
+  // emboscada: um grupo aparece atrás de você, perto, a qualquer momento
+  if (estado === 'jogando' && !trocandoOnda) { emboscadaT -= dt; if (emboscadaT <= 0) { emboscadaT = rnd(28, 55); emboscada(); } }
   const vivos = inimigos.filter(e => !e.morto).length; $('p-rest').textContent = vivos;
-  if (vivos === 0 && estado === 'jogando' && !trocandoOnda) { trocandoOnda = true; aviso('ONDA ' + J.onda + ' VENCIDA', 'Recarregando munição...', 3); J.reserva = Math.min(240, J.reserva + 90); J.vida = 100; setTimeout(proximaOnda, 3500); }
+  if (vivos === 0 && estado === 'jogando' && !trocandoOnda) { trocandoOnda = true; aviso('ONDA ' + J.onda + ' VENCIDA', 'Munição e vida repostas', 3); J.reserva = Math.min(300, J.reserva + 120); J.vida = 100; setTimeout(proximaOnda, 4000); }
 }
-let trocandoOnda = false;
-function tiroInimigo(e, d) {
-  estampido(0.35, 1100, d);
-  const de = new THREE.Vector3(e.x, 1.55, e.z), para = new THREE.Vector3(J.x + rnd(-1, 1), J.y + 1.2 + rnd(-0.5, 0.5), J.z + rnd(-1, 1)); rastro(de, para);
-  const chance = Math.max(0.06, 0.55 - d * 0.012 - (moveu ? 0.12 : 0) - (J.agachado ? 0.1 : 0));
-  if (Math.random() < chance) { J.vida -= rnd(8, 15); J.semDano = 0; danoT = 0.6; if (J.vida <= 0) morrer(); }
+function emboscada() {
+  const n = Math.min(5, 2 + Math.floor(J.onda / 2)), atras = J.yaw + Math.PI; let feitos = 0;
+  for (let k = 0; k < 40 && feitos < n; k++) {
+    const a = atras + rnd(-1.1, 1.1), r = rnd(13, 22), x = J.x - Math.sin(a) * r, z = J.z - Math.cos(a) * r;
+    if (colide(x, z, 0.6) || Math.abs(x) > 90 || z < -90 || z > 96) continue;
+    const e = novoInimigo('sentinela', [x, z]); e.estado = 'combate'; e.cd = rnd(1.2, 2.2); feitos++;
+  }
+  if (feitos) { aviso('EMBOSCADA!', 'Eles apareceram atrás de você', 2.5); somAlarme(); }
 }
+function morrendo(e, dt) {
+  if (e.morto >= 1) return;
+  if (e.tipo === 'sentinela') { e.morto = Math.min(1, e.morto + dt * 2); e.s.g.rotation.x = -e.morto * Math.PI / 2 * 0.95; e.s.g.position.y = e.morto * 0.2; }
+  else if (e.tipo === 'drone') { e.y -= dt * 9; e.s.g.position.y = e.y; e.s.g.rotation.x += dt * 6; if (e.y <= 0.3) { e.morto = 1; explosao(new THREE.Vector3(e.x, 0.5, e.z), 3, 0); cena.remove(e.s.g); } }
+  else { e.morto = Math.min(1, e.morto + dt * 0.25); e.s.corpo.position.y = 15 - e.morto * 13; e.s.corpo.rotation.z = e.morto * 0.5; if (Math.random() < dt * 8) explosao(new THREE.Vector3(e.x + rnd(-5, 5), e.s.corpo.position.y + rnd(-1, 2), e.z + rnd(-5, 5)), 4, 0); }
+}
+function machucar(d) { if (estado !== 'jogando') return; J.vida -= d; J.semDano = 0; danoT = 0.6; tremor = Math.max(tremor, 0.25); if (J.vida <= 0) morrer(); }
 function proximaOnda() {
   trocandoOnda = false; J.onda++; for (const e of inimigos) cena.remove(e.s.g); inimigos.length = 0;
-  const n = 3 + J.onda * 2; for (let i = 0; i < n; i++) novoInimigo();
-  aviso('ONDA ' + J.onda, `${n} inimigos no setor`, 3); atualizarPlacar();
+  for (const p of projeteis) cena.remove(p.s); projeteis.length = 0;
+  const ns = 2 + J.onda, nd = J.onda >= 2 ? Math.floor(J.onda / 2) + 1 : 0, colosso = J.onda % 3 === 0;
+  for (let i = 0; i < ns; i++) novoInimigo('sentinela'); for (let i = 0; i < nd; i++) novoInimigo('drone'); if (colosso) novoInimigo('colosso');
+  aviso('ONDA ' + J.onda, colosso ? 'UM COLOSSO ESTÁ VINDO. Mire no núcleo vermelho embaixo dele!' : `${ns} sentinelas${nd ? ' e ' + nd + ' drones' : ''} no setor`, 4); atualizarPlacar(); emboscadaT = rnd(20, 40);
 }
 function morrer() { estado = 'morto'; liberar(); aviso('VOCÊ CAIU', `Onda ${J.onda} · ${J.pontos} pontos`, 99); setTimeout(() => { $('menu').hidden = false; document.querySelector('#menu .tag').textContent = `FIM DA MISSÃO · ONDA ${J.onda} · ${J.pontos} PONTOS`; $('b-jogar').textContent = 'Tentar de novo'; document.body.classList.remove('jogando'); }, 2200); }
 function atualizarPlacar() { $('p-onda').textContent = J.onda; $('p-pts').textContent = J.pontos; }
@@ -1295,13 +1454,14 @@ function quadro(agora) {
     if (J.rec > 0) { J.rec -= dt; if (J.rec <= 0) { const t = Math.min(30 - J.pente, J.reserva); J.pente += t; J.reserva -= t; } }
     J.mira += ((mirando && J.rec <= 0 && !correr ? 1 : 0) - J.mira) * Math.min(1, dt * 10);
     J.semDano += dt; if (J.semDano > 5 && J.vida < 100) J.vida = Math.min(100, J.vida + dt * 12);
-    atualizarInimigos(dt);
+    J.t = (J.t || 0) + dt; atualizarInimigos(dt); atualizarProjeteis(dt);
     if (J.pente === 0 && J.reserva > 0 && J.rec <= 0 && !gatilho) recarregar();
   }
   // câmera e arma
   const alturaOlho = (J.agachado ? 1.05 : ALT) + J.y;
   camera.position.set(J.x, alturaOlho + Math.sin(bob * 2) * 0.03 * (1 - J.mira), J.z);
-  camera.rotation.set(J.pitch, J.yaw, Math.sin(bob) * 0.006);
+  tremor = Math.max(0, tremor - dt * 1.5);
+  camera.rotation.set(J.pitch + rnd(-1, 1) * tremor * 0.02, J.yaw + rnd(-1, 1) * tremor * 0.02, Math.sin(bob) * 0.006);
   camera.fov = 70 - J.mira * 50; camera.updateProjectionMatrix();
   recuo = Math.max(0, recuo - dt * 12);
   const pos = POS_QUADRIL.clone().lerp(POS_MIRA, J.mira); pos.x += Math.sin(bob) * 0.012 * (1 - J.mira); pos.y += Math.abs(Math.cos(bob)) * 0.01 * (1 - J.mira) - (J.rec > 0 ? Math.sin(Math.min(1, (2.1 - J.rec) / 2.1) * Math.PI) * 0.25 : 0); pos.z += recuo * 0.05;
@@ -1312,7 +1472,7 @@ function quadro(agora) {
   sol.position.set(J.x - 60, 90, J.z - 40); sol.target.position.set(J.x, 0, J.z);
   // fumaça e efeitos
   for (const s of fumacas) { const u = s.userData; u.t = (u.t + dt * 0.04) % 1; s.position.set(u.x + Math.sin(u.t * 6) * 2 + u.t * 10, 2 + u.t * 40, u.z + u.t * 4); s.scale.setScalar(3 + u.t * 16); s.material.opacity = 0.65 * (1 - u.t); }
-  for (let i = efeitos.length - 1; i >= 0; i--) { const e = efeitos[i]; e.t += dt; if (e.s) { e.s.position.addScaledVector(e.v, dt); e.s.scale.setScalar(0.15 + e.t * 1.2); e.s.material.opacity = 1 - e.t / e.vida; } if (e.t >= e.vida) { if (e.s) { cena.remove(e.s); e.s.material.dispose(); } if (e.l) { cena.remove(e.l); e.l.geometry.dispose(); } efeitos.splice(i, 1); } }
+  for (let i = efeitos.length - 1; i >= 0; i--) { const e = efeitos[i]; e.t += dt; if (e.s) { e.s.position.addScaledVector(e.v, dt); e.s.scale.setScalar(e.cresce ? e.cresce * (0.3 + e.t * 1.6) : 0.15 + e.t * 1.2); e.s.material.opacity = 1 - e.t / e.vida; } if (e.t >= e.vida) { if (e.s) { cena.remove(e.s); e.s.material.dispose(); } if (e.l) { cena.remove(e.l); e.l.geometry.dispose(); } efeitos.splice(i, 1); } }
   // HUD
   $('vida').firstChild.style.width = Math.max(0, J.vida) + '%'; $('vida').firstChild.style.background = J.vida < 35 ? 'var(--alerta)' : 'var(--texto)';
   $('m-pente').textContent = J.rec > 0 ? '...' : J.pente; $('m-reserva').textContent = J.reserva;
@@ -1323,6 +1483,6 @@ function quadro(agora) {
   R.render(cena, camera);
 }
 requestAnimationFrame(quadro);
-window.__areia = { J, inimigos, camera, atirar, proximaOnda };
+window.__areia = { J, inimigos, camera, atirar, proximaOnda, novoInimigo, emboscada };
 })();
 </script>
