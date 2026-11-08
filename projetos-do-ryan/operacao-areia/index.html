@@ -81,7 +81,7 @@
   <div class="bloco">
     <div class="tag">OPERAÇÃO · SETOR 7</div>
     <h1>Operação Areia</h1>
-    <p>Máquinas alienígenas invadiram a Terra. Numa cidade antiga do deserto, enfrente as Sentinelas, os drones e o gigantesco Colosso. Cuidado: eles armam emboscadas e aparecem atrás de você a qualquer momento. Desvie dos tiros de plasma e mire nos pontos que brilham. Sua vida volta sozinha se você ficar alguns segundos sem levar tiro.</p>
+    <p>Uma cidade antiga no deserto, tomada por soldados inimigos e por um robô gigante de guerra, o Titã. Cuidado: os soldados armam emboscadas e aparecem atrás de você a qualquer momento. Use os muros como proteção, mire na cabeça e, quando o Titã chegar, acerte o reator vermelho no peito dele. Sua vida volta sozinha se você ficar alguns segundos sem levar tiro.</p>
     <div class="teclas" id="teclas">
       <kbd>W A S D</kbd><span>andar</span>
       <kbd>MOUSE</kbd><span>olhar (clique na tela para prender)</span>
@@ -247,7 +247,7 @@ const fumacas = [];
 for (const [x, z] of [[-30, -60], [40, -30], [-55, 30]]) for (let i = 0; i < 14; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tFumaca, transparent: true, depthWrite: false, opacity: 0.6 })); s.userData = { x, z, t: i / 14 }; cena.add(s); fumacas.push(s); }
 
 // nave-mãe alienígena parada no céu
-const nave = new THREE.Group(); nave.position.set(-80, 210, -420); nave.scale.setScalar(0.75); cena.add(nave);
+const nave = new THREE.Group(); nave.visible = false; // sem alienígenas: a nave fica escondida
 { const mN = new THREE.MeshStandardMaterial({ color: 0x6d7078, roughness: 0.7, metalness: 0.5, fog: false, transparent: true, opacity: 0.85 });
   const d = new THREE.Mesh(new THREE.CylinderGeometry(140, 90, 18, 48), mN); nave.add(d); const t = new THREE.Mesh(new THREE.SphereGeometry(60, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), mN); t.position.y = 8; nave.add(t);
   for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2, s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tClarao, color: 0x66e8ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); s.position.set(Math.cos(a) * 118, -8, Math.sin(a) * 118); s.scale.setScalar(14); nave.add(s); }
@@ -311,83 +311,94 @@ const brilhoSpr = (t, s) => { const sp = new THREE.Sprite(new THREE.SpriteMateri
 const inimigos = [];
 const mk = (pai, geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => { const o = new THREE.Mesh(geo, mat); o.position.set(x, y, z); o.rotation.set(rx, ry, rz); o.castShadow = true; pai.add(o); return o; };
 const hitbox = (pai, geo, x, y, z, e, fraco = false) => { const h = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ visible: false })); h.position.set(x, y, z); h.userData.ini = e; h.userData.cabeca = fraco; pai.add(h); e.alvos.push(h); return h; };
-// --- Sentinela: soldado-robô de 2,3 m, pernas para trás e canhão de plasma no braço
-function criarSentinela(e) {
+// --- Soldado inimigo (humano): farda camuflada, colete com bolsos, capacete, óculos e fuzil
+const tCamo = tex(256, 256, g => { g.fillStyle = '#9a8a66'; g.fillRect(0, 0, 256, 256); for (const [c, n, r] of [['#7d6c4c', 40, 22], ['#b7a57e', 35, 18], ['#5e5038', 25, 14]]) { g.fillStyle = c; for (let i = 0; i < n; i++) { g.beginPath(); g.ellipse(Math.random() * 256, Math.random() * 256, r * rnd(0.6, 1.4), r * rnd(0.4, 1), rnd(0, 3), 0, 7); g.fill(); } } pinta(g, 256, 256, 6000, ['rgba(0,0,0,.08)', 'rgba(255,255,255,.06)'], 1); }, [1, 1]);
+const mFarda = new THREE.MeshStandardMaterial({ map: tCamo, roughness: 0.95 }), mColete = new THREE.MeshStandardMaterial({ color: 0x5a523e, roughness: 0.9 }), mBota = new THREE.MeshStandardMaterial({ color: 0x3a2e22, roughness: 0.8 });
+const mPele = new THREE.MeshStandardMaterial({ color: 0x9a6a4a, roughness: 0.8 }), mOculos = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.05, metalness: 0.9 }), mCapacete = new THREE.MeshStandardMaterial({ map: tCamo, color: 0xcfc6b0, roughness: 0.85 });
+function membro(pai, r1, r2, comp, mat, y0 = 0) { const g = new THREE.Group(); g.position.y = y0; pai.add(g); mk(g, cil(r1, r2, comp, 10), mat, 0, -comp / 2, 0); mk(g, new THREE.SphereGeometry(r1, 10, 8), mat, 0, 0, 0); return g; }
+function criarSoldado(e) {
   const g = new THREE.Group();
   const pernas = [-1, 1].map(s => {
-    const coxa = new THREE.Group(); coxa.position.set(s * 0.2, 1.15, 0); g.add(coxa);
-    mk(coxa, caixa(0.16, 0.6, 0.2), mCasco, 0, -0.28, 0.05, -0.35);
-    const canela = new THREE.Group(); canela.position.set(0, -0.55, 0.2); coxa.add(canela);
-    mk(canela, caixa(0.12, 0.55, 0.14), mCasco2, 0, -0.25, -0.1, 0.55); mk(canela, cil(0.07, 0.07, 0.16, 10), mJunta, 0, 0, 0, 0, 0, Math.PI / 2);
-    for (const dz of [-0.06, 0.1]) mk(canela, caixa(0.06, 0.05, 0.22), mJunta, 0, -0.55, dz + 0.02);
+    const coxa = new THREE.Group(); coxa.position.set(s * 0.11, 0.95, 0); g.add(coxa);
+    mk(coxa, cil(0.085, 0.07, 0.46, 10), mFarda, 0, -0.23, 0); mk(coxa, caixa(0.06, 0.1, 0.1), mColete, s * 0.08, -0.22, 0.02);
+    const canela = new THREE.Group(); canela.position.set(0, -0.46, 0); coxa.add(canela);
+    mk(canela, new THREE.SphereGeometry(0.075, 10, 8), mColete, 0, 0, 0.03); mk(canela, cil(0.068, 0.055, 0.42, 10), mFarda, 0, -0.21, 0);
+    mk(canela, caixa(0.12, 0.1, 0.26), mBota, 0, -0.45, 0.05);
     return { coxa, canela };
   });
-  mk(g, caixa(0.48, 0.2, 0.3), mJunta, 0, 1.2, 0);
-  const tronco = new THREE.Group(); tronco.position.y = 1.3; g.add(tronco);
-  mk(tronco, new THREE.DodecahedronGeometry(0.38, 0), mCasco, 0, 0.42, 0.02).scale.set(1.1, 1.05, 0.75);
-  mk(tronco, caixa(0.5, 0.12, 0.34), mCasco2, 0, 0.12, 0); mk(tronco, caixa(0.18, 0.18, 0.04), mBrilho, 0, 0.45, 0.3);
-  for (const s of [-1, 1]) mk(tronco, new THREE.SphereGeometry(0.17, 12, 8), mCasco2, s * 0.42, 0.66, 0).scale.set(1.2, 0.8, 1);
-  const cab = new THREE.Group(); cab.position.set(0, 0.95, 0.08); tronco.add(cab);
-  mk(cab, new THREE.SphereGeometry(0.16, 16, 12), mCasco, 0, 0, 0).scale.set(0.9, 0.8, 1.35); mk(cab, caixa(0.22, 0.035, 0.05), mBrilho, 0, 0.01, 0.18);
-  for (const s of [-1, 1]) mk(cab, cil(0.012, 0.006, 0.3, 6), mJunta, s * 0.08, 0.12, -0.12, -0.8);
-  const bracoE = new THREE.Group(); bracoE.position.set(-0.45, 0.6, 0); tronco.add(bracoE);
-  mk(bracoE, caixa(0.12, 0.55, 0.13), mCasco2, 0, -0.27, 0); mk(bracoE, caixa(0.1, 0.45, 0.11), mCasco, 0, -0.7, 0.05, -0.2);
-  const bracoD = new THREE.Group(); bracoD.position.set(0.45, 0.6, 0); tronco.add(bracoD);
-  mk(bracoD, caixa(0.13, 0.4, 0.14), mCasco2, 0, -0.2, 0); const canhao = new THREE.Group(); canhao.position.set(0, -0.4, 0.05); bracoD.add(canhao);
-  mk(canhao, cil(0.08, 0.1, 0.62, 12), mCasco, 0, 0, 0.22, Math.PI / 2); mk(canhao, cil(0.05, 0.05, 0.04, 12), mBrilho, 0, 0, 0.54, Math.PI / 2);
-  const boca = new THREE.Object3D(); boca.position.set(0, 0, 0.6); canhao.add(boca);
-  hitbox(g, caixa(0.7, 2.1, 0.6), 0, 1.05, 0, e); hitbox(cab, new THREE.SphereGeometry(0.24, 8, 6), 0, 0, 0, e, true);
-  return { g, pernas, tronco, bracoD, canhao, boca };
+  mk(g, cil(0.17, 0.15, 0.18, 12), mFarda, 0, 0.98, 0); mk(g, caixa(0.36, 0.06, 0.2), mColete, 0, 1.0, 0); // quadril e cinto
+  const tronco = new THREE.Group(); tronco.position.y = 1.05; g.add(tronco);
+  mk(tronco, cil(0.17, 0.16, 0.5, 12), mFarda, 0, 0.25, 0).scale.set(1.15, 1, 0.75);
+  mk(tronco, caixa(0.38, 0.4, 0.26), mColete, 0, 0.3, 0); // colete
+  for (let k = 0; k < 3; k++) mk(tronco, caixa(0.09, 0.12, 0.06), mColete, -0.11 + k * 0.11, 0.2, 0.15); // bolsos de munição
+  mk(tronco, caixa(0.24, 0.3, 0.12), mColete, 0, 0.32, -0.18); // mochila de hidratação
+  mk(tronco, cil(0.06, 0.07, 0.1, 10), mPele, 0, 0.6, 0); // pescoço
+  const cab = new THREE.Group(); cab.position.set(0, 0.74, 0); tronco.add(cab);
+  mk(cab, new THREE.SphereGeometry(0.11, 14, 12), mPele, 0, 0, 0.01).scale.set(0.9, 1.1, 1);
+  mk(cab, new THREE.SphereGeometry(0.135, 16, 10, 0, Math.PI * 2, 0, Math.PI / 1.9), mCapacete, 0, 0.03, -0.005);
+  mk(cab, caixa(0.17, 0.045, 0.04), mOculos, 0, 0.01, 0.1); mk(cab, caixa(0.2, 0.02, 0.02), mJunta, 0, 0.01, 0.07);
+  mk(cab, caixa(0.12, 0.06, 0.06), mColete, 0, -0.06, 0.085); // lenço no rosto
+  // braços segurando o fuzil
+  const bracoD = new THREE.Group(); bracoD.position.set(0, 0.48, 0.02); tronco.add(bracoD);
+  const ombroE = membro(bracoD, 0.06, 0.05, 0.3, mFarda); ombroE.position.set(-0.2, 0, 0); ombroE.rotation.set(-1.0, 0, -0.35);
+  const ombroD = membro(bracoD, 0.06, 0.05, 0.3, mFarda); ombroD.position.set(0.2, 0, 0); ombroD.rotation.set(-0.7, 0, 0.3);
+  const fuzil = new THREE.Group(); fuzil.position.set(0.06, -0.06, 0.32); bracoD.add(fuzil);
+  mk(fuzil, caixa(0.05, 0.07, 0.48), mPolimero, 0, 0, 0); mk(fuzil, cil(0.01, 0.01, 0.3, 8), mAco, 0, 0.01, 0.38, Math.PI / 2); mk(fuzil, caixa(0.035, 0.12, 0.05), mPolimero, 0, -0.08, 0.05, 0.3); mk(fuzil, caixa(0.04, 0.06, 0.18), mPolimero, 0, -0.01, -0.3); mk(fuzil, cil(0.02, 0.02, 0.12, 10), mAco, 0, 0.06, 0, Math.PI / 2);
+  mk(fuzil, new THREE.SphereGeometry(0.045, 8, 6), mLuva, -0.06, -0.04, 0.18); mk(fuzil, new THREE.SphereGeometry(0.045, 8, 6), mLuva, 0.02, -0.06, -0.06);
+  const boca = new THREE.Object3D(); boca.position.set(0, 0.01, 0.55); fuzil.add(boca);
+  hitbox(g, caixa(0.55, 1.75, 0.45), 0, 0.88, 0, e); hitbox(cab, new THREE.SphereGeometry(0.17, 8, 6), 0, 0, 0, e, true);
+  return { g, pernas, tronco, bracoD, canhao: fuzil, boca };
 }
-// --- Drone voador
-function criarDrone(e) {
-  const g = new THREE.Group();
-  mk(g, new THREE.SphereGeometry(0.45, 18, 12), mCasco, 0, 0, 0).scale.set(1, 0.7, 1);
-  mk(g, new THREE.TorusGeometry(0.75, 0.06, 8, 32), mCasco2, 0, 0, 0, Math.PI / 2);
-  for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2; mk(g, caixa(0.5, 0.04, 0.1), mJunta, Math.cos(a) * 0.55, 0, Math.sin(a) * 0.55, 0, -a, 0); mk(g, cil(0.2, 0.2, 0.02, 14), mJunta, Math.cos(a) * 0.8, 0.06, Math.sin(a) * 0.8); }
-  mk(g, new THREE.SphereGeometry(0.14, 12, 10), mNucleo, 0, -0.12, 0.38); const luz = brilhoSpr(tBrilhoVm, 0.7); luz.position.set(0, -0.12, 0.45); g.add(luz);
-  const boca = new THREE.Object3D(); boca.position.set(0, -0.15, 0.5); g.add(boca);
-  hitbox(g, new THREE.SphereGeometry(0.85, 8, 6), 0, 0, 0, e); hitbox(g, new THREE.SphereGeometry(0.22, 8, 6), 0, -0.12, 0.38, e, true);
-  return { g, boca };
-}
-// --- Colosso: máquina gigante de quatro pernas (uns 18 m de altura) com núcleo vermelho embaixo
-function criarColosso(e) {
-  const g = new THREE.Group(), corpo = new THREE.Group(); corpo.position.y = 15; g.add(corpo);
-  mk(corpo, new THREE.SphereGeometry(4.2, 28, 16), mCasco, 0, 0, 0).scale.set(1.35, 0.5, 1);
-  mk(corpo, new THREE.CylinderGeometry(4.6, 5.6, 0.8, 28), mCasco2, 0, -0.6, 0); mk(corpo, new THREE.TorusGeometry(5.0, 0.25, 8, 40), mJunta, 0, -0.2, 0, Math.PI / 2);
-  for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; mk(corpo, caixa(0.6, 0.25, 1.6), mJunta, Math.cos(a) * 4.4, 0.9, Math.sin(a) * 3.2, 0, -a, 0); mk(corpo, new THREE.SphereGeometry(0.18, 8, 6), mBrilho, Math.cos(a) * 5.3, -0.5, Math.sin(a) * 4.0); }
-  const nucleo = mk(corpo, new THREE.SphereGeometry(1.1, 20, 14), mNucleo, 0, -1.8, 0); const halo = brilhoSpr(tBrilhoVm, 6); halo.position.copy(nucleo.position); corpo.add(halo);
-  const canhao = new THREE.Group(); canhao.position.set(0, -0.4, 4.6); corpo.add(canhao);
-  mk(canhao, cil(0.7, 0.9, 3.2, 16), mCasco, 0, 0, 1.2, Math.PI / 2); mk(canhao, cil(0.45, 0.45, 0.2, 16), mNucleo, 0, 0, 2.8, Math.PI / 2);
-  const boca = new THREE.Object3D(); boca.position.set(0, 0, 3.0); canhao.add(boca);
-  const pernas = [];
-  for (let k = 0; k < 4; k++) {
-    const a = Math.PI / 4 + k * Math.PI / 2, quadril = new THREE.Group(); quadril.position.set(Math.cos(a) * 4.2, 0, Math.sin(a) * 3.2); quadril.rotation.y = -a + Math.PI / 2; corpo.add(quadril);
-    const coxa = new THREE.Group(); quadril.add(coxa); mk(coxa, cil(1.0, 0.75, 7, 12), mCasco2, 0, 2.2, 3.0, 1.15); mk(coxa, caixa(1.6, 0.4, 5.5), mCasco, 0, 2.9, 2.8, 1.15 - Math.PI / 2 + 0.05); mk(coxa, new THREE.SphereGeometry(0.8, 12, 10), mJunta, 0, 0, 0);
-    const joelho = new THREE.Group(); joelho.position.set(0, 3.9, 6.1); coxa.add(joelho); mk(joelho, new THREE.SphereGeometry(0.75, 12, 10), mJunta, 0, 0, 0);
-    mk(joelho, cil(0.85, 0.55, 19, 12), mCasco, 0, -9.4, 0.6, 0.06); for (let q = 0; q < 4; q++) mk(joelho, caixa(1.9 - q * 0.2, 2.4, 0.35), mCasco2, 0, -3 - q * 4, 1.3 + q * 0.03, 0.06); mk(joelho, new THREE.CylinderGeometry(1.0, 1.6, 1.2, 10), mJunta, 0, -18.6, 1.2); mk(joelho, new THREE.SphereGeometry(1.1, 12, 10), mJunta, 0, 0, 0);
-    pernas.push({ coxa, joelho, fase: k % 2 ? Math.PI : 0, a });
-  }
+// --- Titã: robô gigante de guerra original, em duas pernas (uns 20 m), com reator no peito
+function criarTita(e) {
+  const g = new THREE.Group(), corpo = new THREE.Group(); corpo.position.y = 11; g.add(corpo);
+  mk(corpo, caixa(5.5, 1.6, 3.4), mJunta, 0, 0, 0); // quadril
+  const peito = new THREE.Group(); peito.position.y = 1.2; corpo.add(peito);
+  mk(peito, caixa(7.5, 5.2, 4.6), mCasco, 0, 3, 0); mk(peito, caixa(6.6, 2, 4.9), mCasco2, 0, 4.8, 0.1); mk(peito, caixa(3.2, 3.2, 0.4), mCasco2, 0, 2.6, 2.4);
+  const reator = mk(peito, cil(1.0, 1.0, 0.5, 20), mNucleo, 0, 2.6, 2.65, Math.PI / 2); const halo = brilhoSpr(tBrilhoVm, 5); halo.position.set(0, 2.6, 3.1); peito.add(halo);
+  for (const s of [-1, 1]) { mk(peito, caixa(0.5, 4.5, 0.6), mJunta, s * 2.2, 3, 2.4); mk(peito, caixa(1.2, 0.6, 3), mJunta, s * 3.2, 0.6, 0); }
+  const cab = new THREE.Group(); cab.position.set(0, 6.4, 0.8); peito.add(cab);
+  mk(cab, caixa(2.2, 1.4, 2.4), mCasco, 0, 0, 0); mk(cab, caixa(1.8, 0.3, 0.2), mNucleo, 0, 0.1, 1.22); mk(cab, caixa(2.4, 0.3, 2.6), mCasco2, 0, 0.8, -0.1);
+  // ombros com lançadores de foguetes
+  for (const s of [-1, 1]) { const p = mk(peito, caixa(2.4, 1.8, 3), mCasco2, s * 5, 5.6, -0.2); for (let k = 0; k < 6; k++) mk(peito, cil(0.22, 0.22, 0.3, 10), mJunta, s * 5 + (k % 3 - 1) * 0.7, 5.3 + Math.floor(k / 3) * 0.7, 1.35, Math.PI / 2); }
+  // braços: esquerdo com garra, direito com canhão rotativo
+  const bracos = [-1, 1].map(s => {
+    const ombro = new THREE.Group(); ombro.position.set(s * 4.6, 4.6, 0); peito.add(ombro);
+    mk(ombro, new THREE.SphereGeometry(1.3, 14, 10), mJunta, 0, 0, 0); mk(ombro, caixa(1.6, 4.2, 1.8), mCasco, s * 0.3, -2.4, 0);
+    const ante = new THREE.Group(); ante.position.set(s * 0.3, -4.6, 0); ombro.add(ante); mk(ante, new THREE.SphereGeometry(0.9, 12, 8), mJunta, 0, 0, 0);
+    if (s > 0) { mk(ante, cil(0.9, 1.0, 4.5, 14), mCasco, 0, -0.4, 2.0, Math.PI / 2); for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; mk(ante, cil(0.15, 0.15, 2.6, 8), mAco, Math.cos(a) * 0.5, -0.4 + Math.sin(a) * 0.5, 5.2, Math.PI / 2); } }
+    else { mk(ante, caixa(1.5, 1.5, 3.6), mCasco2, 0, -0.4, 1.6); for (let k = -1; k <= 1; k++) mk(ante, new THREE.ConeGeometry(0.25, 1.4, 6), mJunta, k * 0.5, -0.4, 4.0, Math.PI / 2); }
+    ante.rotation.x = -1.3; return { ombro, ante };
+  });
+  const boca = new THREE.Object3D(); boca.position.set(0, -0.4, 6.6); bracos[1].ante.add(boca);
+  // pernas com joelho invertido e pés largos
+  const pernas = [-1, 1].map(s => {
+    const coxa = new THREE.Group(); coxa.position.set(s * 2.2, 0, 0); corpo.add(coxa);
+    mk(coxa, new THREE.SphereGeometry(1.2, 12, 10), mJunta, 0, 0, 0); mk(coxa, caixa(1.7, 5.6, 2.0), mCasco, 0, -2.9, 0.6, 0.25);
+    const canela = new THREE.Group(); canela.position.set(0, -5.6, 1.6); coxa.add(canela);
+    mk(canela, new THREE.SphereGeometry(1.0, 12, 10), mJunta, 0, 0, 0); mk(canela, caixa(1.4, 5.4, 1.6), mCasco2, 0, -2.6, -0.5, -0.32);
+    mk(canela, caixa(2.6, 0.7, 4.0), mJunta, 0, -5.2, -0.4); mk(canela, cil(0.4, 0.4, 3, 8), mAco, 0, -2.4, 0.6, -0.32);
+    return { coxa, canela };
+  });
   g.traverse(o => { if (o.isMesh) o.castShadow = true; });
-  hitbox(corpo, new THREE.SphereGeometry(5.6, 10, 8), 0, 0, 0, e); hitbox(corpo, new THREE.SphereGeometry(1.6, 10, 8), 0, -1.8, 0, e, true);
-  return { g, corpo, pernas, canhao, boca, nucleo };
+  hitbox(corpo, caixa(8, 14, 5), 0, 1, 0, e); hitbox(peito, new THREE.SphereGeometry(1.6, 10, 8), 0, 2.6, 2.6, e, true);
+  return { g, corpo, peito, pernas, bracos, boca, nucleo: reator };
 }
 const TIPOS = {
-  sentinela: { hp: 140, criar: criarSentinela, pontos: 120, vel: 2.6, cad: [1.3, 2.4], rajada: [2, 4], dano: [9, 15], proj: 48, explode: 0 },
-  drone: { hp: 70, criar: criarDrone, pontos: 150, vel: 6, cad: [1.6, 2.8], rajada: [1, 3], dano: [6, 10], proj: 55, explode: 0 },
-  colosso: { hp: 2600, criar: criarColosso, pontos: 3000, vel: 1.6, cad: [2.6, 3.6], rajada: [1, 1], dano: [30, 45], proj: 34, explode: 6 }
+  soldado: { hp: 100, criar: criarSoldado, pontos: 100, vel: 3.0, cad: [1.2, 2.4], rajada: [2, 5], dano: [7, 13], proj: 0, explode: 0 },
+  tita: { hp: 3200, criar: criarTita, pontos: 4000, vel: 1.5, cad: [2.4, 3.4], rajada: [3, 5], dano: [28, 40], proj: 40, explode: 5 },
 };
 function posSpawn(min = 45) { for (let k = 0; k < 60; k++) { const x = rnd(-85, 85), z = rnd(-88, 92); if (Math.hypot(x - J.x, z - J.z) < min || colide(x, z, 0.6)) continue; return [x, z]; } return [rnd(-60, 60), -80]; }
 function novoInimigo(tipo, pos) {
   const T = TIPOS[tipo], e = { tipo, T, hp: T.hp, alvos: [], estado: 'patrulha', cd: rnd(1, 2.5), rajada: 0, fase: rnd(0, 6), morto: 0, ang: 0, y: 0 };
-  const [x, z] = pos || posSpawn(tipo === 'colosso' ? 70 : 45); e.x = x; e.z = z; e.alvo = [x + rnd(-15, 15), z + rnd(-15, 15)];
+  const [x, z] = pos || posSpawn(tipo === 'colosso' || tipo === 'tita' ? 70 : 45); e.x = x; e.z = z; e.alvo = [x + rnd(-15, 15), z + rnd(-15, 15)];
   if (tipo === 'drone') e.y = rnd(5, 9);
   e.s = T.criar(e); e.s.g.position.set(x, e.y, z); cena.add(e.s.g); inimigos.push(e); return e;
 }
 // --- tiros de plasma (dá para ver e desviar)
 const projeteis = [];
 function dispararPlasma(e, de, alvo) {
-  const T = e.T, cor = e.tipo === 'sentinela' ? tBrilhoAz : tBrilhoVm, s = brilhoSpr(cor, e.tipo === 'colosso' ? 3 : 0.9);
+  const T = e.T, cor = e.tipo === 'soldado' ? tBrilhoAz : tBrilhoVm, s = brilhoSpr(cor, e.tipo === 'colosso' ? 3 : 0.9);
   const d = alvo.clone().sub(de).normalize(); s.position.copy(de); cena.add(s);
   const luz = e.tipo === 'colosso' ? new THREE.PointLight(0xff5020, 3, 25) : null; if (luz) s.add(luz);
   projeteis.push({ s, v: d.multiplyScalar(T.proj), dano: rnd(T.dano[0], T.dano[1]), explode: T.explode, vida: 4, luz });
@@ -472,9 +483,9 @@ function atirar() {
   if (hit && hit.object.userData.ini) { // preferir a cabeça quando as duas caixas foram atingidas
     const cab = hits.find(h => h.object.userData.cabeca && h.object.userData.ini === hit.object.userData.ini && h.distance - hit.distance < 0.6); if (cab) hit = cab;
     const e = hit.object.userData.ini, cabeca = !!hit.object.userData.cabeca;
-    e.hp -= rnd(30, 36) * (cabeca ? (e.tipo === 'colosso' ? 4 : 2.6) : 1); e.estado = 'combate'; acertoT = 0.15; $('acerto').classList.toggle('cabeca', cabeca); clique(cabeca ? 3000 : 2200, 0.12);
+    e.hp -= rnd(30, 36) * (cabeca ? (e.tipo === 'soldado' ? 4 : 4) : 1); e.estado = 'combate'; acertoT = 0.15; $('acerto').classList.toggle('cabeca', cabeca); clique(cabeca ? 3000 : 2200, 0.12);
     poeira(hit.point, 4, 0x9a8a70);
-    if (e.hp <= 0) { e.morto = 0.001; J.abates++; const pts = e.T.pontos + (cabeca ? 50 : 0); J.pontos += pts; atualizarPlacar(); if (e.tipo === 'colosso') { aviso('COLOSSO DERRUBADO!', '+' + pts, 3); explosao(new THREE.Vector3(e.x, 12, e.z), 10, 0); } else if (cabeca) aviso('PONTO FRACO!', '+' + pts, 1); else if (e.tipo === 'drone') explosao(hit.point.clone(), 2.5, 0); }
+    if (e.hp <= 0) { e.morto = 0.001; J.abates++; const pts = e.T.pontos + (cabeca ? 50 : 0); J.pontos += pts; atualizarPlacar(); if (e.tipo === 'colosso' || e.tipo === 'tita') { aviso('TITÃ DERRUBADO!', '+' + pts, 3); explosao(new THREE.Vector3(e.x, 12, e.z), 10, 0); } else if (cabeca) aviso('NA CABEÇA', '+' + pts, 1); else if (e.tipo === 'drone') explosao(hit.point.clone(), 2.5, 0); }
   } else if (hit) { poeira(hit.point, 6); }
   // coice
   J.pitch += J.mira > 0.8 ? 0.004 : 0.012; J.yaw += rnd(-0.004, 0.004); recuo = 1;
@@ -490,18 +501,19 @@ function atualizarInimigos(dt) {
   for (const e of inimigos) {
     if (e.morto) { morrendo(e, dt); continue; }
     const dx = J.x - e.x, dz = J.z - e.z, d = Math.hypot(dx, dz) || 0.01;
-    const olho = new THREE.Vector3(e.x, e.tipo === 'colosso' ? 14 : e.tipo === 'drone' ? e.y : 2.1, e.z);
-    e.vtT = (e.vtT || 0) - dt; if (e.vtT <= 0) { e.vtT = 0.25; e.vendo = d < (e.tipo === 'colosso' ? 140 : 95) && (e.tipo === 'colosso' || veJogador(olho)); }
+    const gig = e.tipo === 'colosso' || e.tipo === 'tita';
+    const olho = new THREE.Vector3(e.x, gig ? 18 : e.tipo === 'drone' ? e.y : 1.7, e.z);
+    e.vtT = (e.vtT || 0) - dt; if (e.vtT <= 0) { e.vtT = 0.25; e.vendo = d < (gig ? 140 : 95) && (gig || veJogador(olho)); }
     if (e.vendo) e.estado = 'combate';
     let ax = 0, az = 0, vel = 0;
-    if (e.tipo === 'colosso') { // anda sempre em direção ao jogador, devagar, e para a uns 35 m
+    if (gig) { // anda sempre em direção ao jogador, devagar, e para a uns 35 m
       if (d > 35) { ax = dx / d; az = dz / d; vel = e.T.vel; }
     } else if (e.estado === 'patrulha') { const tx = e.alvo[0] - e.x, tz = e.alvo[1] - e.z, td = Math.hypot(tx, tz); if (td < 1) e.alvo = [e.x + rnd(-18, 18), e.z + rnd(-18, 18)]; else { ax = tx / td; az = tz / td; vel = e.T.vel * 0.5; } }
     else if (e.tipo === 'drone') { const lado = Math.sin(J.t * 0.7 + e.fase); ax = dx / d * (d > 18 ? 1 : -0.3) + (-dz / d) * lado; az = dz / d * (d > 18 ? 1 : -0.3) + (dx / d) * lado; vel = e.T.vel; }
     else { if (!e.vendo || d > 30) { ax = dx / d; az = dz / d; vel = e.T.vel; } else if (d < 10) { ax = -dx / d; az = -dz / d; vel = 1.6; } else { ax = -dz / d * Math.sin(J.t + e.fase); az = dx / d * Math.sin(J.t + e.fase); vel = 1.2; } }
     if (vel) {
       const nx = e.x + ax * vel * dt, nz = e.z + az * vel * dt;
-      if (e.tipo !== 'sentinela') { e.x = nx; e.z = nz; }
+      if (e.tipo !== 'soldado') { e.x = nx; e.z = nz; }
       else { if (!colide(nx, e.z, 0.4)) e.x = nx; else e.alvo = [e.x + rnd(-15, 15), e.z + rnd(-15, 15)]; if (!colide(e.x, nz, 0.4)) e.z = nz; }
       e.x = Math.max(-92, Math.min(92, e.x)); e.z = Math.max(-92, Math.min(97, e.z));
     }
@@ -509,16 +521,24 @@ function atualizarInimigos(dt) {
     if (e.vendo && e.estado === 'combate') {
       e.cd -= dt;
       if (e.cd <= 0) { e.rajada = Math.floor(rnd(e.T.rajada[0], e.T.rajada[1] + 1)); e.cd = rnd(e.T.cad[0], e.T.cad[1]); }
-      if (e.rajada > 0) { e.rtT = (e.rtT || 0) - dt; if (e.rtT <= 0) { e.rtT = e.tipo === 'colosso' ? 0.6 : 0.22; e.rajada--; const de = new THREE.Vector3(); e.s.boca.getWorldPosition(de); const erro = d * (moveu ? 0.06 : 0.035) * (J.agachado ? 1.3 : 1); dispararPlasma(e, de, new THREE.Vector3(J.x + rnd(-erro, erro), J.y + 1.1 + rnd(-erro, erro) * 0.5, J.z + rnd(-erro, erro))); } }
+      if (e.rajada > 0) { e.rtT = (e.rtT || 0) - dt; if (e.rtT <= 0) { e.rtT = gig ? 0.45 : 0.13; e.rajada--; const de = new THREE.Vector3(); e.s.boca.getWorldPosition(de); if (e.tipo === 'soldado') { tiroSoldado(e, de, d); } else { const erro = d * (moveu ? 0.06 : 0.035) * (J.agachado ? 1.3 : 1); dispararPlasma(e, de, new THREE.Vector3(J.x + rnd(-erro, erro), J.y + 1.1 + rnd(-erro, erro) * 0.5, J.z + rnd(-erro, erro))); } } }
     }
     // visual
-    const olhaX = e.estado === 'combate' ? dx : ax, olhaZ = e.estado === 'combate' ? dz : az; if (olhaX || olhaZ) { const alvoA = Math.atan2(olhaX, olhaZ); let da = alvoA - e.ang; da = Math.atan2(Math.sin(da), Math.cos(da)); e.ang += da * Math.min(1, dt * (e.tipo === 'colosso' ? 0.8 : 6)); }
-    e.fase += dt * (vel ? vel * (e.tipo === 'colosso' ? 0.55 : 2.6) : 0.5);
-    if (e.tipo === 'sentinela') {
+    const olhaX = e.estado === 'combate' ? dx : ax, olhaZ = e.estado === 'combate' ? dz : az; if (olhaX || olhaZ) { const alvoA = Math.atan2(olhaX, olhaZ); let da = alvoA - e.ang; da = Math.atan2(Math.sin(da), Math.cos(da)); e.ang += da * Math.min(1, dt * (gig ? 0.8 : 6)); }
+    e.fase += dt * (vel ? vel * (gig ? 0.5 : 3.4) : 0.5);
+    if (e.tipo === 'soldado') {
       e.s.g.position.set(e.x, Math.abs(Math.sin(e.fase)) * 0.05, e.z); e.s.g.rotation.y = e.ang;
       const a = vel ? Math.sin(e.fase) * 0.5 : 0; e.s.pernas[0].coxa.rotation.x = a; e.s.pernas[1].coxa.rotation.x = -a; e.s.pernas[0].canela.rotation.x = Math.max(0, -a) * 0.8; e.s.pernas[1].canela.rotation.x = Math.max(0, a) * 0.8;
-      e.s.bracoD.rotation.x = e.vendo ? -1.45 : -0.2; const alt = new THREE.Vector3(J.x, J.y + 1.2, J.z); if (e.vendo) e.s.tronco.rotation.x = -Math.atan2(alt.y - 2.2, d) * 0.5;
+      e.s.bracoD.rotation.x = e.vendo ? 0 : 0.5; if (e.vendo) e.s.tronco.rotation.x = Math.atan2(1.4 - (J.y + 1.2), d) * 0.6;
     } else if (e.tipo === 'drone') { e.y += (rnd(6, 8) - e.y) * dt * 0.3; e.s.g.position.set(e.x, e.y + Math.sin(J.t * 2 + e.fase) * 0.3, e.z); e.s.g.rotation.set(0.2, e.ang, Math.sin(J.t + e.fase) * 0.15); }
+    else if (e.tipo === 'tita') { // titã: duas pernas, passos que tremem o chão
+      e.s.g.position.set(e.x, 0, e.z); e.s.g.rotation.y = e.ang; const s = Math.sin(e.fase), an = vel ? 1 : 0;
+      e.s.corpo.position.y = 11 + Math.abs(Math.cos(e.fase)) * 0.5 * an; e.s.corpo.rotation.z = s * 0.04 * an;
+      e.s.pernas[0].coxa.rotation.x = s * 0.35 * an; e.s.pernas[1].coxa.rotation.x = -s * 0.35 * an; e.s.pernas[0].canela.rotation.x = Math.max(0, s) * 0.5 * an; e.s.pernas[1].canela.rotation.x = Math.max(0, -s) * 0.5 * an;
+      e.s.bracos[0].ombro.rotation.x = -s * 0.2 * an; if (e.vendo) e.s.bracos[1].ombro.rotation.x = 0.25; e.s.peito.rotation.y = Math.sin(J.t * 0.5) * 0.08;
+      const passo = Math.floor((e.fase + Math.PI / 2) / Math.PI); if (vel && passo !== e.passo) { e.passo = passo; tremor = Math.max(tremor, Math.max(0, 0.9 - d / 110)); somPasso(d); }
+      e.s.nucleo.material.emissiveIntensity = 2.2 + Math.sin(J.t * 4) * 0.6;
+    }
     else { // colosso: pernas andando e passos que tremem o chão
       e.s.g.position.set(e.x, 0, e.z); e.s.g.rotation.y = e.ang; e.s.corpo.position.y = 15 + Math.sin(e.fase * 2) * 0.35; e.s.corpo.rotation.z = Math.sin(e.fase) * 0.03;
       for (const p of e.s.pernas) { const s = Math.sin(e.fase + p.fase); p.coxa.rotation.x = vel ? -0.12 + s * 0.16 : -0.12; p.joelho.rotation.x = vel ? Math.max(0, -s) * 0.2 : 0; }
@@ -531,28 +551,36 @@ function atualizarInimigos(dt) {
   const vivos = inimigos.filter(e => !e.morto).length; $('p-rest').textContent = vivos;
   if (vivos === 0 && estado === 'jogando' && !trocandoOnda) { trocandoOnda = true; aviso('ONDA ' + J.onda + ' VENCIDA', 'Munição e vida repostas', 3); J.reserva = Math.min(300, J.reserva + 120); J.vida = 100; setTimeout(proximaOnda, 4000); }
 }
+function tiroSoldado(e, de, d) {
+  estampido(0.35, 1100, d);
+  const corpo = new THREE.Vector3(J.x, J.y + (J.agachado ? 0.8 : 1.2), J.z), erro = 0.4 + d * 0.03;
+  const para = corpo.clone().add(new THREE.Vector3(rnd(-erro, erro), rnd(-erro, erro) * 0.6, rnd(-erro, erro))); rastro(de, para);
+  const fl = brilhoSpr(tClarao, 0.5); fl.position.copy(de); cena.add(fl); setTimeout(() => cena.remove(fl), 50);
+  const chance = Math.max(0.06, 0.55 - d * 0.011 - (moveu ? 0.12 : 0) - (J.agachado ? 0.1 : 0));
+  if (Math.random() < chance) machucar(rnd(e.T.dano[0], e.T.dano[1]));
+}
 function emboscada() {
   const n = Math.min(5, 2 + Math.floor(J.onda / 2)), atras = J.yaw + Math.PI; let feitos = 0;
   for (let k = 0; k < 40 && feitos < n; k++) {
     const a = atras + rnd(-1.1, 1.1), r = rnd(13, 22), x = J.x - Math.sin(a) * r, z = J.z - Math.cos(a) * r;
     if (colide(x, z, 0.6) || Math.abs(x) > 90 || z < -90 || z > 96) continue;
-    const e = novoInimigo('sentinela', [x, z]); e.estado = 'combate'; e.cd = rnd(1.2, 2.2); feitos++;
+    const e = novoInimigo('soldado', [x, z]); e.estado = 'combate'; e.cd = rnd(1.2, 2.2); feitos++;
   }
-  if (feitos) { aviso('EMBOSCADA!', 'Eles apareceram atrás de você', 2.5); somAlarme(); }
+  if (feitos) { aviso('EMBOSCADA!', 'Soldados inimigos atrás de você', 2.5); somAlarme(); }
 }
 function morrendo(e, dt) {
   if (e.morto >= 1) return;
-  if (e.tipo === 'sentinela') { e.morto = Math.min(1, e.morto + dt * 2); e.s.g.rotation.x = -e.morto * Math.PI / 2 * 0.95; e.s.g.position.y = e.morto * 0.2; }
+  if (e.tipo === 'soldado') { e.morto = Math.min(1, e.morto + dt * 2.2); e.s.g.rotation.x = -e.morto * Math.PI / 2 * 0.95; e.s.g.position.y = e.morto * 0.15; e.s.pernas[0].coxa.rotation.x = e.morto * 0.4; }
   else if (e.tipo === 'drone') { e.y -= dt * 9; e.s.g.position.y = e.y; e.s.g.rotation.x += dt * 6; if (e.y <= 0.3) { e.morto = 1; explosao(new THREE.Vector3(e.x, 0.5, e.z), 3, 0); cena.remove(e.s.g); } }
-  else { e.morto = Math.min(1, e.morto + dt * 0.25); e.s.corpo.position.y = 15 - e.morto * 13; e.s.corpo.rotation.z = e.morto * 0.5; if (Math.random() < dt * 8) explosao(new THREE.Vector3(e.x + rnd(-5, 5), e.s.corpo.position.y + rnd(-1, 2), e.z + rnd(-5, 5)), 4, 0); }
+  else { e.morto = Math.min(1, e.morto + dt * 0.25); e.s.corpo.position.y = (e.tipo === 'tita' ? 11 : 15) - e.morto * (e.tipo === 'tita' ? 9 : 13); e.s.corpo.rotation.z = e.morto * 0.5; if (Math.random() < dt * 8) explosao(new THREE.Vector3(e.x + rnd(-5, 5), e.s.corpo.position.y + rnd(-1, 2), e.z + rnd(-5, 5)), 4, 0); }
 }
 function machucar(d) { if (estado !== 'jogando') return; J.vida -= d; J.semDano = 0; danoT = 0.6; tremor = Math.max(tremor, 0.25); if (J.vida <= 0) morrer(); }
 function proximaOnda() {
   trocandoOnda = false; J.onda++; for (const e of inimigos) cena.remove(e.s.g); inimigos.length = 0;
   for (const p of projeteis) cena.remove(p.s); projeteis.length = 0;
-  const ns = 2 + J.onda, nd = J.onda >= 2 ? Math.floor(J.onda / 2) + 1 : 0, colosso = J.onda % 3 === 0;
-  for (let i = 0; i < ns; i++) novoInimigo('sentinela'); for (let i = 0; i < nd; i++) novoInimigo('drone'); if (colosso) novoInimigo('colosso');
-  aviso('ONDA ' + J.onda, colosso ? 'UM COLOSSO ESTÁ VINDO. Mire no núcleo vermelho embaixo dele!' : `${ns} sentinelas${nd ? ' e ' + nd + ' drones' : ''} no setor`, 4); atualizarPlacar(); emboscadaT = rnd(20, 40);
+  const ns = 3 + J.onda * 2, nd = 0, colosso = J.onda % 3 === 0;
+  for (let i = 0; i < ns; i++) novoInimigo('soldado'); for (let i = 0; i < nd; i++) novoInimigo('drone'); if (colosso) novoInimigo('tita');
+  aviso('ONDA ' + J.onda, colosso ? 'O TITÃ ESTÁ VINDO! Mire no reator vermelho do peito dele.' : `${ns} soldados inimigos no setor`, 4); atualizarPlacar(); emboscadaT = rnd(20, 40);
 }
 function morrer() { estado = 'morto'; liberar(); aviso('VOCÊ CAIU', `Onda ${J.onda} · ${J.pontos} pontos`, 99); setTimeout(() => { $('menu').hidden = false; document.querySelector('#menu .tag').textContent = `FIM DA MISSÃO · ONDA ${J.onda} · ${J.pontos} PONTOS`; $('b-jogar').textContent = 'Tentar de novo'; document.body.classList.remove('jogando'); }, 2200); }
 function atualizarPlacar() { $('p-onda').textContent = J.onda; $('p-pts').textContent = J.pontos; }
