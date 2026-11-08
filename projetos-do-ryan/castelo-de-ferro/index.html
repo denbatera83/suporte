@@ -109,12 +109,14 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 const S = (r, g, b) => `rgb(${r | 0},${g | 0},${b | 0})`;
 
 // ===================== TEXTURAS E DESENHOS (tudo feito por código) =====================
+let CONTORNO = false;
 function desenhar(fn, w = 64, h = 64) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
   let s = 777; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
   fn(g, r);
   const d = g.getImageData(0, 0, w, h).data, px = new Uint32Array(w * h);
   for (let i = 0; i < w * h; i++) px[i] = d[i * 4 + 3] < 128 ? 0 : cor(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);
+  if (CONTORNO) { const preto = cor(12, 12, 16), o = px.slice(); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x; if (o[i]) continue; if ((x > 0 && o[i - 1]) || (x < w - 1 && o[i + 1]) || (y > 0 && o[i - w]) || (y < h - 1 && o[i + w])) px[i] = preto; } }
   return px;
 }
 const escuro = (t, k = 0.68) => t.map(c => c ? cor((c & 255) * k, ((c >> 8) & 255) * k, ((c >> 16) & 255) * k) : 0);
@@ -214,6 +216,7 @@ function chefe(g, f) { // o Guardião de Ferro (chefão original)
 }
 const PAL = { guarda: { corpo: '#6b7280', escuro: '#3f4550', visor: '#ff3b3b', luz: '#ffcf3d' }, elite: { corpo: '#3d5f9e', escuro: '#22365e', visor: '#3df0ff', luz: '#ffffff' } };
 const QUADROS = { guarda: ['parado', 'anda1', 'anda2', 'mira', 'tiro', 'dor', 'morre', 'morto'], cao: ['parado', 'anda1', 'anda2', 'morde', 'dor', 'morre', 'morto'], chefe: ['parado', 'anda1', 'anda2', 'mira', 'tiro', 'dor', 'morre', 'morto'] };
+CONTORNO = true; // daqui para frente (robôs e objetos) ganham contorno preto
 const SPR = {};
 for (const k of ['guarda', 'elite']) { SPR[k] = {}; for (const f of QUADROS.guarda) SPR[k][f] = desenhar(g => robo(g, f, PAL[k])); }
 SPR.cao = {}; for (const f of QUADROS.cao) SPR.cao[f] = desenhar(g => cao(g, f === 'parado' ? 'anda1' : f));
@@ -316,7 +319,7 @@ let cdArma = 0, animArma = 0, flashTela = 0, flashCor = '255,0,0', mortoT = 0, m
 
 function carregarAndar(n, manterPontos = true) {
   andar = n; const A = ANDARES[n], c = construir(A.def);
-  mapa = c.m; ceuC = A.ceu; chaoC = A.chao; portas = new Map(); objetos = []; inimigos = []; empurrando = [];
+  mapa = c.m; ceuC = A.ceu; chaoC = A.chao; prepararDegrade(); portas = new Map(); objetos = []; inimigos = []; empurrando = [];
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (mapa[y][x] >= 20 && mapa[y][x] <= 22) {
     const solidoV = ehSolido(mapa[y - 1][x]) && ehSolido(mapa[y + 1][x]);
     portas.set(y * N + x, { x, y, tipo: mapa[y][x], plano: solidoV ? 'x' : 'y', open: 0, alvo: 0, t: 0 });
@@ -398,6 +401,17 @@ function musica(dt) {
 }
 
 // ===================== RENDERIZAÇÃO 3D (raios em colunas) =====================
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) / 16);
+const CEU_A = new Uint32Array(VH), CEU_B = new Uint32Array(VH), CEU_F = new Float32Array(VH);
+function prepararDegrade() { // escurece em degraus perto do horizonte, misturando dois tons com pontinhos
+  const passos = 6, tom = (c, k) => cor((c & 255) * k, ((c >> 8) & 255) * k, ((c >> 16) & 255) * k);
+  for (let y = 0; y < VH; y++) {
+    const teto = y < VH / 2, d = teto ? y / (VH / 2) : (VH - 1 - y) / (VH / 2); // 0 na borda, 1 no horizonte
+    const nivel = (1 - d) * passos, n0 = Math.floor(nivel), fr = nivel - n0, base = teto ? ceuC : chaoC;
+    const k = n => 0.35 + 0.75 * Math.min(1, n / passos);
+    CEU_A[y] = tom(base, k(n0 + 1)); CEU_B[y] = tom(base, k(n0)); CEU_F[y] = fr;
+  }
+}
 function render() {
   const meio = VH / 2;
   for (let x = 0; x < W; x++) {
@@ -429,12 +443,12 @@ function render() {
     zbuf[x] = dist;
     const lh = VH / dist, y0 = Math.floor(meio - lh / 2), y1 = Math.floor(meio + lh / 2);
     const ys = achou ? Math.max(0, y0) : meio, ye = achou ? Math.min(VH - 1, y1) : meio - 1;
-    for (let y = 0; y < ys; y++) buf[y * W + x] = ceuC;
+    for (let y = 0; y < ys; y++) buf[y * W + x] = BAYER[((y & 3) << 2) | (x & 3)] < CEU_F[y] ? CEU_A[y] : CEU_B[y];
     if (achou) {
       const T = lado ? TEXD[tex] : TEX[tex], tx = Math.min(63, (tu * 64) | 0), st = 64 / lh; let ty = (ys - meio + lh / 2) * st;
       for (let y = ys; y <= ye; y++) { buf[y * W + x] = T[(((ty | 0) & 63) << 6) + tx]; ty += st; }
     }
-    for (let y = ye + 1; y < VH; y++) buf[y * W + x] = chaoC;
+    for (let y = ye + 1; y < VH; y++) buf[y * W + x] = BAYER[((y & 3) << 2) | (x & 3)] < CEU_F[y] ? CEU_A[y] : CEU_B[y];
   }
 }
 function projetar(ox, oy) {
@@ -461,31 +475,51 @@ function desenharSprites() {
   }
 }
 // ---------- arma na mão ----------
+// ---------- armas em pixel art (desenhadas ponto a ponto e ampliadas) ----------
+function pixelArma(desenho, w = 48, h = 48) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d');
+  const R = (x, y, ww, hh, cl) => { g.fillStyle = cl; g.fillRect(x, y, ww, hh); };
+  desenho(R);
+  const d = g.getImageData(0, 0, w, h), px = d.data, o = new Uint8ClampedArray(px);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (y * w + x) * 4; if (o[i + 3]) continue; const viz = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => { const xx = x + a, yy = y + b; return xx >= 0 && yy >= 0 && xx < w && yy < h && o[((yy * w + xx) * 4) + 3]; }); if (viz) { px[i] = 14; px[i + 1] = 12; px[i + 2] = 16; px[i + 3] = 255; } }
+  g.putImageData(d, 0, 0); return c;
+}
+const PAL_A = { e: '#1d2026', m: '#3b414c', l: '#646d7c', w: '#a6b0bf', b: '#5a3418', B: '#8a5428', p: '#e2a77c', P: '#b97a52', q: '#f3c9a3', u: '#2a3a5a', U: '#3d5482' };
+function mao(R, x, y, larg = 14) { // mão com luva sem dedos e manga azul
+  R(x - 2, y + 10, larg + 4, 8, PAL_A.u); R(x - 2, y + 10, larg + 4, 2, PAL_A.U);
+  R(x, y, larg, 11, PAL_A.p); R(x, y + 8, larg, 3, PAL_A.P); R(x + 1, y + 1, larg - 2, 2, PAL_A.q);
+  for (let k = 0; k < 4; k++) R(x + 1 + k * Math.floor((larg - 2) / 4), y + 3, 1, 4, PAL_A.P);
+}
+const ARMA_PX = [
+  // faca: lâmina comprida com brilho, guarda e cabo
+  (R, f) => { const o = f ? -8 : 0; R(22, 4 + o, 5, 26, PAL_A.l); R(22, 4 + o, 2, 26, PAL_A.w); R(26, 6 + o, 1, 24, PAL_A.m); R(23, 1 + o, 3, 3, PAL_A.w); R(24, 0 + o, 1, 1, PAL_A.w);
+    R(17, 30 + o, 15, 3, PAL_A.m); R(17, 30 + o, 15, 1, PAL_A.w); R(21, 33 + o, 7, 8, PAL_A.b); R(22, 34 + o, 2, 6, PAL_A.B); mao(R, 17, 36 + o, 15); },
+  // pistola vista de trás: ferrolho, mira, guarda-mato e cabo de madeira
+  (R, f) => { const o = f ? 3 : 0; R(19, 6 + o, 10, 26, PAL_A.m); R(19, 6 + o, 3, 26, PAL_A.l); R(27, 6 + o, 2, 26, PAL_A.e); R(22, 3 + o, 4, 3, PAL_A.e); R(23, 2 + o, 2, 1, PAL_A.w);
+    for (let y = 10; y < 22; y += 3) R(20, y + o, 8, 1, PAL_A.e); R(21, 9 + o, 2, 2, PAL_A.w);
+    R(17, 30 + o, 14, 4, PAL_A.e); R(20, 33 + o, 8, 10, PAL_A.b); R(21, 34 + o, 2, 8, PAL_A.B); mao(R, 16, 35 + o, 16); },
+  // metralhadora: cano com furos, corpo, carregador e duas mãos
+  (R, f) => { const o = f ? 3 : 0; R(21, 0 + o, 6, 14, PAL_A.e); for (let y = 2; y < 13; y += 3) R(22, y + o, 4, 1, PAL_A.l);
+    R(17, 13 + o, 14, 22, PAL_A.m); R(17, 13 + o, 3, 22, PAL_A.l); R(29, 13 + o, 2, 22, PAL_A.e); R(21, 12 + o, 6, 2, PAL_A.e);
+    R(8, 22 + o, 9, 6, PAL_A.e); R(8, 22 + o, 9, 1, PAL_A.l); R(19, 34 + o, 10, 9, PAL_A.b); R(20, 35 + o, 2, 7, PAL_A.B);
+    mao(R, 4, 25 + o, 12); mao(R, 17, 37 + o, 15); },
+  // minigun: seis canos girando, carcaça e alças
+  (R, f, giro) => { const o = f ? 2 : 0; for (let i = 0; i < 6; i++) { const a = giro + i / 6 * 6.283, x = 22 + Math.round(Math.cos(a) * 7), y = 2 + Math.round(Math.sin(a) * 3) + o; R(x, y, 4, 18, Math.sin(a) > 0 ? PAL_A.l : PAL_A.m); R(x, y, 1, 18, PAL_A.w); }
+    R(17, 4 + o, 14, 3, PAL_A.e); R(10, 20 + o, 28, 16, PAL_A.m); R(10, 20 + o, 28, 3, PAL_A.l); R(12, 26 + o, 24, 2, PAL_A.e); R(30, 24 + o, 6, 6, '#c9a33a');
+    mao(R, 4, 33 + o, 13); mao(R, 31, 33 + o, 13); }
+];
+const CLARAO = pixelArma(R => { const Y = '#fff6c0', A = '#ffd23a', L = '#ff8a1a'; R(14, 10, 20, 12, L); R(10, 13, 28, 6, L); R(20, 4, 8, 24, L); R(16, 12, 16, 8, A); R(21, 8, 6, 16, A); R(19, 13, 10, 6, Y); R(22, 11, 4, 10, Y); }, 48, 32);
+const cacheArma = new Map();
 function desenharArma() {
-  const a = ARMAS[J.arma], k = cdArma > 0 ? 1 - cdArma / a.cad : 1, tiro = cdArma > 0 && k < 0.35;
-  const bobX = Math.sin(passoBob) * 4, bobY = Math.abs(Math.cos(passoBob)) * 3;
-  const cx = W / 2 + bobX, base = VH + bobY + (tiro ? -4 : 0);
-  ctx.save();
-  const mao = (x, y) => { ctx.fillStyle = '#e0b08a'; ctx.fillRect(x - 12, y - 18, 24, 18); ctx.fillStyle = '#c48e66'; ctx.fillRect(x - 12, y - 6, 24, 6); ctx.fillStyle = '#2a2f3a'; ctx.fillRect(x - 14, y - 2, 28, 4); };
-  const flash = (x, y, r) => { ctx.fillStyle = '#fff3a0'; ctx.beginPath(); for (let i = 0; i < 12; i++) { const an = i / 12 * 6.283, rr = i % 2 ? r * 0.45 : r; ctx.lineTo(x + Math.cos(an) * rr, y + Math.sin(an) * rr); } ctx.fill(); ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(x, y, r * 0.3, 0, 7); ctx.fill(); };
-  if (J.arma === 0) {
-    const off = cdArma > 0 ? Math.sin(k * Math.PI) * 18 : 0;
-    ctx.fillStyle = '#c8ced6'; ctx.beginPath(); ctx.moveTo(cx + 10 - off * 0.3, base - 36 - off); ctx.lineTo(cx + 18 - off * 0.3, base - 70 - off * 1.6); ctx.lineTo(cx + 24 - off * 0.3, base - 36 - off); ctx.fill();
-    ctx.fillStyle = '#4a2a14'; ctx.fillRect(cx + 10 - off * 0.3, base - 36 - off, 14, 14); mao(cx + 18 - off * 0.3, base - off * 0.6);
-  } else if (J.arma === 1) {
-    ctx.fillStyle = '#2a2d33'; ctx.fillRect(cx - 6, base - 52, 12, 30); ctx.fillStyle = '#16181c'; ctx.fillRect(cx - 4, base - 56, 8, 6); ctx.fillStyle = '#4a4f58'; ctx.fillRect(cx - 6, base - 52, 3, 30);
-    if (tiro) flash(cx, base - 58, 16); mao(cx, base);
-  } else if (J.arma === 2) {
-    ctx.fillStyle = '#26292e'; ctx.fillRect(cx - 9, base - 62, 18, 42); ctx.fillStyle = '#111'; ctx.fillRect(cx - 4, base - 70, 8, 10); ctx.fillStyle = '#5a3a1e'; ctx.fillRect(cx - 13, base - 30, 26, 10); ctx.fillStyle = '#3d424a'; ctx.fillRect(cx - 9, base - 62, 4, 42);
-    if (tiro) flash(cx, base - 72, 20); mao(cx, base);
-  } else {
-    const giro = performance.now() / (cdArma > 0 || gatilho ? 30 : 200);
-    ctx.fillStyle = '#2a2d33'; ctx.fillRect(cx - 22, base - 44, 44, 34); ctx.fillStyle = '#6e7782';
-    for (let i = 0; i < 6; i++) { const an = giro + i / 6 * 6.283; ctx.beginPath(); ctx.arc(cx + Math.cos(an) * 10, base - 60 + Math.sin(an) * 5, 4, 0, 7); ctx.fill(); }
-    ctx.fillStyle = '#16181c'; ctx.fillRect(cx - 14, base - 62, 28, 6);
-    if (tiro) flash(cx, base - 66, 22); mao(cx - 18, base); mao(cx + 18, base);
-  }
-  ctx.restore();
+  const a = ARMAS[J.arma], k = cdArma > 0 ? 1 - cdArma / a.cad : 1, tiro = cdArma > 0 && k < 0.4;
+  const bobX = Math.round(Math.sin(passoBob) * 4), bobY = Math.round(Math.abs(Math.cos(passoBob)) * 3);
+  let img;
+  if (J.arma === 3) img = pixelArma((R) => ARMA_PX[3](R, tiro, performance.now() / (cdArma > 0 || gatilho ? 25 : 260)));
+  else { const chave = J.arma + (tiro ? 'f' : 'n'); if (!cacheArma.has(chave)) cacheArma.set(chave, pixelArma(R => ARMA_PX[J.arma](R, tiro))); img = cacheArma.get(chave); }
+  const esc = 2, x = Math.round(W / 2 - 24 * esc + bobX), y = VH - 48 * esc + 10 + bobY;
+  ctx.imageSmoothingEnabled = false;
+  if (tiro && J.arma > 0) ctx.drawImage(CLARAO, Math.round(W / 2 - 24 * esc + bobX), y - 26 + (J.arma === 3 ? -4 : 0), 48 * esc, 32 * esc);
+  ctx.drawImage(img, x, y, 48 * esc, 48 * esc);
 }
 // ---------- painel de baixo (HUD) e rosto da Agente Dani ----------
 function rosto(x, y) {
