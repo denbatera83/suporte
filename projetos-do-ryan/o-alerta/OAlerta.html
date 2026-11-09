@@ -645,13 +645,13 @@ const joy = { id: null, x: 0, y: 0, dx: 0, dy: 0 }, olharP = { id: null, x: 0, y
 function prenderMouse() { if (toque || travado || !canvas.requestPointerLock) return; try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 function soltarMouse() { if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); }
 document.addEventListener('pointerlockchange', () => { travado = document.pointerLockElement === canvas; });
-addEventListener('mousemove', e => { if (travado && jogoComecou) { J.yaw -= e.movementX * 0.0022; J.pitch = clamp(J.pitch - e.movementY * 0.0022, -1.35, 1.25); ultimoOlhar = UT.value; } });
+addEventListener('mousemove', e => { if (travado && jogoComecou) { const mx = e.movementX || 0, my = e.movementY || 0; J.yaw -= mx * 0.0022; J.pitch = clamp(J.pitch - my * 0.0022, -1.35, 1.25); if (Math.abs(mx) + Math.abs(my) > 2) ultimoOlhar = UT.value; } });
 canvas.addEventListener('pointerdown', e => { if (!jogoComecou) return; $('dica').hidden = true;
   if (e.pointerType === 'mouse') { prenderMouse(); if (travado) return; }
   if (e.pointerType === 'touch' && e.clientX < innerWidth * 0.42 && joy.id === null) { Object.assign(joy, { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, dy: 0 }); baseJ.style.display = 'block'; baseJ.style.left = e.clientX + 'px'; baseJ.style.top = e.clientY - innerHeight * 0.4 + 'px'; }
   else if (olharP.id === null) Object.assign(olharP, { id: e.pointerId, x: e.clientX, y: e.clientY }); try { canvas.setPointerCapture(e.pointerId); } catch (er) {} });
 canvas.addEventListener('pointermove', e => { if (e.pointerId === joy.id) { joy.dx = clamp((e.clientX - joy.x) / 50, -1, 1); joy.dy = clamp((e.clientY - joy.y) / 50, -1, 1); knob.style.transform = `translate(${joy.dx * 34}px,${joy.dy * 34}px)`; }
-  if (e.pointerId === olharP.id && !travado) { const dx = e.clientX - olharP.x, dy = e.clientY - olharP.y; olharP.x = e.clientX; olharP.y = e.clientY; const k = e.pointerType === 'touch' ? 0.006 : 0.0042; J.yaw -= dx * k; J.pitch = clamp(J.pitch - dy * k, -1.35, 1.25); ultimoOlhar = UT.value; } });
+  if (e.pointerId === olharP.id && !travado) { const dx = e.clientX - olharP.x, dy = e.clientY - olharP.y; olharP.x = e.clientX; olharP.y = e.clientY; const k = e.pointerType === 'touch' ? 0.006 : 0.0042; J.yaw -= dx * k; J.pitch = clamp(J.pitch - dy * k, -1.35, 1.25); if (Math.abs(dx) + Math.abs(dy) > 2) ultimoOlhar = UT.value; } });
 const soltar = e => { if (e.pointerId === joy.id) { joy.id = null; joy.dx = joy.dy = 0; baseJ.style.display = 'none'; knob.style.transform = ''; } if (e.pointerId === olharP.id) olharP.id = null; };
 canvas.addEventListener('pointerup', soltar); canvas.addEventListener('pointercancel', soltar);
 $('b-acao').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); pedirAcao = true; });
