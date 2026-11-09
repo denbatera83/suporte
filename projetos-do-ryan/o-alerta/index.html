@@ -34,6 +34,10 @@
   #fade.ver { opacity: 1; }
   #joy { position: fixed; left: 0; bottom: 0; width: 42%; height: 60%; z-index: 4; display: none; }
   body.touch.andar #joy { display: block; }
+  .tb { position: fixed; z-index: 5; right: max(16px, env(safe-area-inset-right, 0px)); font-size: 20px; padding: 10px 18px; background: rgba(10,13,18,.55); border: 1px solid rgba(238,241,244,.45); }
+  .tb.on { background: rgba(255,210,90,.4); }
+  #b-acao { bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 2vh + 64px); }
+  #b-correr { bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 2vh + 124px); }
   #joy .base { position: absolute; width: 112px; height: 112px; margin: -56px 0 0 -56px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); display: none; }
   #joy .base i { position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px; border-radius: 50%; background: rgba(255,255,255,.35); }
   .tela { position: fixed; z-index: 10; inset: 0; overflow-y: auto; display: grid; place-items: center; padding-block: 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
@@ -67,18 +71,20 @@
 <div id="objetivo" hidden></div>
 <div id="dica" hidden></div>
 <div id="joy"><div class="base"><i></i></div></div>
+<button class="tb" id="b-acao" hidden>Levantar</button>
+<button class="tb" id="b-correr" hidden>Correr</button>
 <div id="fade"></div>
 
 <div class="tela" id="menu">
   <div class="bloco">
     <div class="faixa-alerta">NÃO É EXERCÍCIO</div>
     <h1>O Alerta<small>PARTE 1</small></h1>
-    <p>Uma manhã normal na escola. Você está terminando o dever de frações quando o celular começa a tocar embaixo do caderno. O que vem depois vai mudar a vida da sua turma.</p>
+    <p>Uma manhã normal na escola. Você controla o seu personagem do começo ao fim: está terminando o dever de frações quando o celular começa a tocar embaixo do caderno. O que vem depois vai mudar a vida da sua turma.</p>
     <div class="teclas" id="teclas">
-      <kbd>ARRASTAR</kbd><span>olhar em volta (mouse ou dedo)</span>
-      <kbd>W A S D</kbd><span>andar quando puder sair da sala</span>
-      <kbd>ESPAÇO</kbd><span>passar a fala</span>
-      <kbd>A · B</kbd><span>escolher o que fazer</span>
+      <kbd>MOUSE</kbd><span>olhar em volta (clique na tela para prender o mouse)</span>
+      <kbd>W A S D</kbd><span>andar · <kbd>SHIFT</kbd> correr</span>
+      <kbd>E</kbd><span>levantar da carteira ou sentar de volta</span>
+      <kbd>ESPAÇO</kbd><span>passar a fala · <kbd>A</kbd> <kbd>B</kbd> escolher</span>
     </div>
     <div class="linha"><span>Gráficos</span><div class="linha" id="qual" role="group" aria-label="Gráficos"><button data-q="0">Leve</button><button data-q="1">Normal</button><button data-q="2">Ultra</button></div></div>
     <div class="linha"><span>Vozes</span><div class="linha" id="vozes" role="group" aria-label="Vozes"><button data-v="1">Ligadas</button><button data-v="0">Desligadas</button></div></div>
@@ -100,7 +106,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const toque = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
-if (toque) { document.body.classList.add('touch'); $('teclas').innerHTML = '<kbd>ARRASTAR</kbd><span>olhar em volta</span><kbd>ESQUERDA</kbd><span>arraste para andar quando puder sair</span><kbd>TOCAR</kbd><span>no botão Pular para passar a fala</span>'; }
+if (toque) { document.body.classList.add('touch'); $('teclas').innerHTML = '<kbd>DIREITA</kbd><span>arraste para olhar em volta</span><kbd>ESQUERDA</kbd><span>arraste para andar</span><kbd>BOTÕES</kbd><span>levantar, sentar, correr e pular a fala</span>'; }
 const rnd = (a, b) => a + Math.random() * (b - a), clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t;
 const suave = t => t * t * (3 - 2 * t), espera = ms => new Promise(r => setTimeout(r, ms));
 const angDif = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
@@ -600,9 +606,10 @@ async function narra(texto, extra = 0) { legenda('', '', texto, true); await new
 function escolha(pergunta, opcoes) { return new Promise(res => { const e = $('escolhas'); e.querySelector('.pergunta').textContent = pergunta; const box = e.querySelector('.opcoes'); box.innerHTML = '';
   const fim = i => { e.hidden = true; removeEventListener('keydown', tecla); res(i); };
   opcoes.forEach((t, i) => { const b = document.createElement('button'); b.className = 'op'; b.innerHTML = `<b>${'AB'[i]}</b><span></span>`; b.querySelector('span').textContent = t; b.addEventListener('click', () => fim(i)); box.appendChild(b); });
-  const tecla = ev => { const k = ev.key.toLowerCase(); if (k === 'a' || k === '1') fim(0); if (k === 'b' || k === '2') fim(1); }; addEventListener('keydown', tecla); e.hidden = false; setTimeout(() => box.querySelector('button').focus(), 50); }); }
+  const presas = new Set(teclas); const tecla = ev => { const k = ev.key.toLowerCase(); if (ev.repeat || presas.has(k)) return; if (k === 'a' || k === '1') fim(0); if (k === 'b' || k === '2') fim(1); }; addEventListener('keyup', ev => presas.delete(ev.key.toLowerCase())); addEventListener('keydown', tecla); e.hidden = false; setTimeout(() => box.querySelector('button').focus(), 50); }); }
 async function cartao(cenaTxt, nome, ms = 2600) { const c = $('cartao'); c.querySelector('.cena').textContent = cenaTxt; c.querySelector('.nome').textContent = nome; c.classList.add('ver'); await espera(ms); c.classList.remove('ver'); await espera(500); }
 const cinema = on => document.body.classList.toggle('cinema', on);
+let dicaT = null; function mostrarDica(t, seg = 7) { $('dica').textContent = t; $('dica').hidden = false; clearTimeout(dicaT); dicaT = setTimeout(() => { $('dica').hidden = true; }, seg * 1000); }
 function objetivo(t) { $('objetivo').hidden = !t; if (t) $('objetivo').textContent = t; }
 $('b-pular').addEventListener('click', e => { e.stopPropagation(); if (pular) pular(); });
 addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && pular && $('escolhas').hidden) { e.preventDefault(); pular(); } });
@@ -610,121 +617,139 @@ addEventListener('keydown', e => { if ((e.key === ' ' || e.key === 'Enter') && p
 const tarefas = new Set();
 function durante(seg, fn) { return new Promise(res => { let t = 0; const tf = dt => { t += dt; const k = Math.min(1, t / seg); fn(k, dt); if (k >= 1) { tarefas.delete(tf); res(); } }; tarefas.add(tf); }); }
 
-// ===================== CÂMERA E CONTROLES =====================
-const cam = { pos: V3(0, 1.6, 0), alvo: V3(0, 1.6, 0), yaw: 0, pitch: 0, aYaw: 0, aPitch: 0, offY: 0, offX: 0, vel: 2.2, tremor: 0, fov: 66, aFov: 66 };
-let modo = 'cine'; // cine (história), andar (você controla)
-const J = { x: 0, z: 0, yaw: 0, pitch: 0, bob: 0 };
-function olhar(x, y, z) { const dx = x - cam.alvo.x, dy = y - cam.alvo.y, dz = z - cam.alvo.z; cam.aYaw = Math.atan2(-dx, -dz); cam.aPitch = Math.atan2(dy, Math.hypot(dx, dz)); }
+// ===================== VOCÊ: CONTROLE EM PRIMEIRA PESSOA =====================
+// você controla o boneco o tempo todo: olha, levanta, anda, corre e senta; a câmera só ajuda a olhar o que importa quando você está parado
+const LUGAR_EM_PE = V3(MINHA.x + 0.55, 0, MINHA.z + 0.36);
+const J = { x: LUGAR_EM_PE.x, z: LUGAR_EM_PE.z, yaw: 0, pitch: -0.12, bob: 0, sentado: true, levantando: false, sentando: false, correndo: false, mag: 0 };
+const cam = { tremor: 0, fov: 66, aFov: 66 };
+let ajuda = null, ultimoOlhar = -99, zoomCena = false, travado = false, correrToque = false, pedirAcao = false;
+function olhar(x, y, z, seg = 2.5) { ajuda = { p: V3(x, y, z), ate: UT.value + seg }; }
+function olharPessoa(pe, seg = 2.5) { ajuda = { f: () => V3(pe.g.position.x, pe.g.position.y + 1.25 * pe.g.scale.y, pe.g.position.z), ate: UT.value + seg }; }
 function olhoSentado() { const v = V3(); eu.o[2].getWorldPosition(v); return V3(v.x, v.y + 0.2, v.z - 0.075); }
-const teclas = new Set(); addEventListener('keydown', e => teclas.add(e.key.toLowerCase())); addEventListener('keyup', e => teclas.delete(e.key.toLowerCase())); addEventListener('blur', () => teclas.clear());
+const teclas = new Set();
+addEventListener('keydown', e => { const k = e.key.toLowerCase(); teclas.add(k); if (k === 'e' && jogoComecou && $('escolhas').hidden) pedirAcao = true; });
+addEventListener('keyup', e => teclas.delete(e.key.toLowerCase())); addEventListener('blur', () => teclas.clear());
 const joy = { id: null, x: 0, y: 0, dx: 0, dy: 0 }, olharP = { id: null, x: 0, y: 0 }, baseJ = document.querySelector('#joy .base'), knob = document.querySelector('#joy .base i');
-canvas.addEventListener('pointerdown', e => { if (!jogoComecou) return; if (modo === 'andar' && e.pointerType === 'touch' && e.clientX < innerWidth * 0.42 && joy.id === null) { Object.assign(joy, { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, dy: 0 }); baseJ.style.display = 'block'; baseJ.style.left = e.clientX + 'px'; baseJ.style.top = e.clientY - innerHeight * 0.4 + 'px'; }
-  else if (olharP.id === null) Object.assign(olharP, { id: e.pointerId, x: e.clientX, y: e.clientY }); try { canvas.setPointerCapture(e.pointerId); } catch (er) {} $('dica').hidden = true; });
+function prenderMouse() { if (toque || travado || !canvas.requestPointerLock) return; try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+function soltarMouse() { if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); }
+document.addEventListener('pointerlockchange', () => { travado = document.pointerLockElement === canvas; });
+addEventListener('mousemove', e => { if (travado && jogoComecou) { J.yaw -= e.movementX * 0.0022; J.pitch = clamp(J.pitch - e.movementY * 0.0022, -1.35, 1.25); ultimoOlhar = UT.value; } });
+canvas.addEventListener('pointerdown', e => { if (!jogoComecou) return; $('dica').hidden = true;
+  if (e.pointerType === 'mouse') { prenderMouse(); if (travado) return; }
+  if (e.pointerType === 'touch' && e.clientX < innerWidth * 0.42 && joy.id === null) { Object.assign(joy, { id: e.pointerId, x: e.clientX, y: e.clientY, dx: 0, dy: 0 }); baseJ.style.display = 'block'; baseJ.style.left = e.clientX + 'px'; baseJ.style.top = e.clientY - innerHeight * 0.4 + 'px'; }
+  else if (olharP.id === null) Object.assign(olharP, { id: e.pointerId, x: e.clientX, y: e.clientY }); try { canvas.setPointerCapture(e.pointerId); } catch (er) {} });
 canvas.addEventListener('pointermove', e => { if (e.pointerId === joy.id) { joy.dx = clamp((e.clientX - joy.x) / 50, -1, 1); joy.dy = clamp((e.clientY - joy.y) / 50, -1, 1); knob.style.transform = `translate(${joy.dx * 34}px,${joy.dy * 34}px)`; }
-  if (e.pointerId === olharP.id) { const dx = e.clientX - olharP.x, dy = e.clientY - olharP.y; olharP.x = e.clientX; olharP.y = e.clientY; const k = e.pointerType === 'touch' ? 0.006 : 0.0042;
-    if (modo === 'andar') { J.yaw -= dx * k; J.pitch = clamp(J.pitch - dy * k, -1.2, 1.2); } else { cam.offY = clamp(cam.offY - dx * k, -1.5, 1.5); cam.offX = clamp(cam.offX - dy * k, -0.9, 0.9); } } });
+  if (e.pointerId === olharP.id && !travado) { const dx = e.clientX - olharP.x, dy = e.clientY - olharP.y; olharP.x = e.clientX; olharP.y = e.clientY; const k = e.pointerType === 'touch' ? 0.006 : 0.0042; J.yaw -= dx * k; J.pitch = clamp(J.pitch - dy * k, -1.35, 1.25); ultimoOlhar = UT.value; } });
 const soltar = e => { if (e.pointerId === joy.id) { joy.id = null; joy.dx = joy.dy = 0; baseJ.style.display = 'none'; knob.style.transform = ''; } if (e.pointerId === olharP.id) olharP.id = null; };
 canvas.addEventListener('pointerup', soltar); canvas.addEventListener('pointercancel', soltar);
-// por onde dá para andar (retângulos) e o que bloqueia (carteiras)
-const ANDAVEL = [[-4.7, 4.7, -3.7, 3.7], [4.6, 5.45, -3.12, -2.28], [5.3, 7.15, -11.75, 3.7], [5.75, 6.75, -12.7, -11.6], [-60, 60, -80, -12.35]];
+$('b-acao').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); pedirAcao = true; });
+$('b-correr').addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); correrToque = true; $('b-correr').classList.add('on'); });
+['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => $('b-correr').addEventListener(ev, () => { correrToque = false; $('b-correr').classList.remove('on'); }));
+// por onde dá para andar (retângulos), o que bloqueia (carteiras) e as pessoas no caminho
+const ANDAVEL = [[-4.7, 4.7, -3.7, 3.7], [5.3, 7.15, -11.75, 3.7], [5.75, 6.75, -12.7, -11.6], [-45, 45, -31, -12.35]], PORTA_SALA = [4.6, 5.45, -3.12, -2.28];
 const BLOQ = carteiras.map(({ x, z }) => [x - 0.38, x + 0.38, z - 0.3, z + 0.68]).concat([[-3.5, -1.7, -3.5, -2.65], [-4.9, -4.3, 2.5, 3.9]]);
-function livre(x, z) { if (!ANDAVEL.some(([a, b, c, d]) => x > a && x < b && z > c && z < d)) return false; return !BLOQ.some(([a, b, c, d]) => x > a && x < b && z > c && z < d); }
+const dentro = ([a, b, c, d], x, z) => x > a && x < b && z > c && z < d;
+function livre(x, z, x0 = x, z0 = z) { if (!ANDAVEL.some(r => dentro(r, x, z)) && !(porta.rotation.y > 1.2 && dentro(PORTA_SALA, x, z))) return false; if (BLOQ.some(r => dentro(r, x, z))) return false;
+  for (const p of pessoas) { if (p === eu || !p.g.visible) continue; const px = p.g.position.x, pz = p.g.position.z, dn = Math.hypot(px - x, pz - z); if (dn < 0.42 && dn < Math.hypot(px - x0, pz - z0)) return false; } return true; }
+const pertoDoLugar = () => Math.hypot(J.x - LUGAR_EM_PE.x, J.z - LUGAR_EM_PE.z) < 0.8;
+let celLugar = 'mesa'; // mesa, bolso, mao, mochila
+function levantar() { if (!J.sentado || J.levantando) return; J.levantando = true; eu.st.escrever = 0; escrevendo = false; eu.levantar = LUGAR_EM_PE.clone(); if (celLugar === 'mesa') { celLugar = 'bolso'; celular.visible = false; } }
+function sentar() { if (J.sentado || J.sentando || !pertoDoLugar()) return; J.sentando = true; J.x = LUGAR_EM_PE.x; J.z = LUGAR_EM_PE.z; if (celLugar === 'bolso' && fase === 'aula') { celLugar = 'mesa'; celular.visible = true; celular.position.copy(CEL_MESA.p); celular.rotation.copy(CEL_MESA.r); } }
 
 // ===================== ROTEIRO =====================
-let jogoComecou = false, escolheuOlhar = false;
-const portaAberta = { v: 0 };
+let jogoComecou = false, escolheuOlhar = false, fase = 'menu', broncaDada = false, tempoEmPe = 0;
+function falaSolta(id, texto) { if (!pular) fala(id, texto); }
 async function roteiro() {
-  // --- CENA 1: na sala de aula
-  modo = 'cine'; cinema(true); const olho = olhoSentado(); cam.pos.copy(olho); cam.alvo.copy(olho); olhar(0.3, 1.5, -3.8); cam.yaw = cam.aYaw; cam.pitch = cam.aPitch; cam.vel = 1.6; escrevendo = true;
-  $('dica').textContent = 'Arraste para olhar em volta'; $('dica').hidden = false;
+  if (window.__testeFora) { await cartao('TESTE', 'Lá fora', 300); porta.rotation.y = 1.55; iniciarEvacuacao(); J.sentado = false; eu.st.sentar = 0; delete eu.levantar; celular.visible = false; celLugar = 'bolso'; J.x = 6.25; J.z = -16.5; J.yaw = 0.2; return parteFora(); }
+  // --- CENA 1: na sala de aula (você já pode olhar, levantar e andar)
+  fase = 'aula'; escrevendo = true; document.body.classList.add('andar');
+  mostrarDica(toque ? 'Arraste à direita para olhar · à esquerda para andar' : 'Clique na tela e use o mouse para olhar · W A S D para andar · E para levantar ou sentar', 12);
   await cartao('CENA 1', 'Na sala de aula');
-  prof.st.falar = 1; await fala('prof', 'Então, pessoal: para somar frações com denominadores diferentes, primeiro a gente acha o mínimo múltiplo comum. Depois é só somar os numeradores.');
-  olhar(MINHA.x + 0.05, 0.74, MINHA.z + 0.02); await espera(900);
-  await fala('voce', 'Escrevendo no caderno... quase terminei esse dever!');
-  await espera(1600);
-  // o celular começa a tocar embaixo do caderno
-  celEstado = 'tocando'; desenharCelular(); celularVibrando = true; bipes(); vibrar(1.6);
-  const repetir = setInterval(() => { if (celularVibrando) { bipes(); vibrar(1.4, celularEscondido ? 0.025 : 0.06); } }, 2200);
-  escrevendo = false; eu.st.escrever = 0; olhar(CEL_MESA.p.x, CEL_MESA.p.y, CEL_MESA.p.z);
-  await narra('BIP... BIP... BIP... Seu celular vibra na carteira, embaixo do caderno. Ninguém percebe ainda.');
+  await fala('prof', 'Então, pessoal: para somar frações com denominadores diferentes, primeiro a gente acha o mínimo múltiplo comum. Depois é só somar os numeradores.');
+  if (J.sentado) olhar(MINHA.x + 0.05, 0.74, MINHA.z + 0.02, 2); await espera(900);
+  await fala('voce', J.sentado ? 'Escrevendo no caderno... quase terminei esse dever!' : 'Eu ainda nem terminei o dever...');
+  await espera(1800);
+  // o celular começa a tocar
+  fase = 'alerta'; celEstado = 'tocando'; desenharCelular(); celularVibrando = true; bipes(); vibrar(1.6);
+  const repetir = setInterval(() => { if (celularVibrando) { bipes(); vibrar(1.4, celLugar === 'mochila' ? 0.025 : 0.06); } }, 2200);
+  escrevendo = false; eu.st.escrever = 0; if (celLugar === 'mesa') olhar(CEL_MESA.p.x, CEL_MESA.p.y, CEL_MESA.p.z, 2.5);
+  await narra(celLugar === 'mesa' ? 'BIP... BIP... BIP... Seu celular vibra na carteira, embaixo do caderno. Ninguém percebe ainda.' : 'BIP... BIP... BIP... Seu celular vibra no seu bolso. Ninguém percebe ainda.');
   await fala('voce', 'Que som é esse? Meu celular?');
-  semLegenda(); const e = await escolha('O que você faz?', ['Esconde e ignora', 'Olha o que é']); escolheuOlhar = e === 1;
+  soltarMouse(); const e = await escolha('O que você faz?', ['Esconde e ignora', 'Olha o que é']); escolheuOlhar = e === 1;
+  if (!toque) mostrarDica('Clique na tela para voltar a mexer a câmera com o mouse', 6);
   if (escolheuOlhar) { await cartao('CENA 2', 'O alerta', 2000); await pegarCelular(); await espera(700); await fala('voce', 'Nossa... isso não é brincadeira!'); }
-  else { await esconderCelular(); await fala('voce', 'Melhor esconder antes que o professor veja...'); await narra('O celular continua vibrando dentro da mochila...'); await espera(600); }
+  else { const naMesa = celLugar === 'mesa'; await esconderCelular(); await fala('voce', 'Melhor esconder antes que o professor veja...'); await narra(naMesa ? 'O celular continua vibrando dentro da mochila...' : 'O celular continua vibrando no seu bolso...'); await espera(600); }
   // --- o jato rasante
   await jatoPassa(); celularVibrando = false; clearInterval(repetir);
   await fala('a1', 'Vocês viram isso?!'); await fala('a2', 'Que avião enorme!'); await fala('a3', 'Isso não é normal...');
   alertaCelulares(4.6, true); vibrar(3, 0.05); alunos.forEach(p => { p.st.olharX = 0.4; p.st.olharY = rnd(-0.3, 0.3); });
   await narra('O celular de todo mundo começa a tocar ao mesmo tempo.');
-  if (!escolheuOlhar) { await cartao('CENA 2', 'O alerta', 1800); celularEscondido = false; await pegarCelular(true); await fala('voce', 'Alerta de segurança... não é exercício. Eu devia ter olhado antes!'); }
-  alunos.forEach(p => { p.st.olharX = -0.1; p.st.olharY = 0; p.olharPara = V3(-4, 0, -3.5); }); olhar(-4.4, 2.85, -3.8);
+  if (!escolheuOlhar) { await cartao('CENA 2', 'O alerta', 1800); await pegarCelular(true); await fala('voce', 'Alerta de segurança... não é exercício. Eu devia ter olhado antes!'); }
+  alunos.forEach(p => { p.st.olharX = -0.1; p.st.olharY = 0; p.olharPara = V3(-4, 0, -3.5); }); olhar(-4.4, 2.85, -3.8, 3);
   campainha(); await espera(1700); alarmeLigado = true; alarmeEscola();
   await fala('falante', 'Atenção! Alerta geral. Todos os alunos e funcionários, evacuem o prédio imediatamente. Mantenham a calma e sigam os professores.');
   guardarCelular();
   // --- CENA 3: saída de emergência
-  await cartao('CENA 3', 'Saída de emergência');
-  prof.caminho = [V3(2.5, 0, -2.9), V3(4.35, 0, -2.75)]; prof.chegou = () => { prof.olharPara = V3(0, 0, 0); }; olhar(4.4, 1.5, -2.7);
+  await cartao('CENA 3', 'Saída de emergência'); fase = 'evacuar';
+  prof.caminho = [V3(2.5, 0, -2.9), V3(4.35, 0, -2.75)]; prof.chegou = () => { prof.olharPara = V3(0, 0, 0); }; olhar(4.4, 1.5, -2.7, 4);
   await espera(2600); await durante(1.2, k => { porta.rotation.y = suave(k) * 1.55; }); chiadoPorta();
   await fala('prof', 'Calma, pessoal! Uma fila! Sem correr! Vamos lá!');
   iniciarEvacuacao();
-  // você se levanta e passa a controlar
-  eu.levantar = V3(MINHA.x + 0.55, 0, MINHA.z + 0.36); await espera(1300); eu.g.visible = false;
-  J.x = MINHA.x + 0.55; J.z = MINHA.z + 0.36; J.yaw = cam.yaw + cam.offY; J.pitch = 0; cam.offY = cam.offX = 0; modo = 'andar'; cinema(false); document.body.classList.add('andar');
-  objetivo('Siga a fila até o gramado'); $('dica').textContent = toque ? 'Arraste à esquerda para andar e à direita para olhar' : 'W A S D para andar · arraste para olhar'; $('dica').hidden = false;
-  await new Promise(res => { const tf = () => { if (J.z < -15.5) { tarefas.delete(tf); res(); } }; tarefas.add(tf); });
+  objetivo(J.sentado ? 'Levante-se e siga a fila até o gramado' : 'Siga a fila até o gramado');
+  await new Promise(res => { const tf = () => { if (!J.sentado) objetivo('Siga a fila até o gramado'); if (J.z < -15.5) { tarefas.delete(tf); res(); } }; tarefas.add(tf); });
+  await parteFora();
+}
+async function parteFora() {
   // --- lá fora
-  objetivo(''); document.body.classList.remove('andar'); $('dica').hidden = true; alarmeLigado = false;
-  modo = 'cine'; cinema(true); cam.pos.set(J.x, 1.42, J.z); cam.alvo.set(8.1, 1.42, -20.9); cam.yaw = J.yaw; cam.pitch = J.pitch; cam.vel = 1.2; olhar(-2, 2, -45);
+  fase = 'fora'; objetivo(''); alarmeLigado = false; climaAlvo = 1;
   for (const p of alunos.concat([prof])) if (p !== amigo && p.caminho.length && p.g.position.z > -13) { const fim = p.caminho[p.caminho.length - 1]; p.g.position.set(fim.x, 0, fim.z); p.caminho = []; p.st.sentar = 0; delete p.levantar; if (p.chegou) { const c = p.chegou; p.chegou = null; c(); } }
-  if (amigo.g.position.z > -14) { amigo.g.position.set(6.4, 0, -15.5); amigo.st.sentar = 0; delete amigo.levantar; amigo.espera = 0; }
-  amigo.caminho = [V3(7.4, 0, -20.6)]; amigo.olharPara = V3(8.1, 0, -20.9);
-  climaAlvo = 1;
-  await espera(2500); olhar(7.4, 1.25, -20.6); await espera(900);
+  if (amigo.g.position.z > -14) { amigo.g.position.set(6.4, 0, -15.5); amigo.st.sentar = 0; delete amigo.levantar; amigo.espera = 0; amigo.caminho = []; }
+  amigo.seguir = true;
+  await espera(2200); olharPessoa(amigo, 6); await espera(900);
   await fala('amigo', 'Você acha que vem algo ruim?');
   await fala('voce', 'Não sei... mas vamos ficar juntos, tá?');
-  while (climaK < 1) await espera(200); olhar(-30, 18, -120);
-  await jatoPousa();
+  while (climaK < 1) await espera(200); olhar(380, 70, -60, 3);
+  cinema(true); await jatoPousa();
   await fala('mulher', 'Não tenham medo! Eu venho em paz.');
   await fala('mulher', 'Precisamos de vocês. O mundo precisa de heróis corajosos...');
   await fala('mulher', '...e a turma desta escola foi a escolhida!');
-  await espera(1200); $('fade').classList.add('ver'); await espera(1500); $('fim').hidden = false; cinema(false); $('fade').classList.remove('ver');
+  fase = 'fim'; await espera(1200); $('fade').classList.add('ver'); await espera(1500); soltarMouse(); $('fim').hidden = false; cinema(false); zoomCena = false; $('fade').classList.remove('ver');
 }
 // --- celular
-let celularVibrando = false, celularEscondido = false, celTween = null;
-async function pegarCelular(rapido) { celEstado = 'alerta'; celular.visible = true; const ini = { p: celular.position.clone(), q: celular.quaternion.clone() };
-  olhar(cam.alvo.x, cam.alvo.y - 0.05, cam.alvo.z - 1); cam.offY *= 0.3; cam.offX *= 0.3;
-  await durante(rapido ? 0.8 : 1.3, k => { const e = suave(k), alvoP = V3(0.02, -0.07, -0.3).applyQuaternion(camera.quaternion).add(camera.position), alvoQ = camera.quaternion.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2 - 0.25, 0, 0)));
+let celularVibrando = false, celTween = null;
+const CEL_MAO = V3(0.02, -0.07, -0.3), CEL_MAO_R = new THREE.Euler(Math.PI / 2 - 0.25, 0, 0);
+async function pegarCelular(rapido) { celEstado = 'alerta'; if (celLugar !== 'mesa') { celular.position.copy(V3(0.15, -0.55, -0.15).applyQuaternion(camera.quaternion).add(camera.position)); celular.quaternion.copy(camera.quaternion); }
+  celular.visible = true; celLugar = 'mao'; const ini = { p: celular.position.clone(), q: celular.quaternion.clone() };
+  await durante(rapido ? 0.8 : 1.2, k => { const e = suave(k), alvoP = CEL_MAO.clone().applyQuaternion(camera.quaternion).add(camera.position), alvoQ = camera.quaternion.clone().multiply(new THREE.Quaternion().setFromEuler(CEL_MAO_R));
     celular.position.lerpVectors(ini.p, alvoP, e); celular.quaternion.copy(ini.q).slerp(alvoQ, e); });
   celTween = 'mao'; }
-function guardarCelular() { celTween = null; celular.visible = false; celEstado = 'apagado'; }
-async function esconderCelular() { celularEscondido = true; const ini = celular.position.clone(); await durante(0.9, k => { celular.position.set(lerp(ini.x, MINHA.x - 0.3, k), lerp(ini.y, 0.3, k) + Math.sin(k * Math.PI) * 0.15, lerp(ini.z, MINHA.z + 0.5, k)); }); celular.visible = false; olhar(0.3, 1.5, -3.8); }
+function guardarCelular() { celTween = null; celular.visible = false; celEstado = 'apagado'; celLugar = 'bolso'; }
+async function esconderCelular() { if (celLugar !== 'mesa') return; celLugar = 'mochila'; const ini = celular.position.clone(); await durante(0.9, k => { celular.position.set(lerp(ini.x, MINHA.x - 0.3, k), lerp(ini.y, 0.3, k) + Math.sin(k * Math.PI) * 0.15, lerp(ini.z, MINHA.z + 0.5, k)); }); celular.visible = false; olhar(0.3, 1.5, -3.8, 2); }
 // --- o jato passando baixíssimo por cima da escola
 async function jatoPassa() {
   const T = 3.4, x0 = -460, x1 = 520, pico = (0 - x0) / (x1 - x0) * T; jato.g.visible = true; jato.g.rotation.set(0, Math.PI / 2, 0); jato.trem.visible = false;
   setPortaJato(0); jato.bocais.forEach(b => { b.fogo.material.opacity = 0.9; b.sp.material.opacity = 1; });
-  if (!escolheuOlhar) olhar(-5, 2.2, cam.alvo.z - 0.5); else { celTween = 'mesa-baixa'; }
-  somJatoPassa(T + 1.5, pico);
-  let caiu = false;
-  await durante(T, (k, dt) => { const x = lerp(x0, x1, k); jato.g.position.set(x, 12 + Math.abs(x) * 0.01, 0.5); jato.g.rotation.z = Math.sin(k * 3) * 0.05;
-    if (k > 0.08 && k < 0.45) olhar(Math.max(x, -40), Math.min(12, 2 + (x + 460) * 0.0), 0.5);
+  if (celTween === 'mao') celTween = 'mesa-baixa';
+  somJatoPassa(T + 1.5, pico); let caiu = false;
+  await durante(T, (k, dt) => { const x = lerp(x0, x1, k), y = 12 + Math.abs(x) * 0.01; jato.g.position.set(x, y, 0.5); jato.g.rotation.z = Math.sin(k * 3) * 0.05;
+    if (k < 0.45 && J.x < 5) olhar(Math.max(x, -34), y, 0.5, 0.3);
     const prox = clamp(1 - Math.abs(x) / 120, 0, 1); cam.tremor = Math.max(cam.tremor, prox * 0.9);
-    caixilhos.forEach((c, i) => { c.position.x = (Math.random() - 0.5) * 0.012 * prox; c.position.y = (Math.random() - 0.5) * 0.006 * prox; });
+    caixilhos.forEach(c => { c.position.x = (Math.random() - 0.5) * 0.012 * prox; c.position.y = (Math.random() - 0.5) * 0.006 * prox; });
     paineis.forEach(p => p.material.emissiveIntensity = prox > 0.6 && Math.random() < 0.4 ? 0.2 : 1.3); luzesSala.forEach(l => l.intensity = prox > 0.6 && Math.random() < 0.4 ? 0.05 : 0.42);
-    if (!caiu && x > -15) { caiu = true; derrubarLivros(); alunos.forEach((p, i) => { setTimeout(() => { p.levantar = V3(p.base.x + 0.55, 0, p.base.z); p.st.susto = 1; p.st.escrever = 0; p.st.olharX = -0.35; p.st.olharY = rnd(-0.4, 0.4); }, 300 + i * 70); }); prof.st.susto = 1; prof.st.olharX = -0.4; } });
+    if (!caiu && x > -15) { caiu = true; derrubarLivros(); alunos.forEach((p, i) => { setTimeout(() => { if (p.st.sentar > 0) p.levantar = V3(p.base.x + 0.55, 0, p.base.z); p.st.susto = 1; p.st.escrever = 0; p.st.olharX = -0.35; p.st.olharY = rnd(-0.4, 0.4); }, 300 + i * 70); }); prof.st.susto = 1; prof.st.olharX = -0.4; } });
   jato.g.visible = false; caixilhos.forEach(c => c.position.set(0, 0, 0)); paineis.forEach(p => p.material.emissiveIntensity = 1.3); luzesSala.forEach(l => l.intensity = 0.42);
-  alunos.forEach(p => { p.st.susto = 0.4; }); olhar(-2, 1.4, -1);
-  // você também se levanta um pouco assustado: a câmera sobe
-  await espera(500);
+  if (celTween === 'mesa-baixa') celTween = 'mao';
+  alunos.forEach(p => { p.st.susto = 0.4; }); olhar(-2, 1.4, -1, 2); await espera(500);
 }
-function derrubarLivros() { livros.forEach((l, i) => { if (Math.random() < 0.85) { l.caindo = true; l.v.set(rnd(-0.6, 0.6), rnd(0.3, 0.9), rnd(-0.5, 0.5)); l.w.set(rnd(-6, 6), rnd(-3, 3), rnd(-6, 6)); baque(0.35 + rnd(0, 0.5), 0.25); } }); }
+function derrubarLivros() { livros.forEach(l => { if (Math.random() < 0.85) { l.caindo = true; l.v.set(rnd(-0.6, 0.6), rnd(0.3, 0.9), rnd(-0.5, 0.5)); l.w.set(rnd(-6, 6), rnd(-3, 3), rnd(-6, 6)); baque(0.35 + rnd(0, 0.5), 0.25); } }); }
 function atualizarLivros(dt) { for (const l of livros) { if (!l.caindo) continue; l.v.y -= 9.8 * dt; l.m.position.addScaledVector(l.v, dt); l.m.rotation.x += l.w.x * dt; l.m.rotation.y += l.w.y * dt; l.m.rotation.z += l.w.z * dt;
   if (l.m.position.y < 0.014) { l.m.position.y = 0.014; l.caindo = false; l.m.rotation.x = 0; l.m.rotation.z = 0; } } }
 // --- evacuação: a turma sai em fila pela porta, corredor e saída
 function iniciarEvacuacao() {
   const fila = (sx, sz) => [V3(sx, 0, sz), V3(sx, 0, -2.6), V3(4.3, 0, -2.6), V3(5.2, 0, -2.72), V3(6.25, 0, -2.9), V3(6.25, 0, -11.3), V3(6.25, 0, -12.9), V3(6.25, 0, -16.5)];
   const porDistancia = alunos.map(p => { const sx = p.base.x + 0.55; return { p, sx, d: Math.abs(-2.6 - p.base.z) + Math.abs(4.3 - sx) }; }).sort((a, b) => a.d - b.d);
-  let chegada = 0; porDistancia.forEach(({ p, sx, d }, i) => { if (p === amigo) return; const t = Math.max(chegada + 1.05, d / p.vel); chegada = t; p.espera = 1.2 + t - d / p.vel; p.levantar = p.st.sentar > 0 ? V3(sx, 0, p.base.z) : undefined; if (!p.levantar) delete p.levantar;
-    const c = fila(sx, p.base.z), k = i, col = k % 5, lin_ = Math.floor(k / 5); c.push(V3(3.2 + col * 0.85, 0, -20.2 - lin_ * 0.9)); p.caminho = c; p.chegou = () => { p.olharPara = V3(-4, 0, -40); }; p.st.susto = 0; p.st.olharX = 0; p.st.olharY = 0; p.olharPara = null; });
+  let chegada = 0; porDistancia.forEach(({ p, sx, d }, i) => { if (p === amigo) return; const t = Math.max(chegada + 1.05, d / p.vel); chegada = t; p.espera = 1.2 + t - d / p.vel; if (p.st.sentar > 0) p.levantar = V3(sx, 0, p.base.z);
+    const c = fila(sx, p.base.z), col = i % 5, lin_ = Math.floor(i / 5); c.push(V3(3.2 + col * 0.85, 0, -20.2 - lin_ * 0.9)); p.caminho = c; p.chegou = () => { p.olharPara = V3(-4, 0, -40); }; p.st.susto = 0; p.st.olharX = 0; p.st.olharY = 0; p.olharPara = null; });
   amigo.espera = chegada + 3; amigo.caminho = fila(amigo.base.x + 0.55, amigo.base.z).concat([V3(7.4, 0, -19.8)]); amigo.st.olharX = 0; amigo.st.olharY = 0; amigo.olharPara = null;
   prof.espera = 4; prof.caminho = [V3(5.2, 0, -2.72), V3(6.25, 0, -3.4), V3(6.25, 0, -11.3), V3(6.25, 0, -12.9), V3(2.3, 0, -19.4)]; prof.chegou = () => { prof.olharPara = V3(-4, 0, -40); };
 }
@@ -738,20 +763,19 @@ function setPortaJato(k) { jato.portaJ.rotation.z = -2.42 * suave(k); jato.vao.v
 async function jatoPousa() {
   const A = V3(380, 70, -60), B = V3(-4, 15, -40), C = V3(-4, 2.1, -40); jato.g.visible = true; jato.g.rotation.set(0, -Math.PI / 2, 0); setPortaJato(0);
   alvoSom('pairar', 0.0001); alvoSom('assobio', 0.0001); alvoSom('pairar', 0.6, 2.5); alvoSom('assobio', 0.08, 2.5);
-  await durante(7, (k, dt) => { const e = 1 - Math.pow(1 - k, 2.6); jato.g.position.lerpVectors(A, B, e); jato.g.rotation.x = -Math.sin(k * Math.PI) * 0.12; olhar(jato.g.position.x, jato.g.position.y, jato.g.position.z); jato.bocais.forEach(b => { b.fogo.material.opacity = 0.9 * (1 - k); b.sp.material.opacity = 1 - k; }); jato.ventoinhas.forEach(v => v.material.opacity = 0.2 + k * 0.6); jato.luzBaixo.intensity = k * 1.4; cam.tremor = Math.max(cam.tremor, k * 0.15); });
+  await durante(7, k => { const e = 1 - Math.pow(1 - k, 2.6); jato.g.position.lerpVectors(A, B, e); jato.g.rotation.x = -Math.sin(k * Math.PI) * 0.12; olhar(jato.g.position.x, jato.g.position.y, jato.g.position.z, 0.3); jato.bocais.forEach(b => { b.fogo.material.opacity = 0.9 * (1 - k); b.sp.material.opacity = 1 - k; }); jato.ventoinhas.forEach(v => v.material.opacity = 0.2 + k * 0.6); jato.luzBaixo.intensity = k * 1.4; cam.tremor = Math.max(cam.tremor, k * 0.15); });
   jato.trem.visible = true; poeiraFonte = V3(-4, 0, -40);
   alunos.forEach(p => { if (p.caminho.length === 0 && p.g.position.z < -15) { const d = V3(5.5 - p.g.position.x, 0, -19 - p.g.position.z).multiplyScalar(0.3); p.caminho = [V3(p.g.position.x + d.x, 0, p.g.position.z + 1.6)]; p.st.susto = 1; p.chegou = () => { p.olharPara = V3(-4, 0, -40); }; } });
-  await durante(5, (k, dt) => { const e = suave(k); jato.g.position.lerpVectors(B, C, e); jato.g.position.y += Math.sin(k * 9) * 0.08 * (1 - k); jato.trem.scale.y = Math.min(1, k * 2.5); poeiraForca = Math.min(1, 0.4 + k); gramaU.uVento.value.set(-4, -40, 22, (0.6 + 0.6 * k)); olhar(jato.g.position.x, jato.g.position.y - 0.5, jato.g.position.z); cam.tremor = Math.max(cam.tremor, 0.12 + k * 0.12); });
+  await durante(5, k => { const e = suave(k); jato.g.position.lerpVectors(B, C, e); jato.g.position.y += Math.sin(k * 9) * 0.08 * (1 - k); jato.trem.scale.y = Math.min(1, k * 2.5); poeiraForca = Math.min(1, 0.4 + k); gramaU.uVento.value.set(-4, -40, 22, (0.6 + 0.6 * k)); olhar(jato.g.position.x, jato.g.position.y - 0.5, jato.g.position.z, 0.3); cam.tremor = Math.max(cam.tremor, 0.12 + k * 0.12); });
   baque(0, 0.5); alvoSom('pairar', 0.0001, 1.5); alvoSom('assobio', 0.0001, 2.5); poeiraForca = 0.2; await durante(2, k => { gramaU.uVento.value.w = (1 - k) * 1.2; jato.ventoinhas.forEach(v => v.material.opacity = 0.8 - k * 0.6); jato.luzBaixo.intensity = 1.4 - k * 1.2; }); poeiraForca = 0;
-  await espera(800); chiadoPorta(); await durante(2.4, k => setPortaJato(k));
-  // a mulher de uniforme azul desce a rampa
+  await espera(800); chiadoPorta(); olhar(-7.6, 1.9, -38.8, 3); await durante(2.4, k => setPortaJato(k));
+  // a mulher de uniforme azul desce a rampa e vem até a turma
   const portaMundo = V3(1.15, -0.05, 3.6).applyMatrix4(jato.g.matrixWorld), baseRampa = V3(1.22 + 1.0, -2.1, 3.6).applyMatrix4(jato.g.matrixWorld);
   mulher.g.visible = true; mulher.g.position.set(portaMundo.x, 1.25, portaMundo.z - 0.05); mulher.g.rotation.y = 0; mulher.vel = 0.9;
-  mulher.rampa = pos => { const t = clamp((pos.z - (portaMundo.z)) / (baseRampa.z - portaMundo.z), 0, 1); return pos.z < baseRampa.z ? lerp(1.25, 0, t) : 0; };
-  cam.aFov = 34; olhar(portaMundo.x, 1.9, portaMundo.z);
-  mulher.caminho = [V3(portaMundo.x, 0, baseRampa.z + 0.3), V3(portaMundo.x + 1.4, 0, -33.5)];
-  await new Promise(res => { mulher.chegou = res; const tf = () => olhar(mulher.g.position.x, mulher.g.position.y + 1.55, mulher.g.position.z); tarefas.add(tf); setTimeout(() => tarefas.delete(tf), 9000); });
-  mulher.olharPara = V3(5, 0, -20); await espera(600); await durante(0.8, k => { mulher.st.aceno = suave(k); }); olhar(mulher.g.position.x, 1.6, mulher.g.position.z); cam.aFov = 28;
+  mulher.rampa = pos => { const t = clamp((pos.z - portaMundo.z) / (baseRampa.z - portaMundo.z), 0, 1); return pos.z < baseRampa.z ? lerp(1.25, 0, t) : 0; };
+  zoomCena = true; mulher.caminho = [V3(portaMundo.x, 0, baseRampa.z + 0.3), V3(portaMundo.x + 2.4, 0, -28.6)];
+  await new Promise(res => { mulher.chegou = res; const tf = () => olhar(mulher.g.position.x, mulher.g.position.y + 1.55, mulher.g.position.z, 0.3); tarefas.add(tf); setTimeout(() => tarefas.delete(tf), 12000); });
+  mulher.olharPara = V3(J.x, 0, J.z); await espera(600); await durante(0.8, k => { mulher.st.aceno = suave(k); }); olhar(mulher.g.position.x, 1.6, mulher.g.position.z, 4);
 }
 function atualizarPoeira(dt) { for (const p of poeira) { if (p.t < p.vida) { p.t += dt; p.s.position.addScaledVector(p.v, dt); p.v.multiplyScalar(1 - dt * 0.6); p.s.scale.setScalar(1 + p.t * 3); p.s.material.opacity = Math.sin(p.t / p.vida * Math.PI) * 0.45; if (p.t >= p.vida) p.s.visible = false; }
   else if (poeiraFonte && poeiraForca > 0 && Math.random() < poeiraForca * dt * 18) { const a = rnd(0, 6.28), r = rnd(2, 5); p.s.position.set(poeiraFonte.x + Math.cos(a) * r, 0.4, poeiraFonte.z + Math.sin(a) * r); p.v.set(Math.cos(a) * rnd(5, 10), rnd(0.3, 1.2), Math.sin(a) * rnd(5, 10)); p.t = 0; p.vida = rnd(1.6, 2.8); p.s.visible = true; } } }
@@ -759,14 +783,15 @@ function atualizarPoeira(dt) { for (const p of poeira) { if (p.t < p.vida) { p.t
 // ===================== MENU =====================
 document.querySelectorAll('#qual button').forEach(b => { b.setAttribute('aria-pressed', String(+b.dataset.q === qual)); b.addEventListener('click', () => { qual = +b.dataset.q; try { localStorage.setItem('alerta-q', qual); } catch (e) {} location.reload(); }); });
 document.querySelectorAll('#vozes button').forEach(b => { b.setAttribute('aria-pressed', String((b.dataset.v === '1') === vozLigada)); b.addEventListener('click', () => { vozLigada = b.dataset.v === '1'; try { localStorage.setItem('alerta-voz', vozLigada ? '1' : '0'); } catch (e) {} document.querySelectorAll('#vozes button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }); });
-$('b-comecar').addEventListener('click', () => { iniciarAudio(); if (vozLigada && 'speechSynthesis' in window && !Voz.android) { try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {} } $('menu').hidden = true; jogoComecou = true; roteiro(); });
+$('b-comecar').addEventListener('click', () => { iniciarAudio(); if (vozLigada && 'speechSynthesis' in window && !Voz.android) { try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {} } $('menu').hidden = true; jogoComecou = true; prenderMouse(); roteiro(); });
 $('b-denovo').addEventListener('click', () => location.reload());
 
 // ===================== LAÇO PRINCIPAL =====================
 let climaK = 0, climaAlvo = 0;
-let antes = performance.now(), relogioT = 0, passaroT = 3, prAtual = Math.min(devicePixelRatio || 1, Q().pr), mediaF = 1 / 60, resT = 0, corridaAvisada = false;
+let antes = performance.now(), relogioT = 0, passaroT = 3, prAtual = Math.min(devicePixelRatio || 1, Q().pr), mediaF = 1 / 60, resT = 0, corridaAvisada = false, textoAcao = '';
 R.setPixelRatio(prAtual);
 function autoRes(dtR) { if (!jogoComecou || document.hidden) return; mediaF += (dtR - mediaF) * 0.06; resT += dtR; if (resT < 1.5) return; resT = 0; const max = Math.min(devicePixelRatio || 1, Q().pr), fps = 1 / mediaF; let n = prAtual; if (fps < 30) n = Math.max(0.5, prAtual * 0.85); else if (fps > 54) n = Math.min(max, prAtual * 1.08); if (Math.abs(n - prAtual) > 0.01) { prAtual = n; R.setPixelRatio(prAtual); } }
+const H_ = V3();
 function quadro(agora) {
   requestAnimationFrame(quadro);
   const dtR = Math.min(0.25, (agora - antes) / 1000), dt = Math.min(0.05, dtR); antes = agora; UT.value += dt; autoRes(dtR);
@@ -774,41 +799,55 @@ function quadro(agora) {
   for (const tf of [...tarefas]) tf(dt);
   if (climaK < climaAlvo) { climaK = Math.min(climaAlvo, climaK + dt / 12); aplicarClima(suave(climaK)); }
   const t = UT.value;
-  // relógio e caderno
   relogioT += dt; if (relogioT >= 1) { relogioT -= 1; relogioSeg++; desenharRelogio(); }
-  if (escrevendo) { const a = Math.floor(escrita); escrita += dt * 7; if (Math.floor(escrita) !== a) { desenharCaderno(); if (AC && Math.random() < 0.5) chiado(0.05, rnd(3000, 5000), 'bandpass', 0.012, 2); } }
-  // celular vibrando na mesa
-  if (celularVibrando && !celularEscondido && celTween !== 'mao') { const vib = (Math.sin(t * 60) > 0.2 && (t % 2.2) < 1.4) ? 1 : 0; celular.position.x = CEL_MESA.p.x + (Math.random() - 0.5) * 0.004 * vib; celular.position.z = CEL_MESA.p.z + (Math.random() - 0.5) * 0.004 * vib; celular.rotation.y = CEL_MESA.r.y + (Math.random() - 0.5) * 0.04 * vib; }
+  if (escrevendo && J.sentado) { const a = Math.floor(escrita); escrita += dt * 7; if (Math.floor(escrita) !== a) { desenharCaderno(); if (AC && Math.random() < 0.5) chiado(0.05, rnd(3000, 5000), 'bandpass', 0.012, 2); } }
+  if (celularVibrando && celLugar === 'mesa') { const vib = (Math.sin(t * 60) > 0.2 && (t % 2.2) < 1.4) ? 1 : 0; celular.position.x = CEL_MESA.p.x + (Math.random() - 0.5) * 0.004 * vib; celular.position.z = CEL_MESA.p.z + (Math.random() - 0.5) * 0.004 * vib; celular.rotation.y = CEL_MESA.r.y + (Math.random() - 0.5) * 0.04 * vib; }
   if (celEstado !== 'apagado' && Math.floor(t * 8) !== Math.floor((t - dt) * 8)) desenharCelular(t);
-  // pessoas, livros, poeira
-  for (const p of pessoas) atualizarPessoa(p, dt, t);
+  // seu amigo fica do seu lado lá fora
+  if (amigo.seguir && !amigo.caminho.length) { const rx = Math.cos(J.yaw), rz = -Math.sin(J.yaw), alvo = V3(J.x + rx * 0.95, 0, J.z + rz * 0.95); if (alvo.distanceTo(amigo.g.position) > 1.3) amigo.caminho = [alvo]; amigo.olharPara = V3(J.x, 0, J.z); }
+  for (const p of pessoas) if (p !== eu) atualizarPessoa(p, dt, t);
   atualizarLivros(dt); atualizarPoeira(dt);
-  // luzes de alarme piscando
   const piscaA = alarmeLigado && Math.sin(t * 6) > 0; M.alarme.emissiveIntensity = piscaA ? 3 : 0; luzCorredor.intensity = piscaA ? 1.2 : 0;
-  // jato: luzes de navegação
   if (jato.g.visible) { const b = Math.sin(t * 6) > 0.6; jato.luzVerde.visible = jato.luzVermelha.visible = b; }
-  // câmera
-  if (modo === 'andar') {
-    let f = 0, s = 0; if (teclas.has('w') || teclas.has('arrowup')) f += 1; if (teclas.has('s') || teclas.has('arrowdown')) f -= 1; if (teclas.has('d')) s += 1; if (teclas.has('a')) s -= 1; if (teclas.has('arrowleft')) J.yaw += dt * 1.8; if (teclas.has('arrowright')) J.yaw -= dt * 1.8;
-    f -= joy.dy; s += joy.dx; const mag = Math.hypot(f, s); if (mag > 1) { f /= mag; s /= mag; }
-    const correndo = teclas.has('shift'), vel = correndo ? 3.4 : 1.7, sy = Math.sin(J.yaw), cy = Math.cos(J.yaw), dx = (-sy * f + cy * s) * vel * dt, dz = (-cy * f - sy * s) * vel * dt;
-    if (livre(J.x + dx, J.z + dz)) { J.x += dx; J.z += dz; } else if (livre(J.x + dx, J.z)) J.x += dx; else if (livre(J.x, J.z + dz)) J.z += dz;
-    if (mag > 0.1) J.bob += dt * (correndo ? 13 : 8.5);
-    if (correndo && mag > 0.1 && J.z > -12 && !corridaAvisada) { corridaAvisada = true; fala('prof', 'Ei! Sem correr!'); }
-    camera.position.set(J.x, 1.42 + Math.sin(J.bob * 2) * 0.025, J.z); camera.rotation.set(J.pitch, J.yaw, Math.sin(J.bob) * 0.006);
-    gramaU.uJog.value.set(J.x, J.z); alvoSom('sala', J.z < -12 ? 0.0001 : 0.012); alvoSom('vento', J.z < -12 ? 0.05 : 0.008);
-    if (J.z < -12.2) climaAlvo = 1;
-  } else {
-    const k = 1 - Math.exp(-dt * cam.vel); cam.pos.lerp(cam.alvo, k); cam.yaw += angDif(cam.yaw, cam.aYaw) * k; cam.pitch += (cam.aPitch - cam.pitch) * k; cam.fov += (cam.aFov - cam.fov) * (1 - Math.exp(-dt * 1.2));
-    if (olharP.id === null) { cam.offY *= Math.exp(-dt * 0.35); cam.offX *= Math.exp(-dt * 0.35); }
-    if (jogoComecou && eu.st.sentar > 0.5 && eu.g.visible) { const o = olhoSentado(); cam.alvo.copy(o); cam.pos.copy(o); }
-    const tr = cam.tremor; camera.position.set(cam.pos.x + (Math.random() - 0.5) * 0.03 * tr, cam.pos.y + (Math.random() - 0.5) * 0.03 * tr, cam.pos.z + (Math.random() - 0.5) * 0.02 * tr);
-    camera.rotation.set(cam.pitch + cam.offX + (Math.random() - 0.5) * 0.02 * tr, cam.yaw + cam.offY + (Math.random() - 0.5) * 0.02 * tr, (Math.random() - 0.5) * 0.015 * tr);
-    if (Math.abs(camera.fov - cam.fov) > 0.05) { camera.fov = cam.fov; camera.updateProjectionMatrix(); }
+  // --- você
+  let f = 0, s = 0;
+  if (jogoComecou && $('escolhas').hidden && fase !== 'fim') { if (teclas.has('w') || teclas.has('arrowup')) f += 1; if (teclas.has('s') || teclas.has('arrowdown')) f -= 1; if (teclas.has('d')) s += 1; if (teclas.has('a')) s -= 1; if (teclas.has('arrowleft')) { J.yaw += dt * 1.8; ultimoOlhar = t; } if (teclas.has('arrowright')) { J.yaw -= dt * 1.8; ultimoOlhar = t; } f -= joy.dy; s += joy.dx; }
+  let mag = Math.hypot(f, s); if (mag > 1) { f /= mag; s /= mag; mag = 1; } J.mag = mag;
+  if (pedirAcao) { pedirAcao = false; if (J.sentado) levantar(); else sentar(); }
+  if (J.sentado && !J.levantando && mag > 0.35) levantar();
+  if (J.levantando) { atualizarPessoa(eu, dt, t); if (eu.st.sentar <= 0) { J.levantando = false; J.sentado = false; J.x = eu.g.position.x; J.z = eu.g.position.z; } }
+  else if (J.sentando) { eu.st.sentar = Math.min(1, eu.st.sentar + dt * 1.3); const k = suave(eu.st.sentar); eu.g.position.x = lerp(LUGAR_EM_PE.x, eu.base.x, k); eu.g.position.z = lerp(LUGAR_EM_PE.z, eu.base.z, k); eu.g.rotation.y += angDif(eu.g.rotation.y, Math.PI) * Math.min(1, dt * 6); animarPessoa(eu, dt, t);
+    if (eu.st.sentar >= 1) { J.sentando = false; J.sentado = true; if (fase === 'aula') { eu.st.escrever = 1; escrevendo = true; } } }
+  else if (J.sentado) { animarPessoa(eu, dt, t); }
+  else {
+    J.correndo = (teclas.has('shift') || correrToque) && mag > 0.1; const vel = J.correndo ? 3.4 : 1.75, sy = Math.sin(J.yaw), cy = Math.cos(J.yaw), dx = (-sy * f + cy * s) * vel * dt, dz = (-cy * f - sy * s) * vel * dt;
+    if (livre(J.x + dx, J.z + dz, J.x, J.z)) { J.x += dx; J.z += dz; } else if (livre(J.x + dx, J.z, J.x, J.z)) J.x += dx; else if (livre(J.x, J.z + dz, J.x, J.z)) J.z += dz;
+    eu.g.position.set(J.x, 0, J.z); eu.g.rotation.y = J.yaw + Math.PI; eu.st.andar += ((mag > 0.1 ? Math.min(1, mag * 1.2) : 0) - eu.st.andar) * Math.min(1, dt * 8); eu.st.fase += dt * vel * mag / (0.84 * 1.15) * Math.PI * 2;
+    animarPessoa(eu, dt, t);
+    if (J.correndo && J.z > -12 && fase !== 'fora' && !corridaAvisada) { corridaAvisada = true; falaSolta('prof', 'Ei! Sem correr!'); }
+  }
+  // segurando o celular: o braço direito sobe
+  if (celTween) { eu.o[5].rotation.x = -1.25; eu.o[5].rotation.z = 0.32; eu.o[6].rotation.x = -1.35; }
+  // levantou no meio da aula? o professor reclama
+  if (fase === 'aula' && !J.sentado) { tempoEmPe += dt; if (tempoEmPe > 4 && !broncaDada) { broncaDada = true; falaSolta('prof', 'Ei! Volte para o seu lugar, por favor.'); } } else tempoEmPe = 0;
+  // botões de levantar/sentar e correr
+  const acao = !jogoComecou || fase === 'fim' ? '' : J.sentado ? (toque ? 'Levantar' : 'Levantar (E)') : pertoDoLugar() && fase !== 'fora' ? (toque ? 'Sentar' : 'Sentar (E)') : '';
+  if (acao !== textoAcao) { textoAcao = acao; $('b-acao').textContent = acao; $('b-acao').hidden = !acao; }
+  $('b-correr').hidden = !(toque && jogoComecou && !J.sentado && fase !== 'fim');
+  // --- câmera nos seus olhos
+  if (!jogoComecou) { camera.position.set(3.8, 1.6, 3.2); camera.rotation.set(-0.12, 0.85, 0); }
+  else {
+    if (ajuda && t < ajuda.ate && t - ultimoOlhar > 0.8 && $('escolhas').hidden) { const ap = ajuda.f ? ajuda.f() : ajuda.p, dx = ap.x - camera.position.x, dy = ap.y - camera.position.y, dz = ap.z - camera.position.z, k = 1 - Math.exp(-dt * 2.4);
+      J.yaw += angDif(J.yaw, Math.atan2(-dx, -dz)) * k; J.pitch += (clamp(Math.atan2(dy, Math.hypot(dx, dz)), -1.3, 1.2) - J.pitch) * k; }
+    eu.g.updateMatrixWorld(true); eu.o[2].getWorldPosition(H_); const fx = -Math.sin(J.yaw), fz = -Math.cos(J.yaw), tr = cam.tremor;
+    camera.position.set(H_.x + fx * 0.12 + (Math.random() - 0.5) * 0.03 * tr, H_.y + 0.175 + (Math.random() - 0.5) * 0.03 * tr, H_.z + fz * 0.12 + (Math.random() - 0.5) * 0.02 * tr);
+    camera.rotation.set(J.pitch + (Math.random() - 0.5) * 0.02 * tr, J.yaw + (Math.random() - 0.5) * 0.02 * tr, (Math.random() - 0.5) * 0.015 * tr);
     cam.tremor = Math.max(0, cam.tremor - dt * 0.9);
+    cam.aFov = zoomCena && J.mag < 0.1 && t - ultimoOlhar > 0.8 ? 46 : 66; cam.fov += (cam.aFov - cam.fov) * (1 - Math.exp(-dt * 1.5)); if (Math.abs(camera.fov - cam.fov) > 0.05) { camera.fov = cam.fov; camera.updateProjectionMatrix(); }
+    gramaU.uJog.value.set(J.x, J.z); alvoSom('sala', J.z < -12 ? 0.0001 : 0.012); alvoSom('vento', J.z < -12 ? 0.05 : 0.008); if (J.z < -12.2) climaAlvo = 1;
   }
   // celular na mão segue a câmera
-  if (celTween === 'mao') { celular.position.copy(V3(0.02, -0.07, -0.3).applyQuaternion(camera.quaternion).add(camera.position)); celular.quaternion.copy(camera.quaternion).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2 - 0.25, 0, 0))); }
+  if (celTween === 'mao') { celular.position.copy(CEL_MAO.clone().applyQuaternion(camera.quaternion).add(camera.position)); celular.quaternion.copy(camera.quaternion).multiply(new THREE.Quaternion().setFromEuler(CEL_MAO_R)); }
   else if (celTween === 'mesa-baixa') { celular.position.copy(V3(0.12, -0.2, -0.3).applyQuaternion(camera.quaternion).add(camera.position)); celular.quaternion.copy(camera.quaternion).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2 - 0.9, 0, 0))); }
   // sol e sombra seguem a câmera; grama e luz da grama
   sol.position.copy(camera.position).addScaledVector(SOL_DIR, 60); sol.target.position.copy(camera.position); ceu.position.copy(camera.position);
@@ -816,10 +855,8 @@ function quadro(agora) {
   passaroT -= dt; if (passaroT <= 0) { passaroT = rnd(3, 8); if (ceuU.brilho.value < 0.3) passaros(); }
   R.render(cena, camera);
 }
-// primeira imagem: a sala vista da porta, atrás do menu
-desenharCaderno(); gerarAmbiente(); cam.pos.set(3.8, 1.6, 3.2); cam.alvo.copy(cam.pos); olhar(-1, 1.2, -1.5); cam.yaw = cam.aYaw; cam.pitch = cam.aPitch;
-requestAnimationFrame(quadro);
+desenharCaderno(); gerarAmbiente(); requestAnimationFrame(quadro);
 if (document.fonts && document.fonts.load) document.fonts.load('600 30px Caveat').then(() => { desenharCaderno(); desenhaQuadro(tQuadro.userData.g); tQuadro.needsUpdate = true; }).catch(() => {});
-window.__alerta = { get celEstado() { return celEstado; }, get climaK() { return climaK; }, pessoas, alunos, eu, prof, mulher, amigo, jato, cam, J, R, M, camera, aplicarClima, gramaU, get modo() { return modo; }, set modo(v) { modo = v; }, livre, celular, jatoPassa, jatoPousa, pegarCelular, olhar, porta, iniciarEvacuacao, durante };
+window.__alerta = { grama, get ajuda() { return ajuda; }, get celEstado() { return celEstado; }, get climaK() { return climaK; }, set climaK(v) { climaK = v; aplicarClima(v); }, get fase() { return fase; }, get celLugar() { return celLugar; }, pessoas, alunos, eu, prof, mulher, amigo, jato, cam, J, R, M, camera, aplicarClima, gramaU, livre, celular, jatoPassa, jatoPousa, pegarCelular, olhar, porta, iniciarEvacuacao, durante, levantar, sentar };
 })();
 </script>
