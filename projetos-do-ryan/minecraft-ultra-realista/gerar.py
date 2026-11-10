@@ -404,8 +404,9 @@ def salvar_texturas(pasta):
         else:
             img = Image.fromarray(rgb, 'RGB')
         img.save(os.path.join(pasta, f'{nome}.{ext}'))
-        Image.fromarray((np.clip(alt, 0, 1) * 255).astype(np.uint8), 'L').save(os.path.join(pasta, f'{nome}_realista_altura.png'))
-        Image.fromarray((np.clip(mt, 0, 1) * 255).astype(np.uint8), 'RGBA').save(os.path.join(pasta, f'{nome}_realista_mers.png'))
+        h8 = (np.clip(alt, 0, 1) * 255).astype(np.uint8)
+        Image.fromarray(np.dstack([h8, h8, h8]), 'RGB').save(os.path.join(pasta, f'{nome}_realista_altura.png'))
+        Image.fromarray((np.clip(mt, 0, 1) * 255).astype(np.uint8), 'RGBA').save(os.path.join(pasta, f'{nome}_realista_mers.tga'))
         with open(os.path.join(pasta, f'{nome}.texture_set.json'), 'w') as f:
             json.dump({'format_version': '1.21.30', 'minecraft:texture_set': {
                 'color': nome, 'heightmap': f'{nome}_realista_altura', 'metalness_emissive_roughness_subsurface': f'{nome}_realista_mers'}}, f, indent=2)
@@ -424,6 +425,14 @@ def escala_chave(v, k, teto=None):
     return v
 
 
+NS = 'ultra_realista'
+RAIZ = {'lighting': 'minecraft:lighting_settings', 'atmospherics': 'minecraft:atmosphere_settings', 'color_grading': 'minecraft:color_grading_settings', 'water': 'minecraft:water_settings'}
+
+
+def nosso(ident):
+    return NS + ':' + ident.split(':', 1)[-1]
+
+
 def mexer(nome_pasta, func):
     ori = os.path.join(VANILLA, nome_pasta)
     dest = os.path.join(SAIDA, nome_pasta)
@@ -435,6 +444,8 @@ def mexer(nome_pasta, func):
         with open(os.path.join(ori, arq)) as f:
             d = json.load(f)
         func(d)
+        desc = d[RAIZ[nome_pasta]]['description']
+        desc['identifier'] = nosso(desc['identifier'])
         with open(os.path.join(dest, arq), 'w') as f:
             json.dump(d, f, indent=2)
         n += 1
@@ -475,12 +486,43 @@ def agua(d):
     s.setdefault('caustics', {})['enabled'] = True
 
 
+COMP = {'minecraft:lighting_identifier': ('lighting_identifier', 'lighting'), 'minecraft:atmosphere_identifier': ('atmosphere_identifier', 'atmospherics'),
+        'minecraft:color_grading_identifier': ('color_grading_identifier', 'color_grading'), 'minecraft:water_identifier': ('water_identifier', 'water')}
+
+
+def biomas():
+    feitos = {pasta: {json.load(open(os.path.join(SAIDA, pasta, a)))[RAIZ[pasta]]['description']['identifier'] for a in os.listdir(os.path.join(SAIDA, pasta))} for pasta in RAIZ}
+    ori, dest = os.path.join(VANILLA, 'biomes'), os.path.join(SAIDA, 'biomes')
+    os.makedirs(dest, exist_ok=True)
+    n = 0
+    for arq in sorted(os.listdir(ori)):
+        if not arq.endswith('.client_biome.json'):
+            continue
+        with open(os.path.join(ori, arq)) as f:
+            d = json.load(f)
+        comps = d['minecraft:client_biome']['components']
+        mudou = False
+        for chave, (campo, pasta) in COMP.items():
+            if chave in comps:
+                novo = nosso(comps[chave][campo])
+                if novo not in feitos[pasta]:
+                    raise SystemExit(f'{arq}: {novo} não existe em {pasta}/')
+                comps[chave][campo] = novo
+                mudou = True
+        if mudou:
+            with open(os.path.join(dest, arq), 'w') as f:
+                json.dump(d, f, indent=2)
+            n += 1
+    return n
+
+
 def montar():
     if os.path.exists(SAIDA):
         shutil.rmtree(SAIDA)
     os.makedirs(SAIDA)
     feitas = salvar_texturas(os.path.join(SAIDA, 'textures', 'blocks'))
     cont = {p: mexer(p, f) for p, f in (('lighting', luz), ('atmospherics', ceu), ('color_grading', cores), ('water', agua))}
+    cont['biomes'] = biomas()
     os.makedirs(os.path.join(SAIDA, 'shadows'))
     with open(os.path.join(SAIDA, 'shadows', 'global.json'), 'w') as f:
         json.dump({'format_version': '1.21.80', 'minecraft:shadow_settings': {'shadow_style': 'soft_shadows'}}, f, indent=2)
@@ -499,8 +541,8 @@ def montar():
     manifesto = {
         'format_version': 2,
         'header': {'name': 'Minecraft Ultra Realista', 'description': 'Texturas realistas com relevo, sol mais forte, sombras suaves, ondas na água e raios de luz. Use com o modo Visual Vibrante.',
-                   'uuid': 'b3e8f2a4-6c1d-4f7e-9a2b-5d8c1e4f7a01', 'version': [1, 0, 0], 'min_engine_version': [1, 21, 120]},
-        'modules': [{'type': 'resources', 'uuid': 'b3e8f2a4-6c1d-4f7e-9a2b-5d8c1e4f7a02', 'version': [1, 0, 0]}],
+                   'uuid': 'b3e8f2a4-6c1d-4f7e-9a2b-5d8c1e4f7a01', 'version': [1, 1, 0], 'min_engine_version': [1, 21, 120]},
+        'modules': [{'type': 'resources', 'uuid': 'b3e8f2a4-6c1d-4f7e-9a2b-5d8c1e4f7a02', 'version': [1, 1, 0]}],
         'capabilities': ['pbr'],
     }
     with open(os.path.join(SAIDA, 'manifest.json'), 'w') as f:
