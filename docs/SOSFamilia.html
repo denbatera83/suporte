@@ -123,7 +123,7 @@
     </header>
     <p class="avisa" id="avisa"></p>
     <div class="cartao alerta-perm" id="perm" hidden>
-      <p><b>Falta uma permissão.</b> Para mandar o SMS sozinho, ligar e pegar a localização, o app precisa da sua autorização.</p>
+      <p><b>Falta uma permissão.</b> Para pegar a localização (e, na versão automática, mandar o SMS e ligar), o app precisa da sua autorização.</p>
       <div class="linha-btn"><button class="mini forte" id="b-permitir" type="button">Permitir agora</button></div>
     </div>
     <div class="palco">
@@ -170,7 +170,7 @@
       <div class="contato"><label for="c1-nome">Contato 1<input type="text" id="c1-nome" autocomplete="off" placeholder="Nome"></label><label for="c1-tel">Telefone com DDD<input type="tel" id="c1-tel" inputmode="tel" autocomplete="off" placeholder="(11) 98765-4321"></label></div>
       <div class="contato"><label for="c2-nome">Contato 2<input type="text" id="c2-nome" autocomplete="off" placeholder="Nome"></label><label for="c2-tel">Telefone com DDD<input type="tel" id="c2-tel" inputmode="tel" autocomplete="off" placeholder="(11) 98765-4321"></label></div>
       <div class="contato"><label for="c3-nome">Contato 3<input type="text" id="c3-nome" autocomplete="off" placeholder="Nome"></label><label for="c3-tel">Telefone com DDD<input type="tel" id="c3-tel" inputmode="tel" autocomplete="off" placeholder="(11) 98765-4321"></label></div>
-      <label class="marcar" for="c-ligar"><input type="checkbox" id="c-ligar">Depois da mensagem, ligar sozinho para o contato 1 <small>(só no app)</small></label>
+      <label class="marcar" for="c-ligar"><input type="checkbox" id="c-ligar">Depois da mensagem, ligar para o contato 1 <small>(no app)</small></label>
       <p class="aviso-salvo" id="ct-salvo" aria-live="polite"></p>
       <button class="salvar" type="submit">Salvar contatos</button>
       <button class="link" id="b-teste" type="button">Enviar um teste</button>
@@ -218,6 +218,7 @@
 const $ = id => document.getElementById(id);
 const A = window.Android;
 const APP = !!(A && A.enviarSMS);
+const AUTO = APP && (!A.podeAuto || A.podeAuto()); // versão automática manda o SMS sozinho; a simples abre o app de mensagens
 let PREVIA = false; try { PREVIA = !APP && window.top !== window.self; } catch (e) { PREVIA = !APP; }
 const IOS = /iP(hone|ad|od)/.test(navigator.userAgent);
 
@@ -302,7 +303,11 @@ async function dispararAlerta(teste) {
   const loc = await pegarLocal(teste ? 6000 : 9000); if (!alerta || alerta.id !== id) return;
   mostrarLocal(loc); const msg = mensagem(loc, teste); alerta.msg = msg; $('al-msg').textContent = msg;
   if (!cs.length) { $('al-rodape').textContent = 'Cadastre quem deve receber o alerta em Contatos. Agora, ligue para o 192.'; desenharLista('vazio'); return; }
-  if (APP) {
+  if (APP && !AUTO) {
+    desenharLista('aberto'); alerta.esperaVolta = true;
+    try { A.abrirSMS(JSON.stringify(cs.map(c => c.num)), msg); } catch (e) {}
+    $('al-rodape').textContent = 'No app de mensagens, toque em Enviar. Depois volte aqui' + (!teste && cfg.ligar ? `: o app abre a ligação para ${cs[0].nome}.` : '.');
+  } else if (APP) {
     desenharLista('enviando');
     try { A.enviarSMS(JSON.stringify(cs.map(c => c.num)), msg); } catch (e) { alerta.envio.forEach(x => { x.falhou = true; }); desenharLista('enviando'); }
     $('al-rodape').textContent = !teste && cfg.ligar ? `Depois da mensagem, o app liga para ${cs[0].nome}.` : '';
@@ -325,6 +330,7 @@ function desenharLista(modo) {
     li.innerHTML = `<div class="quem"><b>${esc(c.nome)}</b><span>${esc(bonito(c.tel))}</span></div>`;
     const lado = document.createElement('div'); lado.className = 'linha-btn';
     if (modo === 'preparando') lado.innerHTML = '<span class="pill">Preparando…</span>';
+    else if (modo === 'aberto') lado.innerHTML = `<span class="pill">Toque em Enviar</span><button class="mini" type="button" data-sms="${i}">Mensagens</button><button class="mini" type="button" data-tel="${esc(c.num)}">Ligar</button>`;
     else if (modo === 'enviando') { const e = alerta.envio[i], pronto = e.ok >= e.n;
       lado.innerHTML = `<span class="pill ${e.falhou ? 'falha' : pronto ? 'ok' : ''}">${e.falhou ? 'SMS não saiu' : pronto ? 'SMS enviado' : 'Enviando…'}</span><button class="mini" type="button" data-tel="${esc(c.num)}">Ligar</button>`;
       if (e.falhou) { lado.innerHTML += `<button class="mini forte" type="button" data-sms="${i}">Mensagens</button>`; const wa = digitos(c.num); if (wa.length >= 12) lado.innerHTML += `<a class="mini" href="https://wa.me/${wa}?text=${encodeURIComponent(alerta.msg || '')}" target="_blank" rel="noopener">WhatsApp</a>`; } }
@@ -339,7 +345,7 @@ function encerrar() { alerta = null; ligarSirene(false); telaLigada(false); vibr
 function abrirContatos() {
   $('c-nome').value = cfg.nome; $('c-saude').value = cfg.saude; $('c-ligar').checked = !!cfg.ligar;
   [1, 2, 3].forEach(k => { const c = cfg.contatos[k - 1] || { nome: '', tel: '' }; $(`c${k}-nome`).value = c.nome; $(`c${k}-tel`).value = c.tel; });
-  $('ct-salvo').textContent = ''; $('b-teste').textContent = APP ? 'Enviar um teste por SMS' : 'Ver como fica a mensagem'; mostrar('tela-contatos');
+  $('ct-salvo').textContent = ''; $('b-teste').textContent = AUTO ? 'Enviar um teste por SMS' : APP ? 'Abrir um teste nas mensagens' : 'Ver como fica a mensagem'; mostrar('tela-contatos');
 }
 function lerFormulario() { cfg.nome = $('c-nome').value.trim(); cfg.saude = $('c-saude').value.trim(); cfg.ligar = $('c-ligar').checked;
   cfg.contatos = [1, 2, 3].map(k => ({ nome: $(`c${k}-nome`).value.trim(), tel: $(`c${k}-tel`).value.trim() })); }
@@ -351,7 +357,7 @@ $('b-teste').addEventListener('click', () => { lerFormulario(); guardar(); dispa
 
 // ---------- como o outro celular é avisado
 function abrirReceber() { mostrar('tela-receber'); }
-window.__voltou = () => { if (!$('tela-inicio').hidden) atualizarInicio(); };
+window.__voltou = () => { if (alerta && alerta.esperaVolta) { alerta.esperaVolta = false; if (!alerta.teste && cfg.ligar && alerta.cs.length) setTimeout(() => ligarPrimeiro(alerta.id), 800); } if (!$('tela-inicio').hidden) atualizarInicio(); };
 window.__permissoes = window.__voltou;
 
 // ---------- botões

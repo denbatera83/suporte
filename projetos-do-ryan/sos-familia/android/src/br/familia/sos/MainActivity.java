@@ -40,10 +40,16 @@ public class MainActivity extends Activity {
     private final Handler h = new Handler(Looper.getMainLooper());
     private int lote = 0;
 
-    static final String[] PERMISSOES = { Manifest.permission.SEND_SMS, Manifest.permission.CALL_PHONE,
+    static final String[] TODAS = { Manifest.permission.SEND_SMS, Manifest.permission.CALL_PHONE,
         Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION };
+    /** Só as permissões que esta versão pede (a versão simples não pede SMS nem ligação). */
+    String[] PERMISSOES = TODAS;
 
-    private boolean tem(String p) { return Build.VERSION.SDK_INT < 23 || checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED; }
+    private boolean declarada(String p) {
+        try { String[] r = getPackageManager().getPackageInfo(getPackageName(), PackageManager.GET_PERMISSIONS).requestedPermissions; if (r != null) for (String x : r) if (p.equals(x)) return true; } catch (Exception e) { }
+        return false;
+    }
+    private boolean tem(String p) { return Build.VERSION.SDK_INT < 23 ? declarada(p) : checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED; }
 
     /** Roda um pedaço de JavaScript na página (chamado pelos avisos do SMS e da localização). */
     static void js(final String codigo) {
@@ -52,6 +58,8 @@ public class MainActivity extends Activity {
     }
 
     public class Ponte {
+        /** Versão automática: manda o SMS sozinho. Versão simples: abre o app de mensagens pronto. */
+        @JavascriptInterface public boolean podeAuto() { return declarada(Manifest.permission.SEND_SMS); }
         @JavascriptInterface public boolean temPermissoes() { for (String p : PERMISSOES) if (!tem(p)) return false; return true; }
         @JavascriptInterface public void pedirPermissoes() { h.post(new Runnable() { public void run() { if (Build.VERSION.SDK_INT >= 23) requestPermissions(PERMISSOES, 1); } }); }
         /** Se o SMS automático não sair, abre o app de mensagens com tudo pronto (só falta tocar em Enviar). */
@@ -125,6 +133,7 @@ public class MainActivity extends Activity {
     @Override protected void onCreate(Bundle b) {
         super.onCreate(b);
         atual = this;
+        ArrayList<String> ps = new ArrayList<String>(); for (String p : TODAS) if (declarada(p)) ps.add(p); PERMISSOES = ps.toArray(new String[0]);
         web = new WebView(this);
         web.setBackgroundColor(Color.rgb(236, 239, 242));
         WebSettings s = web.getSettings();
