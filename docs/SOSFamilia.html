@@ -135,7 +135,7 @@
       <a class="num" href="tel:193" data-ligar="193"><b>193</b><span>Bombeiros</span></a>
       <button class="num desmaio" id="b-desmaio" type="button"><b>?</b><span>Desmaio: o que fazer</span></button>
     </div>
-    <button class="link" id="b-receber" type="button">Receber alertas neste celular</button>
+    <button class="link" id="b-receber" type="button">Como o outro celular é avisado</button>
   </section>
 
   <section class="contagem" id="tela-contagem" hidden aria-live="assertive">
@@ -198,20 +198,16 @@
   </section>
 
   <section class="tela" id="tela-receber" hidden>
-    <header class="topo"><h2>Receber alertas</h2><button class="link" id="rc-voltar" type="button">Voltar</button></header>
-    <div id="rc-app" class="tela" hidden>
-      <p>Quando chegar um SMS com <b>SOS EMERGÊNCIA</b>, este celular toca um alarme alto e vibra sem parar até alguém apertar <b>Parar</b>, mesmo no modo silencioso na maioria dos aparelhos.</p>
-      <div class="cartao">
-        <label class="chave" for="rc-ligado">Receber alertas neste celular<input type="checkbox" id="rc-ligado" style="width:26px;height:26px;accent-color:var(--sos)"></label>
-        <div class="pessoa"><div class="quem"><b>Ler SMS que chegam</b><span>para reconhecer o alerta</span></div><span class="pill" id="rc-sms">…</span></div>
-        <div class="pessoa"><div class="quem"><b>Aparecer sobre outros apps</b><span>para o alarme abrir sozinho na tela</span></div><span class="pill" id="rc-sob">…</span></div>
-        <div class="linha-btn"><button class="mini" id="rc-permitir" type="button">Permitir</button><button class="mini forte" id="rc-testar" type="button">Testar o alarme</button></div>
-      </div>
-      <p class="rodape">Instale o SOS Família também no celular de quem vai receber. Em alguns aparelhos (Xiaomi, Samsung) também é preciso tirar o app da economia de bateria.</p>
+    <header class="topo"><h2>No celular de quem recebe</h2><button class="link" id="rc-voltar" type="button">Voltar</button></header>
+    <div class="cartao">
+      <b>Ligação: não precisa instalar nada</b>
+      <p>Depois da mensagem, o SOS Família liga para o contato 1. O celular dele toca e vibra como numa ligação normal.</p>
+      <p class="rodape">Para tocar mesmo no modo Não perturbe: salve o número de quem pede ajuda como favorito. No Samsung, abra Configurações, Notificações, Não perturbe, e libere chamadas e mensagens dos favoritos.</p>
     </div>
-    <div id="rc-web" class="cartao">
-      <p>No site, o outro celular vibra do jeito normal quando recebe o SMS, o WhatsApp ou a ligação.</p>
-      <p>Para um alarme alto que não para até a pessoa atender, instale o app <b>SOS Família</b> (Android) no celular de quem vai receber o alerta.</p>
+    <div class="cartao">
+      <b>Alarme que não para: app SOS Alarme</b>
+      <p>Instale o SOS Alarme no celular de quem recebe. Quando chegar o SMS com SOS EMERGÊNCIA, ele toca um alarme alto e vibra sem parar até a pessoa apertar Parar.</p>
+      <p class="rodape">O SOS Alarme precisa ler os SMS que chegam. Por isso o Play Protect pode avisar ou bloquear a instalação dele. O SOS Família funciona sem ele.</p>
     </div>
   </section>
 </div>
@@ -331,7 +327,7 @@ function desenharLista(modo) {
     if (modo === 'preparando') lado.innerHTML = '<span class="pill">Preparando…</span>';
     else if (modo === 'enviando') { const e = alerta.envio[i], pronto = e.ok >= e.n;
       lado.innerHTML = `<span class="pill ${e.falhou ? 'falha' : pronto ? 'ok' : ''}">${e.falhou ? 'SMS não saiu' : pronto ? 'SMS enviado' : 'Enviando…'}</span><button class="mini" type="button" data-tel="${esc(c.num)}">Ligar</button>`;
-      if (e.falhou) { const wa = digitos(c.num); if (wa.length >= 12) lado.innerHTML += `<a class="mini" href="https://wa.me/${wa}?text=${encodeURIComponent(alerta.msg || '')}" target="_blank" rel="noopener">WhatsApp</a>`; } }
+      if (e.falhou) { lado.innerHTML += `<button class="mini forte" type="button" data-sms="${i}">Mensagens</button>`; const wa = digitos(c.num); if (wa.length >= 12) lado.innerHTML += `<a class="mini" href="https://wa.me/${wa}?text=${encodeURIComponent(alerta.msg || '')}" target="_blank" rel="noopener">WhatsApp</a>`; } }
     else { const wa = digitos(c.num);
       lado.innerHTML = `<a class="mini forte" href="${esc(linkSMS(c))}">SMS</a>` + (wa.length >= 12 ? `<a class="mini" href="https://wa.me/${wa}?text=${encodeURIComponent(alerta.msg || '')}" target="_blank" rel="noopener">WhatsApp</a>` : '') + `<a class="mini" href="tel:${esc(c.num)}">Ligar</a>`; }
     li.appendChild(lado); ul.appendChild(li);
@@ -353,14 +349,9 @@ $('form').addEventListener('submit', e => { e.preventDefault(); lerFormulario();
   $('ct-salvo').textContent = ruins.length ? 'Algum telefone está incompleto. Use o DDD, ex.: (11) 98765-4321.' : ok ? `Salvo. ${validos().length} contato(s) vão receber o alerta.` : 'Não deu para guardar neste navegador. Os contatos valem só até fechar a página.'; });
 $('b-teste').addEventListener('click', () => { lerFormulario(); guardar(); dispararAlerta(true); });
 
-// ---------- receber alertas (app)
-function abrirReceber() { $('rc-app').hidden = !APP; $('rc-web').hidden = APP; if (APP) atualizarReceber(); mostrar('tela-receber'); }
-function marcarPill(el, ok, sim, nao) { el.className = 'pill ' + (ok ? 'ok' : 'falha'); el.textContent = ok ? sim : nao; }
-function atualizarReceber() { if (!APP) return; try { $('rc-ligado').checked = A.receberLigado(); marcarPill($('rc-sms'), A.temPermissaoReceber(), 'Permitido', 'Falta permitir'); marcarPill($('rc-sob'), A.podeSobrepor(), 'Permitido', 'Falta permitir'); } catch (e) {} }
-$('rc-ligado').addEventListener('change', () => { try { A.setReceber($('rc-ligado').checked); } catch (e) {} });
-$('rc-permitir').addEventListener('click', () => { try { if (!A.temPermissaoReceber()) A.pedirPermissoes(); else if (!A.podeSobrepor()) A.pedirSobrepor(); } catch (e) {} });
-$('rc-testar').addEventListener('click', () => { try { A.testarAlarme(); } catch (e) {} });
-window.__voltou = () => { atualizarReceber(); if (!$('tela-inicio').hidden) atualizarInicio(); };
+// ---------- como o outro celular é avisado
+function abrirReceber() { mostrar('tela-receber'); }
+window.__voltou = () => { if (!$('tela-inicio').hidden) atualizarInicio(); };
 window.__permissoes = window.__voltou;
 
 // ---------- botões
@@ -380,7 +371,8 @@ $('b-copiar').addEventListener('click', () => { const t = $('al-msg').textConten
   try { navigator.clipboard.writeText(t).then(pronto, () => selecionar()); } catch (e) { selecionar(); } });
 function selecionar() { const r = document.createRange(); r.selectNodeContents($('al-msg')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
 // no app, ligações saem direto pelo telefone
-document.addEventListener('click', e => { const t = e.target.closest('[data-ligar],[data-tel],[data-ir]'); if (!t) return;
+document.addEventListener('click', e => { const t = e.target.closest('[data-ligar],[data-tel],[data-ir],[data-sms]'); if (!t) return;
+  if (t.dataset.sms !== undefined) { e.preventDefault(); const c = alerta && alerta.cs[+t.dataset.sms]; if (c) { try { A.abrirSMS(JSON.stringify([c.num]), alerta.msg || ''); } catch (er) {} } return; }
   if (t.dataset.ir) { e.preventDefault(); if (t.dataset.ir === 'tela-contatos') abrirContatos(); return; }
   const n = t.dataset.ligar || t.dataset.tel; if (APP) { e.preventDefault(); try { A.ligar(n); } catch (er) {} } else if (t.dataset.tel) { location.href = 'tel:' + n; } });
 addEventListener('keydown', e => { if (e.key === 'Escape' && contagem) cancelarContagem(); });

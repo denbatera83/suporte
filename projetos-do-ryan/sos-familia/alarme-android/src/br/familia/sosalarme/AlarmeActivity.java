@@ -1,4 +1,4 @@
-package br.familia.sos;
+package br.familia.sosalarme;
 
 import android.app.Activity;
 import android.content.Context;

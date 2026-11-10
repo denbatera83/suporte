@@ -32,7 +32,7 @@ import java.util.Locale;
 import java.util.Map;
 import org.json.JSONArray;
 
-/** SOS Família: o botão vermelho manda SMS com a localização sozinho e liga; no outro celular, o alerta vira alarme. */
+/** SOS Família: o botão vermelho manda SMS com a localização sozinho e depois liga. */
 public class MainActivity extends Activity {
     private static final String CASA = "appassets.androidplatform.net";
     static MainActivity atual;
@@ -40,7 +40,7 @@ public class MainActivity extends Activity {
     private final Handler h = new Handler(Looper.getMainLooper());
     private int lote = 0;
 
-    static final String[] PERMISSOES = { Manifest.permission.SEND_SMS, Manifest.permission.RECEIVE_SMS, Manifest.permission.CALL_PHONE,
+    static final String[] PERMISSOES = { Manifest.permission.SEND_SMS, Manifest.permission.CALL_PHONE,
         Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION };
 
     private boolean tem(String p) { return Build.VERSION.SDK_INT < 23 || checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED; }
@@ -53,23 +53,21 @@ public class MainActivity extends Activity {
 
     public class Ponte {
         @JavascriptInterface public boolean temPermissoes() { for (String p : PERMISSOES) if (!tem(p)) return false; return true; }
-        @JavascriptInterface public boolean temPermissaoReceber() { return tem(Manifest.permission.RECEIVE_SMS); }
         @JavascriptInterface public void pedirPermissoes() { h.post(new Runnable() { public void run() { if (Build.VERSION.SDK_INT >= 23) requestPermissions(PERMISSOES, 1); } }); }
-        @JavascriptInterface public boolean podeSobrepor() { return Build.VERSION.SDK_INT < 23 || Settings.canDrawOverlays(MainActivity.this); }
-        @JavascriptInterface public void pedirSobrepor() {
-            h.post(new Runnable() { public void run() { try { startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:" + getPackageName()))); } catch (Exception e) { } } });
-        }
-        @JavascriptInterface public boolean receberLigado() { return getSharedPreferences("sos", 0).getBoolean("receber", true); }
-        @JavascriptInterface public void setReceber(boolean on) { getSharedPreferences("sos", 0).edit().putBoolean("receber", on).apply(); }
-        @JavascriptInterface public void testarAlarme() {
-            Intent i = new Intent(MainActivity.this, AlarmeActivity.class);
-            i.putExtra("texto", "(TESTE) SOS EMERGÊNCIA! Assim fica o alarme quando chegar um pedido de ajuda. Toque em PARAR ALARME.");
-            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); startActivity(i);
-        }
+        /** Se o SMS automático não sair, abre o app de mensagens com tudo pronto (só falta tocar em Enviar). */
+        @JavascriptInterface public void abrirSMS(final String numerosJson, final String texto) { h.post(new Runnable() { public void run() { abrirMensagens(numerosJson, texto); } }); }
         @JavascriptInterface public void vibrar(long ms) { try { Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE); if (ms <= 0) v.cancel(); else v.vibrate(ms); } catch (Exception e) { } }
         @JavascriptInterface public void ligar(final String numero) { h.post(new Runnable() { public void run() { fazerLigacao(numero); } }); }
         @JavascriptInterface public void pegarLocal() { h.post(new Runnable() { public void run() { buscarLocal(); } }); }
         @JavascriptInterface public void enviarSMS(final String numerosJson, final String texto) { h.post(new Runnable() { public void run() { mandarSMS(numerosJson, texto); } }); }
+    }
+
+    void abrirMensagens(String numerosJson, String texto) {
+        try {
+            JSONArray a = new JSONArray(numerosJson); StringBuilder nums = new StringBuilder();
+            for (int i = 0; i < a.length(); i++) { if (i > 0) nums.append(';'); nums.append(a.getString(i)); }
+            Intent it = new Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + nums)); it.putExtra("sms_body", texto); startActivity(it);
+        } catch (Exception e) { }
     }
 
     void fazerLigacao(String numero) {
