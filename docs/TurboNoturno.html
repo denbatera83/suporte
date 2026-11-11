@@ -4501,7 +4501,7 @@ function updateCars(dt) {
   if (player.hopT > 0) { player.hopT = Math.max(0, player.hopT - dt); const k = 1 - player.hopT / 0.75; pc.group.position.y += Math.sin(Math.PI * k) * 0.9; pc.body.rotation.x += Math.sin(Math.PI * 2 * k) * 0.06; }
   const hiperNow = !!CAR.hiper; if (document.body.classList.contains('hiper') !== hiperNow) document.body.classList.toggle('hiper', hiperNow);
   if (pc.moto) { pc.body.position.y = 0; pc.body.rotation.z += (clamp(-latAcc * 0.05, -0.8, 0.8) - pc.body.rotation.z) * Math.min(1, 6 * dt); pc.body.rotation.x = 0; }
-  if (pc.escamas) { pc.escT = (pc.escT || 0) + dt; const v = clamp(Math.abs(player.vF) / 35, 0, 1); pc.escamas.forEach((e, i) => { e.rotation.x = -(0.08 + 0.55 * v) * (0.55 + 0.45 * Math.sin(pc.escT * (2 + 6 * v) - i * 0.45)); }); }
+  if (pc.escamas) { pc.escT = (pc.escT || 0) + dt; const v = clamp(Math.abs(player.vF) / 35, 0, 1); pc.escamas.forEach((e, i) => { e.rotation.x = e.userData.base + (0.04 + 0.5 * v) * (0.5 + 0.5 * Math.sin(pc.escT * (2 + 6 * v) - i * 0.45)); }); }
   const wheelSpinR = (player.vF * (1 + player.spin * 0.8)) * dt / CAR.rw;
   pc.wheels.forEach((w, k) => w.rotation.x += (k < 2 ? player.vF * dt / CAR.rw : wheelSpinR) * CAR.rw / (pc.wheelR || CAR.rw));
   pc.steer.forEach(s => s.rotation.y = player.steer);
@@ -6753,33 +6753,62 @@ function makeKart(look, opts = {}) {
   }
   return finishSpecial(B, wheels, steer, pivots, { kart: true, wheelR: 0.22 });
 }
-// carro-conceito biônico: corpo de gota prateado, bolha de vidro, rodas redondas com luz azul e 33 escamas nas costas
+// carro-conceito biônico: corpo longo e baixo feito por seções, vidro curvo na frente, rodas-barril com pás de luz azul e 33 escamas na traseira
 function makeBio(look, opts = {}) {
   const B = makeSpecialBase(look, opts), { mesh, paint } = B, lite = !!opts.lite;
-  const azul = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.25, 0.75, 1).multiplyScalar(2.2) });
-  const vidro = new THREE.MeshPhysicalMaterial({ color: 0x9fb8c8, metalness: 0.2, roughness: 0.04, transparent: true, opacity: 0.38, clearcoat: 1 });
-  const escuro = new THREE.MeshStandardMaterial({ color: 0x1a1d22, metalness: 0.6, roughness: 0.35 });
-  const Y = 0.62, RX = 1.18, RY = 0.66, RZ = 2.45, topo = (x, z) => Y + RY * Math.sqrt(Math.max(0, 1 - (x / RX) ** 2 - (z / RZ) ** 2));
-  mesh(new THREE.SphereGeometry(1, lite ? 20 : 48, lite ? 12 : 24), paint, 0, Y, 0).scale.set(RX, RY, RZ);            // corpo em gota
-  mesh(new THREE.SphereGeometry(1, lite ? 16 : 36, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), escuro, 0, Y - 0.02, 0).scale.set(RX * 0.96, 0.32, RZ * 0.97); // parte de baixo
-  mesh(new THREE.SphereGeometry(1, lite ? 16 : 40, lite ? 10 : 20), vidro, 0, Y + 0.32, 0.7).scale.set(0.9, 0.58, 1.3); // bolha de vidro
-  if (!lite) { for (const s of [1, -1]) for (let k = 0; k < 3; k++) mesh(new THREE.TorusGeometry(0.2 + k * 0.07, 0.01, 6, 24, Math.PI), azul, s * 0.32, Y + 0.38, 0.6 + k * 0.18, B.body, 0, Math.PI / 2, 0); } // fios de luz dentro
-  mesh(new THREE.BoxGeometry(1.6, 0.04, 0.05), B.headMat, 0, Y + 0.08, 2.4);        // faixa de luz na frente
-  mesh(new THREE.TorusGeometry(0.9, 0.02, 6, 40, Math.PI), B.tail, 0, Y + 0.02, -2.25, B.body, Math.PI / 2, 0, 0); // linha vermelha atrás
-  // 33 escamas: cada uma presa pela frente, abre e fecha como as de um peixe
+  const azul = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.2, 0.7, 1).multiplyScalar(2.4) });
+  const vidro = new THREE.MeshPhysicalMaterial({ color: 0xa8c4d4, metalness: 0.1, roughness: 0.03, transparent: true, opacity: 0.32, clearcoat: 1, side: THREE.DoubleSide, depthWrite: false });
+  const escuro = new THREE.MeshStandardMaterial({ color: 0x2a2f36, metalness: 0.7, roughness: 0.3 });
+  const interior = new THREE.MeshStandardMaterial({ color: 0x4a3a32, roughness: 0.8 });
+  const curva = pts => z => { if (z <= pts[0][0]) return pts[0][1]; for (let i = 1; i < pts.length; i++) if (z <= pts[i][0]) { const [z0, v0] = pts[i - 1], [z1, v1] = pts[i], t = (z - z0) / (z1 - z0), u = t * t * (3 - 2 * t); return v0 + (v1 - v0) * u; } return pts[pts.length - 1][1]; };
+  const TOP = curva([[-2.45, 0.6], [-2.32, 0.82], [-1.9, 0.92], [-1.0, 1.0], [-0.3, 1.12], [0.4, 1.1], [1.2, 0.94], [1.9, 0.68], [2.32, 0.5], [2.45, 0.42]]);
+  const BOT = curva([[-2.45, 0.52], [-2.15, 0.36], [-1.5, 0.3], [1.5, 0.3], [2.2, 0.33], [2.45, 0.38]]);
+  const W = curva([[-2.45, 0.25], [-2.36, 0.74], [-2.05, 0.88], [-1.2, 0.86], [0, 0.8], [1.2, 0.76], [2.0, 0.64], [2.36, 0.44], [2.45, 0.2]]);
+  const vidroK = z => { const a = Math.min(1, Math.max(0, (z + 0.75) / 0.4)), b = Math.min(1, Math.max(0, (2.15 - z) / 0.35)); return Math.min(a, b); };
+  const BELT = 0.7, topoCorpo = z => TOP(z) - (TOP(z) - BELT) * vidroK(z);
+  // superfície fechada por seções (superelipse): parte de cima e de baixo com alturas próprias
+  function loftSuper(topF, botF, wF, z0, z1, nz, nr, so = null) {
+    const pos = [], idx = [], n = 2.6, e = 2 / n, a0 = so ? so[0] : 0, a1 = so ? so[1] : Math.PI * 2;
+    for (let i = 0; i <= nz; i++) { const z = z0 + (z1 - z0) * i / nz, t = topF(z), bo = botF(z), w = wF(z), meio = bo + (t - bo) * 0.42;
+      for (let j = 0; j <= nr; j++) { const th = a0 + (a1 - a0) * j / nr, c = Math.cos(th), sn = Math.sin(th);
+        const x = w * Math.sign(c) * Math.pow(Math.abs(c), e), y = sn >= 0 ? meio + (t - meio) * Math.pow(sn, e) : meio - (meio - bo) * Math.pow(-sn, e); pos.push(x, y, z); } }
+    for (let i = 0; i < nz; i++) for (let j = 0; j < nr; j++) { const A = i * (nr + 1) + j, Bq = A + nr + 1; idx.push(A, A + 1, Bq, Bq, A + 1, Bq + 1); } // faces viradas para fora
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals(); return g; }
+  mesh(loftSuper(topoCorpo, BOT, W, -2.45, 2.45, lite ? 24 : 72, lite ? 16 : 40), paint, 0, 0, 0);
+  // vidro curvo (só a parte de cima, acima da linha da cintura)
+  const vidroTop = z => TOP(z) + 0.012, vidroW = z => W(z) - 0.03;
+  mesh(loftSuper(vidroTop, () => BELT * 0.98, vidroW, -0.72, 2.12, lite ? 12 : 40, lite ? 10 : 28, [0.12, Math.PI - 0.12]), vidro, 0, 0, 0);
+  if (!lite) {
+    for (const s of [1, -1]) { mesh(new THREE.BoxGeometry(0.42, 0.1, 0.5), interior, s * 0.3, BELT - 0.02, 0.3); mesh(new THREE.BoxGeometry(0.42, 0.42, 0.08), interior, s * 0.3, BELT + 0.15, 0.02, B.body, -0.25); }
+    mesh(new THREE.BoxGeometry(1.2, 0.06, 0.25), escuro, 0, BELT + 0.05, 1.2);
+    for (let k = 0; k < 4; k++) mesh(new THREE.TorusGeometry(0.36 - k * 0.05, 0.007, 6, 40, Math.PI), azul, 0, BELT, 0.25 + k * 0.28, B.body, 0, 0, 0); // fios de luz dentro do vidro
+    for (const s of [1, -1]) mesh(new THREE.BoxGeometry(0.02, 0.02, 3.2), azul, s * 0.86, 0.42, -0.2);  // friso azul embaixo
+    for (let k = 0; k < 7; k++) mesh(new THREE.BoxGeometry(0.015, 0.07, 0.2), azul, -0.45 + k * 0.15, 0.4, -2.22); // frisos azuis embaixo da traseira
+  }
+  mesh(new THREE.BoxGeometry(1.15, 0.03, 0.04), B.headMat, 0, 0.5, 2.42);              // farol: faixa fina na frente
+  mesh(new THREE.BoxGeometry(1.5, 0.025, 0.04), B.tail, 0, 0.66, -2.44);  // lanterna: linha vermelha fina atrás
+  // 33 escamas deitadas na traseira; abrem para cima com a velocidade
   const escamas = [];
-  if (!lite) { const linhas = [[-0.35, 5], [-0.65, 6], [-0.95, 6], [-1.25, 6], [-1.55, 5], [-1.85, 5]];
-    for (const [z, n] of linhas) for (let i = 0; i < n; i++) { const x = (i - (n - 1) / 2) * 0.27, piv = new THREE.Group(); piv.position.set(x, topo(x, z) + 0.01, z); piv.rotation.y = 0; B.body.add(piv);
-      const e = mesh(new THREE.BoxGeometry(0.22, 0.015, 0.24), escuro, 0, 0, -0.12, piv); mesh(new THREE.BoxGeometry(0.22, 0.012, 0.03), azul, 0, -0.01, -0.235, piv); escamas.push(piv); } }
-  // rodas redondas: pneu largo com ombro arredondado e listras de luz azul
-  const wheels = [], steer = [], pivots = [], R = 0.44;
-  for (const [x, z] of [[0.96, 1.45], [-0.96, 1.45], [0.96, -1.45], [-0.96, -1.45]]) {
+  if (!lite) { const linhas = [[-0.8, 5], [-1.08, 6], [-1.36, 6], [-1.64, 6], [-1.92, 5], [-2.18, 5]];
+    for (const [z, n] of linhas) { const larg = W(z) * 0.78, incl = (TOP(z + 0.05) - TOP(z - 0.05)) / 0.1;
+      for (let i = 0; i < n; i++) { const fx = n > 1 ? (i / (n - 1)) * 2 - 1 : 0, x = fx * larg, curvY = Math.pow(Math.abs(fx), 2.6 / 2) * 0.12, piv = new THREE.Group();
+        piv.position.set(x, TOP(z) - curvY + 0.012, z); piv.rotation.z = -fx * 0.25; B.body.add(piv);
+        const base = -Math.atan(incl); piv.userData.base = base; piv.rotation.x = base;
+        mesh(new THREE.BoxGeometry(0.2, 0.012, 0.25), escuro, 0, 0, -0.125, piv); mesh(new THREE.BoxGeometry(0.2, 0.014, 0.03), azul, 0, 0.003, -0.24, piv); escamas.push(piv); } } }
+  // rodas-barril: pneu arredondado com sulcos e pás de luz azul na lateral
+  const wheels = [], steer = [], pivots = [], R = 0.47;
+  const perfil = [[0.02, -0.25], [0.3, -0.26], [0.42, -0.21], [0.465, -0.11], [0.47, 0], [0.465, 0.11], [0.42, 0.21], [0.3, 0.26], [0.02, 0.25]].map(([r, y]) => new THREE.Vector2(r, y));
+  const pneuGeo = new THREE.LatheGeometry(perfil, lite ? 14 : 36).rotateZ(Math.PI / 2);
+  for (const [x, z] of [[0.98, 1.55], [-0.98, 1.55], [0.98, -1.55], [-0.98, -1.55]]) {
     const pivot = new THREE.Group(); pivot.position.set(x, R, z); B.g.add(pivot); pivots.push(pivot);
-    const wg = new THREE.Group(); pivot.add(wg);
-    mesh(new THREE.CylinderGeometry(R, R, 0.42, lite ? 14 : 30).rotateZ(Math.PI / 2), MAT.tire, 0, 0, 0, wg);
-    for (const s of [1, -1]) mesh(new THREE.TorusGeometry(R - 0.07, 0.09, 8, lite ? 14 : 30), MAT.tire, s * 0.2, 0, 0, wg, 0, Math.PI / 2, 0);
-    if (!lite) for (let k = 0; k < 8; k++) { const l = mesh(new THREE.BoxGeometry(0.46, 0.02, 0.05), azul, 0, 0, 0, wg); l.rotation.x = k / 8 * Math.PI * 2; l.translateY(R + 0.004); l.rotation.y = 0.35; }
-    mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.44, 16).rotateZ(Math.PI / 2), azul, 0, 0, 0, wg);
+    const wg = new THREE.Group(), lado = Math.sign(x); pivot.add(wg);
+    mesh(pneuGeo, MAT.tire, 0, 0, 0, wg);
+    mesh(new THREE.CylinderGeometry(R + 0.09, R + 0.09, 0.56, lite ? 12 : 30, 1, true, -Math.PI * 0.12, Math.PI * 1.24).rotateZ(Math.PI / 2), paint, x, R, z, B.body).material.side = THREE.DoubleSide; // capa curva por cima da roda
+    if (!lite) {
+      for (const dx of [-0.16, -0.08, 0, 0.08, 0.16]) mesh(new THREE.TorusGeometry(R - 0.003 - Math.abs(dx) * 0.25, 0.007, 4, 40), escuro, dx, 0, 0, wg, 0, Math.PI / 2, 0); // sulcos
+      for (let k = 0; k < 6; k++) { const pa = mesh(new THREE.TorusGeometry(0.2, 0.012, 6, 16, Math.PI * 0.55), azul, lado * 0.255, 0, 0, wg, 0, Math.PI / 2, 0); pa.rotation.x = k / 6 * Math.PI * 2; } // pás de luz
+    }
+    mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.53, 16).rotateZ(Math.PI / 2), azul, 0, 0, 0, wg);
     wheels.push(wg); if (z > 0) steer.push(pivot);
   }
   return finishSpecial(B, wheels, steer, pivots, { wheelR: R, escamas: escamas.length ? escamas : null });
