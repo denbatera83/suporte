@@ -1,0 +1,586 @@
+<title>Faxina na Lua</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800&display=swap">
+<style>
+  /* Layout: o jogo ocupa a tela toda; HUD nos cantos (moedas e mochila à esquerda, Lua limpa e mapa à direita), botões redondos para o dedo embaixo. */
+  :root { color-scheme: dark; --fundo: #05070d; --tinta: #f2f5fa; --suave: rgba(242,245,250,.72); --vidro: rgba(14,18,30,.72); --linha: rgba(255,255,255,.18);
+    --ouro: #ffcf4a; --azul: #6ad1ff; --verde: #5be39a; --perigo: #ff6b5e; --poeira: #b8a48c;
+    --display: "Baloo 2", "Arial Rounded MT Bold", system-ui, sans-serif; --texto: "Nunito", system-ui, sans-serif; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; overflow: hidden; background: var(--fundo); color: var(--tinta); font-family: var(--texto); touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+  canvas#cena { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  button { font-family: var(--display); font-weight: 700; color: var(--tinta); cursor: pointer; border-radius: 14px; border: 1px solid var(--linha); background: rgba(255,255,255,.08); padding: 8px 16px; font-size: 18px; transition: transform .1s, background .15s; }
+  button:hover { background: rgba(255,255,255,.15); } button:active { transform: scale(.95); }
+  button:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+  .hud { position: fixed; z-index: 4; pointer-events: none; }
+  #hud-esq { top: max(10px, env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 8px; }
+  .pilula { display: flex; align-items: center; gap: 10px; background: var(--vidro); border: 1px solid var(--linha); border-radius: 16px; padding: 6px 14px 6px 8px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .moeda { width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3b0, var(--ouro) 55%, #b88300); box-shadow: inset 0 -2px 3px rgba(0,0,0,.3); flex: none; }
+  #moedas { font-family: var(--display); font-weight: 800; font-size: 24px; font-variant-numeric: tabular-nums; }
+  .mochila { width: 190px; }
+  .mochila .barra { height: 12px; border-radius: 99px; background: rgba(255,255,255,.12); overflow: hidden; margin-top: 4px; }
+  .mochila .barra i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #c7b291, #e8d6b5); border-radius: 99px; transition: width .2s; }
+  .mochila.cheia .barra i { background: linear-gradient(90deg, #ff8a5e, #ff5e5e); }
+  .mochila small, .ferr small { display: block; font-size: 13px; color: var(--suave); font-weight: 700; }
+  .mochila b, .ferr b { font-size: 15px; font-variant-numeric: tabular-nums; }
+  #hud-dir { top: max(10px, env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  #pct { font-family: var(--display); font-weight: 800; font-size: 22px; }
+  #mapa { width: 132px; height: 132px; border-radius: 50%; border: 2px solid var(--linha); background: #111; box-shadow: 0 6px 18px rgba(0,0,0,.4); }
+  #aviso { position: fixed; z-index: 6; top: calc(max(10px, env(safe-area-inset-top, 0px)) + 64px); left: 50%; transform: translateX(-50%); max-width: min(86vw, 560px); text-align: center; font-family: var(--display); font-weight: 700; font-size: 20px; padding: 8px 18px; border-radius: 16px; background: var(--vidro); border: 1px solid var(--linha); pointer-events: none; transition: opacity .3s; }
+  #aviso.ouro { border-color: var(--ouro); color: var(--ouro); } #aviso.ruim { border-color: var(--perigo); color: #ffd2cc; }
+  #mira { position: fixed; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px; border-radius: 50%; background: rgba(255,255,255,.7); z-index: 3; pointer-events: none; }
+  /* toque */
+  #joy { position: fixed; inset: 0; z-index: 3; pointer-events: none; display: none; }
+  body.toque.jogando #joy { display: block; }
+  #joy .base { position: absolute; left: calc(max(16px, env(safe-area-inset-left, 0px)) + 86px); top: calc(100% - max(14px, env(safe-area-inset-bottom, 0px)) - 96px); width: 132px; height: 132px; margin: -66px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.05) 0 52%, rgba(255,255,255,.14) 53%); border: 2px solid rgba(255,255,255,.4); opacity: .6; }
+  #joy.ativo .base { opacity: 1; }
+  #joy .base i { position: absolute; left: 50%; top: 50%; width: 58px; height: 58px; margin: -29px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #d9dee6 60%, #a9b3c2); box-shadow: 0 5px 14px rgba(0,0,0,.45); }
+  .tb { position: fixed; z-index: 5; display: none; place-items: center; padding: 0; border-radius: 50%; border: 2px solid rgba(255,255,255,.5); background: radial-gradient(circle at 35% 28%, rgba(74,84,104,.92), rgba(16,20,30,.9) 70%); box-shadow: 0 8px 22px rgba(0,0,0,.45); font-size: 13px; line-height: 1.1; text-align: center; }
+  body.toque.jogando .tb { display: grid; }
+  .tb.on { border-color: var(--ouro); color: var(--ouro); }
+  #b-esfregar { width: 104px; height: 104px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 14px); bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 18px); border: 3px solid #fff1c2; color: #3a2600; background: radial-gradient(circle at 35% 28%, #fff0b0, #ffcc33 55%, #e09a10); font-size: 15px; }
+  #b-esfregar.on { filter: brightness(1.15); transform: scale(.94); }
+  #b-pular { width: 70px; height: 70px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 132px); bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 22px); }
+  #b-acao { width: 82px; height: 82px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 38px); bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 140px); border-color: var(--azul); color: #dff5ff; }
+  #b-base { width: 56px; height: 56px; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(max(10px, env(safe-area-inset-top, 0px)) + 186px); font-size: 11px; }
+  /* aviso de ação no computador */
+  #prompt { position: fixed; z-index: 5; left: 50%; top: 60%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 6px 16px 6px 6px; border-radius: 99px; background: var(--vidro); border: 1px solid rgba(106,209,255,.6); font-weight: 800; pointer-events: none; }
+  #prompt kbd { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: var(--azul); color: #00202e; font: 800 18px var(--display); }
+  body.toque #prompt { display: none !important; }
+  /* telas */
+  .tela { position: fixed; inset: 0; z-index: 10; overflow-y: auto; display: grid; place-items: center; padding-block: 20px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); background: radial-gradient(ellipse at 70% 20%, rgba(40,60,120,.35), rgba(5,7,13,.92) 60%); }
+  .bloco { max-width: 640px; display: grid; gap: 14px; }
+  h1 { font-family: var(--display); font-weight: 800; font-size: clamp(54px, 12vw, 108px); line-height: .9; margin: 0; letter-spacing: -.01em; text-wrap: balance; }
+  h1 span { color: var(--ouro); }
+  .bloco p { margin: 0; color: var(--suave); font-size: 17px; line-height: 1.5; max-width: 58ch; }
+  .linha { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .linha > span { min-width: 76px; color: var(--suave); font-size: 15px; }
+  button.principal { background: linear-gradient(180deg, #ffd65a, #ffa51f); border: none; color: #2a1700; font-size: 26px; padding: 12px 32px; border-radius: 18px; box-shadow: 0 10px 26px rgba(255,170,30,.35); }
+  button[aria-pressed="true"] { background: var(--ouro); color: #2a1e00; border-color: var(--ouro); }
+  .teclas { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 15px; color: var(--suave); }
+  kbd { font-family: var(--display); font-weight: 700; padding: 0 8px; border-radius: 8px; border: 1px solid var(--linha); background: rgba(255,255,255,.08); color: var(--tinta); white-space: nowrap; }
+  /* loja */
+  #loja .bloco { max-width: 860px; width: 100%; }
+  .abas { display: flex; gap: 8px; flex-wrap: wrap; }
+  .cartoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 12px; }
+  .carta { background: rgba(20,26,42,.9); border: 1px solid var(--linha); border-radius: 18px; padding: 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .carta h3 { margin: 0; font-family: var(--display); font-size: 22px; line-height: 1.1; }
+  .carta p { margin: 0; color: var(--suave); font-size: 14px; }
+  .carta .stats { display: flex; gap: 8px; flex-wrap: wrap; font-size: 13px; font-weight: 800; }
+  .carta .stats span { background: rgba(255,255,255,.08); border-radius: 99px; padding: 3px 10px; }
+  .carta button { margin-top: auto; }
+  .carta.equipado { border-color: var(--verde); }
+  .carta button.comprar { background: linear-gradient(180deg, #ffd65a, #ffa51f); border: none; color: #2a1700; }
+  .carta button:disabled { opacity: .45; cursor: default; }
+  .topo-loja { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .topo-loja h2 { margin: 0; font-family: var(--display); font-size: 34px; }
+  #fade { position: fixed; inset: 0; z-index: 9; background: #000; opacity: 0; pointer-events: none; transition: opacity .6s; }
+  #fade.ver { opacity: 1; }
+  @media (max-height: 520px) { #mapa { width: 96px; height: 96px; } .mochila { width: 160px; } #moedas { font-size: 20px; } h1 { font-size: 56px; } .bloco p { font-size: 14px; } #b-base { top: calc(max(10px, env(safe-area-inset-top, 0px)) + 146px); } }
+  @media (prefers-reduced-motion: reduce) { #fade, #aviso { transition: none; } }
+</style>
+
+<canvas id="cena" aria-label="A Lua"></canvas>
+<div class="hud" id="hud-esq" hidden>
+  <div class="pilula"><span class="moeda"></span><span id="moedas">0</span></div>
+  <div class="pilula mochila" id="mochila"><div style="flex:1;min-width:0"><small>Mochila de poeira</small><b id="kg">0 / 20 kg</b><div class="barra"><i id="barra"></i></div></div></div>
+  <div class="pilula ferr"><div><small>Ferramenta</small><b id="ferr">Escova de dentes</b></div></div>
+</div>
+<div class="hud" id="hud-dir" hidden>
+  <div class="pilula"><span id="pct">0% limpa</span></div>
+  <canvas id="mapa" width="132" height="132"></canvas>
+</div>
+<div id="aviso" hidden></div>
+<div id="mira" hidden></div>
+<div id="prompt" hidden><kbd>E</kbd><span id="prompt-txt"></span></div>
+<div id="joy"><div class="base"><i></i></div></div>
+<button class="tb" id="b-esfregar" type="button">ESFREGAR</button>
+<button class="tb" id="b-pular" type="button">PULAR</button>
+<button class="tb" id="b-acao" type="button" hidden>AÇÃO</button>
+<button class="tb" id="b-base" type="button" hidden>BASE</button>
+<div id="fade"></div>
+
+<div class="tela" id="menu">
+  <div class="bloco">
+    <h1>Faxina<br>na <span>Lua</span></h1>
+    <p>A Lua está coberta de poeira. Pegue a sua escova de dentes, esfregue, encha a mochila, venda a poeira na base e compre ferramentas cada vez maiores. Embaixo dos montes tem baús, ovos misteriosos e coisas perdidas. Deixe a Lua brilhando!</p>
+    <div class="teclas" id="teclas">
+      <kbd>MOUSE</kbd><span>olhar (clique na tela para prender) · segure o botão para esfregar</span>
+      <kbd>W A S D</kbd><span>andar · <kbd>SHIFT</kbd> correr · <kbd>ESPAÇO</kbd> pular</span>
+      <kbd>E</kbd><span>vender, abrir a loja e pegar o que achar · <kbd>B</kbd> voltar para a base</span>
+    </div>
+    <div class="linha"><span>Gráficos</span><div class="linha" id="qual" role="group" aria-label="Gráficos"><button type="button" data-q="0">Leve</button><button type="button" data-q="1">Normal</button><button type="button" data-q="2">Ultra</button></div></div>
+    <div class="linha"><button class="principal" id="b-jogar" type="button">Jogar</button><button id="b-novo" type="button" hidden>Começar de novo</button><button id="b-tela" type="button">Tela cheia</button></div>
+    <p id="novo-conf" hidden>Apagar todo o progresso? <button id="b-novo-sim" type="button">Sim, apagar</button> <button id="b-novo-nao" type="button">Não</button></p>
+  </div>
+</div>
+
+<div class="tela" id="loja" hidden>
+  <div class="bloco">
+    <div class="topo-loja"><h2>Loja da Base</h2><div class="pilula"><span class="moeda"></span><span id="loja-moedas" style="font:800 22px var(--display)">0</span></div><button id="loja-fechar" type="button">Fechar</button></div>
+    <div class="abas" role="tablist"><button type="button" data-aba="ferr" aria-pressed="true">Ferramentas</button><button type="button" data-aba="moch" aria-pressed="false">Mochilas</button><button type="button" data-aba="extra" aria-pressed="false">Extras</button></div>
+    <div class="cartoes" id="cartoes"></div>
+  </div>
+</div>
+
+<div class="tela" id="vitoria" hidden>
+  <div class="bloco">
+    <h1>A Lua está <span>brilhando!</span></h1>
+    <p id="vit-txt">Você limpou a Lua inteira.</p>
+    <div class="linha"><button class="principal" id="vit-ok" type="button">Continuar jogando</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t;
+const suave = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const angDif = (a, b) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; };
+const toque = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+if (toque) { document.body.classList.add('toque'); $('teclas').innerHTML = '<kbd>ESQUERDA</kbd><span>arraste para andar (até fora do círculo para correr)</span><kbd>DIREITA</kbd><span>arraste para virar a câmera</span><kbd>BOTÕES</kbd><span>segure ESFREGAR · PULAR · AÇÃO para vender, comprar e pegar</span>'; }
+function semente(s) { return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const R = semente(20261111), rr = (a, b) => a + R() * (b - a);
+function hash2(x, z) { const h = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return h - Math.floor(h); }
+function vnoise(x, z) { const ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz, u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz);
+  const a = hash2(ix, iz), b = hash2(ix + 1, iz), c = hash2(ix, iz + 1), d = hash2(ix + 1, iz + 1); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; }
+function fbm(x, z, o = 5) { let s = 0, a = 0.5, f = 1; for (let i = 0; i < o; i++) { s += a * vnoise(x * f, z * f); f *= 2.03; a *= 0.5; } return s; }
+
+// ===================== QUALIDADE =====================
+let qual = 1; try { const q = localStorage.getItem('faxina-q'); if (q !== null) qual = clamp(+q, 0, 2); else if (toque) qual = 0; } catch (e) {}
+const QUAL = [{ pr: 1, sombra: 1024, grade: 192 }, { pr: 1.5, sombra: 2048, grade: 256 }, { pr: 2, sombra: 4096, grade: 320 }][qual];
+
+// ===================== RENDER, CÉU, TERRA E SOL =====================
+const canvas = $('cena');
+const Rd = new THREE.WebGLRenderer({ canvas, antialias: qual > 0, powerPreference: 'high-performance' });
+Rd.setPixelRatio(Math.min(devicePixelRatio || 1, QUAL.pr)); Rd.outputEncoding = THREE.sRGBEncoding; Rd.toneMapping = THREE.ACESFilmicToneMapping; Rd.toneMappingExposure = 1.05;
+Rd.shadowMap.enabled = true; Rd.shadowMap.type = THREE.PCFSoftShadowMap;
+const cena = new THREE.Scene(); cena.background = new THREE.Color(0x020308);
+const camera = new THREE.PerspectiveCamera(62, 1, 0.08, 2500); camera.rotation.order = 'YXZ';
+const SOL_DIR = V3(0.55, 0.42, -0.72).normalize();
+const sol = new THREE.DirectionalLight(0xffffff, 3.1); sol.castShadow = true; sol.shadow.mapSize.set(QUAL.sombra, QUAL.sombra);
+Object.assign(sol.shadow.camera, { left: -26, right: 26, top: 26, bottom: -26, near: 1, far: 160 }); sol.shadow.bias = -0.0006; sol.shadow.normalBias = 0.03; cena.add(sol, sol.target);
+cena.add(new THREE.HemisphereLight(0x25324d, 0x0d0d10, 0.42));
+const terraLuz = new THREE.DirectionalLight(0x7fa6ff, 0.18); terraLuz.position.set(-0.4, 0.6, 0.7); cena.add(terraLuz);
+function tex(w, h, fn) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); fn(g, w, h); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 8; return t; }
+// estrelas
+{ const n = 3500, p = new Float32Array(n * 3), cor = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const u = R() * 2 - 1, a = R() * Math.PI * 2, s = Math.sqrt(1 - u * u); p.set([Math.cos(a) * s * 1800, Math.abs(u) * 1800 * (u > -0.05 ? 1 : 0.2), Math.sin(a) * s * 1800], i * 3); const b = 0.5 + R() * 0.5, q = R(); cor.set([b * (q > 0.8 ? 1 : 0.85), b * 0.92, b * (q < 0.2 ? 1 : 0.95)], i * 3); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3)); g.setAttribute('color', new THREE.BufferAttribute(cor, 3));
+  cena.add(new THREE.Points(g, new THREE.PointsMaterial({ size: 2.2, sizeAttenuation: false, vertexColors: true, fog: false }))); }
+// a Terra no céu
+const tTerra = tex(1024, 512, g => { const gr = g.createLinearGradient(0, 0, 0, 512); gr.addColorStop(0, '#1d4f8f'); gr.addColorStop(.5, '#155fa8'); gr.addColorStop(1, '#1d4f8f'); g.fillStyle = gr; g.fillRect(0, 0, 1024, 512);
+  for (let i = 0; i < 30; i++) { const cx = rr(0, 1024), cy = rr(90, 420), n = 3 + (R() * 5 | 0); g.fillStyle = ['#3f7a3a', '#5a8a3e', '#8a7a4a', '#4a6a34'][i % 4]; for (let k = 0; k < n; k++) { g.beginPath(); g.ellipse(cx + rr(-60, 60), cy + rr(-40, 40), rr(30, 90), rr(20, 60), rr(0, 3), 0, 7); g.fill(); } }
+  g.fillStyle = '#eef4f8'; g.fillRect(0, 0, 1024, 34); g.fillRect(0, 478, 1024, 34);
+  for (let i = 0; i < 320; i++) { g.fillStyle = `rgba(255,255,255,${rr(.2, .55)})`; g.beginPath(); g.ellipse(rr(0, 1024), rr(40, 470), rr(20, 70), rr(6, 16), rr(-.3, .3), 0, 7); g.fill(); } });
+const terra = new THREE.Mesh(new THREE.SphereGeometry(70, 64, 32), new THREE.MeshStandardMaterial({ map: tTerra, roughness: 0.75, emissive: 0x081830, emissiveIntensity: 0.6 }));
+terra.position.set(-420, 330, -900); terra.rotation.z = 0.4; cena.add(terra);
+const tBrilho = tex(64, 64, g => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.25, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
+{ const atm = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: 0x5ab0ff, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending })); atm.position.copy(terra.position); atm.scale.setScalar(200); cena.add(atm);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: 0xfff6e0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); s.position.copy(SOL_DIR).multiplyScalar(1500); s.scale.setScalar(260); cena.add(s); }
+
+// ===================== O CHÃO DA LUA =====================
+const TAM = 160, N = 512, TX = TAM / N, DENS = 40, SUJO = 26; // mapa de poeira 512x512 (cada quadrinho tem 31 cm)
+const CRATERAS = []; for (let i = 0; i < 30; i++) { const r = rr(3, 15), x = rr(-70, 70), z = rr(-70, 70); if (Math.hypot(x, z) < r + 16) continue; CRATERAS.push({ x, z, r, p: r * rr(0.12, 0.22) }); }
+function alturaBruta(x, z) {
+  let h = (fbm(x * 0.03 + 10, z * 0.03) - 0.5) * 3.2 + (fbm(x * 0.14, z * 0.14, 3) - 0.5) * 0.45;
+  for (const c of CRATERAS) { const d = Math.hypot(x - c.x, z - c.z) / c.r; if (d < 2) { if (d < 1) h -= c.p * (1 - d * d); h += c.p * 0.4 * Math.exp(-(((d - 1) / 0.24) ** 2)); } }
+  const e = Math.hypot(x, z); if (e > 66) h += Math.min(14, (e - 66) ** 2 * 0.1) * (0.75 + 0.5 * fbm(x * 0.05, z * 0.05, 3));
+  if (e > 81) h -= (e - 81) * 3;
+  return h * suave(9, 18, e);
+}
+const G = QUAL.grade, GS = TAM / G, HB = new Float32Array((G + 1) * (G + 1));
+for (let r = 0; r <= G; r++) for (let c = 0; c <= G; c++) HB[r * (G + 1) + c] = alturaBruta(-TAM / 2 + c * GS, -TAM / 2 + r * GS);
+function hBase(x, z) { const fx = clamp((x + TAM / 2) / GS, 0, G - 0.001), fz = clamp((z + TAM / 2) / GS, 0, G - 0.001), c = fx | 0, r = fz | 0, u = fx - c, v = fz - r, W = G + 1;
+  return lerp(lerp(HB[r * W + c], HB[r * W + c + 1], u), lerp(HB[(r + 1) * W + c], HB[(r + 1) * W + c + 1], u), v); }
+const RAIO_JOGO = 74, nivelEm = (x, z) => { const d = Math.hypot(x, z); return d < 30 ? 1 : d < 44 ? 2 : d < 56 ? 3 : d < 66 ? 4 : 5; };
+const NOMES_NIVEL = ['', 'poeira fina', 'poeira grossa', 'poeira grudenta', 'poeira dura', 'poeira de pedra'];
+// espessura da poeira (metros) e quanto ainda falta limpar em cada quadrinho
+const LIMPAVEL = new Uint8Array(N * N), ESP = new Float32Array(N * N), RESTO = new Float32Array(N * N), MASC = new Uint8Array(N * N), ESP8 = new Uint8Array(N * N);
+const idx = (x, z) => clamp(Math.floor((z + TAM / 2) / TX), 0, N - 1) * N + clamp(Math.floor((x + TAM / 2) / TX), 0, N - 1);
+const MONTES = []; for (let i = 0; i < 95; i++) { const x = rr(-72, 72), z = rr(-72, 72); if (Math.hypot(x, z) < 17 || Math.hypot(x, z) > 71) { i--; continue; } const nv = nivelEm(x, z); MONTES.push({ x, z, h: rr(0.5, 1.3) + nv * 0.22, r: rr(1.8, 4.2) }); }
+// coisas escondidas debaixo da poeira
+const ITENS = [];
+function lugarLivre(dmin, dmax) { for (let t = 0; t < 200; t++) { const a = R() * Math.PI * 2, d = rr(dmin, dmax), x = Math.cos(a) * d, z = Math.sin(a) * d; if (Math.hypot(x, z) < 71 && ITENS.every(o => Math.hypot(o.x - x, o.z - z) > 9)) return [x, z]; } return [rr(-60, 60), rr(-60, 60)]; }
+[[22, 28, 40], [24, 29, 70], [32, 42, 140], [35, 43, 260], [46, 56, 520], [47, 57, 900], [57, 64, 1800], [66, 71, 4000]].forEach(([a, b, v]) => { const [x, z] = lugarLivre(a, b); ITENS.push({ tipo: 'bau', x, z, valor: v, alt: 0.9 }); });
+[[20, 28, 0x7af0c8], [33, 43, 0xff8ad8], [46, 55, 0xffd36a], [58, 65, 0x9a8aff]].forEach(([a, b, cor]) => { const [x, z] = lugarLivre(a, b); ITENS.push({ tipo: 'ovo', x, z, cor, alt: 0.8 }); });
+{ const [x, z] = lugarLivre(38, 50); ITENS.push({ tipo: 'rover', x, z, valor: 600, alt: 1.6 }); }
+{ const [x, z] = lugarLivre(60, 70); ITENS.push({ tipo: 'capsula', x, z, valor: 2500, alt: 1.4 }); }
+ITENS.forEach(o => MONTES.push({ x: o.x, z: o.z, h: o.alt + 0.7 + nivelEm(o.x, o.z) * 0.15, r: 3.2 }));
+function somarMonte(m) { const r3 = m.r * 2.6, i0 = idx(m.x - r3, m.z - r3), i1 = idx(m.x + r3, m.z + r3), c0 = i0 % N, c1 = i1 % N, l0 = (i0 / N) | 0, l1 = (i1 / N) | 0;
+  for (let l = l0; l <= l1; l++) for (let c = c0; c <= c1; c++) { const x = (c + 0.5) * TX - TAM / 2, z = (l + 0.5) * TX - TAM / 2, k = l * N + c, d = Math.hypot(x - m.x, z - m.z) / m.r; ESP[k] = Math.min(3.2, ESP[k] + m.h * Math.exp(-d * d)); } }
+const BASE_R = 12;
+let TOTAL = 0, sujos = 0;
+function prepararPoeira() {
+  for (let k = 0; k < N * N; k++) { const x = (k % N + 0.5) * TX - TAM / 2, z = ((k / N) | 0) * TX + TX / 2 - TAM / 2; ESP[k] = 0.05 + 0.03 * fbm(x * 0.2, z * 0.2, 3); }
+  MONTES.forEach(somarMonte);
+  TOTAL = 0; for (let k = 0; k < N * N; k++) { const x = (k % N + 0.5) * TX - TAM / 2, z = ((k / N) | 0) * TX + TX / 2 - TAM / 2;
+    const dk = Math.hypot(x, z); LIMPAVEL[k] = dk >= BASE_R && dk < RAIO_JOGO + 1 ? 1 : 0; if (dk < BASE_R) { RESTO[k] = 0; } else { RESTO[k] = ESP[k]; if (LIMPAVEL[k]) TOTAL++; } ESP8[k] = Math.round(ESP[k] / 3.2 * 255); }
+}
+prepararPoeira();
+function atualizarMascaraTudo() { sujos = 0; for (let k = 0; k < N * N; k++) { const m = ESP[k] > 0 ? Math.round(RESTO[k] / ESP[k] * 255) : 0; MASC[k] = m; if (m > SUJO && LIMPAVEL[k]) sujos++; } }
+atualizarMascaraTudo();
+const texMasc = new THREE.DataTexture(MASC, N, N, THREE.LuminanceFormat, THREE.UnsignedByteType); texMasc.magFilter = texMasc.minFilter = THREE.LinearFilter; texMasc.needsUpdate = true;
+const texEsp = new THREE.DataTexture(ESP8, N, N, THREE.LuminanceFormat, THREE.UnsignedByteType); texEsp.magFilter = texEsp.minFilter = THREE.LinearFilter; texEsp.needsUpdate = true;
+const poeiraEm = (x, z) => { const k = idx(x, z); return RESTO[k]; };
+const altura = (x, z) => Math.hypot(x, z) < 9.2 ? 0.3 : hBase(x, z) + poeiraEm(x, z); // dentro da base, em cima do piso
+// texturas do chão: poeira (sujo) e rocha lunar limpa e brilhante
+function ruidoCanvas(g, w, cores, n, tam) { for (let i = 0; i < n; i++) { g.fillStyle = cores[(R() * cores.length) | 0]; const x = R() * w, y = R() * w, s = R() * tam + 0.6; for (const dx of [0, -w, w]) for (const dy of [0, -w, w]) g.fillRect(x + dx, y + dy, s, s); } }
+const tSujo = tex(512, 512, g => { g.fillStyle = '#8f8576'; g.fillRect(0, 0, 512, 512); ruidoCanvas(g, 512, ['rgba(60,52,44,.25)', 'rgba(170,158,140,.25)', 'rgba(110,100,88,.35)', 'rgba(200,190,170,.18)'], 26000, 2.2);
+  for (let i = 0; i < 260; i++) { const x = R() * 512, y = R() * 512, r = R() * 3 + 1; g.fillStyle = 'rgba(55,48,40,.35)'; g.beginPath(); g.arc(x, y + 1, r, 0, 7); g.fill(); g.fillStyle = 'rgba(190,178,158,.4)'; g.beginPath(); g.arc(x, y, r * 0.8, 0, 7); g.fill(); } });
+const tLimpo = tex(512, 512, g => { const gr = g.createLinearGradient(0, 0, 512, 512); gr.addColorStop(0, '#d9dde4'); gr.addColorStop(1, '#cfd5de'); g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
+  ruidoCanvas(g, 512, ['rgba(255,255,255,.35)', 'rgba(170,180,200,.3)', 'rgba(140,150,170,.22)'], 16000, 1.8);
+  g.strokeStyle = 'rgba(150,170,210,.35)'; g.lineWidth = 1.2; for (let i = 0; i < 40; i++) { let x = R() * 512, y = R() * 512; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 6; k++) { x += rr(-30, 30); y += rr(-30, 30); g.lineTo(x, y); } g.stroke(); } });
+[tSujo, tLimpo].forEach(t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
+const uChao = { uSuj: { value: texMasc }, uEsp: { value: texEsp }, uTam: { value: TAM }, uTexSujo: { value: tSujo }, uTexLimpo: { value: tLimpo }, uTempo: { value: 0 } };
+const matChao = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0 });
+matChao.onBeforeCompile = sh => {
+  Object.assign(sh.uniforms, uChao);
+  sh.vertexShader = 'uniform sampler2D uSuj; uniform sampler2D uEsp; uniform float uTam; varying vec3 vMundo;\nfloat poAlt(vec2 p) { vec2 uv = p / uTam + 0.5; return texture2D(uEsp, uv).r * 3.2 * texture2D(uSuj, uv).r; }\n' + sh.vertexShader
+    .replace('#include <beginnormal_vertex>', `#include <beginnormal_vertex>
+      float ePo = uTam / 512.0; float hC = poAlt(position.xz);
+      float hx = (poAlt(position.xz + vec2(ePo, 0.0)) - poAlt(position.xz - vec2(ePo, 0.0))) / (2.0 * ePo);
+      float hz = (poAlt(position.xz + vec2(0.0, ePo)) - poAlt(position.xz - vec2(0.0, ePo))) / (2.0 * ePo);
+      vec3 nb = objectNormal; float ny = max(nb.y, 0.25); objectNormal = normalize(vec3(nb.x / ny - hx, 1.0, nb.z / ny - hz));`)
+    .replace('#include <begin_vertex>', '#include <begin_vertex>\n      transformed.y += hC; vMundo = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+  sh.fragmentShader = 'uniform sampler2D uSuj; uniform sampler2D uTexSujo; uniform sampler2D uTexLimpo; uniform float uTam; uniform float uTempo; varying vec3 vMundo;\nfloat h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }\n' + sh.fragmentShader
+    .replace('#include <map_fragment>', `
+      vec2 uvm = vMundo.xz / uTam + 0.5; float suj = texture2D(uSuj, uvm).r; float dPo = smoothstep(0.05, 0.32, suj);
+      float dist = length(vMundo.xz);
+      float lv = 1.0 + smoothstep(29.0, 31.0, dist) + smoothstep(43.0, 45.0, dist) + smoothstep(55.0, 57.0, dist) + smoothstep(65.0, 67.0, dist);
+      vec3 tinta = lv < 2.0 ? mix(vec3(1.0), vec3(0.92, 0.84, 0.74), lv - 1.0) : lv < 3.0 ? mix(vec3(0.92, 0.84, 0.74), vec3(0.8, 0.68, 0.56), lv - 2.0) : lv < 4.0 ? mix(vec3(0.8, 0.68, 0.56), vec3(0.72, 0.55, 0.48), lv - 3.0) : mix(vec3(0.72, 0.55, 0.48), vec3(0.6, 0.5, 0.62), lv - 4.0);
+      vec3 cs = sRGBToLinear(texture2D(uTexSujo, vMundo.xz * 0.21)).rgb * tinta * (0.85 + 0.15 * texture2D(uTexSujo, vMundo.xz * 0.031).r);
+      vec3 cl = sRGBToLinear(texture2D(uTexLimpo, vMundo.xz * 0.17)).rgb;
+      float borda = smoothstep(0.03, 0.12, suj) * (1.0 - smoothstep(0.12, 0.4, suj));
+      diffuseColor.rgb *= mix(cl, cs, dPo) * (1.0 - 0.35 * borda);`)
+    .replace('#include <roughnessmap_fragment>', 'float roughnessFactor = mix(0.32, 0.97, dPo);')
+    .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
+      vec2 cel = floor(vMundo.xz * 9.0); float bri = step(0.985, h21(cel)) * (0.5 + 0.5 * sin(uTempo * 3.0 + h21(cel + 7.0) * 30.0));
+      totalEmissiveRadiance += vec3(0.9, 0.95, 1.0) * bri * (1.0 - dPo) * 0.9;`);
+};
+const geoChao = new THREE.PlaneGeometry(TAM, TAM, G, G); geoChao.rotateX(-Math.PI / 2);
+{ const p = geoChao.attributes.position; for (let i = 0; i < p.count; i++) p.setY(i, hBase(p.getX(i), p.getZ(i))); geoChao.computeVertexNormals(); }
+const chao = new THREE.Mesh(geoChao, matChao); chao.receiveShadow = true; cena.add(chao);
+// borda: mais Lua até o horizonte
+{ const g = new THREE.RingGeometry(78, 900, 128, 16); g.rotateX(-Math.PI / 2); const p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i), d = Math.hypot(x, z); p.setY(i, alturaBruta(x * 78 / d, z * 78 / d) + Math.max(0, fbm(x * 0.012, z * 0.012, 4) - 0.3) * 40 * suave(78, 140, d) + (d - 78) * 0.03); uv.setXY(i, x * 0.22, z * 0.22); } g.computeVertexNormals();
+  const t2 = tSujo.clone(); t2.needsUpdate = true; const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: t2, color: 0xa39985, roughness: 1 })); m.receiveShadow = true; cena.add(m); }
+// pedras
+{ const n = 140, geo = new THREE.DodecahedronGeometry(1, 1), mat = new THREE.MeshStandardMaterial({ color: 0x77736c, roughness: 0.95, flatShading: true }), im = new THREE.InstancedMesh(geo, mat, n), o = new THREE.Object3D(); let k = 0;
+  for (let i = 0; i < 400 && k < n; i++) { const x = rr(-76, 76), z = rr(-76, 76); if (Math.hypot(x, z) < BASE_R + 3 || Math.hypot(x, z) > 72 || ITENS.some(it => Math.hypot(it.x - x, it.z - z) < 4)) continue; const s = rr(0.15, 0.9) * (R() < 0.08 ? 2.2 : 1);
+    o.position.set(x, hBase(x, z) + s * 0.25, z); o.scale.set(s * rr(0.8, 1.4), s * rr(0.5, 0.9), s * rr(0.8, 1.4)); o.rotation.set(rr(0, 3), rr(0, 3), rr(0, 3)); o.updateMatrix(); im.setMatrixAt(k++, o.matrix); }
+  im.count = k; im.castShadow = true; im.receiveShadow = true; cena.add(im); }
+
+// ===================== A BASE =====================
+const std = o => new THREE.MeshStandardMaterial(o);
+const M = { branco: std({ color: 0xe8ebef, roughness: 0.45, metalness: 0.15 }), metal: std({ color: 0x9aa3ad, roughness: 0.35, metalness: 0.85 }), escuro: std({ color: 0x2a2f38, roughness: 0.6, metalness: 0.4 }),
+  laranja: std({ color: 0xff8a2a, roughness: 0.5 }), vidro: std({ color: 0x9fdcff, roughness: 0.1, metalness: 0.2, emissive: 0x3aa0ff, emissiveIntensity: 0.6 }), painel: std({ color: 0x1b2e66, roughness: 0.25, metalness: 0.6 }),
+  ouro: std({ color: 0xffc84a, roughness: 0.25, metalness: 1 }) };
+function add(geo, mat, x, y, z, pai = cena, sombra = true) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = sombra; m.receiveShadow = true; pai.add(m); return m; }
+const tPiso = tex(512, 512, g => { g.fillStyle = '#9da3ab'; g.fillRect(0, 0, 512, 512); ruidoCanvas(g, 512, ['rgba(0,0,0,.08)', 'rgba(255,255,255,.08)'], 9000, 2); g.strokeStyle = '#f2c230'; g.lineWidth = 14; g.beginPath(); g.arc(256, 256, 220, 0, 7); g.stroke(); g.fillStyle = '#f2c230'; g.font = '900 220px sans-serif'; g.textAlign = 'center'; g.fillText('L', 256, 335); });
+add(new THREE.CylinderGeometry(9, 9.4, 0.3, 48), [std({ color: 0x8a9098, roughness: 0.7 }), std({ map: tPiso, roughness: 0.6 }), std({ color: 0x8a9098 })], 0, 0.15, 0);
+// módulo principal (cúpula com janelas)
+add(new THREE.SphereGeometry(4, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), M.branco, -5.5, 0.3, 4.5);
+for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2, j = add(new THREE.BoxGeometry(1.2, 0.6, 0.15), M.vidro, -5.5 + Math.cos(a) * 3.55, 2.3, 4.5 + Math.sin(a) * 3.55, cena, false); j.lookAt(-5.5, 2.3, 4.5); }
+add(new THREE.CylinderGeometry(1.3, 1.3, 4, 20).rotateZ(Math.PI / 2), M.branco, -1.2, 1.5, 6.2);
+// foguete da base
+const foguete = new THREE.Group(); foguete.position.set(5.5, 0.3, 5); cena.add(foguete);
+add(new THREE.CylinderGeometry(1.2, 1.3, 9, 24), M.branco, 0, 4.8, 0, foguete); add(new THREE.ConeGeometry(1.2, 3, 24), M.laranja, 0, 10.8, 0, foguete);
+for (let i = 0; i < 4; i++) { const f = add(new THREE.BoxGeometry(0.15, 2.4, 1.6), M.laranja, Math.cos(i * Math.PI / 2) * 1.4, 1.4, Math.sin(i * Math.PI / 2) * 1.4, foguete); f.rotation.y = -i * Math.PI / 2; }
+add(new THREE.CylinderGeometry(0.5, 0.5, 0.15, 16).rotateX(Math.PI / 2), M.vidro, 0, 7, 1.25, foguete, false);
+// painéis solares e antena
+for (let i = 0; i < 3; i++) { const p = add(new THREE.BoxGeometry(3.2, 0.08, 1.8), M.painel, -7 + i * 0.1, 2.2, -5 + i * 2.2); p.rotation.x = -0.5; add(new THREE.CylinderGeometry(0.06, 0.06, 2.1, 8), M.metal, -7, 1.1, -5 + i * 2.2); }
+{ const d = add(new THREE.SphereGeometry(1.4, 24, 12, 0, Math.PI * 2, 0, 1.0), M.branco, 7, 4, -5); d.rotation.x = -0.9; d.material = M.branco; add(new THREE.CylinderGeometry(0.1, 0.12, 3.6, 8), M.metal, 7, 1.9, -5); }
+// máquina que compra poeira (funil) e terminal da loja
+const VENDA = V3(4.5, 0, -4.2), LOJA = V3(-3.6, 0, -5.4);
+add(new THREE.BoxGeometry(2.2, 1.8, 1.6), M.metal, VENDA.x, 0.9, VENDA.z - 1.6); add(new THREE.ConeGeometry(1.1, 1.2, 24, 1, true).rotateX(Math.PI), std({ color: 0xffb02e, roughness: 0.4, metalness: 0.5, side: THREE.DoubleSide }), VENDA.x, 2.4, VENDA.z - 1.6);
+const tPlaca = (txt, cor) => tex(512, 256, g => { g.fillStyle = '#0c1424'; g.fillRect(0, 0, 512, 256); g.strokeStyle = cor; g.lineWidth = 12; g.strokeRect(10, 10, 492, 236); g.fillStyle = cor; g.font = '900 92px sans-serif'; g.textAlign = 'center'; g.fillText(txt[0], 256, 120); g.font = '700 50px sans-serif'; g.fillStyle = '#fff'; g.fillText(txt[1], 256, 200); });
+add(new THREE.PlaneGeometry(1.9, 0.95), new THREE.MeshBasicMaterial({ map: tPlaca(['VENDA', 'poeira = moedas'], '#ffcf4a'), toneMapped: false }), VENDA.x, 1.15, VENDA.z - 0.79, cena, false);
+const anelVenda = add(new THREE.RingGeometry(1.6, 2.0, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffcf4a, transparent: true, opacity: 0.7, toneMapped: false }), VENDA.x, 0.32, VENDA.z, cena, false);
+add(new THREE.BoxGeometry(1.4, 1.5, 0.8), M.escuro, LOJA.x, 0.75, LOJA.z - 0.8); const telaLoja = add(new THREE.PlaneGeometry(1.25, 0.65), new THREE.MeshBasicMaterial({ map: tPlaca(['LOJA', 'ferramentas'], '#6ad1ff'), toneMapped: false }), LOJA.x, 1.25, LOJA.z - 0.39, cena, false); telaLoja.rotation.x = -0.25;
+const anelLoja = add(new THREE.RingGeometry(1.4, 1.75, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x6ad1ff, transparent: true, opacity: 0.7, toneMapped: false }), LOJA.x, 0.32, LOJA.z, cena, false);
+const BLOQ = [[-5.5, 4.5, 4.2], [5.5, 5, 1.6], [-1.2, 6.2, 1.4], [VENDA.x, VENDA.z - 1.6, 1.3], [LOJA.x, LOJA.z - 0.8, 0.9], [7, -5, 0.5]];
+
+// ===================== O ASTRONAUTA =====================
+function capsula(A, B, r1, r2, seg = 14) { const d = B.clone().sub(A), L = d.length(); d.normalize(); const a = A.clone().addScaledVector(d, -r1), Lt = L + r1 + r2, pts = [];
+  for (let i = 0; i <= 5; i++) { const t = -Math.PI / 2 + i / 5 * Math.PI / 2; pts.push(new THREE.Vector2(Math.max(1e-4, r1 * Math.cos(t)), r1 + r1 * Math.sin(t))); }
+  for (let i = 0; i <= 5; i++) { const t = i / 5 * Math.PI / 2; pts.push(new THREE.Vector2(Math.max(1e-4, r2 * Math.cos(t)), Lt - r2 + r2 * Math.sin(t))); }
+  const g = new THREE.LatheGeometry(pts, seg); g.applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(V3(0, 1, 0), d))); g.translate(a.x, a.y, a.z); return g; }
+const traje = std({ color: 0xf1f2ee, roughness: 0.7 }), trajeEsc = std({ color: 0xb9bec6, roughness: 0.6, metalness: 0.2 }), visor = std({ color: 0xffbf3a, roughness: 0.08, metalness: 1, envMapIntensity: 1 });
+const astro = { g: new THREE.Group(), x: 0, z: 3, y: 0, vy: 0, chao: true, rot: Math.PI, fase: 0, andar: 0, esfregando: 0, corre: false };
+cena.add(astro.g);
+const corpo = new THREE.Group(); astro.g.add(corpo);
+add(capsula(V3(0, 0.95, 0), V3(0, 1.32, 0), 0.24, 0.27), traje, 0, 0, 0, corpo);
+add(new THREE.CylinderGeometry(0.16, 0.18, 0.08, 16), trajeEsc, 0, 1.5, 0, corpo);
+const capacete = add(new THREE.SphereGeometry(0.25, 28, 18), traje, 0, 1.68, 0, corpo);
+add(new THREE.SphereGeometry(0.205, 28, 16, Math.PI * 0.08, Math.PI * 0.84, Math.PI * 0.28, Math.PI * 0.42), visor, 0, 1.68, 0.06, corpo);
+add(new THREE.BoxGeometry(0.46, 0.55, 0.24), trajeEsc, 0, 1.18, -0.3, corpo);
+const tanque = add(new THREE.CylinderGeometry(0.1, 0.1, 0.46, 14), new THREE.MeshStandardMaterial({ color: 0xbfe6ff, transparent: true, opacity: 0.35, roughness: 0.05 }), 0.14, 1.18, -0.44, corpo, false);
+const enchido = add(new THREE.CylinderGeometry(0.085, 0.085, 0.44, 12), std({ color: 0xa8947a, roughness: 1 }), 0.14, 0.96, -0.44, corpo, false); enchido.geometry.translate(0, 0.22, 0);
+add(new THREE.BoxGeometry(0.2, 0.08, 0.04), std({ color: 0x3aa0ff, emissive: 0x3aa0ff, emissiveIntensity: 1.5 }), -0.1, 1.3, 0.26, corpo, false);
+function membro(px, py, pz, L1, L2, r) { const o = new THREE.Group(); o.position.set(px, py, pz); corpo.add(o); add(capsula(V3(0, 0, 0), V3(0, -L1, 0), r, r * 0.9), traje, 0, 0, 0, o);
+  const b = new THREE.Group(); b.position.y = -L1; o.add(b); add(capsula(V3(0, 0, 0), V3(0, -L2, 0), r * 0.92, r * 0.85), traje, 0, 0, 0, b); return [o, b]; }
+const [bracoE, anteE] = membro(-0.33, 1.38, 0, 0.3, 0.28, 0.08), [bracoD, anteD] = membro(0.33, 1.38, 0, 0.3, 0.28, 0.08);
+const [pernaE, canelaE] = membro(-0.13, 0.86, 0, 0.42, 0.38, 0.1), [pernaD, canelaD] = membro(0.13, 0.86, 0, 0.42, 0.38, 0.1);
+for (const c of [canelaE, canelaD]) add(new THREE.BoxGeometry(0.2, 0.14, 0.32), trajeEsc, 0, -0.42, 0.04, c);
+for (const a of [anteE, anteD]) add(new THREE.SphereGeometry(0.085, 12, 10), trajeEsc, 0, -0.3, 0, a);
+const mao = new THREE.Group(); mao.position.y = -0.3; anteD.add(mao);
+astro.g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+// ferramentas (o desenho muda quando você compra outra)
+const FERR = [
+  { id: 'escova', nome: 'Escova de dentes', desc: 'Começo humilde. Esfrega bem pouquinho por vez.', r: 0.45, p: 0.1, nivel: 1, preco: 0 },
+  { id: 'escovao', nome: 'Escovão de chão', desc: 'Cerdas grossas e cabo comprido.', r: 0.8, p: 0.18, nivel: 1, preco: 60 },
+  { id: 'esfregao', nome: 'Esfregão', desc: 'Dá conta da poeira grossa.', r: 1.2, p: 0.35, nivel: 2, preco: 350 },
+  { id: 'aspirador', nome: 'Aspirador Lunar', desc: 'Suga a poeira grudenta em um instante.', r: 1.8, p: 0.7, nivel: 3, preco: 1800 },
+  { id: 'jato', nome: 'Jato de Ar', desc: 'Sopra até a poeira dura.', r: 2.6, p: 1.4, nivel: 4, preco: 7000 },
+  { id: 'vassoura', nome: 'Vassoura Cósmica', desc: 'Brilha e limpa até poeira de pedra.', r: 3.6, p: 3.0, nivel: 5, preco: 25000 }];
+const MOCH = [{ cap: 20, preco: 0, nome: 'Mochila pequena' }, { cap: 60, preco: 100, nome: 'Mochila média' }, { cap: 160, preco: 500, nome: 'Mochila grande' }, { cap: 450, preco: 2200, nome: 'Tanque de poeira' }, { cap: 1200, preco: 8000, nome: 'Tanque duplo' }, { cap: 4000, preco: 26000, nome: 'Contêiner espacial' }];
+const EXTRA = [{ id: 'botas', nome: 'Botas Saltadoras', desc: 'Pulos mais altos e corrida mais rápida.', preco: 300 }, { id: 'tele', nome: 'Volta Rápida', desc: 'Botão BASE (ou tecla B) leva você para a base na hora.', preco: 150 }];
+function montarFerramenta(id) { while (mao.children.length) mao.remove(mao.children[0]); const g = new THREE.Group(); mao.add(g);
+  const cabo = (L, r, cor) => add(new THREE.CylinderGeometry(r, r, L, 10), std({ color: cor, roughness: 0.5 }), 0, -L / 2, 0, g);
+  if (id === 'escova') { cabo(0.32, 0.018, 0x47b3ff); add(new THREE.BoxGeometry(0.05, 0.05, 0.1), std({ color: 0xffffff, roughness: 0.9 }), 0, -0.33, 0.04, g); }
+  if (id === 'escovao') { cabo(0.9, 0.025, 0xc9864a); add(new THREE.BoxGeometry(0.35, 0.06, 0.12), std({ color: 0x8a5a2a }), 0, -0.9, 0, g); add(new THREE.BoxGeometry(0.33, 0.07, 0.1), std({ color: 0xf2d38a, roughness: 1 }), 0, -0.96, 0, g); }
+  if (id === 'esfregao') { cabo(1.0, 0.025, 0x3a8a5a); for (let i = 0; i < 18; i++) add(new THREE.CylinderGeometry(0.02, 0.012, 0.32, 5), std({ color: 0xeae2cf, roughness: 1 }), Math.cos(i) * 0.08, -1.08, Math.sin(i * 1.7) * 0.08, g).rotation.z = Math.cos(i) * 0.4; }
+  if (id === 'aspirador') { cabo(0.9, 0.035, 0x8a96a6); add(new THREE.BoxGeometry(0.45, 0.08, 0.16), std({ color: 0xff5a3d, roughness: 0.4 }), 0, -0.92, 0.05, g); add(new THREE.CylinderGeometry(0.11, 0.11, 0.3, 16), std({ color: 0xff5a3d, roughness: 0.4 }), 0, -0.35, -0.12, g); }
+  if (id === 'jato') { cabo(0.6, 0.04, 0x3d4a5c); add(new THREE.ConeGeometry(0.09, 0.3, 14).rotateX(Math.PI), std({ color: 0x6ad1ff, metalness: 0.7, roughness: 0.2 }), 0, -0.72, 0, g); add(new THREE.BoxGeometry(0.14, 0.18, 0.12), std({ color: 0xffcf4a }), 0, -0.12, 0.05, g); }
+  if (id === 'vassoura') { cabo(1.2, 0.03, 0x9a7aff); const cab = add(new THREE.ConeGeometry(0.22, 0.42, 18), std({ color: 0xd8c4ff, emissive: 0x9a7aff, emissiveIntensity: 1.6 }), 0, -1.32, 0, g); cab.rotation.x = Math.PI; }
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; }); }
+
+// ===================== COISAS ESCONDIDAS E BICHINHOS =====================
+const tAnel = tex(128, 128, g => { g.strokeStyle = '#fff'; g.lineWidth = 10; g.beginPath(); g.arc(64, 64, 52, 0, 7); g.stroke(); });
+function malhaItem(o) { const g = new THREE.Group(); g.position.set(o.x, hBase(o.x, o.z), o.z); g.rotation.y = R() * 6.28; cena.add(g);
+  if (o.tipo === 'bau') { add(new THREE.BoxGeometry(1.0, 0.55, 0.65), std({ color: 0x7a4a24, roughness: 0.7 }), 0, 0.28, 0, g); const t = add(new THREE.CylinderGeometry(0.33, 0.33, 1.0, 16, 1, false, 0, Math.PI).rotateZ(Math.PI / 2), std({ color: 0x8a5a2c, roughness: 0.7 }), 0, 0.55, 0, g); t.rotation.x = 0; add(new THREE.BoxGeometry(1.04, 0.08, 0.69), M.ouro, 0, 0.55, 0, g); add(new THREE.BoxGeometry(0.14, 0.18, 0.06), M.ouro, 0, 0.5, 0.34, g); }
+  if (o.tipo === 'ovo') { const e = add(new THREE.SphereGeometry(0.32, 24, 16), std({ color: o.cor, roughness: 0.3, emissive: o.cor, emissiveIntensity: 0.35 }), 0, 0.42, 0, g); e.scale.set(1, 1.3, 1); for (let i = 0; i < 7; i++) add(new THREE.SphereGeometry(0.07, 10, 8), std({ color: 0xffffff, roughness: 0.5 }), Math.cos(i * 2.3) * 0.29, 0.3 + (i % 3) * 0.14, Math.sin(i * 2.3) * 0.29, g); }
+  if (o.tipo === 'rover') { add(new THREE.BoxGeometry(1.6, 0.4, 2.2), std({ color: 0xc9cdd3, roughness: 0.5, metalness: 0.4 }), 0, 0.75, 0, g); for (const [x, z] of [[-0.9, -0.8], [0.9, -0.8], [-0.9, 0], [0.9, 0], [-0.9, 0.8], [0.9, 0.8]]) add(new THREE.CylinderGeometry(0.28, 0.28, 0.2, 16).rotateZ(Math.PI / 2), M.escuro, x, 0.3, z, g);
+    add(new THREE.BoxGeometry(1.4, 0.05, 0.9), M.painel, 0, 1.2, -0.4, g); add(new THREE.CylinderGeometry(0.03, 0.03, 0.8, 6), M.metal, 0.5, 1.35, 0.7, g); add(new THREE.SphereGeometry(0.22, 16, 8, 0, 6.3, 0, 1.2), M.branco, 0.5, 1.75, 0.7, g); }
+  if (o.tipo === 'capsula') { add(new THREE.CylinderGeometry(0.45, 0.45, 1.2, 20), std({ color: 0xb8c0cc, roughness: 0.25, metalness: 0.9 }), 0, 0.6, 0, g); add(new THREE.SphereGeometry(0.45, 20, 10, 0, 6.3, 0, Math.PI / 2), std({ color: 0xb8c0cc, roughness: 0.25, metalness: 0.9 }), 0, 1.2, 0, g); add(new THREE.TorusGeometry(0.46, 0.04, 8, 30).rotateX(Math.PI / 2), std({ color: 0x6ad1ff, emissive: 0x6ad1ff, emissiveIntensity: 1.2 }), 0, 0.9, 0, g); }
+  g.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+  const sinal = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: o.tipo === 'ovo' ? o.cor : 0xffe08a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })); sinal.position.y = 1.6; sinal.scale.setScalar(2.2); g.add(sinal);
+  const anel = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 2.4).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tAnel, color: 0xffe08a, transparent: true, opacity: 0, depthWrite: false, toneMapped: false })); anel.position.y = 0.06; g.add(anel);
+  o.g = g; o.sinal = sinal; o.anel = anel; o.estado = 'escondido'; }
+ITENS.forEach(malhaItem);
+const NOME_ITEM = { bau: 'Baú do tesouro', ovo: 'Ovo misterioso', rover: 'Jipe lunar antigo', capsula: 'Cápsula do tempo' };
+const pets = [];
+function criarPet(cor) { const g = new THREE.Group(); cena.add(g);
+  const c = add(new THREE.SphereGeometry(0.28, 24, 16), std({ color: cor, roughness: 0.35, emissive: cor, emissiveIntensity: 0.25 }), 0, 0, 0, g); c.scale.set(1, 0.9, 1);
+  for (const s of [-1, 1]) { add(new THREE.SphereGeometry(0.09, 14, 10), std({ color: 0xffffff, roughness: 0.2 }), s * 0.1, 0.06, 0.22, g); add(new THREE.SphereGeometry(0.045, 10, 8), std({ color: 0x111111, roughness: 0.2 }), s * 0.1, 0.06, 0.3, g);
+    add(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 6), M.metal, s * 0.12, 0.32, 0, g).rotation.z = -s * 0.3; add(new THREE.SphereGeometry(0.05, 10, 8), std({ color: 0xffffff, emissive: cor, emissiveIntensity: 2 }), s * 0.16, 0.43, 0, g); }
+  const aro = add(new THREE.TorusGeometry(0.34, 0.025, 6, 24).rotateX(Math.PI / 2), std({ color: 0xffffff, emissive: cor, emissiveIntensity: 1.5 }), 0, -0.22, 0, g, false);
+  g.traverse(m => { if (m.isMesh) m.castShadow = true; }); g.position.set(astro.x, altura(astro.x, astro.z) + 1, astro.z); pets.push({ g, aro, fase: R() * 6, cor }); }
+
+// ===================== PARTÍCULAS DE POEIRA =====================
+const tFumaca = tex(64, 64, g => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
+const PART = []; for (let i = 0; i < 220; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tFumaca, color: 0xb9a98f, transparent: true, opacity: 0, depthWrite: false })); s.visible = false; cena.add(s); PART.push({ s, v: V3(0, 0, 0), t: 9, vida: 1 }); }
+let partI = 0;
+function soltarPo(x, y, z, forca, cor = 0xb9a98f) { const p = PART[partI++ % PART.length]; p.s.visible = true; p.s.material.color.setHex(cor); p.s.position.set(x + rr(-0.3, 0.3), y + 0.1, z + rr(-0.3, 0.3)); const a = R() * 6.28; p.v.set(Math.cos(a) * forca, rr(0.4, 1.4) * forca, Math.sin(a) * forca); p.t = 0; p.vida = rr(1.2, 2.4); }
+function atualizarPo(dt) { for (const p of PART) { if (p.t >= p.vida) continue; p.t += dt; p.v.y -= 1.62 * dt * 0.5; p.s.position.addScaledVector(p.v, dt); const k = p.t / p.vida; p.s.scale.setScalar(0.25 + k * 0.9); p.s.material.opacity = Math.sin(k * Math.PI) * 0.55; if (k >= 1) p.s.visible = false; } }
+
+// ===================== SOM =====================
+let AC = null, mestre = null, ruido = null, somEsf = null;
+function iniciarAudio() { if (AC) { if (AC.state !== 'running') AC.resume(); return; }
+  try { AC = new (window.AudioContext || window.webkitAudioContext)(); mestre = AC.createGain(); mestre.gain.value = 0.8; mestre.connect(AC.destination);
+    ruido = AC.createBuffer(1, AC.sampleRate * 2, AC.sampleRate); const d = ruido.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const s = AC.createBufferSource(); s.buffer = ruido; s.loop = true; const f = AC.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2400; f.Q.value = 0.8; const g = AC.createGain(); g.gain.value = 0; s.connect(f); f.connect(g); g.connect(mestre); s.start(); somEsf = { g, f };
+  } catch (e) { AC = null; } }
+['pointerdown', 'keydown'].forEach(ev => addEventListener(ev, () => { if (AC && AC.state !== 'running') AC.resume(); }, { capture: true, passive: true }));
+function tom(f0, f1, dur, tipo = 'sine', vol = 0.12, at = 0) { if (!AC) return; const t = AC.currentTime + at, o = AC.createOscillator(), g = AC.createGain(); o.type = tipo; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(mestre); o.start(t); o.stop(t + dur + 0.05); }
+const somMoedas = n => { for (let i = 0; i < Math.min(8, 2 + n); i++) tom(1200 + i * 90, 1800 + i * 90, 0.12, 'triangle', 0.08, i * 0.06); };
+const somAchou = () => [660, 880, 1320, 1760].forEach((f, i) => tom(f, f, 0.35, 'sine', 0.12, i * 0.09));
+const somRuim = () => tom(220, 140, 0.25, 'square', 0.05);
+
+// ===================== ESTADO, LOJA E SALVAR =====================
+const est = { moedas: 0, kg: 0, ferr: 'escova', temFerr: ['escova'], moch: 0, extras: [], achados: [], pets: [], meteoros: [], venceu: false, total: 0 };
+const ferrAtual = () => FERR.find(f => f.id === est.ferr), capacidade = () => MOCH[est.moch].cap;
+function salvar() { try {
+  const pares = []; let v = MASC[0] >> 3, n = 0; for (let k = 0; k < N * N; k++) { const q = MASC[k] >> 3; if (q === v && n < 255) n++; else { pares.push(v, n); v = q; n = 1; } } pares.push(v, n);
+  let s = ''; const u = new Uint8Array(pares); for (let i = 0; i < u.length; i += 8192) s += String.fromCharCode.apply(null, u.subarray(i, i + 8192));
+  localStorage.setItem('faxina-na-lua-1', JSON.stringify(Object.assign({}, est, { masc: btoa(s) }))); } catch (e) {} }
+function carregar() { try { const d = JSON.parse(localStorage.getItem('faxina-na-lua-1') || 'null'); if (!d) return false;
+  for (const k of Object.keys(est)) if (d[k] !== undefined) est[k] = d[k];
+  (est.meteoros || []).forEach(m => somarMonte(m)); for (let k = 0; k < N * N; k++) ESP8[k] = Math.round(ESP[k] / 3.2 * 255);
+  if (d.masc) { const b = atob(d.masc); let k = 0; for (let i = 0; i + 1 < b.length; i += 2) { const q = b.charCodeAt(i), n = b.charCodeAt(i + 1); for (let j = 0; j < n && k < N * N; j++, k++) { const m = q === 0 ? 0 : Math.min(255, (q << 3) + 4); RESTO[k] = ESP[k] * m / 255; } } }
+  atualizarMascaraTudo(); texMasc.needsUpdate = true; texEsp.needsUpdate = true;
+  ITENS.forEach((o, i) => { if (est.achados.includes(i)) { o.estado = 'coletado'; o.g.visible = false; } });
+  est.pets.forEach(c => criarPet(c)); return true; } catch (e) { return false; } }
+const temSalvo = (() => { try { return !!localStorage.getItem('faxina-na-lua-1'); } catch (e) { return false; } })();
+
+// ===================== AVISOS E HUD =====================
+let avisoT = 0, ultimoAviso = '', avisoQuando = 0;
+function aviso(txt, tipo = '', seg = 2.6) { if (txt === ultimoAviso && performance.now() - avisoQuando < 2500) return; ultimoAviso = txt; avisoQuando = performance.now(); const a = $('aviso'); a.textContent = txt; a.className = tipo; a.hidden = false; a.style.opacity = 1; avisoT = seg; }
+let mostrados = { moedas: -1, kg: -1 };
+function hud() { if (mostrados.moedas !== est.moedas) { mostrados.moedas = est.moedas; $('moedas').textContent = Math.floor(est.moedas).toLocaleString('pt-BR'); $('loja-moedas').textContent = Math.floor(est.moedas).toLocaleString('pt-BR'); }
+  const cap = capacidade(), kg = Math.min(est.kg, cap); $('kg').textContent = `${kg.toFixed(kg < 10 ? 1 : 0)} / ${cap.toLocaleString('pt-BR')} kg`; $('barra').style.width = (kg / cap * 100).toFixed(1) + '%'; $('mochila').classList.toggle('cheia', kg >= cap - 0.01);
+  $('ferr').textContent = ferrAtual().nome; $('pct').textContent = `${(100 * (1 - sujos / TOTAL)).toFixed(1)}% limpa`;
+  enchido.scale.y = Math.max(0.02, kg / cap); $('b-base').hidden = !est.extras.includes('tele'); }
+// mapa
+const mapaCtx = $('mapa').getContext('2d'), mapaImg = mapaCtx.createImageData(132, 132);
+function desenharMapa() { const d = mapaImg.data; for (let y = 0; y < 132; y++) for (let x = 0; x < 132; x++) { const i = (y * 132 + x) * 4, wx = (x / 132 - 0.5) * TAM, wz = (y / 132 - 0.5) * TAM, m = MASC[idx(wx, wz)] / 255, lv = nivelEm(wx, wz);
+    const sj = [[0, 0, 0], [150, 140, 125], [140, 118, 96], [120, 96, 78], [110, 80, 72], [96, 80, 104]][lv], li = [214, 222, 236], k = m > 0.1 ? 1 : 0; d[i] = k ? sj[0] : li[0]; d[i + 1] = k ? sj[1] : li[1]; d[i + 2] = k ? sj[2] : li[2]; d[i + 3] = Math.hypot(x - 66, y - 66) < 66 ? 255 : 0; }
+  mapaCtx.putImageData(mapaImg, 0, 0); const px = v => (v / TAM + 0.5) * 132;
+  mapaCtx.fillStyle = '#ffcf4a'; mapaCtx.beginPath(); mapaCtx.arc(66, 66, 4, 0, 7); mapaCtx.fill();
+  ITENS.forEach(o => { if (o.estado === 'revelado') { mapaCtx.fillStyle = '#6ad1ff'; mapaCtx.beginPath(); mapaCtx.arc(px(o.x), px(o.z), 3.5, 0, 7); mapaCtx.fill(); } });
+  mapaCtx.save(); mapaCtx.translate(px(astro.x), px(astro.z)); mapaCtx.rotate(-astro.rot + Math.PI); mapaCtx.fillStyle = '#ff5e5e'; mapaCtx.beginPath(); mapaCtx.moveTo(0, -6); mapaCtx.lineTo(4.5, 5); mapaCtx.lineTo(-4.5, 5); mapaCtx.closePath(); mapaCtx.fill(); mapaCtx.restore(); }
+
+// ===================== LIMPAR =====================
+let mascaraMudou = false, mudouT = 0;
+function limpar(cx, cz, raio, rem) { const i0 = idx(cx - raio, cz - raio), i1 = idx(cx + raio, cz + raio), c0 = i0 % N, c1 = i1 % N, l0 = (i0 / N) | 0, l1 = (i1 / N) | 0, r2 = raio * raio; let kg = 0;
+  for (let l = l0; l <= l1; l++) for (let c = c0; c <= c1; c++) { const x = (c + 0.5) * TX - TAM / 2, z = (l + 0.5) * TX - TAM / 2, d2 = (x - cx) ** 2 + (z - cz) ** 2; if (d2 > r2) continue; const k = l * N + c, t = RESTO[k]; if (t <= 0 || !LIMPAVEL[k]) continue;
+    const nt = Math.max(0, t - rem * (1 - 0.55 * d2 / r2)), tira = t - nt; RESTO[k] = nt; kg += tira * TX * TX * DENS; const m = nt <= 0.0005 ? 0 : Math.round(nt / ESP[k] * 255); if (MASC[k] > SUJO && m <= SUJO) sujos--; MASC[k] = m; if (m === 0) RESTO[k] = 0; }
+  if (kg > 0) mascaraMudou = true; return kg; }
+function espacoMochila() { return Math.max(0, capacidade() - est.kg); }
+function pontoFerr() { const f = ferrAtual(), fr = 0.75 + f.r * 0.45; return [astro.x + Math.sin(astro.rot) * fr, astro.z + Math.cos(astro.rot) * fr]; }
+const marca = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.2, depthTest: false, depthWrite: false, toneMapped: false })); marca.renderOrder = 5; cena.add(marca);
+let bloqueado = false;
+function esfregar(dt) { const f = ferrAtual(), [cx, cz] = pontoFerr(), nv = nivelEm(cx, cz);
+  if (Math.hypot(cx, cz) < BASE_R) return 0;
+  bloqueado = true;
+  if (nv > f.nivel) { const prec = FERR.find(x => x.nivel >= nv); aviso(`Essa ${NOMES_NIVEL[nv]} é dura demais. Você precisa do ${prec.nome}.`, 'ruim'); return 0; }
+  const esp = espacoMochila(); if (esp <= 0.001) { aviso('Mochila cheia! Volte à base e venda a poeira.', 'ruim'); return 0; }
+  bloqueado = false; let kg = limpar(cx, cz, f.r, f.p * dt); if (kg > esp) kg = esp; est.kg += kg;
+  if (kg > 0 && Math.random() < 0.6 + f.r * 0.15) soltarPo(cx, altura(cx, cz), cz, 0.6 + f.r * 0.3, nv >= 4 ? 0x9a8278 : 0xb9a98f);
+  return kg; }
+
+// ===================== CONTROLES =====================
+const J = { yaw: Math.PI, pitch: -0.28 }, teclas = new Set(); let travado = false, jogando = false, mouseEsq = false, esfToque = false, pedirAcao = false, pedirPulo = false, ultimoOlhar = 0;
+addEventListener('keydown', e => { const k = e.key.toLowerCase(); teclas.add(k); if (!jogando) return; if (k === 'e') pedirAcao = true; if (k === ' ') { pedirPulo = true; e.preventDefault(); } if (k === 'b') voltarBase(); if (k === 'escape' && !$('loja').hidden) fecharLoja(); });
+addEventListener('keyup', e => teclas.delete(e.key.toLowerCase())); addEventListener('blur', () => { teclas.clear(); mouseEsq = false; });
+function prender() { if (toque || travado || !canvas.requestPointerLock) return; try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
+function soltarMouse() { if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); }
+document.addEventListener('pointerlockchange', () => { travado = document.pointerLockElement === canvas; if (!travado) mouseEsq = false; });
+addEventListener('mousemove', e => { if (travado && jogando) { J.yaw -= (e.movementX || 0) * 0.0026; J.pitch = clamp(J.pitch - (e.movementY || 0) * 0.0026, -1.2, 0.6); } });
+const joy = { id: null, x: 0, y: 0, dx: 0, dy: 0, correr: false }, olharP = { id: null, x: 0, y: 0 }, joyEl = $('joy'), baseJ = joyEl.querySelector('.base'), knob = baseJ.querySelector('i');
+function moverJoy(e) { let dx = e.clientX - joy.x, dy = e.clientY - joy.y; const d = Math.hypot(dx, dy); joy.correr = d > 56 * 1.2; if (d > 56) { dx *= 56 / d; dy *= 56 / d; } joy.dx = dx / 56; joy.dy = dy / 56; if (Math.hypot(joy.dx, joy.dy) < 0.12) joy.dx = joy.dy = 0; knob.style.transform = `translate(${dx}px,${dy}px)`; }
+canvas.addEventListener('pointerdown', e => { if (!jogando) return;
+  if (e.pointerType === 'mouse') { prender(); if (travado && e.button === 0) mouseEsq = true; if (travado) return; }
+  if (e.pointerType !== 'mouse' && e.clientX < innerWidth * 0.5 && e.clientY > innerHeight * 0.25 && joy.id === null) { const x = clamp(e.clientX, 78, innerWidth * 0.5 - 30), y = clamp(e.clientY, 90, innerHeight - 78); Object.assign(joy, { id: e.pointerId, x, y }); baseJ.style.left = x + 'px'; baseJ.style.top = y + 'px'; joyEl.classList.add('ativo'); moverJoy(e); }
+  else if (olharP.id === null) Object.assign(olharP, { id: e.pointerId, x: e.clientX, y: e.clientY });
+  try { canvas.setPointerCapture(e.pointerId); } catch (er) {} });
+canvas.addEventListener('pointermove', e => { if (e.pointerId === joy.id) moverJoy(e);
+  if (e.pointerId === olharP.id && !travado) { const dx = e.clientX - olharP.x, dy = e.clientY - olharP.y; olharP.x = e.clientX; olharP.y = e.clientY; const k = (e.pointerType === 'mouse' ? 0.005 : 0.0105) * (1 + Math.min(1, Math.hypot(dx, dy) / 28) * 0.6); J.yaw -= dx * k; J.pitch = clamp(J.pitch - dy * k, -1.2, 0.6); ultimoOlhar = performance.now(); } });
+const soltar = e => { if (e.pointerId === joy.id) { joy.id = null; joy.dx = joy.dy = 0; joy.correr = false; baseJ.style.left = baseJ.style.top = ''; knob.style.transform = ''; joyEl.classList.remove('ativo'); } if (e.pointerId === olharP.id) olharP.id = null; };
+canvas.addEventListener('pointerup', soltar); canvas.addEventListener('pointercancel', soltar); addEventListener('mouseup', e => { if (e.button === 0) mouseEsq = false; });
+const botao = (id, fd, fu) => { const b = $(id); b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); b.classList.add('on'); fd(); }); ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => b.addEventListener(ev, () => { b.classList.remove('on'); if (fu) fu(); })); };
+botao('b-esfregar', () => { esfToque = true; }, () => { esfToque = false; }); botao('b-pular', () => { pedirPulo = true; }); botao('b-acao', () => { pedirAcao = true; }); botao('b-base', () => voltarBase());
+
+// ===================== VENDER, LOJA, ACHAR =====================
+function vender() { if (est.kg < 0.05) { aviso('A mochila está vazia. Vá esfregar a Lua!'); return; } const kg = est.kg, valor = Math.round(kg); est.moedas += valor; est.total += valor; est.kg = 0; somMoedas(Math.min(10, valor / 10));
+  for (let i = 0; i < 16; i++) soltarPo(VENDA.x, 2.6, VENDA.z - 1.6, 0.8, 0xffcf4a); aviso(`Vendeu ${kg.toFixed(1)} kg de poeira por ${valor.toLocaleString('pt-BR')} moedas!`, 'ouro'); salvar(); }
+let abaLoja = 'ferr';
+function abrirLoja() { soltarMouse(); $('loja').hidden = false; desenharLoja(); }
+function fecharLoja() { $('loja').hidden = true; if (!toque) prender(); }
+$('loja-fechar').addEventListener('click', fecharLoja);
+document.querySelectorAll('.abas button').forEach(b => b.addEventListener('click', () => { abaLoja = b.dataset.aba; document.querySelectorAll('.abas button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); desenharLoja(); }));
+function desenharLoja() { const box = $('cartoes'); box.innerHTML = ''; $('loja-moedas').textContent = Math.floor(est.moedas).toLocaleString('pt-BR');
+  const carta = (titulo, desc, stats, estado, preco, fn) => { const c = document.createElement('div'); c.className = 'carta' + (estado === 'equipado' ? ' equipado' : '');
+    c.innerHTML = `<h3></h3><p></p><div class="stats">${stats.map(s => `<span>${s}</span>`).join('')}</div>`; c.querySelector('h3').textContent = titulo; c.querySelector('p').textContent = desc;
+    const b = document.createElement('button'); b.type = 'button';
+    if (estado === 'equipado') { b.textContent = 'Equipado'; b.disabled = true; } else if (estado === 'tem') { b.textContent = 'Equipar'; } else { b.className = 'comprar'; b.textContent = `Comprar · ${preco.toLocaleString('pt-BR')}`; b.disabled = est.moedas < preco; }
+    b.addEventListener('click', fn); c.appendChild(b); box.appendChild(c); };
+  if (abaLoja === 'ferr') FERR.forEach(f => { const tem = est.temFerr.includes(f.id); carta(f.nome, f.desc, [`Tamanho ${f.r.toFixed(1)} m`, `Força ${Math.round(f.p * 100)}`, `Limpa até ${NOMES_NIVEL[f.nivel]}`], est.ferr === f.id ? 'equipado' : tem ? 'tem' : 'comprar', f.preco, () => {
+    if (!tem) { if (est.moedas < f.preco) return; est.moedas -= f.preco; est.temFerr.push(f.id); tom(523, 1046, 0.3, 'triangle', 0.12); aviso(`Comprou: ${f.nome}!`, 'ouro'); } est.ferr = f.id; montarFerramenta(f.id); salvar(); desenharLoja(); }); });
+  if (abaLoja === 'moch') MOCH.forEach((m, i) => carta(m.nome, `Guarda ${m.cap.toLocaleString('pt-BR')} kg de poeira.`, [`${m.cap.toLocaleString('pt-BR')} kg`], est.moch === i ? 'equipado' : est.moch > i ? 'tem' : 'comprar', m.preco, () => {
+    if (est.moch >= i) return; if (est.moedas < m.preco) return; est.moedas -= m.preco; est.moch = i; tom(523, 1046, 0.3, 'triangle', 0.12); aviso(`Comprou: ${m.nome}!`, 'ouro'); salvar(); desenharLoja(); }));
+  if (abaLoja === 'extra') EXTRA.forEach(x => { const tem = est.extras.includes(x.id); carta(x.nome, x.desc, [], tem ? 'equipado' : 'comprar', x.preco, () => { if (tem || est.moedas < x.preco) return; est.moedas -= x.preco; est.extras.push(x.id); tom(523, 1046, 0.3, 'triangle', 0.12); aviso(`Comprou: ${x.nome}!`, 'ouro'); salvar(); desenharLoja(); }); });
+  hud(); }
+function coletar(i) { const o = ITENS[i]; o.estado = 'coletado'; est.achados.push(i); somAchou(); for (let k = 0; k < 24; k++) soltarPo(o.x, o.g.position.y + 0.5, o.z, 1.2, o.tipo === 'ovo' ? o.cor : 0xffe08a);
+  if (o.tipo === 'ovo') { est.pets.push(o.cor); criarPet(o.cor); aviso('O ovo chocou! Um Lunito vai te ajudar a limpar!', 'ouro', 4); }
+  else { est.moedas += o.valor; est.total += o.valor; aviso(`${NOME_ITEM[o.tipo]}: +${o.valor.toLocaleString('pt-BR')} moedas!`, 'ouro', 3.5); }
+  o.g.visible = false; salvar(); }
+function voltarBase() { if (!jogando || !est.extras.includes('tele')) return; $('fade').classList.add('ver'); setTimeout(() => { astro.x = 0; astro.z = 3; astro.vy = 0; astro.y = altura(0, 3); pets.forEach(p => p.g.position.set(0, 2, 3)); $('fade').classList.remove('ver'); }, 450); tom(300, 1200, 0.5, 'sine', 0.1); }
+
+// ===================== CHUVA DE METEOROS =====================
+let meteoroT = 150; const voando = [];
+function chuva() { aviso('Chuva de meteoros! Caiu poeira nova na Lua!', 'ruim', 4); for (let i = 0; i < 3; i++) { const a = R() * 6.28, d = rr(22, 66), x = Math.cos(a) * d, z = Math.sin(a) * d;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: 0xffb070, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); s.scale.setScalar(4); cena.add(s);
+  voando.push({ s, de: V3(x + rr(-80, 80), 120, z - 140), para: V3(x, hBase(x, z), z), t: -i * 0.8, x, z }); } }
+function atualizarMeteoros(dt) { for (let i = voando.length - 1; i >= 0; i--) { const m = voando[i]; m.t += dt / 2.2; if (m.t < 0) { m.s.visible = false; continue; } m.s.visible = true; m.s.position.lerpVectors(m.de, m.para, Math.min(1, m.t));
+  if (m.t >= 1) { cena.remove(m.s); voando.splice(i, 1); const monte = { x: m.x, z: m.z, h: rr(1.0, 1.6), r: rr(2.5, 3.5) }; est.meteoros.push(monte); somarMonte(monte);
+    const r3 = monte.r * 2.6; for (let l = idx(0, m.z - r3) / N | 0; l <= (idx(0, m.z + r3) / N | 0); l++) for (let c = idx(m.x - r3, 0) % N; c <= idx(m.x + r3, 0) % N; c++) { const k = l * N + c, x = (c + 0.5) * TX - TAM / 2, z = (l + 0.5) * TX - TAM / 2; if (Math.hypot(x - m.x, z - m.z) < monte.r * 1.6 && LIMPAVEL[k]) { if (MASC[k] <= SUJO) sujos++; RESTO[k] = ESP[k]; MASC[k] = 255; } ESP8[k] = Math.round(ESP[k] / 3.2 * 255); }
+    texEsp.needsUpdate = true; mascaraMudou = true; for (let k = 0; k < 30; k++) soltarPo(m.x, hBase(m.x, m.z), m.z, 3, 0xffa060); tom(90, 40, 0.6, 'sawtooth', 0.12); } } }
+
+// ===================== MENU =====================
+document.querySelectorAll('#qual button').forEach(b => { b.setAttribute('aria-pressed', String(+b.dataset.q === qual)); b.addEventListener('click', () => { try { localStorage.setItem('faxina-q', b.dataset.q); } catch (e) {} location.reload(); }); });
+if (temSalvo) { $('b-jogar').textContent = 'Continuar'; $('b-novo').hidden = false; }
+$('b-novo').addEventListener('click', () => { $('novo-conf').hidden = false; });
+$('b-novo-nao').addEventListener('click', () => { $('novo-conf').hidden = true; });
+$('b-novo-sim').addEventListener('click', () => { try { localStorage.removeItem('faxina-na-lua-1'); } catch (e) {} location.reload(); });
+function telaCheia() { const el = document.documentElement; try { if (!document.fullscreenElement) { const f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) { const r = f.call(el); if (r && r.catch) r.catch(() => {}); } } else document.exitFullscreen(); } catch (e) {} }
+$('b-tela').addEventListener('click', telaCheia); if (!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)) $('b-tela').hidden = true;
+function comecar() { iniciarAudio(); $('menu').hidden = true; jogando = true; document.body.classList.add('jogando'); $('hud-esq').hidden = $('hud-dir').hidden = false; $('mira').hidden = toque; prender();
+  aviso(toque ? 'Segure ESFREGAR para limpar a poeira!' : 'Segure o botão do mouse para esfregar a poeira!', '', 4); }
+$('b-jogar').addEventListener('click', comecar);
+$('vit-ok').addEventListener('click', () => { $('vitoria').hidden = true; jogando = true; prender(); });
+carregar(); montarFerramenta(est.ferr); astro.y = altura(astro.x, astro.z);
+
+// ===================== LAÇO =====================
+const H_ = V3(); let antes = performance.now(), salvarT = 0, mapaT = 0, revelarT = 0, perto = null, tempoTotal = 0, cam = { dist: 4.6 };
+function quadro(agora) { requestAnimationFrame(quadro);
+  const VEL = window.__vel || 1, dtR = Math.min(0.25, (agora - antes) / 1000), dt = Math.min(0.05 * VEL, dtR * VEL); antes = agora; tempoTotal += dt; uChao.uTempo.value = tempoTotal;
+  const w = innerWidth, h = innerHeight; if (canvas.width !== Math.floor(w * Rd.getPixelRatio()) || canvas.height !== Math.floor(h * Rd.getPixelRatio())) { Rd.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  const ativo = jogando && $('loja').hidden && $('vitoria').hidden;
+  // andar
+  let f = 0, s = 0; if (ativo) { if (teclas.has('w') || teclas.has('arrowup')) f++; if (teclas.has('s') || teclas.has('arrowdown')) f--; if (teclas.has('d') || teclas.has('arrowright')) s++; if (teclas.has('a') || teclas.has('arrowleft')) s--; f -= joy.dy; s += joy.dx; }
+  let mag = Math.hypot(f, s); if (mag > 1) { f /= mag; s /= mag; mag = 1; }
+  const botas = est.extras.includes('botas'), esfAtivo = ativo && (mouseEsq || esfToque || teclas.has('f')), corre = (teclas.has('shift') || joy.correr) && !esfAtivo;
+  const vel = (corre ? 5.5 : 3.0) * (botas ? 1.3 : 1) * (esfAtivo ? 0.55 : 1), sy = Math.sin(J.yaw), cy = Math.cos(J.yaw);
+  let dx = (-sy * f + cy * s) * vel * dt, dz = (-cy * f - sy * s) * vel * dt;
+  let nx = astro.x + dx, nz = astro.z + dz; const dn = Math.hypot(nx, nz); if (dn > RAIO_JOGO) { nx *= RAIO_JOGO / dn; nz *= RAIO_JOGO / dn; }
+  if (!BLOQ.some(([bx, bz, r]) => Math.hypot(nx - bx, nz - bz) < r + 0.35)) { astro.x = nx; astro.z = nz; }
+  if (esfAtivo) astro.rot += angDif(astro.rot, Math.atan2(-sy, -cy)) * Math.min(1, dt * 10); else if (mag > 0.1) astro.rot += angDif(astro.rot, Math.atan2(dx, dz)) * Math.min(1, dt * 10);
+  const chaoY = altura(astro.x, astro.z);
+  if (pedirPulo && astro.chao && ativo) { astro.vy = botas ? 4.3 : 3.1; astro.chao = false; tom(180, 260, 0.15, 'sine', 0.05); } pedirPulo = false;
+  astro.vy -= 1.62 * dt; astro.y += astro.vy * dt; if (astro.y <= chaoY) { if (!astro.chao && astro.vy < -2) { for (let i = 0; i < 6; i++) soltarPo(astro.x, chaoY, astro.z, 0.8); } astro.y = chaoY; astro.vy = 0; astro.chao = true; } else if (astro.y > chaoY + 0.05) astro.chao = false;
+  if (astro.chao && astro.y < chaoY + 0.4) astro.y = chaoY;
+  astro.andar += ((mag > 0.1 ? 1 : 0) - astro.andar) * Math.min(1, dt * 8); astro.fase += dt * vel * mag * 1.6;
+  astro.esfregando += ((esfAtivo ? 1 : 0) - astro.esfregando) * Math.min(1, dt * 10);
+  // limpar
+  let kgAgora = 0; if (esfAtivo) kgAgora = esfregar(dt); else bloqueado = false;
+  { const [mx, mz] = pontoFerr(), fr = ferrAtual().r, foraBase = Math.hypot(mx, mz) > BASE_R; marca.visible = jogando && foraBase; marca.position.set(mx, altura(mx, mz) + 0.08, mz); marca.scale.setScalar(fr);
+    marca.material.color.setHex(bloqueado ? 0xff6b5e : 0xffffff); marca.material.opacity = esfAtivo ? 0.55 + 0.2 * Math.sin(tempoTotal * 12) : 0.18; }
+  for (const p of pets) { if (espacoMochila() > 0.001 && Math.hypot(p.g.position.x, p.g.position.z) > BASE_R && nivelEm(p.g.position.x, p.g.position.z) <= 3) { const k = Math.min(espacoMochila(), limpar(p.g.position.x, p.g.position.z, 1.0, 0.12 * dt)); est.kg += k; if (k > 0 && Math.random() < 0.15) soltarPo(p.g.position.x, p.g.position.y - 0.6, p.g.position.z, 0.5); } }
+  if (somEsf) { somEsf.g.gain.setTargetAtTime(kgAgora > 0 ? 0.08 + ferrAtual().r * 0.02 : 0.0001, AC.currentTime, 0.05); somEsf.f.frequency.value = est.ferr === 'aspirador' || est.ferr === 'jato' ? 700 : 2400 + Math.sin(tempoTotal * 18) * 600; }
+  mudouT += dt; if (mascaraMudou && mudouT > 0.05) { texMasc.needsUpdate = true; mascaraMudou = false; mudouT = 0; }
+  // corpo do astronauta
+  astro.g.position.set(astro.x, astro.y, astro.z); astro.g.rotation.y = astro.rot;
+  const fa = astro.fase, wv = astro.andar * (astro.chao ? 1 : 0.3), esf = astro.esfregando;
+  corpo.position.y = Math.abs(Math.sin(fa)) * 0.06 * wv; corpo.rotation.x = 0.08 * wv + 0.2 * esf;
+  pernaE.rotation.x = Math.sin(fa) * 0.6 * wv + (astro.chao ? 0 : -0.5); pernaD.rotation.x = -Math.sin(fa) * 0.6 * wv + (astro.chao ? 0 : 0.2); canelaE.rotation.x = Math.max(0, -Math.sin(fa)) * 0.8 * wv + (astro.chao ? 0 : 0.8); canelaD.rotation.x = Math.max(0, Math.sin(fa)) * 0.8 * wv + (astro.chao ? 0 : 0.4);
+  bracoE.rotation.x = -Math.sin(fa) * 0.5 * wv; bracoE.rotation.z = -0.15; anteE.rotation.x = -0.3;
+  const vai = Math.sin(tempoTotal * 14) * esf; bracoD.rotation.x = lerp(Math.sin(fa) * 0.5 * wv, -0.9 + vai * 0.35, esf); bracoD.rotation.z = 0.15; anteD.rotation.x = lerp(-0.3, -0.5 + vai * 0.3, esf);
+  mao.rotation.x = lerp(0, 0.4, esf);
+  // bichinhos
+  pets.forEach((p, i) => { p.fase += dt; const a = astro.rot + Math.PI + (i - (pets.length - 1) / 2) * 0.9, alvo = V3(astro.x + Math.sin(a) * 1.8, 0, astro.z + Math.cos(a) * 1.8); alvo.y = altura(alvo.x, alvo.z) + 0.9 + Math.sin(p.fase * 2.4) * 0.15;
+    p.g.position.lerp(alvo, Math.min(1, dt * 2.5)); p.g.rotation.y += angDif(p.g.rotation.y, Math.atan2(astro.x - p.g.position.x, astro.z - p.g.position.z)) * Math.min(1, dt * 4); p.aro.rotation.z += dt * 3; });
+  // coisas escondidas
+  revelarT -= dt; if (revelarT <= 0) { revelarT = 0.25; ITENS.forEach(o => { if (o.estado !== 'escondido') return; let soma = 0, n = 0; for (let a = 0; a < 8; a++) { soma += MASC[idx(o.x + Math.cos(a) * 0.7, o.z + Math.sin(a) * 0.7)]; n++; } if (soma / n < 0.3 * 255) { o.estado = 'revelado'; somAchou(); aviso(`Você achou: ${NOME_ITEM[o.tipo]}! Chegue perto para pegar.`, 'ouro', 3.5); } }); }
+  ITENS.forEach(o => { if (o.estado === 'revelado') { o.sinal.material.opacity = 0.55 + 0.35 * Math.sin(tempoTotal * 4); o.anel.material.opacity = 0.5 + 0.3 * Math.sin(tempoTotal * 4); o.anel.scale.setScalar(1 + 0.15 * Math.sin(tempoTotal * 4)); } });
+  // ação: vender, loja, pegar
+  perto = null; if (ativo) { if (Math.hypot(astro.x - VENDA.x, astro.z - VENDA.z) < 2.2) perto = { txt: 'Vender poeira', curto: 'VENDER', fn: vender }; else if (Math.hypot(astro.x - LOJA.x, astro.z - LOJA.z) < 2.0) perto = { txt: 'Abrir a loja', curto: 'LOJA', fn: abrirLoja };
+    else ITENS.forEach((o, i) => { if (o.estado === 'revelado' && Math.hypot(astro.x - o.x, astro.z - o.z) < 2.6) perto = { txt: o.tipo === 'ovo' ? 'Chocar o ovo' : `Pegar: ${NOME_ITEM[o.tipo]}`, curto: o.tipo === 'ovo' ? 'CHOCAR' : 'PEGAR', fn: () => coletar(i) }; }); }
+  if (pedirAcao && perto) perto.fn(); pedirAcao = false;
+  $('prompt').hidden = !perto; if (perto) $('prompt-txt').textContent = perto.txt; $('b-acao').hidden = !perto; if (perto) $('b-acao').textContent = perto.curto;
+  anelVenda.material.opacity = 0.45 + 0.3 * Math.sin(tempoTotal * 3); anelLoja.material.opacity = 0.45 + 0.3 * Math.sin(tempoTotal * 3 + 1);
+  // meteoros
+  if (est.total > 200 && ativo) { meteoroT -= dt; if (meteoroT <= 0) { meteoroT = rr(180, 260); chuva(); } } atualizarMeteoros(dt);
+  atualizarPo(dt);
+  // câmera atrás do astronauta
+  astro.g.updateMatrixWorld(true); capacete.getWorldPosition(H_); const cpt = Math.cos(J.pitch), dX = -Math.sin(J.yaw) * cpt, dY = Math.sin(J.pitch), dZ = -Math.cos(J.yaw) * cpt;
+  const alvoY = H_.y + 0.35; let dd = cam.dist; camera.position.set(H_.x - dX * dd + Math.cos(J.yaw) * 0.45, alvoY - dY * dd, H_.z - dZ * dd - Math.sin(J.yaw) * 0.45);
+  const minY = altura(camera.position.x, camera.position.z) + 0.4; if (camera.position.y < minY) camera.position.y = minY;
+  camera.rotation.set(J.pitch, J.yaw, 0);
+  // sol e sombra seguem você
+  sol.position.set(astro.x, astro.y, astro.z).addScaledVector(SOL_DIR, 70); sol.target.position.set(astro.x, astro.y, astro.z);
+  // HUD
+  if (avisoT > 0) { avisoT -= dtR; if (avisoT <= 0) $('aviso').hidden = true; }
+  if (jogando) { hud(); mapaT -= dtR; if (mapaT <= 0) { mapaT = 0.5; desenharMapa(); } salvarT += dtR; if (salvarT > 10) { salvarT = 0; salvar(); }
+    if (!est.venceu && sujos / TOTAL < 0.01) { est.venceu = true; jogando = false; soltarMouse(); $('vit-txt').textContent = `Você limpou a Lua inteira e ganhou ${Math.floor(est.total).toLocaleString('pt-BR')} moedas no caminho. Os Lunitos estão orgulhosos!`; $('vitoria').hidden = false; salvar(); } }
+  if (!jogando && $('menu').hidden === false) { const t = tempoTotal * 0.05; camera.position.set(Math.cos(t) * 26, 9, Math.sin(t) * 26); camera.lookAt(0, 2, 0); }
+  Rd.render(cena, camera);
+}
+requestAnimationFrame(quadro);
+window.__lua = { est, limpar, MASC, RESTO, ESP, ITENS, astro, J, pets, vender, abrirLoja, coletar, chuva, get sujos() { return sujos; }, TOTAL, nivelEm, altura, camera, Rd, idx, montarFerramenta, salvar };
+})();
+</script>
