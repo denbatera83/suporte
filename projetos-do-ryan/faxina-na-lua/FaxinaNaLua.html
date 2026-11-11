@@ -49,6 +49,9 @@
   #b-pular { width: 70px; height: 70px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 132px); bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 22px); }
   #b-acao { width: 82px; height: 82px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 38px); bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 140px); border-color: var(--azul); color: #dff5ff; }
   #b-base { width: 56px; height: 56px; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(max(10px, env(safe-area-inset-top, 0px)) + 186px); font-size: 11px; }
+  #b-carro { width: 68px; height: 68px; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 150px); bottom: calc(max(14px, env(safe-area-inset-bottom, 0px)) + 112px); border-color: #4fd8ff; color: #dff5ff; font-size: 14px; }
+  body.dirigindo #b-carro { border-color: var(--ouro); color: var(--ouro); }
+  body.dirigindo #b-esfregar, body.dirigindo #b-pular { display: none !important; }
   /* aviso de ação no computador */
   #prompt { position: fixed; z-index: 5; left: 50%; top: 60%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 6px 16px 6px 6px; border-radius: 99px; background: var(--vidro); border: 1px solid rgba(106,209,255,.6); font-weight: 800; pointer-events: none; }
   #prompt kbd { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: var(--azul); color: #00202e; font: 800 18px var(--display); }
@@ -104,6 +107,7 @@
 <button class="tb" id="b-pular" type="button">PULAR</button>
 <button class="tb" id="b-acao" type="button" hidden>AÇÃO</button>
 <button class="tb" id="b-base" type="button" hidden>BASE</button>
+<button class="tb" id="b-carro" type="button" hidden>CARRO</button>
 <div id="fade"></div>
 
 <div class="tela" id="menu">
@@ -114,6 +118,7 @@
       <kbd>MOUSE</kbd><span>olhar (clique na tela para prender) · segure o botão para esfregar</span>
       <kbd>W A S D</kbd><span>andar · <kbd>SHIFT</kbd> correr · <kbd>ESPAÇO</kbd> pular</span>
       <kbd>E</kbd><span>vender, abrir a loja e pegar o que achar · <kbd>B</kbd> voltar para a base</span>
+      <kbd>C</kbd><span>entrar e sair do carro (compre na loja, aba Carros)</span>
     </div>
     <div class="linha"><span>Gráficos</span><div class="linha" id="qual" role="group" aria-label="Gráficos"><button type="button" data-q="0">Leve</button><button type="button" data-q="1">Normal</button><button type="button" data-q="2">Ultra</button></div></div>
     <div class="linha"><button class="principal" id="b-jogar" type="button">Jogar</button><button id="b-novo" type="button" hidden>Começar de novo</button><button id="b-tela" type="button">Tela cheia</button></div>
@@ -124,7 +129,7 @@
 <div class="tela" id="loja" hidden>
   <div class="bloco">
     <div class="topo-loja"><h2>Loja da Base</h2><div class="pilula"><span class="moeda"></span><span id="loja-moedas" style="font:800 22px var(--display)">0</span></div><button id="loja-fechar" type="button">Fechar</button></div>
-    <div class="abas" role="tablist"><button type="button" data-aba="ferr" aria-pressed="true">Ferramentas</button><button type="button" data-aba="moch" aria-pressed="false">Mochilas</button><button type="button" data-aba="extra" aria-pressed="false">Extras</button></div>
+    <div class="abas" role="tablist"><button type="button" data-aba="ferr" aria-pressed="true">Ferramentas</button><button type="button" data-aba="moch" aria-pressed="false">Mochilas</button><button type="button" data-aba="veic" aria-pressed="false">Carros</button><button type="button" data-aba="extra" aria-pressed="false">Extras</button></div>
     <div class="cartoes" id="cartoes"></div>
   </div>
 </div>
@@ -359,6 +364,104 @@ function montarFerramenta(id) { while (mao.children.length) mao.remove(mao.child
   if (id === 'vassoura') { cabo(1.2, 0.03, 0x9a7aff); const cab = add(new THREE.ConeGeometry(0.22, 0.42, 18), std({ color: 0xd8c4ff, emissive: 0x9a7aff, emissiveIntensity: 1.6 }), 0, -1.32, 0, g); cab.rotation.x = Math.PI; }
   g.traverse(o => { if (o.isMesh) o.castShadow = true; }); }
 
+// ===================== CARROS =====================
+const VEIC = [
+  { id: 'bio', nome: 'Bio Lunar', art: 'o', em: 'no', desc: 'O carro do futuro que limpa! Prateado, com bolha de vidro, rodas que brilham e 33 escamas. Um raio azul embaixo suga a poeira enquanto você corre.', preco: 1200, vel: 11, turbo: 17, acel: 2.4, vira: 3.2, r: 1.2, p: 0.5, nivel: 2, stats: ['Limpa sozinho', 'Rápido 11 m/s', 'Até poeira grossa'] },
+  { id: 'varre', nome: 'Varredeira Lunar', art: 'a', em: 'na', desc: 'O carro que limpa! Escovas giratórias na frente aspiram a poeira enquanto você dirige.', preco: 4500, vel: 6.5, turbo: 9, acel: 1.8, vira: 2.6, r: 1.6, p: 0.9, nivel: 3, stats: ['Limpa sozinho', 'Tamanho 1.6 m', 'Até poeira grudenta'] }];
+const carro = { g: null, id: null, dentro: false, x: 1.8, z: 7.2, rot: Math.PI / 2, vel: 0, giro: 0, rodas: [], escovas: [], rolo: null, escamas: [], luz: null, tanque: null, piloto: null };
+const vAtual = () => VEIC.find(v => v.id === carro.id);
+function rodaCarro(g, x, y, z, R, larg, cor, brilho) { const w = new THREE.Group(); w.position.set(x, y, z); g.add(w);
+  add(new THREE.CylinderGeometry(R, R, larg, 24).rotateZ(Math.PI / 2), std({ color: cor, roughness: 0.55, metalness: 0.5 }), 0, 0, 0, w);
+  if (brilho) { for (const o of [-larg * 0.3, 0, larg * 0.3]) add(new THREE.TorusGeometry(R + 0.005, 0.018, 6, 32).rotateY(Math.PI / 2), brilho, o, 0, 0, w, false);
+    for (let k = 0; k < 5; k++) { const a = add(new THREE.BoxGeometry(0.02, R * 1.5, 0.05), brilho, Math.sign(x) * (larg / 2 + 0.005), 0, 0, w, false); a.rotation.x = k / 5 * Math.PI; } }
+  else for (let k = 0; k < 4; k++) { const a = add(new THREE.BoxGeometry(0.02, R * 1.3, 0.12), std({ color: 0xffc23a, roughness: 0.4, metalness: 0.4 }), Math.sign(x) * (larg / 2 + 0.005), 0, 0, w, false); a.rotation.x = k / 4 * Math.PI; }
+  carro.rodas.push(w); }
+function capacetePiloto(g, x, y, z) { const p = new THREE.Group(); p.position.set(x, y, z); g.add(p); add(new THREE.SphereGeometry(0.24, 20, 14), traje, 0, 0, 0, p); add(new THREE.SphereGeometry(0.2, 20, 12, Math.PI * 0.08, Math.PI * 0.84, Math.PI * 0.28, Math.PI * 0.42), visor, 0, 0, 0.05, p); add(capsula(V3(0, -0.5, 0), V3(0, -0.2, 0), 0.22, 0.24), traje, 0, 0, 0, p); return p; }
+function fazerBio(g) {
+  const prata = std({ color: 0xe9edf2, roughness: 0.28, metalness: 0.45 }), azul = new THREE.MeshBasicMaterial({ color: 0x4fd8ff, toneMapped: false }), escuro = std({ color: 0x1a1d24, roughness: 0.5, metalness: 0.5 });
+  const vid = std({ color: 0x9fd8ff, roughness: 0.04, metalness: 0.4, transparent: true, opacity: 0.38, depthWrite: false });
+  // corpo em gota: perfil girado e achatado (frente em +z)
+  const PERFIL = [[0, -2.25], [0.4, -2.18], [0.74, -1.9], [0.93, -1.25], [1.0, -0.35], [0.98, 0.55], [0.88, 1.35], [0.66, 1.92], [0.3, 2.2], [0, 2.26]];
+  const raioEm = z => { for (let i = 1; i < PERFIL.length; i++) if (z <= PERFIL[i][1]) { const [r0, z0] = PERFIL[i - 1], [r1, z1] = PERFIL[i]; return lerp(r0, r1, (z - z0) / (z1 - z0)); } return 0; };
+  const geo = new THREE.LatheGeometry(PERFIL.map(([r, z]) => new THREE.Vector2(Math.max(0.001, r), z)), 48).rotateX(Math.PI / 2); geo.scale(1, 0.46, 1); geo.computeVertexNormals();
+  const CY = 0.66; add(geo, prata, 0, CY, 0, g);
+  const topo = (x, z) => { const r = raioEm(z); return CY + 0.46 * Math.sqrt(Math.max(0, r * r - x * x)); };
+  // bolha de vidro, bancos e piloto
+  add(new THREE.BoxGeometry(1.1, 0.12, 1.6), escuro, 0, CY + 0.12, 0.35, g);
+  add(new THREE.BoxGeometry(0.42, 0.42, 0.12), std({ color: 0xece6da, roughness: 0.6 }), -0.28, CY + 0.36, -0.15, g); add(new THREE.BoxGeometry(0.42, 0.42, 0.12), std({ color: 0xece6da, roughness: 0.6 }), 0.28, CY + 0.36, -0.15, g);
+  for (let k = 0; k < 3; k++) add(new THREE.TorusGeometry(0.3 - k * 0.06, 0.012, 6, 24, Math.PI), azul, 0, CY + 0.2, 0.4 + k * 0.35, g, false);
+  carro.piloto = capacetePiloto(g, -0.28, CY + 0.62, 0.05);
+  const bolha = add(new THREE.SphereGeometry(1, 36, 18, 0, Math.PI * 2, 0, Math.PI / 2), vid, 0, CY + 0.12, 0.35, g, false); bolha.scale.set(0.82, 0.62, 1.55); bolha.renderOrder = 2;
+  // luzes: faixa azul na frente, linha vermelha atrás, linhas azuis dos lados
+  add(new THREE.BoxGeometry(1.1, 0.035, 0.05), azul, 0, CY + 0.02, 2.17, g, false);
+  add(new THREE.BoxGeometry(1.3, 0.03, 0.04), new THREE.MeshBasicMaterial({ color: 0xff2a2a, toneMapped: false }), 0, CY + 0.14, -2.12, g, false);
+  for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.03, 0.03, 2.6), azul, s * 0.99, CY - 0.06, 0.1, g, false);
+  // 33 escamas nas costas (abrem quando o carro corre)
+  const FILAS = [[-0.75, 5], [-1.0, 6], [-1.25, 6], [-1.5, 6], [-1.75, 5], [-1.98, 5]];
+  const placa = std({ color: 0xc9d0d8, roughness: 0.3, metalness: 0.5 });
+  for (const [z, n] of FILAS) { const larg = raioEm(z) * 0.78; for (let i = 0; i < n; i++) { const x = n > 1 ? lerp(-larg, larg, i / (n - 1)) : 0, y = topo(x, z);
+    const base = -Math.atan2(y - topo(x, z - 0.24), 0.24), lado = -Math.atan2(x * 0.46, Math.max(0.15, Math.sqrt(Math.max(0, raioEm(z) ** 2 - x * x))));
+    const piv = new THREE.Group(); piv.position.set(x, y + 0.012, z); piv.rotation.z = lado; g.add(piv); const e = new THREE.Group(); piv.add(e);
+    add(new THREE.BoxGeometry(0.17, 0.014, 0.22), placa, 0, 0, -0.11, e); add(new THREE.BoxGeometry(0.13, 0.016, 0.03), azul, 0, 0.002, -0.215, e, false);
+    e.userData.base = base; e.rotation.x = base; carro.escamas.push(e); } }
+  for (const [x, z] of [[-1.0, 1.38], [1.0, 1.38], [-1.0, -1.38], [1.0, -1.38]]) rodaCarro(g, x, 0.42, z, 0.42, 0.42, 0x2b2f37, azul);
+  carro.raio = add(new THREE.CylinderGeometry(0.5, 1.1, 0.6, 24, 1, true), new THREE.MeshBasicMaterial({ color: 0x4fd8ff, transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false }), 0, 0.3, 2.3, g, false);
+  carro.luz = null; }
+function fazerVarre(g) {
+  const amarelo = std({ color: 0xffbf24, roughness: 0.45, metalness: 0.2 }), escuro = std({ color: 0x2a2f38, roughness: 0.6, metalness: 0.4 }), branco = std({ color: 0xf2f2ee, roughness: 0.5 });
+  const vid = std({ color: 0x9fd8ff, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.45, depthWrite: false });
+  add(new THREE.BoxGeometry(1.9, 0.36, 3.5), escuro, 0, 0.56, 0, g);
+  add(new THREE.BoxGeometry(1.8, 0.95, 1.25), amarelo, 0, 1.2, 0.85, g); add(new THREE.BoxGeometry(1.8, 0.12, 1.35), branco, 0, 1.72, 0.85, g);
+  add(new THREE.BoxGeometry(1.5, 0.55, 0.04), vid, 0, 1.3, 1.49, g, false); for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.04, 0.5, 0.8), vid, s * 0.91, 1.32, 0.85, g, false);
+  carro.piloto = capacetePiloto(g, 0, 1.38, 0.8);
+  add(new THREE.BoxGeometry(1.7, 0.05, 0.08), new THREE.MeshBasicMaterial({ color: 0xfff2b0, toneMapped: false }), 0, 0.82, 1.5, g, false);
+  // tanque de poeira transparente (enche junto com a mochila)
+  add(new THREE.CylinderGeometry(0.72, 0.72, 1.25, 28), std({ color: 0xcfeaff, roughness: 0.05, transparent: true, opacity: 0.3, depthWrite: false }), 0, 1.38, -0.8, g, false);
+  const ench = add(new THREE.CylinderGeometry(0.66, 0.66, 1.2, 24), std({ color: 0xa8947a, roughness: 1 }), 0, 0.78, -0.8, g, false); ench.geometry.translate(0, 0.6, 0); carro.tanque = ench;
+  for (const y of [0.76, 2.0]) add(new THREE.TorusGeometry(0.72, 0.04, 8, 32).rotateX(Math.PI / 2), amarelo, 0, y, -0.8, g);
+  add(new THREE.CylinderGeometry(0.08, 0.08, 0.7, 10), escuro, 0.55, 1.6, -1.65, g);
+  // giroflex laranja
+  carro.luz = add(new THREE.CylinderGeometry(0.12, 0.14, 0.16, 14), new THREE.MeshBasicMaterial({ color: 0xff8a1a, toneMapped: false }), 0, 1.86, 0.6, g, false);
+  // braços e duas escovas redondas na frente
+  for (const s of [-1, 1]) { add(new THREE.BoxGeometry(0.1, 0.1, 0.7), amarelo, s * 0.6, 0.42, 1.95, g);
+    const esc = new THREE.Group(); esc.position.set(s * 0.62, 0.18, 2.3); g.add(esc);
+    add(new THREE.CylinderGeometry(0.52, 0.52, 0.08, 24), escuro, 0, 0.06, 0, esc);
+    for (let k = 0; k < 24; k++) { const a = k / 24 * Math.PI * 2, c = add(new THREE.CylinderGeometry(0.025, 0.01, 0.3, 4), std({ color: k % 6 < 3 ? 0xff5a3d : 0xffd27a, roughness: 0.9 }), Math.cos(a) * 0.5, -0.06, Math.sin(a) * 0.5, esc); c.rotation.set(Math.sin(a) * 0.5, 0, -Math.cos(a) * 0.5); }
+    carro.escovas.push({ g: esc, s }); }
+  // rolo de trás
+  const rolo = new THREE.Group(); rolo.position.set(0, 0.24, -1.85); g.add(rolo); add(new THREE.CylinderGeometry(0.22, 0.22, 1.7, 16).rotateZ(Math.PI / 2), std({ color: 0xffd27a, roughness: 0.9 }), 0, 0, 0, rolo);
+  for (let k = 0; k < 4; k++) { const b = add(new THREE.BoxGeometry(1.72, 0.05, 0.05), std({ color: 0xff5a3d }), 0, 0, 0, rolo, false); b.position.set(0, Math.cos(k * Math.PI / 2) * 0.22, Math.sin(k * Math.PI / 2) * 0.22); }
+  carro.rolo = rolo;
+  for (const [x, z] of [[-1.02, 1.0], [1.02, 1.0], [-1.02, -1.15], [1.02, -1.15]]) rodaCarro(g, x, 0.4, z, 0.4, 0.36, 0x1e2128, null); }
+function trocarCarro() { if (carro.g) cena.remove(carro.g); carro.g = null; carro.rodas = []; carro.escovas = []; carro.escamas = []; carro.rolo = carro.luz = carro.tanque = carro.piloto = carro.raio = null; carro.id = est.veic;
+  if (!carro.id) return; const g = new THREE.Group(); cena.add(g); carro.g = g; (carro.id === 'bio' ? fazerBio : fazerVarre)(g);
+  g.traverse(o => { if (o.isMesh && !o.material.transparent) { o.castShadow = true; o.receiveShadow = true; } }); g.rotation.order = 'YXZ';
+  if (carro.dentro) { carro.x = astro.x; carro.z = astro.z; } }
+function entrarSair() { if (!jogando) return;
+  if (!est.veic) { aviso('Compre um carro na loja da base (aba Carros)!'); return; }
+  if (carro.dentro) { carro.dentro = false; carro.vel = 0; const ex = Math.cos(carro.rot) * 1.9, ez = -Math.sin(carro.rot) * 1.9; let ax = carro.x - ex, az = carro.z - ez; if (Math.hypot(ax, az) > RAIO_JOGO || BLOQ.some(([bx, bz, r]) => Math.hypot(ax - bx, az - bz) < r + 0.35)) { ax = carro.x + ex; az = carro.z + ez; }
+    astro.x = ax; astro.z = az; astro.y = altura(ax, az); astro.g.visible = true; document.body.classList.remove('dirigindo'); tom(400, 200, 0.2, 'triangle', 0.08); return; }
+  if (Math.hypot(carro.x - astro.x, carro.z - astro.z) > 5) { for (let k = 0; k < 18; k++) soltarPo(astro.x, altura(astro.x, astro.z), astro.z, 1.4, 0x9fdcff); carro.x = astro.x; carro.z = astro.z; carro.rot = astro.rot; aviso(`${vAtual().art === 'a' ? 'A' : 'O'} ${vAtual().nome} chegou voando!`); }
+  else { astro.x = carro.x; astro.z = carro.z; }
+  carro.dentro = true; carro.vel = 0; astro.g.visible = false; document.body.classList.add('dirigindo'); tom(200, 520, 0.3, 'sawtooth', 0.05); }
+function atualizarCarro(dt) { const g = carro.g; if (!g) return; const x = carro.x, z = carro.z, sr = Math.sin(carro.rot), cr = Math.cos(carro.rot);
+  const hF = altura(x + sr * 1.3, z + cr * 1.3), hB = altura(x - sr * 1.3, z - cr * 1.3), hR = altura(x + cr * 0.9, z - sr * 0.9), hL = altura(x - cr * 0.9, z + sr * 0.9);
+  g.position.set(x, Math.max((hF + hB + hR + hL) / 4, altura(x, z) - 0.05), z); g.rotation.set(-Math.atan2(hF - hB, 2.6), carro.rot, Math.atan2(hR - hL, 1.8));
+  carro.giro += carro.vel * dt / 0.41; carro.rodas.forEach(w => { w.rotation.x = carro.giro; });
+  if (carro.piloto) carro.piloto.visible = carro.dentro;
+  const v = clamp(Math.abs(carro.vel) / 13, 0, 1); carro.escamas.forEach((e, i) => { e.rotation.x = e.userData.base + (0.05 + 0.55 * v) * (0.5 + 0.5 * Math.sin(tempoTotal * (2 + 7 * v) - i * 0.45)); });
+  const liga = carro.dentro && carro.id === 'varre'; if (carro.raio) { carro.raio.visible = carro.dentro && Math.abs(carro.vel) > 0.3; carro.raio.material.opacity = 0.35 + 0.25 * Math.sin(tempoTotal * 14); } carro.escovas.forEach(e => { e.g.rotation.y += (liga ? 14 : 0) * e.s * dt; }); if (carro.rolo && liga) carro.rolo.rotation.x += dt * 12;
+  if (carro.luz) carro.luz.material.color.setHex(liga && Math.sin(tempoTotal * 10) > 0 ? 0xffd04a : 0xff6a10);
+  if (carro.tanque) carro.tanque.scale.y = Math.max(0.02, Math.min(1, est.kg / capacidade())); }
+function pontoVarre() { const V = vAtual(); return [carro.x + Math.sin(carro.rot) * 2.3, carro.z + Math.cos(carro.rot) * 2.3, V.r]; }
+function varrer(dt) { const V = vAtual(), [cx, cz] = pontoVarre(), nv = nivelEm(cx, cz), forte = Math.max(V.nivel, ferrAtual().nivel);
+  if (Math.hypot(cx, cz) < BASE_R) return 0; bloqueado = true;
+  if (nv > forte) { aviso(`Essa ${NOMES_NIVEL[nv]} é dura demais para ${V.art} ${V.nome}. Use o ${FERR.find(x => x.nivel >= nv).nome}.`, 'ruim'); return 0; }
+  const esp = espacoMochila(); if (esp <= 0.001) { aviso('Tanque cheio! Volte à base e venda a poeira.', 'ruim'); return 0; }
+  bloqueado = false; let kg = limpar(cx, cz, V.r, V.p * dt * Math.min(1, 0.4 + Math.abs(carro.vel) / 5)); if (kg > esp) kg = esp; est.kg += kg;
+  if (kg > 0) for (const s of [-1, 1]) if (Math.random() < 0.7) soltarPo(cx + Math.cos(carro.rot) * 0.6 * s, altura(cx, cz), cz - Math.sin(carro.rot) * 0.6 * s, 0.9, nv >= 4 ? 0x9a8278 : 0xb9a98f);
+  return kg; }
+
 // ===================== COISAS ESCONDIDAS E BICHINHOS =====================
 const tAnel = tex(128, 128, g => { g.strokeStyle = '#fff'; g.lineWidth = 10; g.beginPath(); g.arc(64, 64, 52, 0, 7); g.stroke(); });
 function malhaItem(o) { const g = new THREE.Group(); g.position.set(o.x, hBase(o.x, o.z), o.z); g.rotation.y = R() * 6.28; cena.add(g);
@@ -402,7 +505,7 @@ const somAchou = () => [660, 880, 1320, 1760].forEach((f, i) => tom(f, f, 0.35, 
 const somRuim = () => tom(220, 140, 0.25, 'square', 0.05);
 
 // ===================== ESTADO, LOJA E SALVAR =====================
-const est = { moedas: 0, kg: 0, ferr: 'escova', temFerr: ['escova'], moch: 0, extras: [], achados: [], pets: [], meteoros: [], venceu: false, total: 0 };
+const est = { moedas: 0, kg: 0, ferr: 'escova', temFerr: ['escova'], moch: 0, extras: [], achados: [], pets: [], meteoros: [], venceu: false, total: 0, veics: [], veic: null };
 const ferrAtual = () => FERR.find(f => f.id === est.ferr), capacidade = () => MOCH[est.moch].cap;
 function salvar() { try {
   const pares = []; let v = MASC[0] >> 3, n = 0; for (let k = 0; k < N * N; k++) { const q = MASC[k] >> 3; if (q === v && n < 255) n++; else { pares.push(v, n); v = q; n = 1; } } pares.push(v, n);
@@ -424,7 +527,7 @@ let mostrados = { moedas: -1, kg: -1 };
 function hud() { if (mostrados.moedas !== est.moedas) { mostrados.moedas = est.moedas; $('moedas').textContent = Math.floor(est.moedas).toLocaleString('pt-BR'); $('loja-moedas').textContent = Math.floor(est.moedas).toLocaleString('pt-BR'); }
   const cap = capacidade(), kg = Math.min(est.kg, cap); $('kg').textContent = `${kg.toFixed(kg < 10 ? 1 : 0)} / ${cap.toLocaleString('pt-BR')} kg`; $('barra').style.width = (kg / cap * 100).toFixed(1) + '%'; $('mochila').classList.toggle('cheia', kg >= cap - 0.01);
   $('ferr').textContent = ferrAtual().nome; $('pct').textContent = `${(100 * (1 - sujos / TOTAL)).toFixed(1)}% limpa`;
-  enchido.scale.y = Math.max(0.02, kg / cap); $('b-base').hidden = !est.extras.includes('tele'); }
+  enchido.scale.y = Math.max(0.02, kg / cap); $('b-base').hidden = !est.extras.includes('tele'); $('b-carro').hidden = !est.veic; }
 // mapa
 const mapaCtx = $('mapa').getContext('2d'), mapaImg = mapaCtx.createImageData(132, 132);
 function desenharMapa() { const d = mapaImg.data; for (let y = 0; y < 132; y++) for (let x = 0; x < 132; x++) { const i = (y * 132 + x) * 4, wx = (x / 132 - 0.5) * TAM, wz = (y / 132 - 0.5) * TAM, m = MASC[idx(wx, wz)] / 255, lv = nivelEm(wx, wz);
@@ -455,7 +558,7 @@ function esfregar(dt) { const f = ferrAtual(), [cx, cz] = pontoFerr(), nv = nive
 
 // ===================== CONTROLES =====================
 const J = { yaw: Math.PI, pitch: -0.28 }, teclas = new Set(); let travado = false, jogando = false, mouseEsq = false, esfToque = false, pedirAcao = false, pedirPulo = false, ultimoOlhar = 0;
-addEventListener('keydown', e => { const k = e.key.toLowerCase(); teclas.add(k); if (!jogando) return; if (k === 'e') pedirAcao = true; if (k === ' ') { pedirPulo = true; e.preventDefault(); } if (k === 'b') voltarBase(); if (k === 'escape' && !$('loja').hidden) fecharLoja(); });
+addEventListener('keydown', e => { const k = e.key.toLowerCase(); teclas.add(k); if (!jogando) return; if (k === 'e') pedirAcao = true; if (k === ' ') { pedirPulo = true; e.preventDefault(); } if (k === 'b') voltarBase(); if (k === 'c' && $('loja').hidden) entrarSair(); if (k === 'escape' && !$('loja').hidden) fecharLoja(); });
 addEventListener('keyup', e => teclas.delete(e.key.toLowerCase())); addEventListener('blur', () => { teclas.clear(); mouseEsq = false; });
 function prender() { if (toque || travado || !canvas.requestPointerLock) return; try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 function soltarMouse() { if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); }
@@ -473,7 +576,7 @@ canvas.addEventListener('pointermove', e => { if (e.pointerId === joy.id) moverJ
 const soltar = e => { if (e.pointerId === joy.id) { joy.id = null; joy.dx = joy.dy = 0; joy.correr = false; baseJ.style.left = baseJ.style.top = ''; knob.style.transform = ''; joyEl.classList.remove('ativo'); } if (e.pointerId === olharP.id) olharP.id = null; };
 canvas.addEventListener('pointerup', soltar); canvas.addEventListener('pointercancel', soltar); addEventListener('mouseup', e => { if (e.button === 0) mouseEsq = false; });
 const botao = (id, fd, fu) => { const b = $(id); b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); b.classList.add('on'); fd(); }); ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => b.addEventListener(ev, () => { b.classList.remove('on'); if (fu) fu(); })); };
-botao('b-esfregar', () => { esfToque = true; }, () => { esfToque = false; }); botao('b-pular', () => { pedirPulo = true; }); botao('b-acao', () => { pedirAcao = true; }); botao('b-base', () => voltarBase());
+botao('b-esfregar', () => { esfToque = true; }, () => { esfToque = false; }); botao('b-pular', () => { pedirPulo = true; }); botao('b-acao', () => { pedirAcao = true; }); botao('b-base', () => voltarBase()); botao('b-carro', () => entrarSair());
 
 // ===================== VENDER, LOJA, ACHAR =====================
 function vender() { if (est.kg < 0.05) { aviso('A mochila está vazia. Vá esfregar a Lua!'); return; } const kg = est.kg, valor = Math.round(kg); est.moedas += valor; est.total += valor; est.kg = 0; somMoedas(Math.min(10, valor / 10));
@@ -493,6 +596,9 @@ function desenharLoja() { const box = $('cartoes'); box.innerHTML = ''; $('loja-
     if (!tem) { if (est.moedas < f.preco) return; est.moedas -= f.preco; est.temFerr.push(f.id); tom(523, 1046, 0.3, 'triangle', 0.12); aviso(`Comprou: ${f.nome}!`, 'ouro'); } est.ferr = f.id; montarFerramenta(f.id); salvar(); desenharLoja(); }); });
   if (abaLoja === 'moch') MOCH.forEach((m, i) => carta(m.nome, `Guarda ${m.cap.toLocaleString('pt-BR')} kg de poeira.`, [`${m.cap.toLocaleString('pt-BR')} kg`], est.moch === i ? 'equipado' : est.moch > i ? 'tem' : 'comprar', m.preco, () => {
     if (est.moch >= i) return; if (est.moedas < m.preco) return; est.moedas -= m.preco; est.moch = i; tom(523, 1046, 0.3, 'triangle', 0.12); aviso(`Comprou: ${m.nome}!`, 'ouro'); salvar(); desenharLoja(); }));
+  if (abaLoja === 'veic') VEIC.forEach(v => { const tem = est.veics.includes(v.id); carta(v.nome, v.desc, v.stats, est.veic === v.id ? 'equipado' : tem ? 'tem' : 'comprar', v.preco, () => {
+    if (!tem) { if (est.moedas < v.preco) return; est.moedas -= v.preco; est.veics.push(v.id); tom(523, 1046, 0.3, 'triangle', 0.12); aviso(`Comprou: ${v.nome}! Aperte ${toque ? 'o botão CARRO' : 'C'} para dirigir.`, 'ouro', 4.5); }
+    est.veic = v.id; trocarCarro(); salvar(); desenharLoja(); }); });
   if (abaLoja === 'extra') EXTRA.forEach(x => { const tem = est.extras.includes(x.id); carta(x.nome, x.desc, [], tem ? 'equipado' : 'comprar', x.preco, () => { if (tem || est.moedas < x.preco) return; est.moedas -= x.preco; est.extras.push(x.id); tom(523, 1046, 0.3, 'triangle', 0.12); aviso(`Comprou: ${x.nome}!`, 'ouro'); salvar(); desenharLoja(); }); });
   hud(); }
 function coletar(i) { const o = ITENS[i]; o.estado = 'coletado'; est.achados.push(i); somAchou(); for (let k = 0; k < 24; k++) soltarPo(o.x, o.g.position.y + 0.5, o.z, 1.2, o.tipo === 'ovo' ? o.cor : 0xffe08a);
@@ -523,7 +629,7 @@ function comecar() { iniciarAudio(); $('menu').hidden = true; jogando = true; do
   aviso(toque ? 'Segure ESFREGAR para limpar a poeira!' : 'Segure o botão do mouse para esfregar a poeira!', '', 4); }
 $('b-jogar').addEventListener('click', comecar);
 $('vit-ok').addEventListener('click', () => { $('vitoria').hidden = true; jogando = true; prender(); });
-carregar(); montarFerramenta(est.ferr); astro.y = altura(astro.x, astro.z);
+carregar(); montarFerramenta(est.ferr); trocarCarro(); astro.y = altura(astro.x, astro.z);
 
 // ===================== LAÇO =====================
 const H_ = V3(); let antes = performance.now(), salvarT = 0, mapaT = 0, revelarT = 0, perto = null, tempoTotal = 0, cam = { dist: 4.6 };
@@ -534,22 +640,24 @@ function quadro(agora) { requestAnimationFrame(quadro);
   // andar
   let f = 0, s = 0; if (ativo) { if (teclas.has('w') || teclas.has('arrowup')) f++; if (teclas.has('s') || teclas.has('arrowdown')) f--; if (teclas.has('d') || teclas.has('arrowright')) s++; if (teclas.has('a') || teclas.has('arrowleft')) s--; f -= joy.dy; s += joy.dx; }
   let mag = Math.hypot(f, s); if (mag > 1) { f /= mag; s /= mag; mag = 1; }
-  const botas = est.extras.includes('botas'), esfAtivo = ativo && (mouseEsq || esfToque || teclas.has('f')), corre = (teclas.has('shift') || joy.correr) && !esfAtivo;
+  const botas = est.extras.includes('botas'), esfAtivo = ativo && !carro.dentro && (mouseEsq || esfToque || teclas.has('f')), corre = (teclas.has('shift') || joy.correr) && !esfAtivo;
   const vel = (corre ? 5.5 : 3.0) * (botas ? 1.3 : 1) * (esfAtivo ? 0.55 : 1), sy = Math.sin(J.yaw), cy = Math.cos(J.yaw);
   let dx = (-sy * f + cy * s) * vel * dt, dz = (-cy * f - sy * s) * vel * dt;
-  let nx = astro.x + dx, nz = astro.z + dz; const dn = Math.hypot(nx, nz); if (dn > RAIO_JOGO) { nx *= RAIO_JOGO / dn; nz *= RAIO_JOGO / dn; }
-  if (!BLOQ.some(([bx, bz, r]) => Math.hypot(nx - bx, nz - bz) < r + 0.35)) { astro.x = nx; astro.z = nz; }
-  if (esfAtivo) astro.rot += angDif(astro.rot, Math.atan2(-sy, -cy)) * Math.min(1, dt * 10); else if (mag > 0.1) astro.rot += angDif(astro.rot, Math.atan2(dx, dz)) * Math.min(1, dt * 10);
+  if (carro.dentro) { const V = vAtual(), quer = mag * (corre ? V.turbo : V.vel); carro.vel += (quer - carro.vel) * Math.min(1, dt * (quer > carro.vel ? V.acel : 2.5));
+    if (mag > 0.1) carro.rot += angDif(carro.rot, Math.atan2(dx, dz)) * Math.min(1, dt * V.vira); dx = Math.sin(carro.rot) * carro.vel * dt; dz = Math.cos(carro.rot) * carro.vel * dt; }
+  let nx = astro.x + dx, nz = astro.z + dz; const dn = Math.hypot(nx, nz); if (dn > RAIO_JOGO) { nx *= RAIO_JOGO / dn; nz *= RAIO_JOGO / dn; if (carro.dentro) carro.vel *= 0.9; }
+  if (!BLOQ.some(([bx, bz, r]) => Math.hypot(nx - bx, nz - bz) < r + (carro.dentro ? 1.5 : 0.35))) { astro.x = nx; astro.z = nz; } else if (carro.dentro) { carro.vel *= -0.3; tom(120, 60, 0.2, 'square', 0.05); }
+  if (carro.dentro) { carro.x = astro.x; carro.z = astro.z; astro.rot = carro.rot; } else if (esfAtivo) astro.rot += angDif(astro.rot, Math.atan2(-sy, -cy)) * Math.min(1, dt * 10); else if (mag > 0.1) astro.rot += angDif(astro.rot, Math.atan2(dx, dz)) * Math.min(1, dt * 10);
   const chaoY = altura(astro.x, astro.z);
-  if (pedirPulo && astro.chao && ativo) { astro.vy = botas ? 4.3 : 3.1; astro.chao = false; tom(180, 260, 0.15, 'sine', 0.05); } pedirPulo = false;
+  if (pedirPulo && astro.chao && ativo && !carro.dentro) { astro.vy = botas ? 4.3 : 3.1; astro.chao = false; tom(180, 260, 0.15, 'sine', 0.05); } pedirPulo = false;
   astro.vy -= 1.62 * dt; astro.y += astro.vy * dt; if (astro.y <= chaoY) { if (!astro.chao && astro.vy < -2) { for (let i = 0; i < 6; i++) soltarPo(astro.x, chaoY, astro.z, 0.8); } astro.y = chaoY; astro.vy = 0; astro.chao = true; } else if (astro.y > chaoY + 0.05) astro.chao = false;
   if (astro.chao && astro.y < chaoY + 0.4) astro.y = chaoY;
   astro.andar += ((mag > 0.1 ? 1 : 0) - astro.andar) * Math.min(1, dt * 8); astro.fase += dt * vel * mag * 1.6;
   astro.esfregando += ((esfAtivo ? 1 : 0) - astro.esfregando) * Math.min(1, dt * 10);
   // limpar
-  let kgAgora = 0; if (esfAtivo) kgAgora = esfregar(dt); else bloqueado = false;
-  { const [mx, mz] = pontoFerr(), fr = ferrAtual().r, foraBase = Math.hypot(mx, mz) > BASE_R; marca.visible = jogando && foraBase; marca.position.set(mx, altura(mx, mz) + 0.08, mz); marca.scale.setScalar(fr);
-    marca.material.color.setHex(bloqueado ? 0xff6b5e : 0xffffff); marca.material.opacity = esfAtivo ? 0.55 + 0.2 * Math.sin(tempoTotal * 12) : 0.18; }
+  let kgAgora = 0; if (esfAtivo) kgAgora = esfregar(dt); else if (ativo && carro.dentro && Math.abs(carro.vel) > 0.3) kgAgora = varrer(dt); else bloqueado = false;
+  { const varre = carro.dentro, [mx, mz, fr] = varre ? pontoVarre() : [...pontoFerr(), ferrAtual().r], foraBase = Math.hypot(mx, mz) > BASE_R; marca.visible = jogando && foraBase && (!carro.dentro || varre); marca.position.set(mx, altura(mx, mz) + 0.08, mz); marca.scale.setScalar(fr);
+    marca.material.color.setHex(bloqueado ? 0xff6b5e : 0xffffff); marca.material.opacity = esfAtivo || kgAgora > 0 ? 0.55 + 0.2 * Math.sin(tempoTotal * 12) : 0.18; }
   for (const p of pets) { if (espacoMochila() > 0.001 && Math.hypot(p.g.position.x, p.g.position.z) > BASE_R && nivelEm(p.g.position.x, p.g.position.z) <= 3) { const k = Math.min(espacoMochila(), limpar(p.g.position.x, p.g.position.z, 1.0, 0.12 * dt)); est.kg += k; if (k > 0 && Math.random() < 0.15) soltarPo(p.g.position.x, p.g.position.y - 0.6, p.g.position.z, 0.5); } }
   if (somEsf) { somEsf.g.gain.setTargetAtTime(kgAgora > 0 ? 0.08 + ferrAtual().r * 0.02 : 0.0001, AC.currentTime, 0.05); somEsf.f.frequency.value = est.ferr === 'aspirador' || est.ferr === 'jato' ? 700 : 2400 + Math.sin(tempoTotal * 18) * 600; }
   mudouT += dt; if (mascaraMudou && mudouT > 0.05) { texMasc.needsUpdate = true; mascaraMudou = false; mudouT = 0; }
@@ -561,6 +669,7 @@ function quadro(agora) { requestAnimationFrame(quadro);
   bracoE.rotation.x = -Math.sin(fa) * 0.5 * wv; bracoE.rotation.z = -0.15; anteE.rotation.x = -0.3;
   const vai = Math.sin(tempoTotal * 14) * esf; bracoD.rotation.x = lerp(Math.sin(fa) * 0.5 * wv, -0.9 + vai * 0.35, esf); bracoD.rotation.z = 0.15; anteD.rotation.x = lerp(-0.3, -0.5 + vai * 0.3, esf);
   mao.rotation.x = lerp(0, 0.4, esf);
+  atualizarCarro(dt);
   // bichinhos
   pets.forEach((p, i) => { p.fase += dt; const a = astro.rot + Math.PI + (i - (pets.length - 1) / 2) * 0.9, alvo = V3(astro.x + Math.sin(a) * 1.8, 0, astro.z + Math.cos(a) * 1.8); alvo.y = altura(alvo.x, alvo.z) + 0.9 + Math.sin(p.fase * 2.4) * 0.15;
     p.g.position.lerp(alvo, Math.min(1, dt * 2.5)); p.g.rotation.y += angDif(p.g.rotation.y, Math.atan2(astro.x - p.g.position.x, astro.z - p.g.position.z)) * Math.min(1, dt * 4); p.aro.rotation.z += dt * 3; });
@@ -569,7 +678,8 @@ function quadro(agora) { requestAnimationFrame(quadro);
   ITENS.forEach(o => { if (o.estado === 'revelado') { o.sinal.material.opacity = 0.55 + 0.35 * Math.sin(tempoTotal * 4); o.anel.material.opacity = 0.5 + 0.3 * Math.sin(tempoTotal * 4); o.anel.scale.setScalar(1 + 0.15 * Math.sin(tempoTotal * 4)); } });
   // ação: vender, loja, pegar
   perto = null; if (ativo) { if (Math.hypot(astro.x - VENDA.x, astro.z - VENDA.z) < 2.2) perto = { txt: 'Vender poeira', curto: 'VENDER', fn: vender }; else if (Math.hypot(astro.x - LOJA.x, astro.z - LOJA.z) < 2.0) perto = { txt: 'Abrir a loja', curto: 'LOJA', fn: abrirLoja };
-    else ITENS.forEach((o, i) => { if (o.estado === 'revelado' && Math.hypot(astro.x - o.x, astro.z - o.z) < 2.6) perto = { txt: o.tipo === 'ovo' ? 'Chocar o ovo' : `Pegar: ${NOME_ITEM[o.tipo]}`, curto: o.tipo === 'ovo' ? 'CHOCAR' : 'PEGAR', fn: () => coletar(i) }; }); }
+    else ITENS.forEach((o, i) => { if (o.estado === 'revelado' && Math.hypot(astro.x - o.x, astro.z - o.z) < 2.6) perto = { txt: o.tipo === 'ovo' ? 'Chocar o ovo' : `Pegar: ${NOME_ITEM[o.tipo]}`, curto: o.tipo === 'ovo' ? 'CHOCAR' : 'PEGAR', fn: () => coletar(i) }; });
+    if (!perto && carro.g && !carro.dentro && Math.hypot(astro.x - carro.x, astro.z - carro.z) < 3) perto = { txt: `Entrar ${vAtual().em} ${vAtual().nome}`, curto: 'ENTRAR', fn: entrarSair }; }
   if (pedirAcao && perto) perto.fn(); pedirAcao = false;
   $('prompt').hidden = !perto; if (perto) $('prompt-txt').textContent = perto.txt; $('b-acao').hidden = !perto; if (perto) $('b-acao').textContent = perto.curto;
   anelVenda.material.opacity = 0.45 + 0.3 * Math.sin(tempoTotal * 3); anelLoja.material.opacity = 0.45 + 0.3 * Math.sin(tempoTotal * 3 + 1);
@@ -578,7 +688,7 @@ function quadro(agora) { requestAnimationFrame(quadro);
   atualizarPo(dt);
   // câmera atrás do astronauta
   astro.g.updateMatrixWorld(true); capacete.getWorldPosition(H_); const cpt = Math.cos(J.pitch), dX = -Math.sin(J.yaw) * cpt, dY = Math.sin(J.pitch), dZ = -Math.cos(J.yaw) * cpt;
-  const alvoY = H_.y + 0.35; let dd = cam.dist; camera.position.set(H_.x - dX * dd + Math.cos(J.yaw) * 0.45, alvoY - dY * dd, H_.z - dZ * dd - Math.sin(J.yaw) * 0.45);
+  const alvoY = H_.y + 0.35; cam.dist += ((carro.dentro ? (carro.id === 'varre' ? 8 : 7.5) : 4.6) - cam.dist) * Math.min(1, dt * 3); let dd = cam.dist; camera.position.set(H_.x - dX * dd + Math.cos(J.yaw) * 0.45, alvoY - dY * dd, H_.z - dZ * dd - Math.sin(J.yaw) * 0.45);
   const minY = altura(camera.position.x, camera.position.z) + 0.4; if (camera.position.y < minY) camera.position.y = minY;
   camera.rotation.set(J.pitch, J.yaw, 0);
   // sol e sombra seguem você
@@ -591,6 +701,6 @@ function quadro(agora) { requestAnimationFrame(quadro);
   Rd.render(cena, camera);
 }
 requestAnimationFrame(quadro);
-window.__lua = { est, limpar, MASC, RESTO, ESP, ITENS, astro, J, pets, vender, abrirLoja, coletar, chuva, get sujos() { return sujos; }, TOTAL, nivelEm, altura, camera, Rd, idx, montarFerramenta, salvar };
+window.__lua = { est, limpar, MASC, RESTO, ESP, ITENS, astro, J, pets, vender, abrirLoja, coletar, chuva, get sujos() { return sujos; }, TOTAL, nivelEm, altura, camera, Rd, idx, montarFerramenta, salvar, carro, entrarSair, trocarCarro };
 })();
 </script>
