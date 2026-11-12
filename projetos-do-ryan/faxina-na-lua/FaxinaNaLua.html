@@ -134,6 +134,14 @@
   </div>
 </div>
 
+<div class="tela" id="viagem" hidden>
+  <div class="bloco" style="max-width:860px;width:100%">
+    <div class="topo-loja"><h2>Viagem de foguete</h2><div class="pilula"><span class="moeda"></span><span id="viagem-moedas" style="font:800 22px var(--display)">0</span></div><button id="viagem-fechar" type="button">Fechar</button></div>
+    <p>Cada planeta tem poeira nova para limpar. Suas moedas, ferramentas, carros e Lunitos vão com você.</p>
+    <div class="cartoes" id="planetas"></div>
+  </div>
+</div>
+
 <div class="tela" id="vitoria" hidden>
   <div class="bloco">
     <h1>A Lua está <span>brilhando!</span></h1>
@@ -160,7 +168,16 @@ const angDif = (a, b) => { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -
 const toque = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 if (toque) { document.body.classList.add('toque'); $('teclas').innerHTML = '<kbd>ESQUERDA</kbd><span>arraste para andar (até fora do círculo para correr)</span><kbd>DIREITA</kbd><span>arraste para virar a câmera</span><kbd>BOTÕES</kbd><span>segure ESFREGAR · PULAR · AÇÃO para vender, comprar e pegar</span>'; }
 function semente(s) { return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
-const R = semente(20261111), rr = (a, b) => a + R() * (b - a);
+// ===================== FASES (planetas) =====================
+const FASES = [
+  { id: 'lua', nome: 'Lua', artigo: 'A', gen: 'a', prep: 'na', desc: 'Onde tudo começou: poeira cinza e a Terra no céu.', preco: 0, valor: 1, semente: 20261111, ceu: 0x020308, hemi: 0x25324d, sujo: '#8f8576', limpo: ['#d9dde4', '#cfd5de'], tintas: [[1, 1, 1], [.92, .84, .74], [.8, .68, .56], [.72, .55, .48], [.6, .5, .62]], borda: 0xa39985, pedra: 0x77736c, po: 0xb9a98f, especial: 'rover', ceuObj: 'terra' },
+  { id: 'marte', nome: 'Marte', artigo: '', gen: 'o', prep: 'em', desc: 'O planeta vermelho: areia enferrujada e duas luas no céu. A poeira vale 2 vezes mais.', preco: 3000, valor: 2, semente: 7171, ceu: 0x2a1408, hemi: 0x6a3a24, sujo: '#9a5a3a', limpo: ['#ecd9c6', '#e2c9b2'], tintas: [[1, 1, 1], [1, .86, .76], [.95, .74, .62], [.86, .62, .52], [.72, .5, .52]], borda: 0xb06a44, pedra: 0x7a4430, po: 0xc0784e, especial: 'robo', ceuObj: 'marte' },
+  { id: 'gelo', nome: 'Lua de Gelo', artigo: 'A', gen: 'a', prep: 'na', desc: 'Gelo azul coberto de neve suja e um planeta gigante listrado no céu. A poeira vale 4 vezes mais.', preco: 12000, valor: 4, semente: 31337, ceu: 0x020612, hemi: 0x2a4a70, sujo: '#7f8c99', limpo: ['#e4f5ff', '#c9e8ff'], tintas: [[1, 1, 1], [.9, .95, 1], [.8, .88, .98], [.72, .8, .95], [.72, .7, .92]], borda: 0x9fb6c8, pedra: 0x9ec4dc, po: 0xc8d8e8, especial: 'cristal', ceuObj: 'gigante' },
+  { id: 'doce', nome: 'Planeta Doce', artigo: 'O', gen: 'o', prep: 'no', desc: 'Chão de bala cor-de-rosa coberto de pó de chocolate, pedras de jujuba e um planeta com anéis. A poeira vale 8 vezes mais.', preco: 40000, valor: 8, semente: 8080, ceu: 0x1c0a2a, hemi: 0x6a3a7a, sujo: '#6e4a3a', limpo: ['#ffd9ef', '#ffc4e6'], tintas: [[1, 1, 1], [1, .9, .86], [.95, .8, .76], [.9, .72, .72], [.86, .66, .82]], borda: 0x8a5a48, pedra: 0xff7ac8, po: 0x8a5a44, especial: 'pirulito', ceuObj: 'aneis' }];
+const CHAVE = 'faxina-na-lua-1';
+let FI = 0; try { const d = JSON.parse(localStorage.getItem(CHAVE) || 'null'), f = +(localStorage.getItem('faxina-fase') || 0); if (f > 0 && f < FASES.length && d && (d.fases || []).includes(FASES[f].id)) FI = f; } catch (e) {}
+const FASE = FASES[FI], NOME_FASE = (FASE.artigo ? FASE.artigo + ' ' : '') + FASE.nome;
+const R = semente(FASE.semente), rr = (a, b) => a + R() * (b - a);
 function hash2(x, z) { const h = Math.sin(x * 127.1 + z * 311.7) * 43758.5453; return h - Math.floor(h); }
 function vnoise(x, z) { const ix = Math.floor(x), iz = Math.floor(z), fx = x - ix, fz = z - iz, u = fx * fx * (3 - 2 * fx), v = fz * fz * (3 - 2 * fz);
   const a = hash2(ix, iz), b = hash2(ix + 1, iz), c = hash2(ix, iz + 1), d = hash2(ix + 1, iz + 1); return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v; }
@@ -175,12 +192,12 @@ const canvas = $('cena');
 const Rd = new THREE.WebGLRenderer({ canvas, antialias: qual > 0, powerPreference: 'high-performance' });
 Rd.setPixelRatio(Math.min(devicePixelRatio || 1, QUAL.pr)); Rd.outputEncoding = THREE.sRGBEncoding; Rd.toneMapping = THREE.ACESFilmicToneMapping; Rd.toneMappingExposure = 1.05;
 Rd.shadowMap.enabled = true; Rd.shadowMap.type = THREE.PCFSoftShadowMap;
-const cena = new THREE.Scene(); cena.background = new THREE.Color(0x020308);
+const cena = new THREE.Scene(); cena.background = new THREE.Color(FASE.ceu);
 const camera = new THREE.PerspectiveCamera(62, 1, 0.08, 2500); camera.rotation.order = 'YXZ';
 const SOL_DIR = V3(0.55, 0.42, -0.72).normalize();
 const sol = new THREE.DirectionalLight(0xffffff, 3.1); sol.castShadow = true; sol.shadow.mapSize.set(QUAL.sombra, QUAL.sombra);
 Object.assign(sol.shadow.camera, { left: -26, right: 26, top: 26, bottom: -26, near: 1, far: 160 }); sol.shadow.bias = -0.0006; sol.shadow.normalBias = 0.03; cena.add(sol, sol.target);
-cena.add(new THREE.HemisphereLight(0x25324d, 0x0d0d10, 0.42));
+cena.add(new THREE.HemisphereLight(FASE.hemi, 0x0d0d10, 0.42));
 const terraLuz = new THREE.DirectionalLight(0x7fa6ff, 0.18); terraLuz.position.set(-0.4, 0.6, 0.7); cena.add(terraLuz);
 function tex(w, h, fn) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); fn(g, w, h); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 8; return t; }
 // estrelas
@@ -195,8 +212,20 @@ const tTerra = tex(1024, 512, g => { const gr = g.createLinearGradient(0, 0, 0, 
 const terra = new THREE.Mesh(new THREE.SphereGeometry(70, 64, 32), new THREE.MeshStandardMaterial({ map: tTerra, roughness: 0.75, emissive: 0x081830, emissiveIntensity: 0.6 }));
 terra.position.set(-420, 330, -900); terra.rotation.z = 0.4; cena.add(terra);
 const tBrilho = tex(64, 64, g => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.25, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
-{ const atm = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: 0x5ab0ff, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending })); atm.position.copy(terra.position); atm.scale.setScalar(200); cena.add(atm);
+{ const atm = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: 0x5ab0ff, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending })); atm.position.copy(terra.position); atm.scale.setScalar(200); cena.add(atm); if (FASE.ceuObj !== 'terra') atm.visible = terra.visible = false;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: 0xfff6e0, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); s.position.copy(SOL_DIR).multiplyScalar(1500); s.scale.setScalar(260); cena.add(s); }
+
+// outros céus: luas de Marte, planeta gigante listrado e planeta com anéis
+const listras = (cores, n) => tex(512, 256, g => { for (let y = 0; y < 256; y++) { const k = Math.floor((y / 256 + 0.03 * Math.sin(y * 0.21)) * n); g.fillStyle = cores[((k % cores.length) + cores.length) % cores.length]; g.fillRect(0, y, 512, 1); }
+  for (let i = 0; i < 220; i++) { g.fillStyle = `rgba(255,255,255,${rr(0.03, 0.12)})`; g.beginPath(); g.ellipse(rr(0, 512), rr(0, 256), rr(10, 60), rr(2, 6), 0, 0, 7); g.fill(); } });
+if (FASE.ceuObj === 'marte') for (const [x, y, z, r, c] of [[-500, 280, -800, 34, 0x8a7a6a], [620, 420, -700, 18, 0x9a8a7a]]) { const g = new THREE.IcosahedronGeometry(r, 3), p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) { const v = V3(p.getX(i), p.getY(i), p.getZ(i)), k = 1 + (fbm(v.x * 0.06 + 3, v.z * 0.06 + v.y * 0.04, 3) - 0.5) * 0.4; p.setXYZ(i, v.x * k, v.y * k, v.z * k); } g.computeVertexNormals();
+  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: c, roughness: 1, flatShading: true, emissive: 0x241810, emissiveIntensity: 0.7 })); m.position.set(x, y, z); cena.add(m); }
+if (FASE.ceuObj === 'gigante') { const m = new THREE.Mesh(new THREE.SphereGeometry(260, 64, 32), new THREE.MeshStandardMaterial({ map: listras(['#d9b48a', '#f2e2c4', '#b8865a', '#e8cfa8', '#c99a6a', '#f6ead2'], 16), roughness: 0.9, emissive: 0x2a1a0c, emissiveIntensity: 0.6 })); m.position.set(-520, 430, -1300); m.rotation.z = 0.25; cena.add(m); }
+if (FASE.ceuObj === 'aneis') { const m = new THREE.Mesh(new THREE.SphereGeometry(110, 64, 32), new THREE.MeshStandardMaterial({ map: listras(['#9ad8ff', '#c4a8ff', '#ff9ad8', '#b8f0ff', '#e0c8ff'], 10), roughness: 0.8, emissive: 0x2a1040, emissiveIntensity: 0.6 })); m.position.set(520, 360, -1000); m.rotation.z = -0.3; cena.add(m);
+  const ta = tex(512, 8, g => { for (let x = 0; x < 512; x++) { g.fillStyle = `rgba(${220 + (x * 7) % 35},${180 + (x * 3) % 60},255,${(0.25 + 0.6 * Math.abs(Math.sin(x * 0.07))) * (x > 30 ? 1 : 0)})`; g.fillRect(x, 0, 1, 8); } });
+  const rg = new THREE.RingGeometry(140, 240, 128, 1), uv = rg.attributes.uv, p = rg.attributes.position; for (let i = 0; i < p.count; i++) uv.setXY(i, (Math.hypot(p.getX(i), p.getY(i)) - 140) / 100, 0.5);
+  const an = new THREE.Mesh(rg, new THREE.MeshBasicMaterial({ map: ta, transparent: true, side: THREE.DoubleSide, depthWrite: false })); an.position.copy(m.position); an.rotation.set(-1.25, 0.25, 0.3); cena.add(an); }
 
 // ===================== O CHÃO DA LUA =====================
 const TAM = 160, N = 512, TX = TAM / N, DENS = 40, SUJO = 26; // mapa de poeira 512x512 (cada quadrinho tem 31 cm)
@@ -223,8 +252,9 @@ const ITENS = [];
 function lugarLivre(dmin, dmax) { for (let t = 0; t < 200; t++) { const a = R() * Math.PI * 2, d = rr(dmin, dmax), x = Math.cos(a) * d, z = Math.sin(a) * d; if (Math.hypot(x, z) < 71 && ITENS.every(o => Math.hypot(o.x - x, o.z - z) > 9)) return [x, z]; } return [rr(-60, 60), rr(-60, 60)]; }
 [[22, 28, 40], [24, 29, 70], [32, 42, 140], [35, 43, 260], [46, 56, 520], [47, 57, 900], [57, 64, 1800], [66, 71, 4000]].forEach(([a, b, v]) => { const [x, z] = lugarLivre(a, b); ITENS.push({ tipo: 'bau', x, z, valor: v, alt: 0.9 }); });
 [[20, 28, 0x7af0c8], [33, 43, 0xff8ad8], [46, 55, 0xffd36a], [58, 65, 0x9a8aff]].forEach(([a, b, cor]) => { const [x, z] = lugarLivre(a, b); ITENS.push({ tipo: 'ovo', x, z, cor, alt: 0.8 }); });
-{ const [x, z] = lugarLivre(38, 50); ITENS.push({ tipo: 'rover', x, z, valor: 600, alt: 1.6 }); }
+{ const [x, z] = lugarLivre(38, 50); ITENS.push({ tipo: FASE.especial, x, z, valor: 600, alt: 1.6 }); }
 { const [x, z] = lugarLivre(60, 70); ITENS.push({ tipo: 'capsula', x, z, valor: 2500, alt: 1.4 }); }
+ITENS.forEach(o => { if (o.valor) o.valor *= FASE.valor; });
 ITENS.forEach(o => MONTES.push({ x: o.x, z: o.z, h: o.alt + 0.7 + nivelEm(o.x, o.z) * 0.15, r: 3.2 }));
 function somarMonte(m) { const r3 = m.r * 2.6, i0 = idx(m.x - r3, m.z - r3), i1 = idx(m.x + r3, m.z + r3), c0 = i0 % N, c1 = i1 % N, l0 = (i0 / N) | 0, l1 = (i1 / N) | 0;
   for (let l = l0; l <= l1; l++) for (let c = c0; c <= c1; c++) { const x = (c + 0.5) * TX - TAM / 2, z = (l + 0.5) * TX - TAM / 2, k = l * N + c, d = Math.hypot(x - m.x, z - m.z) / m.r; ESP[k] = Math.min(3.2, ESP[k] + m.h * Math.exp(-d * d)); } }
@@ -245,13 +275,14 @@ const poeiraEm = (x, z) => { const k = idx(x, z); return RESTO[k]; };
 const altura = (x, z) => Math.hypot(x, z) < 9.2 ? 0.3 : hBase(x, z) + poeiraEm(x, z); // dentro da base, em cima do piso
 // texturas do chão: poeira (sujo) e rocha lunar limpa e brilhante
 function ruidoCanvas(g, w, cores, n, tam) { for (let i = 0; i < n; i++) { g.fillStyle = cores[(R() * cores.length) | 0]; const x = R() * w, y = R() * w, s = R() * tam + 0.6; for (const dx of [0, -w, w]) for (const dy of [0, -w, w]) g.fillRect(x + dx, y + dy, s, s); } }
-const tSujo = tex(512, 512, g => { g.fillStyle = '#8f8576'; g.fillRect(0, 0, 512, 512); ruidoCanvas(g, 512, ['rgba(60,52,44,.25)', 'rgba(170,158,140,.25)', 'rgba(110,100,88,.35)', 'rgba(200,190,170,.18)'], 26000, 2.2);
+const tSujo = tex(512, 512, g => { g.fillStyle = FASE.sujo; g.fillRect(0, 0, 512, 512); ruidoCanvas(g, 512, ['rgba(60,52,44,.25)', 'rgba(170,158,140,.25)', 'rgba(110,100,88,.35)', 'rgba(200,190,170,.18)'], 26000, 2.2);
   for (let i = 0; i < 260; i++) { const x = R() * 512, y = R() * 512, r = R() * 3 + 1; g.fillStyle = 'rgba(55,48,40,.35)'; g.beginPath(); g.arc(x, y + 1, r, 0, 7); g.fill(); g.fillStyle = 'rgba(190,178,158,.4)'; g.beginPath(); g.arc(x, y, r * 0.8, 0, 7); g.fill(); } });
-const tLimpo = tex(512, 512, g => { const gr = g.createLinearGradient(0, 0, 512, 512); gr.addColorStop(0, '#d9dde4'); gr.addColorStop(1, '#cfd5de'); g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
+const tLimpo = tex(512, 512, g => { const gr = g.createLinearGradient(0, 0, 512, 512); gr.addColorStop(0, FASE.limpo[0]); gr.addColorStop(1, FASE.limpo[1]); g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
   ruidoCanvas(g, 512, ['rgba(255,255,255,.35)', 'rgba(170,180,200,.3)', 'rgba(140,150,170,.22)'], 16000, 1.8);
   g.strokeStyle = 'rgba(150,170,210,.35)'; g.lineWidth = 1.2; for (let i = 0; i < 40; i++) { let x = R() * 512, y = R() * 512; g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 6; k++) { x += rr(-30, 30); y += rr(-30, 30); g.lineTo(x, y); } g.stroke(); } });
 [tSujo, tLimpo].forEach(t => { t.wrapS = t.wrapT = THREE.RepeatWrapping; });
 const uChao = { uSuj: { value: texMasc }, uEsp: { value: texEsp }, uTam: { value: TAM }, uTexSujo: { value: tSujo }, uTexLimpo: { value: tLimpo }, uTempo: { value: 0 } };
+const TI = FASE.tintas.map(c => `vec3(${c.map(v => v.toFixed(3)).join(', ')})`);
 const matChao = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0 });
 matChao.onBeforeCompile = sh => {
   Object.assign(sh.uniforms, uChao);
@@ -267,7 +298,7 @@ matChao.onBeforeCompile = sh => {
       vec2 uvm = vMundo.xz / uTam + 0.5; float suj = texture2D(uSuj, uvm).r; float dPo = smoothstep(0.05, 0.32, suj);
       float dist = length(vMundo.xz);
       float lv = 1.0 + smoothstep(29.0, 31.0, dist) + smoothstep(43.0, 45.0, dist) + smoothstep(55.0, 57.0, dist) + smoothstep(65.0, 67.0, dist);
-      vec3 tinta = lv < 2.0 ? mix(vec3(1.0), vec3(0.92, 0.84, 0.74), lv - 1.0) : lv < 3.0 ? mix(vec3(0.92, 0.84, 0.74), vec3(0.8, 0.68, 0.56), lv - 2.0) : lv < 4.0 ? mix(vec3(0.8, 0.68, 0.56), vec3(0.72, 0.55, 0.48), lv - 3.0) : mix(vec3(0.72, 0.55, 0.48), vec3(0.6, 0.5, 0.62), lv - 4.0);
+      vec3 tinta = lv < 2.0 ? mix(${TI[0]}, ${TI[1]}, lv - 1.0) : lv < 3.0 ? mix(${TI[1]}, ${TI[2]}, lv - 2.0) : lv < 4.0 ? mix(${TI[2]}, ${TI[3]}, lv - 3.0) : mix(${TI[3]}, ${TI[4]}, lv - 4.0);
       vec3 cs = sRGBToLinear(texture2D(uTexSujo, vMundo.xz * 0.21)).rgb * tinta * (0.85 + 0.15 * texture2D(uTexSujo, vMundo.xz * 0.031).r);
       vec3 cl = sRGBToLinear(texture2D(uTexLimpo, vMundo.xz * 0.17)).rgb;
       float borda = smoothstep(0.03, 0.12, suj) * (1.0 - smoothstep(0.12, 0.4, suj));
@@ -282,9 +313,9 @@ const geoChao = new THREE.PlaneGeometry(TAM, TAM, G, G); geoChao.rotateX(-Math.P
 const chao = new THREE.Mesh(geoChao, matChao); chao.receiveShadow = true; cena.add(chao);
 // borda: mais Lua até o horizonte
 { const g = new THREE.RingGeometry(78, 900, 128, 16); g.rotateX(-Math.PI / 2); const p = g.attributes.position, uv = g.attributes.uv; for (let i = 0; i < p.count; i++) { const x = p.getX(i), z = p.getZ(i), d = Math.hypot(x, z); p.setY(i, alturaBruta(x * 78 / d, z * 78 / d) + Math.max(0, fbm(x * 0.012, z * 0.012, 4) - 0.3) * 40 * suave(78, 140, d) + (d - 78) * 0.03); uv.setXY(i, x * 0.22, z * 0.22); } g.computeVertexNormals();
-  const t2 = tSujo.clone(); t2.needsUpdate = true; const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: t2, color: 0xa39985, roughness: 1 })); m.receiveShadow = true; cena.add(m); }
+  const t2 = tSujo.clone(); t2.needsUpdate = true; const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: t2, color: FASE.borda, roughness: 1 })); m.receiveShadow = true; cena.add(m); }
 // pedras
-{ const n = 140, geo = new THREE.DodecahedronGeometry(1, 1), mat = new THREE.MeshStandardMaterial({ color: 0x77736c, roughness: 0.95, flatShading: true }), im = new THREE.InstancedMesh(geo, mat, n), o = new THREE.Object3D(); let k = 0;
+{ const n = 140, geo = new THREE.DodecahedronGeometry(1, 1), mat = new THREE.MeshStandardMaterial({ color: FASE.pedra, roughness: FASE.id === 'doce' ? 0.35 : 0.95, flatShading: true }), im = new THREE.InstancedMesh(geo, mat, n), o = new THREE.Object3D(); let k = 0;
   for (let i = 0; i < 400 && k < n; i++) { const x = rr(-76, 76), z = rr(-76, 76); if (Math.hypot(x, z) < BASE_R + 3 || Math.hypot(x, z) > 72 || ITENS.some(it => Math.hypot(it.x - x, it.z - z) < 4)) continue; const s = rr(0.15, 0.9) * (R() < 0.08 ? 2.2 : 1);
     o.position.set(x, hBase(x, z) + s * 0.25, z); o.scale.set(s * rr(0.8, 1.4), s * rr(0.5, 0.9), s * rr(0.8, 1.4)); o.rotation.set(rr(0, 3), rr(0, 3), rr(0, 3)); o.updateMatrix(); im.setMatrixAt(k++, o.matrix); }
   im.count = k; im.castShadow = true; im.receiveShadow = true; cena.add(im); }
@@ -317,6 +348,7 @@ add(new THREE.PlaneGeometry(1.9, 0.95), new THREE.MeshBasicMaterial({ map: tPlac
 const anelVenda = add(new THREE.RingGeometry(1.6, 2.0, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffcf4a, transparent: true, opacity: 0.7, toneMapped: false }), VENDA.x, 0.32, VENDA.z, cena, false);
 add(new THREE.BoxGeometry(1.4, 1.5, 0.8), M.escuro, LOJA.x, 0.75, LOJA.z - 0.8); const telaLoja = add(new THREE.PlaneGeometry(1.25, 0.65), new THREE.MeshBasicMaterial({ map: tPlaca(['LOJA', 'ferramentas'], '#6ad1ff'), toneMapped: false }), LOJA.x, 1.25, LOJA.z - 0.39, cena, false); telaLoja.rotation.x = -0.25;
 const anelLoja = add(new THREE.RingGeometry(1.4, 1.75, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x6ad1ff, transparent: true, opacity: 0.7, toneMapped: false }), LOJA.x, 0.32, LOJA.z, cena, false);
+const anelFoguete = add(new THREE.RingGeometry(2.3, 2.7, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xc08aff, transparent: true, opacity: 0.7, toneMapped: false }), 5.5, 0.32, 5, cena, false);
 const BLOQ = [[-5.5, 4.5, 4.2], [5.5, 5, 1.6], [-1.2, 6.2, 1.4], [VENDA.x, VENDA.z - 1.6, 1.3], [LOJA.x, LOJA.z - 0.8, 0.9], [7, -5, 0.5]];
 
 // ===================== O ASTRONAUTA =====================
@@ -351,9 +383,10 @@ const FERR = [
   { id: 'esfregao', nome: 'Esfregão', desc: 'Dá conta da poeira grossa.', r: 1.2, p: 0.35, nivel: 2, preco: 350 },
   { id: 'aspirador', nome: 'Aspirador Lunar', desc: 'Suga a poeira grudenta em um instante.', r: 1.8, p: 0.7, nivel: 3, preco: 1800 },
   { id: 'jato', nome: 'Jato de Ar', desc: 'Sopra até a poeira dura.', r: 2.6, p: 1.4, nivel: 4, preco: 7000 },
-  { id: 'vassoura', nome: 'Vassoura Cósmica', desc: 'Brilha e limpa até poeira de pedra.', r: 3.6, p: 3.0, nivel: 5, preco: 25000 }];
-const MOCH = [{ cap: 20, preco: 0, nome: 'Mochila pequena' }, { cap: 60, preco: 100, nome: 'Mochila média' }, { cap: 160, preco: 500, nome: 'Mochila grande' }, { cap: 450, preco: 2200, nome: 'Tanque de poeira' }, { cap: 1200, preco: 8000, nome: 'Tanque duplo' }, { cap: 4000, preco: 26000, nome: 'Contêiner espacial' }];
-const EXTRA = [{ id: 'botas', nome: 'Botas Saltadoras', desc: 'Pulos mais altos e corrida mais rápida.', preco: 300 }, { id: 'tele', nome: 'Volta Rápida', desc: 'Botão BASE (ou tecla B) leva você para a base na hora.', preco: 150 }];
+  { id: 'vassoura', nome: 'Vassoura Cósmica', desc: 'Brilha e limpa até poeira de pedra.', r: 3.6, p: 3.0, nivel: 5, preco: 25000 },
+  { id: 'furacao', nome: 'Furacão Galáctico', desc: 'Um tornado de bolso que limpa tudo em volta.', r: 4.8, p: 5.5, nivel: 5, preco: 90000 }];
+const MOCH = [{ cap: 20, preco: 0, nome: 'Mochila pequena' },  { cap: 60, preco: 100, nome: 'Mochila média' }, { cap: 160, preco: 500, nome: 'Mochila grande' }, { cap: 450, preco: 2200, nome: 'Tanque de poeira' }, { cap: 1200, preco: 8000, nome: 'Tanque duplo' }, { cap: 4000, preco: 26000, nome: 'Contêiner espacial' }, { cap: 15000, preco: 80000, nome: 'Mega Contêiner' }];
+const EXTRA = [{ id: 'voo', nome: 'Mochila a Jato', desc: 'Pule e segure o PULAR no ar para voar um pouquinho.', preco: 2500 }, { id: 'radar', nome: 'Radar de Tesouros', desc: 'Mostra no mapa (pontinhos amarelos) onde estão as coisas escondidas.', preco: 1500 }, { id: 'botas', nome: 'Botas Saltadoras', desc: 'Pulos mais altos e corrida mais rápida.', preco: 300 }, { id: 'tele', nome: 'Volta Rápida', desc: 'Botão BASE (ou tecla B) leva você para a base na hora.', preco: 150 }];
 function montarFerramenta(id) { while (mao.children.length) mao.remove(mao.children[0]); const g = new THREE.Group(); mao.add(g);
   const cabo = (L, r, cor) => add(new THREE.CylinderGeometry(r, r, L, 10), std({ color: cor, roughness: 0.5 }), 0, -L / 2, 0, g);
   if (id === 'escova') { cabo(0.32, 0.018, 0x47b3ff); add(new THREE.BoxGeometry(0.05, 0.05, 0.1), std({ color: 0xffffff, roughness: 0.9 }), 0, -0.33, 0.04, g); }
@@ -361,13 +394,16 @@ function montarFerramenta(id) { while (mao.children.length) mao.remove(mao.child
   if (id === 'esfregao') { cabo(1.0, 0.025, 0x3a8a5a); for (let i = 0; i < 18; i++) add(new THREE.CylinderGeometry(0.02, 0.012, 0.32, 5), std({ color: 0xeae2cf, roughness: 1 }), Math.cos(i) * 0.08, -1.08, Math.sin(i * 1.7) * 0.08, g).rotation.z = Math.cos(i) * 0.4; }
   if (id === 'aspirador') { cabo(0.9, 0.035, 0x8a96a6); add(new THREE.BoxGeometry(0.45, 0.08, 0.16), std({ color: 0xff5a3d, roughness: 0.4 }), 0, -0.92, 0.05, g); add(new THREE.CylinderGeometry(0.11, 0.11, 0.3, 16), std({ color: 0xff5a3d, roughness: 0.4 }), 0, -0.35, -0.12, g); }
   if (id === 'jato') { cabo(0.6, 0.04, 0x3d4a5c); add(new THREE.ConeGeometry(0.09, 0.3, 14).rotateX(Math.PI), std({ color: 0x6ad1ff, metalness: 0.7, roughness: 0.2 }), 0, -0.72, 0, g); add(new THREE.BoxGeometry(0.14, 0.18, 0.12), std({ color: 0xffcf4a }), 0, -0.12, 0.05, g); }
+  if (id === 'furacao') { cabo(0.9, 0.035, 0x2fd6c0); for (let i = 0; i < 4; i++) add(new THREE.TorusGeometry(0.1 + i * 0.07, 0.025, 6, 20).rotateX(Math.PI / 2), std({ color: 0xbffcff, emissive: 0x2fd6c0, emissiveIntensity: 1.6 }), 0, -0.95 - i * 0.12, 0, g); }
   if (id === 'vassoura') { cabo(1.2, 0.03, 0x9a7aff); const cab = add(new THREE.ConeGeometry(0.22, 0.42, 18), std({ color: 0xd8c4ff, emissive: 0x9a7aff, emissiveIntensity: 1.6 }), 0, -1.32, 0, g); cab.rotation.x = Math.PI; }
   g.traverse(o => { if (o.isMesh) o.castShadow = true; }); }
 
 // ===================== CARROS =====================
 const VEIC = [
-  { id: 'bio', nome: 'Bio Lunar', art: 'o', em: 'no', desc: 'O carro do futuro que limpa! Prateado, com bolha de vidro, rodas que brilham e 33 escamas. Um raio azul embaixo suga a poeira enquanto você corre.', preco: 1200, vel: 11, turbo: 17, acel: 2.4, vira: 3.2, r: 1.2, p: 0.5, nivel: 2, stats: ['Limpa sozinho', 'Rápido 11 m/s', 'Até poeira grossa'] },
-  { id: 'varre', nome: 'Varredeira Lunar', art: 'a', em: 'na', desc: 'O carro que limpa! Escovas giratórias na frente aspiram a poeira enquanto você dirige.', preco: 4500, vel: 6.5, turbo: 9, acel: 1.8, vira: 2.6, r: 1.6, p: 0.9, nivel: 3, stats: ['Limpa sozinho', 'Tamanho 1.6 m', 'Até poeira grudenta'] }];
+  { id: 'bio', nome: 'Bio Lunar', art: 'o', em: 'no', desc: 'O carro do futuro que limpa! Prateado, com bolha de vidro, rodas que brilham e 33 escamas. Um raio azul embaixo suga a poeira enquanto você corre.', preco: 1200, vel: 11, turbo: 17, acel: 2.4, vira: 3.2, r: 1.2, p: 0.5, nivel: 2, tanque: 30, frente: 2.3, col: 1.5, cam: 7.5, stats: ['Limpa sozinho', 'Rápido 11 m/s', 'Até poeira grossa'] },
+  { id: 'varre', nome: 'Varredeira Lunar', art: 'a', em: 'na', desc: 'O carro que limpa! Escovas giratórias na frente aspiram a poeira enquanto você dirige.', preco: 4500, vel: 6.5, turbo: 9, acel: 1.8, vira: 2.6, r: 1.6, p: 0.9, nivel: 3, tanque: 150, frente: 2.3, col: 1.5, cam: 8, stats: ['Limpa sozinho', 'Tamanho 1.6 m', 'Até poeira grudenta', '+150 kg'] },
+  { id: 'tubo3', nome: 'Sugador 3 Tubos', art: 'o', em: 'no', desc: 'Três tubos gigantes que sugam muita poeira de uma vez! O tanque guarda 500 kg a mais.', preco: 9000, vel: 7.5, turbo: 11, acel: 1.8, vira: 2.4, r: 2.5, p: 2.0, nivel: 4, tanque: 500, frente: 2.75, col: 1.7, cam: 9.5, cor: 0x2fbf71, corTubo: 0xffd23a, bocais: [[-1.1, 2.6], [0, 2.85], [1.1, 2.6]], stats: ['3 tubos', 'Tamanho 2.5 m', '+500 kg', 'Até poeira dura'] },
+  { id: 'mega', nome: 'Mega Sugador 3 Tubos', art: 'o', em: 'no', desc: 'O maior carro do espaço! Três tubos enormes que sugam até poeira de pedra. Guarda 3.000 kg a mais.', preco: 35000, vel: 7, turbo: 10, acel: 1.5, vira: 2.0, r: 3.6, p: 4.0, nivel: 5, tanque: 3000, frente: 3.95, col: 2.4, cam: 12.5, escala: 1.45, cor: 0x7a3cff, corTubo: 0x4fd8ff, bocais: [[-1.1, 2.6], [0, 2.85], [1.1, 2.6]], stats: ['3 tubos gigantes', 'Tamanho 3.6 m', '+3.000 kg', 'Até poeira de pedra'] }];
 const carro = { g: null, id: null, dentro: false, x: 1.8, z: 7.2, rot: Math.PI / 2, vel: 0, giro: 0, rodas: [], escovas: [], rolo: null, escamas: [], luz: null, tanque: null, piloto: null };
 const vAtual = () => VEIC.find(v => v.id === carro.id);
 function rodaCarro(g, x, y, z, R, larg, cor, brilho) { const w = new THREE.Group(); w.position.set(x, y, z); g.add(w);
@@ -433,13 +469,38 @@ function fazerVarre(g) {
   for (let k = 0; k < 4; k++) { const b = add(new THREE.BoxGeometry(1.72, 0.05, 0.05), std({ color: 0xff5a3d }), 0, 0, 0, rolo, false); b.position.set(0, Math.cos(k * Math.PI / 2) * 0.22, Math.sin(k * Math.PI / 2) * 0.22); }
   carro.rolo = rolo;
   for (const [x, z] of [[-1.02, 1.0], [1.02, 1.0], [-1.02, -1.15], [1.02, -1.15]]) rodaCarro(g, x, 0.4, z, 0.4, 0.36, 0x1e2128, null); }
-function trocarCarro() { if (carro.g) cena.remove(carro.g); carro.g = null; carro.rodas = []; carro.escovas = []; carro.escamas = []; carro.rolo = carro.luz = carro.tanque = carro.piloto = carro.raio = null; carro.id = est.veic;
-  if (!carro.id) return; const g = new THREE.Group(); cena.add(g); carro.g = g; (carro.id === 'bio' ? fazerBio : fazerVarre)(g);
+function fazerTubos(g0, V) { const g = new THREE.Group(); g.scale.setScalar(V.escala || 1); g0.add(g);
+  const pint = std({ color: V.cor, roughness: 0.35, metalness: 0.45 }), escuro = std({ color: 0x23272f, roughness: 0.6, metalness: 0.4 }), cromo = std({ color: 0xd5dce4, roughness: 0.18, metalness: 0.9, side: THREE.DoubleSide }), tubo = std({ color: V.corTubo, roughness: 0.4, metalness: 0.2 });
+  const vid = std({ color: 0x9fd8ff, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.45, depthWrite: false }), brilho = new THREE.MeshBasicMaterial({ color: V.corTubo, toneMapped: false });
+  add(new THREE.BoxGeometry(2.1, 0.42, 4.0), escuro, 0, 0.62, -0.1, g);
+  add(new THREE.BoxGeometry(2.0, 1.0, 1.1), pint, 0, 1.3, 1.25, g); add(new THREE.BoxGeometry(2.04, 0.1, 1.2), escuro, 0, 1.84, 1.25, g);
+  add(new THREE.BoxGeometry(1.8, 0.5, 0.04), vid, 0, 1.42, 1.81, g, false); for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.04, 0.45, 0.75), vid, s * 1.01, 1.44, 1.25, g, false);
+  add(new THREE.BoxGeometry(1.9, 0.05, 0.08), new THREE.MeshBasicMaterial({ color: 0xfff2b0, toneMapped: false }), 0, 0.9, 1.81, g, false);
+  carro.piloto = capacetePiloto(g, 0, 1.5, 1.2);
+  // tanque enorme transparente atrás (enche com a poeira)
+  add(new THREE.CylinderGeometry(0.88, 0.88, 1.5, 32), std({ color: 0xcfeaff, roughness: 0.05, transparent: true, opacity: 0.28, depthWrite: false }), 0, 1.58, -0.85, g, false);
+  const ench = add(new THREE.CylinderGeometry(0.82, 0.82, 1.45, 28), std({ color: 0xa8947a, roughness: 1 }), 0, 0.84, -0.85, g, false); ench.geometry.translate(0, 0.725, 0); carro.tanque = ench;
+  for (const y of [0.84, 1.58, 2.33]) add(new THREE.TorusGeometry(0.9, 0.05, 8, 36).rotateX(Math.PI / 2), pint, 0, y, -0.85, g);
+  add(new THREE.SphereGeometry(0.9, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), pint, 0, 2.33, -0.85, g);
+  for (const s of [-1, 1]) add(new THREE.CylinderGeometry(0.09, 0.09, 1.4, 12), cromo, s * 0.85, 1.6, -1.95, g);
+  carro.luz = add(new THREE.CylinderGeometry(0.12, 0.14, 0.16, 14), new THREE.MeshBasicMaterial({ color: 0x5bff9a, toneMapped: false }), 0.6, 1.97, 1.25, g, false);
+  // os 3 tubos: saem do tanque, passam por cima da cabine e descem até o chão
+  V.bocais.forEach(([bx, bz], i) => { const sx = [-1, 0, 1][i];
+    const cur = new THREE.CatmullRomCurve3([V3(sx * 0.42, 2.55, -0.85), V3(sx * 0.55, 2.95, -0.2), V3(sx * 0.8, 2.55, 1.0), V3(sx * 1.02, 1.85, 2.15), V3(bx, 0.85, bz)]);
+    add(new THREE.TubeGeometry(cur, 56, 0.17, 12), tubo, 0, 0, 0, g);
+    for (let k = 1; k < 14; k++) { const t = k / 14, a = add(new THREE.TorusGeometry(0.19, 0.03, 6, 18), escuro, 0, 0, 0, g); a.position.copy(cur.getPointAt(t)); a.quaternion.setFromUnitVectors(V3(0, 0, 1), cur.getTangentAt(t)); }
+    add(new THREE.CylinderGeometry(0.21, 0.46, 0.5, 24, 1, true), cromo, bx, 0.58, bz, g);
+    const anel = add(new THREE.TorusGeometry(0.44, 0.045, 8, 28).rotateX(Math.PI / 2), brilho, bx, 0.34, bz, g, false); carro.bocais.push(anel); });
+  for (const [x, z] of [[-1.12, 1.3], [1.12, 1.3], [-1.12, -0.25], [1.12, -0.25], [-1.12, -1.55], [1.12, -1.55]]) rodaCarro(g, x, 0.45, z, 0.45, 0.4, 0x1e2128, null); }
+function sugarPo(x, y, z, tx, ty, tz, cor) { const p = PART[partI++ % PART.length]; p.s.visible = true; p.s.material.color.setHex(cor); p.s.position.set(x, y, z); p.vida = 0.35 + Math.random() * 0.3; p.t = 0;
+  p.v.set((tx - x) / p.vida, (ty - y) / p.vida + 0.81 * p.vida * 0.5, (tz - z) / p.vida); }
+function trocarCarro() { if (carro.g) cena.remove(carro.g); carro.g = null; carro.rodas = []; carro.escovas = []; carro.escamas = []; carro.rolo = carro.luz = carro.tanque = carro.piloto = carro.raio = null; carro.bocais = []; carro.id = est.veic;
+  if (!carro.id) return; const g = new THREE.Group(); cena.add(g); carro.g = g; ({ bio: fazerBio, varre: fazerVarre, tubo3: fazerTubos, mega: fazerTubos })[carro.id](g, vAtual());
   g.traverse(o => { if (o.isMesh && !o.material.transparent) { o.castShadow = true; o.receiveShadow = true; } }); g.rotation.order = 'YXZ';
   if (carro.dentro) { carro.x = astro.x; carro.z = astro.z; } }
 function entrarSair() { if (!jogando) return;
   if (!est.veic) { aviso('Compre um carro na loja da base (aba Carros)!'); return; }
-  if (carro.dentro) { carro.dentro = false; carro.vel = 0; const ex = Math.cos(carro.rot) * 1.9, ez = -Math.sin(carro.rot) * 1.9; let ax = carro.x - ex, az = carro.z - ez; if (Math.hypot(ax, az) > RAIO_JOGO || BLOQ.some(([bx, bz, r]) => Math.hypot(ax - bx, az - bz) < r + 0.35)) { ax = carro.x + ex; az = carro.z + ez; }
+  if (carro.dentro) { carro.dentro = false; carro.vel = 0; const sai = vAtual().col + 0.6, ex = Math.cos(carro.rot) * sai, ez = -Math.sin(carro.rot) * sai; let ax = carro.x - ex, az = carro.z - ez; if (Math.hypot(ax, az) > RAIO_JOGO || BLOQ.some(([bx, bz, r]) => Math.hypot(ax - bx, az - bz) < r + 0.35)) { ax = carro.x + ex; az = carro.z + ez; }
     astro.x = ax; astro.z = az; astro.y = altura(ax, az); astro.g.visible = true; document.body.classList.remove('dirigindo'); tom(400, 200, 0.2, 'triangle', 0.08); return; }
   if (Math.hypot(carro.x - astro.x, carro.z - astro.z) > 5) { for (let k = 0; k < 18; k++) soltarPo(astro.x, altura(astro.x, astro.z), astro.z, 1.4, 0x9fdcff); carro.x = astro.x; carro.z = astro.z; carro.rot = astro.rot; aviso(`${vAtual().art === 'a' ? 'A' : 'O'} ${vAtual().nome} chegou voando!`); }
   else { astro.x = carro.x; astro.z = carro.z; }
@@ -451,31 +512,40 @@ function atualizarCarro(dt) { const g = carro.g; if (!g) return; const x = carro
   if (carro.piloto) carro.piloto.visible = carro.dentro;
   const v = clamp(Math.abs(carro.vel) / 13, 0, 1); carro.escamas.forEach((e, i) => { e.rotation.x = e.userData.base + (0.05 + 0.55 * v) * (0.5 + 0.5 * Math.sin(tempoTotal * (2 + 7 * v) - i * 0.45)); });
   const liga = carro.dentro && carro.id === 'varre'; if (carro.raio) { carro.raio.visible = carro.dentro && Math.abs(carro.vel) > 0.3; carro.raio.material.opacity = 0.35 + 0.25 * Math.sin(tempoTotal * 14); } carro.escovas.forEach(e => { e.g.rotation.y += (liga ? 14 : 0) * e.s * dt; }); if (carro.rolo && liga) carro.rolo.rotation.x += dt * 12;
-  if (carro.luz) carro.luz.material.color.setHex(liga && Math.sin(tempoTotal * 10) > 0 ? 0xffd04a : 0xff6a10);
+  if (carro.luz) carro.luz.material.color.setHex(carro.bocais.length ? (carro.dentro && Math.sin(tempoTotal * 8) > 0 ? 0xb0ffd0 : 0x2fbf71) : liga && Math.sin(tempoTotal * 10) > 0 ? 0xffd04a : 0xff6a10);
+  const suga = carro.dentro && Math.abs(carro.vel) > 0.3; carro.bocais.forEach((b, i) => { b.scale.setScalar(suga ? 1 + 0.18 * Math.sin(tempoTotal * 16 + i * 2) : 1); b.visible = suga || Math.sin(tempoTotal * 2) > -0.6; });
   if (carro.tanque) carro.tanque.scale.y = Math.max(0.02, Math.min(1, est.kg / capacidade())); }
-function pontoVarre() { const V = vAtual(); return [carro.x + Math.sin(carro.rot) * 2.3, carro.z + Math.cos(carro.rot) * 2.3, V.r]; }
+function pontoVarre() { const V = vAtual(), e = V.frente; return [carro.x + Math.sin(carro.rot) * e, carro.z + Math.cos(carro.rot) * e, V.r]; }
 function varrer(dt) { const V = vAtual(), [cx, cz] = pontoVarre(), nv = nivelEm(cx, cz), forte = Math.max(V.nivel, ferrAtual().nivel);
   if (Math.hypot(cx, cz) < BASE_R) return 0; bloqueado = true;
   if (nv > forte) { aviso(`Essa ${NOMES_NIVEL[nv]} é dura demais para ${V.art} ${V.nome}. Use o ${FERR.find(x => x.nivel >= nv).nome}.`, 'ruim'); return 0; }
   const esp = espacoMochila(); if (esp <= 0.001) { aviso('Tanque cheio! Volte à base e venda a poeira.', 'ruim'); return 0; }
   bloqueado = false; let kg = limpar(cx, cz, V.r, V.p * dt * Math.min(1, 0.4 + Math.abs(carro.vel) / 5)); if (kg > esp) kg = esp; est.kg += kg;
-  if (kg > 0) for (const s of [-1, 1]) if (Math.random() < 0.7) soltarPo(cx + Math.cos(carro.rot) * 0.6 * s, altura(cx, cz), cz - Math.sin(carro.rot) * 0.6 * s, 0.9, nv >= 4 ? 0x9a8278 : 0xb9a98f);
+  if (kg > 0 && V.bocais) { const e = V.escala || 1, sn = Math.sin(carro.rot), cs = Math.cos(carro.rot); for (const [lx, lz] of V.bocais) { const bx = carro.x + (lx * cs + lz * sn) * e, bz = carro.z + (-lx * sn + lz * cs) * e, ch = altura(bx, bz);
+    for (let n = 0; n < 2; n++) { const a = Math.random() * 6.28, d = (0.7 + Math.random() * 1.1) * e; sugarPo(bx + Math.cos(a) * d, ch + 0.08, bz + Math.sin(a) * d, bx, ch + 0.5 * e, bz, nv >= 4 ? 0x9a8278 : FASE.po); } } }
+  else if (kg > 0) for (const s of [-1, 1]) if (Math.random() < 0.7) soltarPo(cx + Math.cos(carro.rot) * 0.6 * s, altura(cx, cz), cz - Math.sin(carro.rot) * 0.6 * s, 0.9, nv >= 4 ? 0x9a8278 : FASE.po);
   return kg; }
 
 // ===================== COISAS ESCONDIDAS E BICHINHOS =====================
 const tAnel = tex(128, 128, g => { g.strokeStyle = '#fff'; g.lineWidth = 10; g.beginPath(); g.arc(64, 64, 52, 0, 7); g.stroke(); });
+const tPiru = tex(256, 256, g => { g.fillStyle = '#fff'; g.fillRect(0, 0, 256, 256); g.lineWidth = 14; const cs = ['#ff4fa3', '#ffd34f', '#4fd8ff', '#7aff8a']; for (let i = 0; i < 40; i++) { g.strokeStyle = cs[i % 4]; g.beginPath(); g.arc(128, 128, 6 + i * 3, i * 0.7, i * 0.7 + 2.6); g.stroke(); } });
 function malhaItem(o) { const g = new THREE.Group(); g.position.set(o.x, hBase(o.x, o.z), o.z); g.rotation.y = R() * 6.28; cena.add(g);
   if (o.tipo === 'bau') { add(new THREE.BoxGeometry(1.0, 0.55, 0.65), std({ color: 0x7a4a24, roughness: 0.7 }), 0, 0.28, 0, g); const t = add(new THREE.CylinderGeometry(0.33, 0.33, 1.0, 16, 1, false, 0, Math.PI).rotateZ(Math.PI / 2), std({ color: 0x8a5a2c, roughness: 0.7 }), 0, 0.55, 0, g); t.rotation.x = 0; add(new THREE.BoxGeometry(1.04, 0.08, 0.69), M.ouro, 0, 0.55, 0, g); add(new THREE.BoxGeometry(0.14, 0.18, 0.06), M.ouro, 0, 0.5, 0.34, g); }
   if (o.tipo === 'ovo') { const e = add(new THREE.SphereGeometry(0.32, 24, 16), std({ color: o.cor, roughness: 0.3, emissive: o.cor, emissiveIntensity: 0.35 }), 0, 0.42, 0, g); e.scale.set(1, 1.3, 1); for (let i = 0; i < 7; i++) add(new THREE.SphereGeometry(0.07, 10, 8), std({ color: 0xffffff, roughness: 0.5 }), Math.cos(i * 2.3) * 0.29, 0.3 + (i % 3) * 0.14, Math.sin(i * 2.3) * 0.29, g); }
   if (o.tipo === 'rover') { add(new THREE.BoxGeometry(1.6, 0.4, 2.2), std({ color: 0xc9cdd3, roughness: 0.5, metalness: 0.4 }), 0, 0.75, 0, g); for (const [x, z] of [[-0.9, -0.8], [0.9, -0.8], [-0.9, 0], [0.9, 0], [-0.9, 0.8], [0.9, 0.8]]) add(new THREE.CylinderGeometry(0.28, 0.28, 0.2, 16).rotateZ(Math.PI / 2), M.escuro, x, 0.3, z, g);
     add(new THREE.BoxGeometry(1.4, 0.05, 0.9), M.painel, 0, 1.2, -0.4, g); add(new THREE.CylinderGeometry(0.03, 0.03, 0.8, 6), M.metal, 0.5, 1.35, 0.7, g); add(new THREE.SphereGeometry(0.22, 16, 8, 0, 6.3, 0, 1.2), M.branco, 0.5, 1.75, 0.7, g); }
+  if (o.tipo === 'robo') { const lat = std({ color: 0xd8dde4, roughness: 0.4, metalness: 0.6 }), olho = std({ color: 0x6ad1ff, emissive: 0x6ad1ff, emissiveIntensity: 2 }); add(new THREE.BoxGeometry(0.9, 0.8, 0.7), lat, 0, 0.75, 0, g); add(new THREE.BoxGeometry(0.62, 0.45, 0.5), lat, 0, 1.4, 0, g);
+    for (const s of [-1, 1]) { add(new THREE.SphereGeometry(0.08, 12, 8), olho, s * 0.15, 1.45, 0.26, g); add(new THREE.CylinderGeometry(0.16, 0.16, 0.3, 14).rotateZ(Math.PI / 2), M.escuro, s * 0.36, 0.2, 0, g); add(new THREE.BoxGeometry(0.14, 0.55, 0.14), M.metal, s * 0.55, 0.75, 0, g); }
+    add(new THREE.CylinderGeometry(0.02, 0.02, 0.4, 6), M.metal, 0, 1.8, 0, g); add(new THREE.SphereGeometry(0.06, 10, 8), std({ color: 0xff5e5e, emissive: 0xff5e5e, emissiveIntensity: 2 }), 0, 2.02, 0, g); }
+  if (o.tipo === 'cristal') { const cr = std({ color: 0x9fe8ff, roughness: 0.1, metalness: 0.3, emissive: 0x3ab8ff, emissiveIntensity: 0.7 }); for (let i = 0; i < 7; i++) { const hh = i === 0 ? 1.8 : 0.7 + (i % 3) * 0.25, c = add(new THREE.ConeGeometry(0.22, hh, 6), cr, i ? Math.cos(i) * 0.35 : 0, hh / 2, i ? Math.sin(i) * 0.35 : 0, g); if (i) c.rotation.set(Math.sin(i) * 0.5, 0, -Math.cos(i) * 0.5); } }
+  if (o.tipo === 'pirulito') { add(new THREE.CylinderGeometry(0.06, 0.06, 1.5, 10), std({ color: 0xffffff, roughness: 0.5 }), 0, 0.75, 0, g); add(new THREE.CylinderGeometry(0.62, 0.62, 0.16, 40).rotateX(Math.PI / 2), [std({ color: 0xff4fa3, roughness: 0.3 }), std({ map: tPiru, roughness: 0.25 }), std({ map: tPiru, roughness: 0.25 })], 0, 1.8, 0, g); }
   if (o.tipo === 'capsula') { add(new THREE.CylinderGeometry(0.45, 0.45, 1.2, 20), std({ color: 0xb8c0cc, roughness: 0.25, metalness: 0.9 }), 0, 0.6, 0, g); add(new THREE.SphereGeometry(0.45, 20, 10, 0, 6.3, 0, Math.PI / 2), std({ color: 0xb8c0cc, roughness: 0.25, metalness: 0.9 }), 0, 1.2, 0, g); add(new THREE.TorusGeometry(0.46, 0.04, 8, 30).rotateX(Math.PI / 2), std({ color: 0x6ad1ff, emissive: 0x6ad1ff, emissiveIntensity: 1.2 }), 0, 0.9, 0, g); }
   g.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
   const sinal = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: o.tipo === 'ovo' ? o.cor : 0xffe08a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })); sinal.position.y = 1.6; sinal.scale.setScalar(2.2); g.add(sinal);
   const anel = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 2.4).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tAnel, color: 0xffe08a, transparent: true, opacity: 0, depthWrite: false, toneMapped: false })); anel.position.y = 0.06; g.add(anel);
   o.g = g; o.sinal = sinal; o.anel = anel; o.estado = 'escondido'; }
 ITENS.forEach(malhaItem);
-const NOME_ITEM = { bau: 'Baú do tesouro', ovo: 'Ovo misterioso', rover: 'Jipe lunar antigo', capsula: 'Cápsula do tempo' };
+const NOME_ITEM = { bau: 'Baú do tesouro', ovo: 'Ovo misterioso', rover: 'Jipe lunar antigo', capsula: 'Cápsula do tempo', robo: 'Robô explorador perdido', cristal: 'Cristal gigante', pirulito: 'Pirulito gigante' };
 const pets = [];
 function criarPet(cor) { const g = new THREE.Group(); cena.add(g);
   const c = add(new THREE.SphereGeometry(0.28, 24, 16), std({ color: cor, roughness: 0.35, emissive: cor, emissiveIntensity: 0.25 }), 0, 0, 0, g); c.scale.set(1, 0.9, 1);
@@ -486,9 +556,9 @@ function criarPet(cor) { const g = new THREE.Group(); cena.add(g);
 
 // ===================== PARTÍCULAS DE POEIRA =====================
 const tFumaca = tex(64, 64, g => { const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,.9)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
-const PART = []; for (let i = 0; i < 220; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tFumaca, color: 0xb9a98f, transparent: true, opacity: 0, depthWrite: false })); s.visible = false; cena.add(s); PART.push({ s, v: V3(0, 0, 0), t: 9, vida: 1 }); }
+const PART = []; for (let i = 0; i < 220; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tFumaca, color: FASE.po, transparent: true, opacity: 0, depthWrite: false })); s.visible = false; cena.add(s); PART.push({ s, v: V3(0, 0, 0), t: 9, vida: 1 }); }
 let partI = 0;
-function soltarPo(x, y, z, forca, cor = 0xb9a98f) { const p = PART[partI++ % PART.length]; p.s.visible = true; p.s.material.color.setHex(cor); p.s.position.set(x + rr(-0.3, 0.3), y + 0.1, z + rr(-0.3, 0.3)); const a = R() * 6.28; p.v.set(Math.cos(a) * forca, rr(0.4, 1.4) * forca, Math.sin(a) * forca); p.t = 0; p.vida = rr(1.2, 2.4); }
+function soltarPo(x, y, z, forca, cor = FASE.po) { const p = PART[partI++ % PART.length]; p.s.visible = true; p.s.material.color.setHex(cor); p.s.position.set(x + rr(-0.3, 0.3), y + 0.1, z + rr(-0.3, 0.3)); const a = R() * 6.28; p.v.set(Math.cos(a) * forca, rr(0.4, 1.4) * forca, Math.sin(a) * forca); p.t = 0; p.vida = rr(1.2, 2.4); }
 function atualizarPo(dt) { for (const p of PART) { if (p.t >= p.vida) continue; p.t += dt; p.v.y -= 1.62 * dt * 0.5; p.s.position.addScaledVector(p.v, dt); const k = p.t / p.vida; p.s.scale.setScalar(0.25 + k * 0.9); p.s.material.opacity = Math.sin(k * Math.PI) * 0.55; if (k >= 1) p.s.visible = false; } }
 
 // ===================== SOM =====================
@@ -505,29 +575,33 @@ const somAchou = () => [660, 880, 1320, 1760].forEach((f, i) => tom(f, f, 0.35, 
 const somRuim = () => tom(220, 140, 0.25, 'square', 0.05);
 
 // ===================== ESTADO, LOJA E SALVAR =====================
-const est = { moedas: 0, kg: 0, ferr: 'escova', temFerr: ['escova'], moch: 0, extras: [], achados: [], pets: [], meteoros: [], venceu: false, total: 0, veics: [], veic: null };
-const ferrAtual = () => FERR.find(f => f.id === est.ferr), capacidade = () => MOCH[est.moch].cap;
+const LOCAIS = ['achados', 'meteoros', 'venceu'];
+const est = { fases: ['lua'], moedas: 0, kg: 0, ferr: 'escova', temFerr: ['escova'], moch: 0, extras: [], achados: [], pets: [], meteoros: [], venceu: false, total: 0, veics: [], veic: null };
+const ferrAtual = () => FERR.find(f => f.id === est.ferr), capacidade = () => MOCH[est.moch].cap + (carro.dentro ? (vAtual().tanque || 0) : 0);
 function salvar() { try {
   const pares = []; let v = MASC[0] >> 3, n = 0; for (let k = 0; k < N * N; k++) { const q = MASC[k] >> 3; if (q === v && n < 255) n++; else { pares.push(v, n); v = q; n = 1; } } pares.push(v, n);
   let s = ''; const u = new Uint8Array(pares); for (let i = 0; i < u.length; i += 8192) s += String.fromCharCode.apply(null, u.subarray(i, i + 8192));
-  localStorage.setItem('faxina-na-lua-1', JSON.stringify(Object.assign({}, est, { masc: btoa(s) }))); } catch (e) {} }
-function carregar() { try { const d = JSON.parse(localStorage.getItem('faxina-na-lua-1') || 'null'); if (!d) return false;
-  for (const k of Object.keys(est)) if (d[k] !== undefined) est[k] = d[k];
+  const local = { masc: btoa(s) }, comum = {}; for (const k of Object.keys(est)) (LOCAIS.includes(k) ? local : comum)[k] = est[k];
+  if (FI === 0) localStorage.setItem(CHAVE, JSON.stringify(Object.assign({}, comum, local)));
+  else { let base = {}; try { base = JSON.parse(localStorage.getItem(CHAVE) || '{}') || {}; } catch (e) {} localStorage.setItem(CHAVE, JSON.stringify(Object.assign(base, comum))); localStorage.setItem(CHAVE + '-' + FASE.id, JSON.stringify(local)); } } catch (e) {} }
+function carregar() { try { const d = JSON.parse(localStorage.getItem(CHAVE) || 'null'); if (!d) return false;
+  const loc = FI === 0 ? d : (JSON.parse(localStorage.getItem(CHAVE + '-' + FASE.id) || 'null') || {});
+  for (const k of Object.keys(est)) { const o = LOCAIS.includes(k) ? loc : d; if (o[k] !== undefined) est[k] = o[k]; }
   (est.meteoros || []).forEach(m => somarMonte(m)); for (let k = 0; k < N * N; k++) ESP8[k] = Math.round(ESP[k] / 3.2 * 255);
-  if (d.masc) { const b = atob(d.masc); let k = 0; for (let i = 0; i + 1 < b.length; i += 2) { const q = b.charCodeAt(i), n = b.charCodeAt(i + 1); for (let j = 0; j < n && k < N * N; j++, k++) { const m = q === 0 ? 0 : Math.min(255, (q << 3) + 4); RESTO[k] = ESP[k] * m / 255; } } }
+  if (loc.masc) { const b = atob(loc.masc); let k = 0; for (let i = 0; i + 1 < b.length; i += 2) { const q = b.charCodeAt(i), n = b.charCodeAt(i + 1); for (let j = 0; j < n && k < N * N; j++, k++) { const m = q === 0 ? 0 : Math.min(255, (q << 3) + 4); RESTO[k] = ESP[k] * m / 255; } } }
   atualizarMascaraTudo(); texMasc.needsUpdate = true; texEsp.needsUpdate = true;
   ITENS.forEach((o, i) => { if (est.achados.includes(i)) { o.estado = 'coletado'; o.g.visible = false; } });
   est.pets.forEach(c => criarPet(c)); return true; } catch (e) { return false; } }
-const temSalvo = (() => { try { return !!localStorage.getItem('faxina-na-lua-1'); } catch (e) { return false; } })();
+const temSalvo = (() => { try { return !!localStorage.getItem(CHAVE); } catch (e) { return false; } })();
 
 // ===================== AVISOS E HUD =====================
 let avisoT = 0, ultimoAviso = '', avisoQuando = 0;
 function aviso(txt, tipo = '', seg = 2.6) { if (txt === ultimoAviso && performance.now() - avisoQuando < 2500) return; ultimoAviso = txt; avisoQuando = performance.now(); const a = $('aviso'); a.textContent = txt; a.className = tipo; a.hidden = false; a.style.opacity = 1; avisoT = seg; }
 let mostrados = { moedas: -1, kg: -1 };
 function hud() { if (mostrados.moedas !== est.moedas) { mostrados.moedas = est.moedas; $('moedas').textContent = Math.floor(est.moedas).toLocaleString('pt-BR'); $('loja-moedas').textContent = Math.floor(est.moedas).toLocaleString('pt-BR'); }
-  const cap = capacidade(), kg = Math.min(est.kg, cap); $('kg').textContent = `${kg.toFixed(kg < 10 ? 1 : 0)} / ${cap.toLocaleString('pt-BR')} kg`; $('barra').style.width = (kg / cap * 100).toFixed(1) + '%'; $('mochila').classList.toggle('cheia', kg >= cap - 0.01);
-  $('ferr').textContent = ferrAtual().nome; $('pct').textContent = `${(100 * (1 - sujos / TOTAL)).toFixed(1)}% limpa`;
-  enchido.scale.y = Math.max(0.02, kg / cap); $('b-base').hidden = !est.extras.includes('tele'); $('b-carro').hidden = !est.veic; }
+  const cap = capacidade(), kg = est.kg; { const t = carro.dentro ? 'Tanque do carro' : 'Mochila de poeira', el = $('mochila').querySelector('small'); if (el.textContent !== t) el.textContent = t; } $('kg').textContent = `${kg.toFixed(kg < 10 ? 1 : 0)} / ${cap.toLocaleString('pt-BR')} kg`; $('barra').style.width = (kg / cap * 100).toFixed(1) + '%'; $('mochila').classList.toggle('cheia', kg >= cap - 0.01);
+  $('ferr').textContent = ferrAtual().nome; $('pct').textContent = `${FASE.nome} · ${(100 * (1 - sujos / TOTAL)).toFixed(1)}% limpa`;
+  enchido.scale.y = clamp(kg / cap, 0.02, 1); $('b-base').hidden = !est.extras.includes('tele'); $('b-carro').hidden = !est.veic; }
 // mapa
 const mapaCtx = $('mapa').getContext('2d'), mapaImg = mapaCtx.createImageData(132, 132);
 function desenharMapa() { const d = mapaImg.data; for (let y = 0; y < 132; y++) for (let x = 0; x < 132; x++) { const i = (y * 132 + x) * 4, wx = (x / 132 - 0.5) * TAM, wz = (y / 132 - 0.5) * TAM, m = MASC[idx(wx, wz)] / 255, lv = nivelEm(wx, wz);
@@ -535,6 +609,7 @@ function desenharMapa() { const d = mapaImg.data; for (let y = 0; y < 132; y++) 
   mapaCtx.putImageData(mapaImg, 0, 0); const px = v => (v / TAM + 0.5) * 132;
   mapaCtx.fillStyle = '#ffcf4a'; mapaCtx.beginPath(); mapaCtx.arc(66, 66, 4, 0, 7); mapaCtx.fill();
   ITENS.forEach(o => { if (o.estado === 'revelado') { mapaCtx.fillStyle = '#6ad1ff'; mapaCtx.beginPath(); mapaCtx.arc(px(o.x), px(o.z), 3.5, 0, 7); mapaCtx.fill(); } });
+  if (est.extras.includes('radar')) { mapaCtx.fillStyle = Math.sin(performance.now() / 200) > 0 ? '#ffcf4a' : 'rgba(255,207,74,.45)'; ITENS.forEach(o => { if (o.estado === 'escondido') { mapaCtx.beginPath(); mapaCtx.arc(px(o.x), px(o.z), 2.6, 0, 7); mapaCtx.fill(); } }); }
   mapaCtx.save(); mapaCtx.translate(px(astro.x), px(astro.z)); mapaCtx.rotate(-astro.rot + Math.PI); mapaCtx.fillStyle = '#ff5e5e'; mapaCtx.beginPath(); mapaCtx.moveTo(0, -6); mapaCtx.lineTo(4.5, 5); mapaCtx.lineTo(-4.5, 5); mapaCtx.closePath(); mapaCtx.fill(); mapaCtx.restore(); }
 
 // ===================== LIMPAR =====================
@@ -553,12 +628,13 @@ function esfregar(dt) { const f = ferrAtual(), [cx, cz] = pontoFerr(), nv = nive
   if (nv > f.nivel) { const prec = FERR.find(x => x.nivel >= nv); aviso(`Essa ${NOMES_NIVEL[nv]} é dura demais. Você precisa do ${prec.nome}.`, 'ruim'); return 0; }
   const esp = espacoMochila(); if (esp <= 0.001) { aviso('Mochila cheia! Volte à base e venda a poeira.', 'ruim'); return 0; }
   bloqueado = false; let kg = limpar(cx, cz, f.r, f.p * dt); if (kg > esp) kg = esp; est.kg += kg;
-  if (kg > 0 && Math.random() < 0.6 + f.r * 0.15) soltarPo(cx, altura(cx, cz), cz, 0.6 + f.r * 0.3, nv >= 4 ? 0x9a8278 : 0xb9a98f);
+  if (kg > 0 && Math.random() < 0.6 + f.r * 0.15) soltarPo(cx, altura(cx, cz), cz, 0.6 + f.r * 0.3, nv >= 4 ? 0x9a8278 : FASE.po);
   return kg; }
 
 // ===================== CONTROLES =====================
+let puloToque = false;
 const J = { yaw: Math.PI, pitch: -0.28 }, teclas = new Set(); let travado = false, jogando = false, mouseEsq = false, esfToque = false, pedirAcao = false, pedirPulo = false, ultimoOlhar = 0;
-addEventListener('keydown', e => { const k = e.key.toLowerCase(); teclas.add(k); if (!jogando) return; if (k === 'e') pedirAcao = true; if (k === ' ') { pedirPulo = true; e.preventDefault(); } if (k === 'b') voltarBase(); if (k === 'c' && $('loja').hidden) entrarSair(); if (k === 'escape' && !$('loja').hidden) fecharLoja(); });
+addEventListener('keydown', e => { const k = e.key.toLowerCase(); teclas.add(k); if (!jogando) return; if (k === 'e') pedirAcao = true; if (k === ' ') { pedirPulo = true; e.preventDefault(); } if (k === 'b') voltarBase(); if (k === 'c' && $('loja').hidden && $('viagem').hidden) entrarSair(); if (k === 'escape' && !$('loja').hidden) fecharLoja(); if (k === 'escape' && !$('viagem').hidden) fecharViagem(); });
 addEventListener('keyup', e => teclas.delete(e.key.toLowerCase())); addEventListener('blur', () => { teclas.clear(); mouseEsq = false; });
 function prender() { if (toque || travado || !canvas.requestPointerLock) return; try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 function soltarMouse() { if (document.pointerLockElement && document.exitPointerLock) document.exitPointerLock(); }
@@ -576,10 +652,10 @@ canvas.addEventListener('pointermove', e => { if (e.pointerId === joy.id) moverJ
 const soltar = e => { if (e.pointerId === joy.id) { joy.id = null; joy.dx = joy.dy = 0; joy.correr = false; baseJ.style.left = baseJ.style.top = ''; knob.style.transform = ''; joyEl.classList.remove('ativo'); } if (e.pointerId === olharP.id) olharP.id = null; };
 canvas.addEventListener('pointerup', soltar); canvas.addEventListener('pointercancel', soltar); addEventListener('mouseup', e => { if (e.button === 0) mouseEsq = false; });
 const botao = (id, fd, fu) => { const b = $(id); b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); b.classList.add('on'); fd(); }); ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => b.addEventListener(ev, () => { b.classList.remove('on'); if (fu) fu(); })); };
-botao('b-esfregar', () => { esfToque = true; }, () => { esfToque = false; }); botao('b-pular', () => { pedirPulo = true; }); botao('b-acao', () => { pedirAcao = true; }); botao('b-base', () => voltarBase()); botao('b-carro', () => entrarSair());
+botao('b-esfregar', () => { esfToque = true; }, () => { esfToque = false; }); botao('b-pular', () => { pedirPulo = true; puloToque = true; }, () => { puloToque = false; }); botao('b-acao', () => { pedirAcao = true; }); botao('b-base', () => voltarBase()); botao('b-carro', () => entrarSair());
 
 // ===================== VENDER, LOJA, ACHAR =====================
-function vender() { if (est.kg < 0.05) { aviso('A mochila está vazia. Vá esfregar a Lua!'); return; } const kg = est.kg, valor = Math.round(kg); est.moedas += valor; est.total += valor; est.kg = 0; somMoedas(Math.min(10, valor / 10));
+function vender() { if (est.kg < 0.05) { aviso('A mochila está vazia. Vá esfregar a Lua!'); return; } const kg = est.kg, valor = Math.round(kg * FASE.valor); est.moedas += valor; est.total += valor; est.kg = 0; somMoedas(Math.min(10, valor / 10));
   for (let i = 0; i < 16; i++) soltarPo(VENDA.x, 2.6, VENDA.z - 1.6, 0.8, 0xffcf4a); aviso(`Vendeu ${kg.toFixed(1)} kg de poeira por ${valor.toLocaleString('pt-BR')} moedas!`, 'ouro'); salvar(); }
 let abaLoja = 'ferr';
 function abrirLoja() { soltarMouse(); $('loja').hidden = false; desenharLoja(); }
@@ -605,6 +681,17 @@ function coletar(i) { const o = ITENS[i]; o.estado = 'coletado'; est.achados.pus
   if (o.tipo === 'ovo') { est.pets.push(o.cor); criarPet(o.cor); aviso('O ovo chocou! Um Lunito vai te ajudar a limpar!', 'ouro', 4); }
   else { est.moedas += o.valor; est.total += o.valor; aviso(`${NOME_ITEM[o.tipo]}: +${o.valor.toLocaleString('pt-BR')} moedas!`, 'ouro', 3.5); }
   o.g.visible = false; salvar(); }
+function abrirViagem() { soltarMouse(); $('viagem').hidden = false; desenharViagem(); }
+function fecharViagem() { $('viagem').hidden = true; if (!toque) prender(); }
+$('viagem-fechar').addEventListener('click', fecharViagem);
+function desenharViagem() { const box = $('planetas'); box.innerHTML = ''; $('viagem-moedas').textContent = Math.floor(est.moedas).toLocaleString('pt-BR');
+  FASES.forEach((f, i) => { const tem = est.fases.includes(f.id), aqui = i === FI, c = document.createElement('div'); c.className = 'carta' + (aqui ? ' equipado' : '');
+    c.innerHTML = `<h3></h3><p></p><div class="stats"><span>Fase ${i + 1}</span><span>Poeira vale ${f.valor}x</span></div>`; c.querySelector('h3').textContent = f.nome; c.querySelector('p').textContent = f.desc;
+    const b = document.createElement('button'); b.type = 'button';
+    if (aqui) { b.textContent = 'Você está aqui'; b.disabled = true; } else if (tem) b.textContent = 'Viajar'; else { b.className = 'comprar'; b.textContent = `Comprar viagem · ${f.preco.toLocaleString('pt-BR')}`; b.disabled = est.moedas < f.preco; }
+    b.addEventListener('click', () => { if (aqui) return; if (!tem) { if (est.moedas < f.preco) return; est.moedas -= f.preco; est.fases.push(f.id); } viajar(i); }); c.appendChild(b); box.appendChild(c); }); }
+function viajar(i) { if (carro.dentro) entrarSair(); salvar(); try { localStorage.setItem('faxina-fase', String(i)); sessionStorage.setItem('faxina-auto', '1'); } catch (e) {}
+  $('viagem').hidden = true; $('fade').classList.add('ver'); [300, 450, 650, 900, 1300].forEach((f, k) => tom(f, f * 1.6, 0.45, 'sawtooth', 0.04, k * 0.12)); setTimeout(() => location.reload(), 1000); }
 function voltarBase() { if (!jogando || !est.extras.includes('tele')) return; $('fade').classList.add('ver'); setTimeout(() => { astro.x = 0; astro.z = 3; astro.vy = 0; astro.y = altura(0, 3); pets.forEach(p => p.g.position.set(0, 2, 3)); $('fade').classList.remove('ver'); }, 450); tom(300, 1200, 0.5, 'sine', 0.1); }
 
 // ===================== CHUVA DE METEOROS =====================
@@ -622,21 +709,24 @@ document.querySelectorAll('#qual button').forEach(b => { b.setAttribute('aria-pr
 if (temSalvo) { $('b-jogar').textContent = 'Continuar'; $('b-novo').hidden = false; }
 $('b-novo').addEventListener('click', () => { $('novo-conf').hidden = false; });
 $('b-novo-nao').addEventListener('click', () => { $('novo-conf').hidden = true; });
-$('b-novo-sim').addEventListener('click', () => { try { localStorage.removeItem('faxina-na-lua-1'); } catch (e) {} location.reload(); });
+$('b-novo-sim').addEventListener('click', () => { try { localStorage.removeItem(CHAVE); localStorage.removeItem('faxina-fase'); FASES.forEach(f => localStorage.removeItem(CHAVE + '-' + f.id)); } catch (e) {} location.reload(); });
 function telaCheia() { const el = document.documentElement; try { if (!document.fullscreenElement) { const f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) { const r = f.call(el); if (r && r.catch) r.catch(() => {}); } } else document.exitFullscreen(); } catch (e) {} }
 $('b-tela').addEventListener('click', telaCheia); if (!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)) $('b-tela').hidden = true;
 function comecar() { iniciarAudio(); $('menu').hidden = true; jogando = true; document.body.classList.add('jogando'); $('hud-esq').hidden = $('hud-dir').hidden = false; $('mira').hidden = toque; prender();
   aviso(toque ? 'Segure ESFREGAR para limpar a poeira!' : 'Segure o botão do mouse para esfregar a poeira!', '', 4); }
 $('b-jogar').addEventListener('click', comecar);
 $('vit-ok').addEventListener('click', () => { $('vitoria').hidden = true; jogando = true; prender(); });
-carregar(); montarFerramenta(est.ferr); trocarCarro(); astro.y = altura(astro.x, astro.z);
+carregar(); montarFerramenta(est.ferr); trocarCarro();
+if (FI) { $('menu').querySelector('h1').innerHTML = `Faxina<br>${FASE.prep} <span>${FASE.nome}</span>`; document.title = `Faxina ${FASE.prep} ${FASE.nome}`; }
+$('vitoria').querySelector('h1').innerHTML = `${NOME_FASE} está <span>brilhando!</span>`;
+try { if (sessionStorage.getItem('faxina-auto')) { sessionStorage.removeItem('faxina-auto'); setTimeout(() => { comecar(); aviso(`Bem-vindo ${FASE.prep === 'em' ? 'a' : FASE.prep === 'no' ? 'ao' : 'à'} ${FASE.nome}!`, 'ouro', 4); }, 200); } } catch (e) {} astro.y = altura(astro.x, astro.z);
 
 // ===================== LAÇO =====================
 const H_ = V3(); let antes = performance.now(), salvarT = 0, mapaT = 0, revelarT = 0, perto = null, tempoTotal = 0, cam = { dist: 4.6 };
 function quadro(agora) { requestAnimationFrame(quadro);
   const VEL = window.__vel || 1, dtR = Math.min(0.25, (agora - antes) / 1000), dt = Math.min(0.05 * VEL, dtR * VEL); antes = agora; tempoTotal += dt; uChao.uTempo.value = tempoTotal;
   const w = innerWidth, h = innerHeight; if (canvas.width !== Math.floor(w * Rd.getPixelRatio()) || canvas.height !== Math.floor(h * Rd.getPixelRatio())) { Rd.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
-  const ativo = jogando && $('loja').hidden && $('vitoria').hidden;
+  const ativo = jogando && $('loja').hidden && $('vitoria').hidden && $('viagem').hidden;
   // andar
   let f = 0, s = 0; if (ativo) { if (teclas.has('w') || teclas.has('arrowup')) f++; if (teclas.has('s') || teclas.has('arrowdown')) f--; if (teclas.has('d') || teclas.has('arrowright')) s++; if (teclas.has('a') || teclas.has('arrowleft')) s--; f -= joy.dy; s += joy.dx; }
   let mag = Math.hypot(f, s); if (mag > 1) { f /= mag; s /= mag; mag = 1; }
@@ -646,10 +736,11 @@ function quadro(agora) { requestAnimationFrame(quadro);
   if (carro.dentro) { const V = vAtual(), quer = mag * (corre ? V.turbo : V.vel); carro.vel += (quer - carro.vel) * Math.min(1, dt * (quer > carro.vel ? V.acel : 2.5));
     if (mag > 0.1) carro.rot += angDif(carro.rot, Math.atan2(dx, dz)) * Math.min(1, dt * V.vira); dx = Math.sin(carro.rot) * carro.vel * dt; dz = Math.cos(carro.rot) * carro.vel * dt; }
   let nx = astro.x + dx, nz = astro.z + dz; const dn = Math.hypot(nx, nz); if (dn > RAIO_JOGO) { nx *= RAIO_JOGO / dn; nz *= RAIO_JOGO / dn; if (carro.dentro) carro.vel *= 0.9; }
-  if (!BLOQ.some(([bx, bz, r]) => Math.hypot(nx - bx, nz - bz) < r + (carro.dentro ? 1.5 : 0.35))) { astro.x = nx; astro.z = nz; } else if (carro.dentro) { carro.vel *= -0.3; tom(120, 60, 0.2, 'square', 0.05); }
+  if (!BLOQ.some(([bx, bz, r]) => Math.hypot(nx - bx, nz - bz) < r + (carro.dentro ? vAtual().col : 0.35))) { astro.x = nx; astro.z = nz; } else if (carro.dentro) { carro.vel *= -0.3; tom(120, 60, 0.2, 'square', 0.05); }
   if (carro.dentro) { carro.x = astro.x; carro.z = astro.z; astro.rot = carro.rot; } else if (esfAtivo) astro.rot += angDif(astro.rot, Math.atan2(-sy, -cy)) * Math.min(1, dt * 10); else if (mag > 0.1) astro.rot += angDif(astro.rot, Math.atan2(dx, dz)) * Math.min(1, dt * 10);
   const chaoY = altura(astro.x, astro.z);
   if (pedirPulo && astro.chao && ativo && !carro.dentro) { astro.vy = botas ? 4.3 : 3.1; astro.chao = false; tom(180, 260, 0.15, 'sine', 0.05); } pedirPulo = false;
+  if (astro.chao) astro.combust = 2.5; else if (ativo && !carro.dentro && est.extras.includes('voo') && (teclas.has(' ') || puloToque) && (astro.combust || 0) > 0) { astro.combust -= dt; astro.vy = Math.min(3.2, astro.vy + 5.2 * dt); if (Math.random() < 0.7) soltarPo(astro.x - Math.sin(astro.rot) * 0.4, astro.y + 0.7, astro.z - Math.cos(astro.rot) * 0.4, 0.3, 0x6ad1ff); }
   astro.vy -= 1.62 * dt; astro.y += astro.vy * dt; if (astro.y <= chaoY) { if (!astro.chao && astro.vy < -2) { for (let i = 0; i < 6; i++) soltarPo(astro.x, chaoY, astro.z, 0.8); } astro.y = chaoY; astro.vy = 0; astro.chao = true; } else if (astro.y > chaoY + 0.05) astro.chao = false;
   if (astro.chao && astro.y < chaoY + 0.4) astro.y = chaoY;
   astro.andar += ((mag > 0.1 ? 1 : 0) - astro.andar) * Math.min(1, dt * 8); astro.fase += dt * vel * mag * 1.6;
@@ -659,7 +750,7 @@ function quadro(agora) { requestAnimationFrame(quadro);
   { const varre = carro.dentro, [mx, mz, fr] = varre ? pontoVarre() : [...pontoFerr(), ferrAtual().r], foraBase = Math.hypot(mx, mz) > BASE_R; marca.visible = jogando && foraBase && (!carro.dentro || varre); marca.position.set(mx, altura(mx, mz) + 0.08, mz); marca.scale.setScalar(fr);
     marca.material.color.setHex(bloqueado ? 0xff6b5e : 0xffffff); marca.material.opacity = esfAtivo || kgAgora > 0 ? 0.55 + 0.2 * Math.sin(tempoTotal * 12) : 0.18; }
   for (const p of pets) { if (espacoMochila() > 0.001 && Math.hypot(p.g.position.x, p.g.position.z) > BASE_R && nivelEm(p.g.position.x, p.g.position.z) <= 3) { const k = Math.min(espacoMochila(), limpar(p.g.position.x, p.g.position.z, 1.0, 0.12 * dt)); est.kg += k; if (k > 0 && Math.random() < 0.15) soltarPo(p.g.position.x, p.g.position.y - 0.6, p.g.position.z, 0.5); } }
-  if (somEsf) { somEsf.g.gain.setTargetAtTime(kgAgora > 0 ? 0.08 + ferrAtual().r * 0.02 : 0.0001, AC.currentTime, 0.05); somEsf.f.frequency.value = est.ferr === 'aspirador' || est.ferr === 'jato' ? 700 : 2400 + Math.sin(tempoTotal * 18) * 600; }
+  if (somEsf) { somEsf.g.gain.setTargetAtTime(kgAgora > 0 ? 0.08 + ferrAtual().r * 0.02 : 0.0001, AC.currentTime, 0.05); somEsf.f.frequency.value = carro.dentro && vAtual().bocais ? 520 : est.ferr === 'aspirador' || est.ferr === 'jato' ? 700 : 2400 + Math.sin(tempoTotal * 18) * 600; }
   mudouT += dt; if (mascaraMudou && mudouT > 0.05) { texMasc.needsUpdate = true; mascaraMudou = false; mudouT = 0; }
   // corpo do astronauta
   astro.g.position.set(astro.x, astro.y, astro.z); astro.g.rotation.y = astro.rot;
@@ -679,16 +770,17 @@ function quadro(agora) { requestAnimationFrame(quadro);
   // ação: vender, loja, pegar
   perto = null; if (ativo) { if (Math.hypot(astro.x - VENDA.x, astro.z - VENDA.z) < 2.2) perto = { txt: 'Vender poeira', curto: 'VENDER', fn: vender }; else if (Math.hypot(astro.x - LOJA.x, astro.z - LOJA.z) < 2.0) perto = { txt: 'Abrir a loja', curto: 'LOJA', fn: abrirLoja };
     else ITENS.forEach((o, i) => { if (o.estado === 'revelado' && Math.hypot(astro.x - o.x, astro.z - o.z) < 2.6) perto = { txt: o.tipo === 'ovo' ? 'Chocar o ovo' : `Pegar: ${NOME_ITEM[o.tipo]}`, curto: o.tipo === 'ovo' ? 'CHOCAR' : 'PEGAR', fn: () => coletar(i) }; });
-    if (!perto && carro.g && !carro.dentro && Math.hypot(astro.x - carro.x, astro.z - carro.z) < 3) perto = { txt: `Entrar ${vAtual().em} ${vAtual().nome}`, curto: 'ENTRAR', fn: entrarSair }; }
+    if (!perto && Math.hypot(astro.x - 5.5, astro.z - 5) < (carro.dentro ? vAtual().col + 2.2 : 3.4)) perto = { txt: 'Viajar de foguete para outro planeta', curto: 'FOGUETE', fn: abrirViagem };
+    if (!perto && carro.g && !carro.dentro && Math.hypot(astro.x - carro.x, astro.z - carro.z) < vAtual().col + 1.8) perto = { txt: `Entrar ${vAtual().em} ${vAtual().nome}`, curto: 'ENTRAR', fn: entrarSair }; }
   if (pedirAcao && perto) perto.fn(); pedirAcao = false;
   $('prompt').hidden = !perto; if (perto) $('prompt-txt').textContent = perto.txt; $('b-acao').hidden = !perto; if (perto) $('b-acao').textContent = perto.curto;
-  anelVenda.material.opacity = 0.45 + 0.3 * Math.sin(tempoTotal * 3); anelLoja.material.opacity = 0.45 + 0.3 * Math.sin(tempoTotal * 3 + 1);
+  anelVenda.material.opacity = 0.45 + 0.3 * Math.sin(tempoTotal * 3); anelLoja.material.opacity = 0.45 + 0.3 * Math.sin(tempoTotal * 3 + 1); anelFoguete.material.opacity = 0.45 + 0.3 * Math.sin(tempoTotal * 3 + 2);
   // meteoros
   if (est.total > 200 && ativo) { meteoroT -= dt; if (meteoroT <= 0) { meteoroT = rr(180, 260); chuva(); } } atualizarMeteoros(dt);
   atualizarPo(dt);
   // câmera atrás do astronauta
   astro.g.updateMatrixWorld(true); capacete.getWorldPosition(H_); const cpt = Math.cos(J.pitch), dX = -Math.sin(J.yaw) * cpt, dY = Math.sin(J.pitch), dZ = -Math.cos(J.yaw) * cpt;
-  const alvoY = H_.y + 0.35; cam.dist += ((carro.dentro ? (carro.id === 'varre' ? 8 : 7.5) : 4.6) - cam.dist) * Math.min(1, dt * 3); let dd = cam.dist; camera.position.set(H_.x - dX * dd + Math.cos(J.yaw) * 0.45, alvoY - dY * dd, H_.z - dZ * dd - Math.sin(J.yaw) * 0.45);
+  const alvoY = H_.y + 0.35; cam.dist += ((carro.dentro ? vAtual().cam : 4.6) - cam.dist) * Math.min(1, dt * 3); let dd = cam.dist; camera.position.set(H_.x - dX * dd + Math.cos(J.yaw) * 0.45, alvoY - dY * dd, H_.z - dZ * dd - Math.sin(J.yaw) * 0.45);
   const minY = altura(camera.position.x, camera.position.z) + 0.4; if (camera.position.y < minY) camera.position.y = minY;
   camera.rotation.set(J.pitch, J.yaw, 0);
   // sol e sombra seguem você
@@ -696,11 +788,11 @@ function quadro(agora) { requestAnimationFrame(quadro);
   // HUD
   if (avisoT > 0) { avisoT -= dtR; if (avisoT <= 0) $('aviso').hidden = true; }
   if (jogando) { hud(); mapaT -= dtR; if (mapaT <= 0) { mapaT = 0.5; desenharMapa(); } salvarT += dtR; if (salvarT > 10) { salvarT = 0; salvar(); }
-    if (!est.venceu && sujos / TOTAL < 0.01) { est.venceu = true; jogando = false; soltarMouse(); $('vit-txt').textContent = `Você limpou a Lua inteira e ganhou ${Math.floor(est.total).toLocaleString('pt-BR')} moedas no caminho. Os Lunitos estão orgulhosos!`; $('vitoria').hidden = false; salvar(); } }
+    if (!est.venceu && sujos / TOTAL < 0.01) { est.venceu = true; jogando = false; soltarMouse(); $('vit-txt').textContent = `Você limpou ${NOME_FASE.toLowerCase()} inteir${FASE.gen} e ganhou ${Math.floor(est.total).toLocaleString('pt-BR')} moedas no caminho. Os Lunitos estão orgulhosos!`; $('vitoria').hidden = false; salvar(); } }
   if (!jogando && $('menu').hidden === false) { const t = tempoTotal * 0.05; camera.position.set(Math.cos(t) * 26, 9, Math.sin(t) * 26); camera.lookAt(0, 2, 0); }
   Rd.render(cena, camera);
 }
 requestAnimationFrame(quadro);
-window.__lua = { est, limpar, MASC, RESTO, ESP, ITENS, astro, J, pets, vender, abrirLoja, coletar, chuva, get sujos() { return sujos; }, TOTAL, nivelEm, altura, camera, Rd, idx, montarFerramenta, salvar, carro, entrarSair, trocarCarro };
+window.__lua = { est, limpar, MASC, RESTO, ESP, ITENS, astro, J, pets, vender, abrirLoja, coletar, chuva, get sujos() { return sujos; }, TOTAL, nivelEm, altura, camera, Rd, idx, montarFerramenta, salvar, carro, entrarSair, trocarCarro, FASE, viajar, abrirViagem };
 })();
 </script>
