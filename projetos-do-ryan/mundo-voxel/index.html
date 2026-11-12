@@ -1,0 +1,196 @@
+<title>Mundo Voxel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Nunito:wght@700;800&display=swap">
+<style>
+  /* Layout: mundo 3D na tela toda; mira no centro; barra de blocos embaixo; controles de toque nos cantos */
+  :root { --ceu: #8fc8ff; --painel: rgba(18,24,34,.78); --borda: rgba(255,255,255,.22); --texto: #f2f6fb; --sub: #b9c6d6; --sel: #ffd23d;
+    --pixel: "Silkscreen", "Courier New", monospace; --corpo: "Nunito", system-ui, sans-serif; color-scheme: dark; }
+  html, body { height: 100%; margin: 0; overflow: hidden; background: var(--ceu); color: var(--texto); font-family: var(--corpo); touch-action: none; user-select: none; -webkit-user-select: none; }
+  canvas#mundo { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  .mira { position: fixed; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; pointer-events: none; z-index: 3; }
+  .mira::before, .mira::after { content: ""; position: absolute; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.5); }
+  .mira::before { left: 10px; top: 0; width: 2px; height: 22px; } .mira::after { top: 10px; left: 0; width: 22px; height: 2px; }
+  .info { position: fixed; top: max(10px, env(safe-area-inset-top, 0px)); left: max(12px, env(safe-area-inset-left, 0px)); z-index: 4; background: var(--painel); border: 1px solid var(--borda); border-radius: 10px; padding: 8px 12px; font: 700 12px/1.5 var(--pixel); pointer-events: none; }
+  .info b { font-size: 14px; color: var(--sel); }
+  .ajuda { position: fixed; top: max(10px, env(safe-area-inset-top, 0px)); right: max(12px, env(safe-area-inset-right, 0px)); z-index: 4; background: var(--painel); border: 1px solid var(--borda); border-radius: 10px; padding: 8px 12px; font: 700 12px/1.55 var(--corpo); color: var(--sub); max-width: 260px; }
+  .ajuda b { color: var(--texto); }
+  .barra { position: fixed; left: 50%; transform: translateX(-50%); bottom: max(12px, env(safe-area-inset-bottom, 0px)); z-index: 4; display: flex; gap: 6px; background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 6px; }
+  .barra button { width: 54px; height: 54px; border-radius: 8px; border: 2px solid transparent; background: rgba(255,255,255,.06); padding: 6px; cursor: pointer; display: grid; place-items: center; position: relative; }
+  .barra button canvas { width: 34px; height: 34px; image-rendering: pixelated; }
+  .barra button[aria-pressed="true"] { border-color: var(--sel); background: rgba(255,210,61,.18); }
+  .barra button span { position: absolute; top: 2px; left: 5px; font: 700 10px var(--pixel); color: var(--sub); }
+  .barra button:focus-visible, .toque button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .toque { position: fixed; z-index: 5; display: grid; gap: 6px; }
+  .toque button { width: 54px; height: 54px; border-radius: 12px; border: 1px solid var(--borda); background: var(--painel); color: var(--texto); font: 800 20px var(--corpo); }
+  .toque button:active { background: rgba(255,255,255,.25); }
+  #mover { left: max(12px, env(safe-area-inset-left, 0px)); bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + 76px); grid-template-columns: repeat(3, 54px); }
+  #acoes { right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + 76px); grid-template-columns: 76px; }
+  #acoes button { width: 76px; font-size: 14px; }
+  #acoes .rem { background: rgba(217,59,84,.85); } #acoes .add { background: rgba(46,180,100,.85); }
+  @media (hover: hover) and (pointer: fine) { .toque { display: none; } }
+  @media (max-width: 600px) { .ajuda { display: none; } .barra button { width: 44px; height: 44px; } .barra button canvas { width: 28px; height: 28px; } }
+</style>
+
+<canvas id="mundo" aria-label="Mundo de blocos em 3D"></canvas>
+<div class="mira" aria-hidden="true"></div>
+<div class="info" id="info">Blocos: <b id="nblocos">0</b><br>Mirando: <span id="mirando">nada</span></div>
+<div class="ajuda"><b>Computador:</b> clique na tela para olhar com o mouse · <b>WASD</b> anda · <b>Espaço</b> sobe · <b>Shift</b> desce · <b>clique esquerdo</b> remove · <b>clique direito</b> adiciona · <b>1–5</b> escolhe o bloco<br><b>Celular:</b> arraste para olhar e use os botões</div>
+<div class="barra" id="barra" role="toolbar" aria-label="Escolher bloco"></div>
+<div class="toque" id="mover" aria-label="Andar">
+  <button data-k="sobe" aria-label="Subir">⤒</button><button data-k="w" aria-label="Frente">▲</button><button data-k="desce" aria-label="Descer">⤓</button>
+  <button data-k="a" aria-label="Esquerda">◀</button><button data-k="s" aria-label="Trás">▼</button><button data-k="d" aria-label="Direita">▶</button>
+</div>
+<div class="toque" id="acoes"><button class="rem" id="b-rem">⛏️ Tirar</button><button class="add" id="b-add">🧱 Pôr</button></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+'use strict';
+// ---------- texturas de 16×16 pontinhos (sem borrar) ----------
+function pixel(desenha, semente) {
+  const c = document.createElement('canvas'); c.width = c.height = 16; const g = c.getContext('2d');
+  let s = semente * 7919 + 13; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  desenha(g, r); const t = new THREE.CanvasTexture(c); t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.encoding = THREE.sRGBEncoding; t.canvas = c; return t;
+}
+const ruido = (g, r, cores) => { for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { g.fillStyle = cores[Math.floor(r() * cores.length)]; g.fillRect(x, y, 1, 1); } };
+const TERRA = ['#8a5a3c', '#7b4f33', '#946446', '#6e4630'], VERDE = ['#62c04c', '#58b545', '#6fcc58', '#4fa83f'], PEDRA = ['#8f919b', '#80828c', '#9a9ca6', '#74767f'];
+const L = t => new THREE.MeshLambertMaterial({ map: t });
+const tTerra = pixel((g, r) => ruido(g, r, TERRA), 2), tGramaL = pixel((g, r) => { ruido(g, r, TERRA); for (let x = 0; x < 16; x++) { const h = 3 + Math.floor(r() * 3); for (let y = 0; y < h; y++) { g.fillStyle = VERDE[Math.floor(r() * 4)]; g.fillRect(x, y, 1, 1); } } }, 4);
+const tGramaT = pixel((g, r) => ruido(g, r, VERDE), 3), tPedra = pixel((g, r) => ruido(g, r, PEDRA), 5);
+const tMadeira = pixel((g, r) => { for (let x = 0; x < 16; x++) { const b = x % 5 === 0 ? '#5e3d22' : x % 2 ? '#7a5230' : '#86603a'; for (let y = 0; y < 16; y++) { g.fillStyle = r() < 0.15 ? '#6a4628' : b; g.fillRect(x, y, 1, 1); } } }, 8);
+const tTabua = pixel((g, r) => { ruido(g, r, ['#c89a5e', '#b98b52', '#d3a76a']); g.fillStyle = '#7a5230'; [3, 7, 11, 15].forEach(y => g.fillRect(0, y, 16, 1)); }, 9);
+const mTerra = L(tTerra), mGramaL = L(tGramaL);
+// tipos de bloco (o "prefab" do Unity): faces +x, -x, +y, -y, +z, -z
+const TIPOS = [
+  { nome: 'Grama', mat: [mGramaL, mGramaL, L(tGramaT), mTerra, mGramaL, mGramaL], icone: tGramaL },
+  { nome: 'Terra', mat: mTerra, icone: tTerra },
+  { nome: 'Pedra', mat: L(tPedra), icone: tPedra },
+  { nome: 'Madeira', mat: L(tMadeira), icone: tMadeira },
+  { nome: 'Tábua', mat: L(tTabua), icone: tTabua }
+];
+
+// ---------- cena ----------
+const canvas = document.getElementById('mundo');
+const R = new THREE.WebGLRenderer({ canvas, antialias: true }); R.setPixelRatio(Math.min(devicePixelRatio || 1, 2)); R.outputEncoding = THREE.sRGBEncoding;
+const cena = new THREE.Scene(); cena.background = new THREE.Color(0x8fc8ff); cena.fog = new THREE.Fog(0x8fc8ff, 30, 70);
+cena.add(new THREE.HemisphereLight(0xffffff, 0x556070, 0.95)); const sol = new THREE.DirectionalLight(0xffffff, 0.7); sol.position.set(8, 20, 5); cena.add(sol);
+const camera = new THREE.PerspectiveCamera(70, 1, 0.05, 200);
+camera.position.set(10, 7.5, 27); camera.rotation.order = 'YXZ';
+let yaw = 0, pitch = -0.32;
+const geo = new THREE.BoxGeometry(1, 1, 1);
+const chao = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshLambertMaterial({ color: 0x4f8a3a })); chao.rotation.x = -Math.PI / 2; chao.position.y = -0.5; cena.add(chao);
+
+// ================= VoxelBlock =================
+// guarda a posição do bloco no grid (como o componente VoxelBlock)
+class VoxelBlock { constructor(gridPosition) { this.gridPosition = gridPosition.clone(); } }
+
+// ================= VoxelWorld =================
+class VoxelWorld {
+  constructor(largura = 20, profundidade = 20, altura = 4) {
+    this.largura = largura; this.profundidade = profundidade; this.altura = altura;
+    this.blocos = new Map(); // Dictionary<Vector3Int, GameObject>
+    this.grupo = new THREE.Group(); cena.add(this.grupo);
+  }
+  chave(p) { return p.x + ',' + p.y + ',' + p.z; }
+  Start() { this.CriarMundo(); }
+  CriarMundo() {
+    for (let x = 0; x < this.largura; x++) for (let z = 0; z < this.profundidade; z++) for (let y = 0; y < this.altura; y++)
+      this.AdicionarBloco(new THREE.Vector3(x, y, z), y === this.altura - 1 ? 0 : y === 0 ? 2 : 1); // grama em cima, pedra embaixo
+  }
+  AdicionarBloco(posicao, tipo = 0) {
+    const k = this.chave(posicao); if (this.blocos.has(k)) return;
+    const novoBloco = new THREE.Mesh(geo, TIPOS[tipo].mat); // Instantiate(blocoPrefab, posicao, ...)
+    novoBloco.position.copy(posicao); novoBloco.userData.voxel = new VoxelBlock(posicao);
+    this.grupo.add(novoBloco); this.blocos.set(k, novoBloco); atualizaInfo();
+  }
+  RemoverBloco(posicao) {
+    const k = this.chave(posicao); if (!this.blocos.has(k)) return;
+    this.grupo.remove(this.blocos.get(k)); this.blocos.delete(k); atualizaInfo(); // Destroy(...)
+  }
+  ExisteBloco(posicao) { return this.blocos.has(this.chave(posicao)); }
+}
+
+// ================= VRBlockInteraction =================
+class VRBlockInteraction {
+  constructor(vrCamera, mundo) { this.vrCamera = vrCamera; this.mundo = mundo; this.distanciaMaxima = 8; this.raycaster = new THREE.Raycaster(); this.botaoRemover = false; this.botaoAdicionar = false; this.tipo = 0; this.contorno = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1.02, 1.02, 1.02)), new THREE.LineBasicMaterial({ color: 0x111111 })); this.contorno.visible = false; cena.add(this.contorno); }
+  Update() {
+    // raio do centro da câmera para a frente, até distanciaMaxima
+    this.raycaster.set(this.vrCamera.position, this.vrCamera.getWorldDirection(new THREE.Vector3())); this.raycaster.far = this.distanciaMaxima;
+    const impacto = this.raycaster.intersectObjects(this.mundo.grupo.children, false)[0];
+    const remover = this.botaoRemover, adicionar = this.botaoAdicionar; this.botaoRemover = this.botaoAdicionar = false; // "WasPressedThisFrame"
+    if (!impacto) { this.contorno.visible = false; document.getElementById('mirando').textContent = 'nada'; return; }
+    const bloco = impacto.object.userData.voxel; if (!bloco) return;
+    this.contorno.visible = true; this.contorno.position.copy(bloco.gridPosition);
+    const g = bloco.gridPosition; document.getElementById('mirando').textContent = `(${g.x}, ${g.y}, ${g.z})`;
+    if (remover) { this.mundo.RemoverBloco(bloco.gridPosition); som(180); }
+    if (adicionar) {
+      const normal = impacto.face.normal.clone().transformDirection(impacto.object.matrixWorld);
+      const ponto = impacto.point.clone().add(normal.multiplyScalar(0.5)); // impacto.point + impacto.normal * 0.5f
+      const novaPosicao = new THREE.Vector3(Math.round(ponto.x), Math.round(ponto.y), Math.round(ponto.z)); // Mathf.RoundToInt
+      const dentro = Math.abs(novaPosicao.x - camera.position.x) < 0.6 && Math.abs(novaPosicao.z - camera.position.z) < 0.6 && novaPosicao.y > camera.position.y - 1.9 && novaPosicao.y < camera.position.y + 0.6;
+      if (!this.mundo.ExisteBloco(novaPosicao) && !dentro) { this.mundo.AdicionarBloco(novaPosicao, this.tipo); som(420); }
+    }
+  }
+}
+
+const mundo = new VoxelWorld(20, 20, 4);
+const interacao = new VRBlockInteraction(camera, mundo);
+function atualizaInfo() { document.getElementById('nblocos').textContent = mundo ? mundo.blocos.size : 0; }
+mundo.Start();
+
+// ---------- som curtinho ----------
+let ac = null; function som(f) { try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime; o.type = 'square'; o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f / 2, t + 0.08); g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.1); o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.12); } catch (e) {} }
+
+// ---------- barra de blocos ----------
+const barra = document.getElementById('barra');
+TIPOS.forEach((t, i) => {
+  const b = document.createElement('button'); b.setAttribute('aria-label', t.nome); b.title = t.nome; b.innerHTML = `<span>${i + 1}</span>`;
+  const c = document.createElement('canvas'); c.width = c.height = 16; c.getContext('2d').drawImage(t.icone.canvas, 0, 0); b.appendChild(c);
+  b.onclick = () => escolhe(i); barra.appendChild(b);
+});
+function escolhe(i) { interacao.tipo = i; [...barra.children].forEach((b, k) => b.setAttribute('aria-pressed', k === i)); }
+escolhe(0);
+
+// ---------- controles ----------
+const TECLAS = new Set();
+addEventListener('keydown', e => { const k = e.key.toLowerCase(); TECLAS.add(k); if (k >= '1' && k <= '5') escolhe(+k - 1); if (k === ' ') e.preventDefault(); });
+addEventListener('keyup', e => TECLAS.delete(e.key.toLowerCase()));
+addEventListener('blur', () => TECLAS.clear());
+const olha = (dx, dy) => { yaw -= dx * 0.004; pitch = Math.max(-1.5, Math.min(1.5, pitch - dy * 0.004)); };
+// computador: clique trava o mouse (olhar); sem trava, arrastar também olha
+let arrasta = null;
+canvas.addEventListener('mousedown', e => { arrasta = { x: e.clientX, y: e.clientY, moveu: 0, botao: e.button }; if (document.pointerLockElement !== canvas && canvas.requestPointerLock) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (er) {} } });
+addEventListener('mousemove', e => { if (document.pointerLockElement === canvas) olha(e.movementX, e.movementY); else if (arrasta) { olha(e.clientX - arrasta.x, e.clientY - arrasta.y); arrasta.moveu += Math.abs(e.clientX - arrasta.x) + Math.abs(e.clientY - arrasta.y); arrasta.x = e.clientX; arrasta.y = e.clientY; } });
+addEventListener('mouseup', e => { if (arrasta && (arrasta.moveu < 6 || document.pointerLockElement === canvas)) { if (e.button === 0) interacao.botaoRemover = true; if (e.button === 2) interacao.botaoAdicionar = true; } arrasta = null; });
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+// celular: arrastar o dedo olha; botões andam e põem/tiram blocos
+let dedo = null;
+canvas.addEventListener('touchstart', e => { const t = e.changedTouches[0]; dedo = { id: t.identifier, x: t.clientX, y: t.clientY }; }, { passive: true });
+canvas.addEventListener('touchmove', e => { for (const t of e.changedTouches) if (dedo && t.identifier === dedo.id) { olha((t.clientX - dedo.x) * 1.4, (t.clientY - dedo.y) * 1.4); dedo.x = t.clientX; dedo.y = t.clientY; } e.preventDefault(); }, { passive: false });
+canvas.addEventListener('touchend', () => { dedo = null; });
+document.querySelectorAll('#mover button').forEach(b => { const k = b.dataset.k, on = e => { e.preventDefault(); TECLAS.add(k); }, off = () => TECLAS.delete(k); b.addEventListener('pointerdown', on); ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => b.addEventListener(ev, off)); });
+document.getElementById('b-rem').addEventListener('pointerdown', e => { e.preventDefault(); interacao.botaoRemover = true; });
+document.getElementById('b-add').addEventListener('pointerdown', e => { e.preventDefault(); interacao.botaoAdicionar = true; });
+
+// ---------- a cada quadro ----------
+let antes = performance.now();
+function quadro(agora) {
+  requestAnimationFrame(quadro);
+  const dt = Math.min(0.05, (agora - antes) / 1000); antes = agora;
+  const w = innerWidth, h = innerHeight; if (canvas.width !== Math.floor(w * R.getPixelRatio()) || canvas.height !== Math.floor(h * R.getPixelRatio())) { R.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  camera.rotation.set(pitch, yaw, 0);
+  const frente = new THREE.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw)), lado = new THREE.Vector3(Math.cos(yaw), 0, -Math.sin(yaw)), v = new THREE.Vector3();
+  if (TECLAS.has('w') || TECLAS.has('arrowup')) v.add(frente); if (TECLAS.has('s') || TECLAS.has('arrowdown')) v.sub(frente);
+  if (TECLAS.has('d') || TECLAS.has('arrowright')) v.add(lado); if (TECLAS.has('a') || TECLAS.has('arrowleft')) v.sub(lado);
+  if (TECLAS.has(' ') || TECLAS.has('sobe')) v.y += 1; if (TECLAS.has('shift') || TECLAS.has('desce')) v.y -= 1;
+  if (v.lengthSq()) camera.position.addScaledVector(v.normalize(), dt * 6);
+  camera.position.y = Math.max(0.6, camera.position.y);
+  interacao.Update();
+  R.render(cena, camera);
+}
+requestAnimationFrame(quadro);
+window.__mundo = mundo; window.__interacao = interacao; // para testes
+})();
+</script>
