@@ -64,7 +64,7 @@
   .pedal.on { filter: brightness(1.25); transform: scale(.95); }
   #ctl-botoes { right: max(12px, env(safe-area-inset-right, 0px)); top: calc(max(10px, env(safe-area-inset-top, 0px)) + 196px); display: none; gap: 8px; }
   body.dirigindo #ctl-botoes { display: flex; }
-  #ctl-botoes button { width: 54px; height: 54px; padding: 0; border-radius: 50%; font-size: 12px; background: rgba(12,16,24,.78); }
+  #ctl-botoes button { width: 54px; height: 54px; padding: 0; border-radius: 50%; font-size: 12px; line-height: 1.05; background: rgba(12,16,24,.78); } #ctl-botoes button[data-cam] { font-size: 14px; } #ctl-botoes { flex-wrap: wrap; justify-content: flex-end; max-width: 260px; }
   #ctl-botoes button.on { border-color: var(--amarelo); color: var(--amarelo); }
   /* telas */
   .tela { position: fixed; inset: 0; z-index: 10; overflow-y: auto; display: grid; place-items: center; padding-block: 20px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); background: linear-gradient(90deg, rgba(5,7,11,.92), rgba(5,7,11,.55) 60%, rgba(5,7,11,.2)); }
@@ -118,10 +118,10 @@
 </div>
 <div id="aviso" hidden></div>
 <div id="flash"></div>
-<div class="hud" id="dicas"><kbd>W</kbd> acelerar · <kbd>S</kbd> frear e ré · <kbd>A</kbd><kbd>D</kbd> virar<br><kbd>C</kbd> câmera · <kbd>L</kbd> faróis · <kbd>H</kbd> buzina · <kbd>ESC</kbd> pausa · arraste o mouse para olhar</div>
+<div class="hud" id="dicas"><kbd>W</kbd> acelerar · <kbd>S</kbd> frear e ré · <kbd>A</kbd><kbd>D</kbd> virar<br><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 1ª, 2ª e 3ª pessoa · <kbd>C</kbd> troca câmera · <kbd>L</kbd> faróis · <kbd>H</kbd> buzina · <kbd>ESC</kbd> pausa · arraste o mouse para olhar</div>
 <div class="ctl" id="ctl-volante"><div class="aro"></div><span>ARRASTE PARA OS LADOS</span></div>
 <div class="ctl" id="ctl-pedais"><button class="pedal" id="b-freio" type="button">FREIO<br>RÉ</button><button class="pedal" id="b-acel" type="button">ACELERAR</button></div>
-<div class="ctl" id="ctl-botoes"><button type="button" id="b-cam">CÂMERA</button><button type="button" id="b-farol">FAROL</button><button type="button" id="b-buzina">BUZINA</button><button type="button" id="b-pausa">PAUSA</button></div>
+<div class="ctl" id="ctl-botoes"><button type="button" data-cam="1" title="1ª pessoa: dentro da cabine">1ª<br>PESSOA</button><button type="button" data-cam="2" title="2ª pessoa: olhando para você">2ª<br>PESSOA</button><button type="button" data-cam="3" class="on" title="3ª pessoa: atrás do caminhão">3ª<br>PESSOA</button><button type="button" data-cam="4" title="Câmera de cinema">🎬</button><button type="button" id="b-farol">FAROL</button><button type="button" id="b-buzina">BUZINA</button><button type="button" id="b-pausa">PAUSA</button></div>
 <div id="fade"></div>
 
 <div class="tela" id="menu">
@@ -154,6 +154,7 @@
   <div class="bloco" style="width:min(100%,460px)">
     <h2>Pausa</h2>
     <p class="sub" id="p-info"></p>
+    <div class="linha"><span class="rot">Câmera</span><div class="linha" role="group" aria-label="Câmera"><button type="button" data-pcam="1">1ª pessoa</button><button type="button" data-pcam="2">2ª pessoa</button><button type="button" data-pcam="3">3ª pessoa</button><button type="button" data-pcam="4">Cinema</button></div></div>
     <button class="principal" id="p-voltar" type="button">Continuar viagem</button>
     <button id="p-guincho" type="button">Chamar guincho (R$ 400)</button>
     <button id="p-desistir" type="button">Desistir da carga</button>
@@ -503,6 +504,7 @@ function roda(pai, x, y, z, R, larg, duplo, aro = MAT.cromo, lado) { const w = n
   const sx = lado || Math.sign(x) || 1; add(new THREE.CylinderGeometry(R * 0.22, R * 0.28, 0.12, 10).rotateZ(Math.PI / 2), MAT.preto, sx * (larg * (duplo ? 1.1 : 0.5) + 0.03), 0, 0, w, false);
   for (let k = 0; k < 8; k++) { const a = k / 8 * Math.PI * 2, p = add(new THREE.CylinderGeometry(0.025, 0.025, 0.06, 6).rotateZ(Math.PI / 2), MAT.cromo, sx * (larg * (duplo ? 1.1 : 0.5) + 0.02), Math.cos(a) * R * 0.38, Math.sin(a) * R * 0.38, w, false); }
   return w; }
+const tGpsCab = new THREE.CanvasTexture(document.getElementById('gps')); tGpsCab.encoding = THREE.sRGBEncoding;
 function montarCavalo(modelo, corHex) {
   const M = CAMINHOES.find(c => c.id === modelo) || CAMINHOES[0], g = new THREE.Group(), cab = new THREE.Group(); g.add(cab);
   const pint = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(corHex).convertSRGBToLinear(), roughness: 0.28, metalness: 0.35, clearcoat: 1, clearcoatRoughness: 0.08 });
@@ -538,17 +540,49 @@ function montarCavalo(modelo, corHex) {
   const traseiros = M.eixosTras === 2 ? [0.68, -0.68] : [0]; for (const z of traseiros) for (const s of [-1, 1]) rodas.push(roda(g, s * 0.98, R, z, R, 0.3, true));
   // lanternas traseiras
   for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.3, 0.12, 0.05), MAT.luzVermelha, s * 1.0, 0.9, -1.3, g, false);
-  // interior (só aparece na câmera de dentro)
+  // ===== interior: aparece na câmera de 1ª pessoa =====
   const dentro = new THREE.Group(); dentro.visible = false; cab.add(dentro);
-  const painel = add(new THREE.BoxGeometry(2.3, 0.35, 0.6), std({ color: 0x141518, roughness: 0.8 }), 0, 2.05, fz - 0.45, dentro, false); painel.rotation.x = -0.25;
-  const volante = new THREE.Group(); volante.position.set(0.55, 2.15, fz - 0.95); volante.rotation.x = -0.9; dentro.add(volante);
-  add(new THREE.TorusGeometry(0.24, 0.025, 8, 28), MAT.preto, 0, 0, 0, volante, false); add(new THREE.BoxGeometry(0.4, 0.04, 0.03), MAT.preto, 0, 0, 0, volante, false); add(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 14).rotateX(Math.PI / 2), MAT.cromo, 0, 0, 0, volante, false);
-  for (const s of [-1, 1]) { const col = add(new THREE.BoxGeometry(0.1, 1.15, 0.1), std({ color: 0x2a2d33, roughness: 0.8 }), s * 1.12, 2.62, fz - 0.15, dentro, false); col.rotation.x = -0.2; }
-  add(new THREE.BoxGeometry(2.3, 0.12, 1.6), std({ color: 0x3a3d44, roughness: 0.9 }), 0, topo - 0.15, fz - 0.9, dentro, false);
-  const mostrador = add(new THREE.PlaneGeometry(0.5, 0.18), std({ color: 0x000000, emissive: 0x5ab8ff, emissiveIntensity: 0.6 }), 0.55, 2.24, fz - 0.6, dentro, false); mostrador.rotation.x = -0.6;
-  cab.traverse(o => { if (o.isMesh && !dentro.children.includes(o) && o.parent !== volante) o.userData.casca = true; });
+  const plast = std({ color: 0x1a1c20, roughness: 0.85 }), plast2 = std({ color: 0x2b2e34, roughness: 0.8 }), tecido = std({ color: 0x3d4656, roughness: 1 }), forro = std({ color: 0x8e887b, roughness: 1 }), couro = std({ color: 0x202226, roughness: 0.55 }), madeira = std({ color: 0x5a3a22, roughness: 0.5 });
+  const D = (geo, mat, x, y, z) => add(geo, mat, x, y, z, dentro, false), prof = fz - tras;
+  // painel inteiro, capô dos instrumentos e saídas de ar
+  D(new THREE.BoxGeometry(2.3, 0.85, 0.6), plast, 0, 1.72, fz - 0.38); const tp = D(new THREE.BoxGeometry(2.32, 0.07, 0.72), plast2, 0, 2.16, fz - 0.42); tp.rotation.x = 0.1;
+  D(new THREE.BoxGeometry(0.82, 0.04, 0.26), plast, 0.55, 2.35, fz - 0.74); D(new THREE.BoxGeometry(2.0, 0.05, 0.05), madeira, -0.1, 2.06, fz - 0.71);
+  for (const x of [-0.95, -0.15, 0.05, 1.0]) { const v = D(new THREE.BoxGeometry(0.16, 0.08, 0.02), std({ color: 0x08090a, roughness: 0.9 }), x, 1.96, fz - 0.69); for (let k = 0; k < 3; k++) D(new THREE.BoxGeometry(0.15, 0.008, 0.025), plast2, x, 1.94 + k * 0.022, fz - 0.7); }
+  // mostradores com ponteiros que se mexem
+  const cvP = document.createElement('canvas'); cvP.width = 512; cvP.height = 220; const tP = new THREE.CanvasTexture(cvP); tP.encoding = THREE.sRGBEncoding;
+  const telaP = D(new THREE.PlaneGeometry(0.7, 0.3), new THREE.MeshBasicMaterial({ map: tP, toneMapped: false }), 0.55, 2.2, fz - 0.83); telaP.rotation.set(0.35, Math.PI, 0);
+  // tela do GPS no meio do painel
+  const telaG = D(new THREE.PlaneGeometry(0.34, 0.34), new THREE.MeshBasicMaterial({ map: tGpsCab, toneMapped: false }), -0.12, 2.29, fz - 0.67); telaG.rotation.set(0.3, Math.PI - 0.35, 0);
+  const molduraG = D(new THREE.BoxGeometry(0.4, 0.4, 0.03), plast, -0.12, 2.29, fz - 0.63); molduraG.rotation.copy(telaG.rotation);
+  // rádio com luzinha
+  D(new THREE.BoxGeometry(0.34, 0.1, 0.02), std({ color: 0x000000, emissive: 0x4fe08a, emissiveIntensity: 0.8 }), -0.12, 1.9, fz - 0.69);
+  // volante com 3 raios, cubo e coluna
+  const volante = new THREE.Group(); volante.position.set(0.55, 2.1, fz - 1.02); volante.rotation.x = 0.8; dentro.add(volante);
+  add(new THREE.TorusGeometry(0.25, 0.032, 10, 40), couro, 0, 0, 0, volante, false);
+  for (const a of [Math.PI, Math.PI / 2, -Math.PI / 2]) { const r = add(new THREE.BoxGeometry(0.045, 0.2, 0.022), plast2, 0, 0, 0, volante, false); r.geometry.translate(0, 0.12, 0); r.rotation.z = a; }
+  add(new THREE.CylinderGeometry(0.075, 0.08, 0.06, 20).rotateX(Math.PI / 2), plast, 0, 0, -0.01, volante, false); add(new THREE.CylinderGeometry(0.03, 0.03, 0.065, 14).rotateX(Math.PI / 2), MAT.cromo, 0, 0, -0.015, volante, false);
+  add(new THREE.CylinderGeometry(0.045, 0.06, 0.5, 12).rotateX(Math.PI / 2), plast, 0, 0, 0.26, volante, false);
+  // alavanca de câmbio e console
+  D(new THREE.BoxGeometry(0.32, 0.4, 0.8), plast2, 0.02, 1.35, fz - 1.3); D(new THREE.CylinderGeometry(0.015, 0.02, 0.35, 8), MAT.cromo, 0.08, 1.7, fz - 1.15); D(new THREE.SphereGeometry(0.05, 12, 10), plast, 0.08, 1.88, fz - 1.15);
+  // bancos
+  for (const s of [1, -1]) { D(new THREE.BoxGeometry(0.56, 0.16, 0.55), tecido, s * 0.55, 1.5, fz - 1.75); const enc = D(new THREE.BoxGeometry(0.56, 0.8, 0.13), tecido, s * 0.55, 1.95, fz - 2.06); enc.rotation.x = -0.15; D(new THREE.BoxGeometry(0.3, 0.2, 0.1), tecido, s * 0.55, 2.45, fz - 2.13); }
+  // portas, colunas, parede de trás, teto e chão (por dentro)
+  for (const s of [-1, 1]) { D(new THREE.BoxGeometry(0.05, 0.98, prof - 0.1), plast2, s * 1.17, 1.66, tras + prof / 2); D(new THREE.BoxGeometry(0.1, 0.05, 0.9), plast, s * 1.13, 2.0, fz - 1.2);
+    D(new THREE.BoxGeometry(0.05, topo - 3.08, prof - 0.1), forro, s * 1.17, (3.08 + topo) / 2, tras + prof / 2); D(new THREE.BoxGeometry(0.05, 1.0, Math.max(0.1, fz - 1.25 - tras)), plast2, s * 1.17, 2.62, tras + (fz - 1.25 - tras) / 2);
+    const a = D(new THREE.BoxGeometry(0.1, topo - 2.1, 0.12), plast2, s * 1.12, (2.1 + topo) / 2, fz - 0.15); a.rotation.x = -0.2;
+    const pala = D(new THREE.BoxGeometry(0.75, 0.025, 0.28), forro, s * 0.55, Math.min(3.15, topo - 0.12), fz - 0.38); pala.rotation.x = 0.35; }
+  D(new THREE.BoxGeometry(2.3, topo - 1.15, 0.05), tecido, 0, (1.15 + topo) / 2, tras + 0.06); D(new THREE.BoxGeometry(2.3, 0.05, prof), forro, 0, topo - 0.06, tras + prof / 2); D(new THREE.BoxGeometry(2.3, 0.04, prof), std({ color: 0x15161a, roughness: 1 }), 0, 1.2, tras + prof / 2);
+  D(new THREE.BoxGeometry(2.3, Math.max(0.08, topo - 3.12), 0.08), forro, 0, (3.12 + topo) / 2, fz - 0.2);
+  if (M.alta) D(new THREE.BoxGeometry(2.2, 0.25, 0.7), tecido, 0, 1.55, tras + 0.45);
+  // cachorrinho de painel que balança
+  const cao = new THREE.Group(); cao.position.set(-0.75, 2.22, fz - 0.32); dentro.add(cao); add(new THREE.BoxGeometry(0.1, 0.07, 0.16), std({ color: 0xc9883a, roughness: 0.8 }), 0, 0, 0, cao, false);
+  const cabeca = new THREE.Group(); cabeca.position.set(0, 0.07, -0.06); cao.add(cabeca); add(new THREE.SphereGeometry(0.055, 14, 10), std({ color: 0xc9883a, roughness: 0.8 }), 0, 0.04, 0, cabeca, false);
+  for (const s of [-1, 1]) { add(new THREE.SphereGeometry(0.012, 8, 6), MAT.preto, s * 0.022, 0.05, -0.05, cabeca, false); add(new THREE.BoxGeometry(0.02, 0.06, 0.04), std({ color: 0x5a3a22 }), s * 0.05, 0.05, 0, cabeca, false); }
+  // limpadores de para-brisa (por fora, aparecem na chuva)
+  const limp = []; for (const x of [0.75, -0.3]) { const p = new THREE.Group(); p.position.set(x, 2.12, fz + 0.0); p.rotation.x = -0.2; cab.add(p); const braco = new THREE.Group(); p.add(braco);
+    add(new THREE.BoxGeometry(0.025, 0.88, 0.025).translate(0, 0.44, 0.02), MAT.preto, 0, 0, 0, braco, false); braco.rotation.z = Math.PI / 2; limp.push(braco); }
   g.traverse(o => { if (o.isMesh) o.receiveShadow = true; });
-  return { g, cab, rodas, piv, dentro, volante, farolG, fz, topo, M, pint, olho: V3(0.55, 2.62, fz - 1.15) }; }
+  return { g, cab, rodas, piv, dentro, volante, farolG, fz, topo, M, pint, olho: V3(0.55, 2.62, fz - 1.68), painel: { cv: cvP, ctx: cvP.getContext('2d'), tex: tP }, cabeca, limp }; }
 function montarReboque(tipo, corHex, frio) {
   const g = new THREE.Group(), rodas = [], C = 12.8, R = 0.5; // pino-rei em z=0, carreta vai para trás
   const corCarga = new THREE.Color(corHex || 0xe8e8e8).convertSRGBToLinear();
@@ -698,7 +732,9 @@ function posicionarCaminhao(dt) { const c = caminhao, M = cavalo.M, fx = Math.si
   const tlx = Math.cos(c.phi), tlz = -Math.sin(c.phi), hAE = alturaPonto(ax + tlx * 1.1, az + tlz * 1.1), hAD = alturaPonto(ax - tlx * 1.1, az - tlz * 1.1);
   reboque.g.position.set(kx, hK, kz); c.rp = lerp(c.rp, Math.atan2(hK - hA, reboque.LT), Math.min(1, dt * 10)); c.rr = lerp(c.rr || 0, Math.atan2(hAE - hAD, 2.2), Math.min(1, dt * 8)); reboque.g.rotation.set(-c.rp, c.phi, c.rr * 0.7);
   const giro = c.v * dt / 0.53; cavalo.rodas.forEach(w => { w.rotation.x += giro; }); reboque.rodas.forEach(w => { w.rotation.x += giro; });
-  cavalo.piv.forEach((p, i) => { p.rotation.y = c.steer * (i < 2 ? 1 : 0.6); }); cavalo.volante.rotation.set(-0.9, 0, c.steer * 7); }
+  cavalo.piv.forEach((p, i) => { p.rotation.y = c.steer * (i < 2 ? 1 : 0.6); }); cavalo.volante.rotation.set(0.8, 0, -c.steer * 7);
+  cavalo.cabeca.rotation.x = Math.sin(tempo * 9) * 0.25 * Math.min(1, Math.abs(c.v) / 8 + (c.fora ? 0.6 : 0)) + (c.balanco || 0) * 8; cavalo.cabeca.rotation.z = (c.ginga || 0) * 6;
+  const lg = chuvaNivel > 0.1 ? (0.5 - 0.5 * Math.cos(tempo * 3.2)) * 1.45 : 0; cavalo.limp.forEach(b => { b.rotation.z = Math.PI / 2 - lg; }); }
 
 // ===================== CÉU, LUZ, CHUVA =====================
 const corHor = new THREE.Color(), corTmp2 = new THREE.Color(), dirSol = V3(0, 1, 0);
@@ -740,7 +776,7 @@ function ambiente(dt) {
 
 // ===================== CÂMERA =====================
 let camModo = 0, camYaw = 0, olharYaw = 0, olharPitch = 0, olharT = 0; const cine = { ok: false, x: 0, y: 0, z: 0, s: 0 };
-const NOMES_CAM = ['Câmera de trás', 'Câmera de dentro', 'Câmera perto', 'Câmera de cinema'];
+const NOMES_CAM = ['3ª pessoa (atrás)', '1ª pessoa (dentro da cabine)', '2ª pessoa (olhando para você)', 'Câmera de cinema', '3ª pessoa (perto)'];
 function atualizarCamera(dt) { const c = caminhao, M = cavalo.M;
   olharT += dt; if (olharT > 2.2 && camModo !== 1) { olharYaw *= 1 - Math.min(1, dt * 2); olharPitch *= 1 - Math.min(1, dt * 2); }
   cavalo.dentro.visible = camModo === 1 && jogando;
@@ -749,11 +785,14 @@ function atualizarCamera(dt) { const c = caminhao, M = cavalo.M;
     const ch = alturaPonto(camera.position.x, camera.position.z) + 1.2; if (camera.position.y < ch) camera.position.y = ch; camera.lookAt(cx, c.y + 2.2, cz); camera.fov = 55; camera.updateProjectionMatrix(); return; }
   const sh = tremor * 0.35; tremor = Math.max(0, tremor - dt * 1.8);
   if (camModo === 1) { cavalo.cab.updateMatrixWorld(true); const o = cavalo.olho, pos = cavalo.cab.localToWorld(o.clone()); camera.position.copy(pos);
-    const alvo = cavalo.cab.localToWorld(V3(o.x + Math.sin(olharYaw) * 10, o.y - 0.7 + Math.sin(olharPitch) * 10, o.z + Math.cos(olharYaw) * 10)); camera.up.set(0, 1, 0); camera.lookAt(alvo); }
+    const alvo = cavalo.cab.localToWorld(V3(o.x + Math.sin(olharYaw) * 10, o.y - 1.25 + Math.sin(olharPitch) * 10, o.z + Math.cos(olharYaw) * 10)); camera.up.set(0, 1, 0); camera.lookAt(alvo); }
+  else if (camModo === 2) { const yaw = c.psi + olharYaw * 1.5, fr = M.entre + 0.6, cx = c.x + Math.sin(c.psi) * fr, cz = c.z + Math.cos(c.psi) * fr;
+    camera.position.set(cx + Math.sin(yaw + 0.32) * 9, c.y + 3.0 + olharPitch * 6, cz + Math.cos(yaw + 0.32) * 9); const ch = alturaPonto(camera.position.x, camera.position.z) + 0.8; if (camera.position.y < ch) camera.position.y = ch;
+    camera.lookAt(cx - Math.sin(c.psi) * 1.2, c.y + 2.5, cz - Math.cos(c.psi) * 1.2); }
   else if (camModo === 3) { const ds = cine.ok ? Math.hypot(cine.x - c.x, cine.z - c.z) : 999;
     if (!cine.ok || ds > 150 || (c.s - cine.s) > 35) { cine.ok = true; cine.s = c.s + 70 + Math.random() * 60; const u = Math.random() < 0.5 ? -10 : 12, P = mundo(cine.s, u); cine.x = P.x; cine.z = P.z; cine.y = alturaChao(cine.s, u, P.x, P.z) + 1.3 + Math.random() * 5; }
     camera.position.set(cine.x, cine.y, cine.z); const kx = c.x - Math.sin(c.phi) * 4, kz = c.z - Math.cos(c.phi) * 4; camera.lookAt(kx, c.y + 2, kz); }
-  else { const longe = camModo === 0, dist = longe ? 21 : 12, alt = longe ? 7 : 4.2;
+  else { const longe = camModo === 0, dist = longe ? 21 : 12, alt = longe ? 7 : 4.2; // 3ª pessoa
     const alvoYaw = c.v < -0.5 ? c.psi + Math.PI * 0 : c.psi + angDif(c.psi, c.phi) * 0.45; camYaw += angDif(camYaw, alvoYaw) * Math.min(1, dt * 2.4);
     const yaw = camYaw + olharYaw, cx = c.x + Math.sin(c.psi) * 2, cz = c.z + Math.cos(c.psi) * 2;
     camera.position.set(cx - Math.sin(yaw) * dist, c.y + alt + olharPitch * 8, cz - Math.cos(yaw) * dist);
@@ -789,6 +828,19 @@ function atualizarSom(dt) { if (!AC || !motor) return; const c = caminhao, t = A
 let avisoT = 0, ultimoAviso = '', avisoQ = 0;
 function aviso(txt, tipo = '', seg = 2.8) { if (txt === ultimoAviso && performance.now() - avisoQ < 2500) return; ultimoAviso = txt; avisoQ = performance.now(); const a = $('aviso'); a.textContent = txt; a.className = tipo; a.hidden = false; avisoT = seg; }
 const gctx = $('gps').getContext('2d'); let gpsT = 0;
+function desenharPainel() { const P = cavalo.painel, g = P.ctx, c = caminhao, kmh = Math.abs(c.v) * 3.6;
+  g.fillStyle = '#040506'; g.fillRect(0, 0, 512, 220);
+  const dial = (cx, max, val, passo, rot) => { const r = 92, a0 = Math.PI * 0.75, a1 = Math.PI * 2.25; g.strokeStyle = '#2a2f38'; g.lineWidth = 8; g.beginPath(); g.arc(cx, 110, r, a0, a1); g.stroke();
+    g.lineWidth = 3; g.font = '700 17px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (let v = 0; v <= max; v += passo) { const a = a0 + (a1 - a0) * v / max; g.strokeStyle = '#e8eef5'; g.beginPath(); g.moveTo(cx + Math.cos(a) * (r - 4), 110 + Math.sin(a) * (r - 4)); g.lineTo(cx + Math.cos(a) * (r - 16), 110 + Math.sin(a) * (r - 16)); g.stroke(); g.fillStyle = '#c8d2dc'; g.fillText(String(rot ? v / 1000 : v), cx + Math.cos(a) * (r - 32), 110 + Math.sin(a) * (r - 32)); }
+    const a = a0 + (a1 - a0) * clamp(val / max, 0, 1); g.strokeStyle = '#ff4a3a'; g.lineWidth = 5; g.beginPath(); g.moveTo(cx, 110); g.lineTo(cx + Math.cos(a) * (r - 12), 110 + Math.sin(a) * (r - 12)); g.stroke(); g.fillStyle = '#ff4a3a'; g.beginPath(); g.arc(cx, 110, 9, 0, 7); g.fill(); };
+  dial(110, 120, kmh, 20, false); dial(402, 3000, c.rpm, 500, true);
+  g.fillStyle = '#ffc531'; g.font = '800 44px sans-serif'; g.textAlign = 'center'; g.fillText(c.marcha < 0 ? 'R' : c.marcha === 0 ? 'N' : String(c.marcha), 256, 80);
+  g.fillStyle = '#e8eef5'; g.font = '700 22px sans-serif'; g.fillText(Math.round(kmh) + ' km/h', 256, 128);
+  g.fillStyle = '#2a2f38'; g.fillRect(206, 160, 100, 12); g.fillStyle = c.diesel < TANQUE * 0.15 ? '#ff4a3a' : '#4fe08a'; g.fillRect(206, 160, 100 * c.diesel / TANQUE, 12); g.fillStyle = '#9aa4ae'; g.font = '700 14px sans-serif'; g.fillText('DIESEL', 256, 190);
+  if (c.farolLigado) { g.fillStyle = '#4fa0ff'; g.font = '800 18px sans-serif'; g.fillText('◐ FAROL', 256, 30); }
+  if (c.freando) { g.fillStyle = '#ff4a3a'; g.font = '800 15px sans-serif'; g.fillText('(!) FREIO', 256, 210); }
+  P.tex.needsUpdate = true; }
 function desenharGps() { const c = caminhao, W = 300, cx = 150, cy = 190, k = 0.11, sp = Math.sin(c.psi), cp = Math.cos(c.psi);
   const tela = (x, z) => { const dx = x - c.x, dz = z - c.z; return [cx + (dx * -cp + dz * sp) * k, cy - (dx * sp + dz * cp) * k]; };
   gctx.clearRect(0, 0, W, W); gctx.save(); gctx.beginPath(); gctx.arc(150, 150, 148, 0, 7); gctx.clip(); gctx.fillStyle = '#121a24'; gctx.fillRect(0, 0, W, W);
@@ -807,7 +859,7 @@ function hud(dt) { const c = caminhao, kmh = Math.round(Math.abs(c.v) * 3.6);
   $('comb-b').classList.toggle('baixo', c.diesel < TANQUE * 0.15); $('placa').classList.toggle('acima', kmh > 85);
   if (viagem) { const falta = Math.max(0, ROTA.comp - c.s); setTxt('h-falta', Math.round(falta / 1000 * ESCALA_KM) + ' km'); setW('#h-prog', clamp(c.s / ROTA.comp, 0, 1)); setTxt('h-din', reais(est.dinheiro)); }
   const hh = Math.floor(hora) % 24, mm = Math.floor((hora % 1) * 60); setTxt('relogio', `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${chuvaAlvo > 0 ? ' 🌧' : nf > 0.5 ? ' 🌙' : ' ☀'}`);
-  gpsT -= dt; if (gpsT <= 0) { gpsT = 0.12; desenharGps(); }
+  gpsT -= dt; if (gpsT <= 0) { gpsT = 0.12; desenharGps(); if (camModo === 1) { desenharPainel(); tGpsCab.needsUpdate = true; } }
   if (avisoT > 0) { avisoT -= dt; if (avisoT <= 0) $('aviso').hidden = true; } }
 
 // ===================== REGRAS DA VIAGEM =====================
@@ -846,7 +898,7 @@ function iniciarViagem(o) { iniciarAudio(); $('fade').classList.add('ver');
   setTimeout(() => { viagem = { ...o, multas: 0, dieselGasto: 0, inicioHora: o.hora, t0: tempo }; cargaAtual = o.carga; hora = o.hora; chuvaAlvo = o.chuva ? 1 : 0; chuvaNivel = chuvaAlvo; nublado = o.chuva ? 0.5 : Math.random() * 0.35;
     prepararMundo(o.comp, o.seed, est.cidade, o.dest); montarJogador(); colocarCaminhao(55, 10, 0); const c = caminhao; c.danoViagem = 0; c.diesel = Math.max(c.diesel, TANQUE * 0.55); c.entregaT = 0; c.tp = 0; c.rp = 0;
     sAnt = c.s; avisouPosto = -1; avisouChegada = false; ROTA.feixe = null; gerarTudo(c.s); criarTrafego(); envT = 99;
-    document.querySelectorAll('.tela').forEach(t => { t.hidden = true; }); document.body.classList.add('dirigindo'); jogando = true; pausado = false; camModo = 0; camYaw = c.psi;
+    document.querySelectorAll('.tela').forEach(t => { t.hidden = true; }); document.body.classList.add('dirigindo'); jogando = true; pausado = false; camModo = 0; camYaw = c.psi; marcarCam();
     $('dicas').hidden = false; clearTimeout(window.__dicasT); window.__dicasT = setTimeout(() => { $('dicas').hidden = true; }, 15000);
     $('h-rota').textContent = `${o.carga.ico} ${o.carga.nome} → ${o.dest}`;
     aviso(toque ? 'Arraste o volante e segure ACELERAR. Saia do pátio e siga a estrada!' : 'W acelera, A e D viram. Saia do pátio e siga a estrada!', 'info', 5);
@@ -881,9 +933,13 @@ $('g-conserto').addEventListener('click', () => { const custo = Math.round(est.d
 const teclas = new Set();
 addEventListener('keydown', e => { const k = e.key.toLowerCase(); teclas.add(k); if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
   if (k === 'escape') { if (jogando && !pausado) abrirPausa(); else if (pausado) fecharPausa(); }
-  if (!jogando || pausado) return; if (k === 'c') trocarCamera(); if (k === 'l') { caminhao.farol = !caminhao.farol; $('b-farol').classList.toggle('on', caminhao.farol); } if (k === 'h') buzina(); });
+  if (!jogando || pausado) return; if (k === 'c') trocarCamera(); if (k === '1') camBotao(1); if (k === '2') camBotao(2); if (k === '3') camBotao(3); if (k === '4') camBotao(4); if (k === 'l') { caminhao.farol = !caminhao.farol; $('b-farol').classList.toggle('on', caminhao.farol); } if (k === 'h') buzina(); });
 addEventListener('keyup', e => teclas.delete(e.key.toLowerCase())); addEventListener('blur', () => teclas.clear());
-function trocarCamera() { camModo = (camModo + 1) % 4; cine.ok = false; olharYaw = olharPitch = 0; aviso(NOMES_CAM[camModo], '', 1.2); }
+const ORDEM_CAM = [0, 4, 1, 2, 3];
+function usarCamera(m) { camModo = m; cine.ok = false; olharYaw = olharPitch = 0; aviso(NOMES_CAM[camModo], '', 1.4); marcarCam(); }
+function trocarCamera() { usarCamera(ORDEM_CAM[(ORDEM_CAM.indexOf(camModo) + 1) % ORDEM_CAM.length]); }
+function marcarCam() { const qual = camModo === 1 ? 1 : camModo === 2 ? 2 : camModo === 3 ? 4 : 3; document.querySelectorAll('[data-cam]').forEach(b => b.classList.toggle('on', +b.dataset.cam === qual)); document.querySelectorAll('[data-pcam]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.pcam === qual))); }
+function camBotao(n) { if (n === 1) usarCamera(1); else if (n === 2) usarCamera(2); else if (n === 4) usarCamera(3); else usarCamera(camModo === 0 ? 4 : 0); }
 const toqueEnt = { acel: false, freio: false, vol: 0 };
 const pedal = (id, k) => { const b = $(id); b.addEventListener('pointerdown', e => { e.preventDefault(); iniciarAudio(); toqueEnt[k] = true; b.classList.add('on'); try { b.setPointerCapture(e.pointerId); } catch (er) {} });
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => b.addEventListener(ev, () => { toqueEnt[k] = false; b.classList.remove('on'); })); };
@@ -892,7 +948,7 @@ pedal('b-acel', 'acel'); pedal('b-freio', 'freio');
   v.addEventListener('pointerdown', e => { e.preventDefault(); id = e.pointerId; x0 = e.clientX; try { v.setPointerCapture(id); } catch (er) {} });
   v.addEventListener('pointermove', e => { if (e.pointerId !== id) return; toqueEnt.vol = clamp((x0 - e.clientX) / 90, -1, 1); aro.style.transform = `rotate(${-toqueEnt.vol * 110}deg)`; });
   const solta = e => { if (e.pointerId !== id) return; id = null; toqueEnt.vol = 0; aro.style.transform = ''; }; ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => v.addEventListener(ev, solta)); }
-$('b-cam').addEventListener('click', trocarCamera); $('b-farol').addEventListener('click', () => { caminhao.farol = !caminhao.farol; $('b-farol').classList.toggle('on', caminhao.farol); }); $('b-buzina').addEventListener('pointerdown', () => { iniciarAudio(); buzina(); }); $('b-pausa').addEventListener('click', abrirPausa);
+document.querySelectorAll('[data-cam]').forEach(b => b.addEventListener('click', () => camBotao(+b.dataset.cam))); document.querySelectorAll('[data-pcam]').forEach(b => b.addEventListener('click', () => camBotao(+b.dataset.pcam))); $('b-farol').addEventListener('click', () => { caminhao.farol = !caminhao.farol; $('b-farol').classList.toggle('on', caminhao.farol); }); $('b-buzina').addEventListener('pointerdown', () => { iniciarAudio(); buzina(); }); $('b-pausa').addEventListener('click', abrirPausa);
 // arrastar para olhar em volta
 { let id = null, px = 0, py = 0; canvas.addEventListener('pointerdown', e => { if (!jogando) return; id = e.pointerId; px = e.clientX; py = e.clientY; try { canvas.setPointerCapture(id); } catch (er) {} });
   canvas.addEventListener('pointermove', e => { if (e.pointerId !== id) return; const k = e.pointerType === 'mouse' ? 0.005 : 0.008; olharYaw -= (e.clientX - px) * k; olharPitch = clamp(olharPitch - (e.clientY - py) * k * 0.6, -0.5, 0.6); olharYaw = clamp(olharYaw, -Math.PI, Math.PI); px = e.clientX; py = e.clientY; olharT = 0; });
@@ -925,6 +981,6 @@ function quadro(agora) { requestAnimationFrame(quadro);
   atualizarSom(dt);
   if (composer) composer.render(); else Rd.render(cena, camera); }
 requestAnimationFrame(quadro);
-window.__estrada = { est, salvar, caminhao, iniciarViagem, gerarCargas, get ofertas() { return ofertas; }, get rota() { return ROTA; }, carros, entregar, get camModo() { return camModo; }, set camModo(v) { camModo = v; }, set hora(v) { hora = v; }, set chuva(v) { chuvaAlvo = chuvaNivel = v; }, abrirPausa, guincho, pedacos };
+window.__estrada = { est, salvar, caminhao, iniciarViagem, gerarCargas, get ofertas() { return ofertas; }, get rota() { return ROTA; }, carros, entregar, get camModo() { return camModo; }, set camModo(v) { camModo = v; }, set hora(v) { hora = v; }, set chuva(v) { chuvaAlvo = chuvaNivel = v; }, abrirPausa, guincho, pedacos, usarCamera };
 })();
 </script>
