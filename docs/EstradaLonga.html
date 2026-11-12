@@ -1755,10 +1755,10 @@ function fisica(dt) { const c = caminhao, M = cavalo.M, massa = 8500 + cargaAtua
 function posicionarCaminhao(dt) { const c = caminhao, M = cavalo.M, fx = Math.sin(c.psi), fz = Math.cos(c.psi), lx = Math.cos(c.psi), lz = -Math.sin(c.psi);
   const hF = alturaPonto(c.x + fx * M.entre, c.z + fz * M.entre), hT = alturaPonto(c.x, c.z), hE = alturaPonto(c.x + fx * M.entre * 0.5 + lx * 1.1, c.z + fz * M.entre * 0.5 + lz * 1.1), hD = alturaPonto(c.x + fx * M.entre * 0.5 - lx * 1.1, c.z + fz * M.entre * 0.5 - lz * 1.1);
   const bump = c.fora ? (Math.sin(tempo * 23) + Math.sin(tempo * 37)) * 0.03 * Math.min(1, Math.abs(c.v) / 5) : 0;
-  c.y += (hT + bump - c.y) * Math.min(1, dt * 14); c.tp += (Math.atan2(hF - hT, M.entre) - c.tp) * Math.min(1, dt * 10); c.roll += (Math.atan2(hE - hD, 2.2) - c.roll) * Math.min(1, dt * 8);
+  const dentroCab = camModo === 1; c.y += (hT + (dentroCab ? 0 : bump) - c.y) * Math.min(1, dt * (dentroCab ? 6 : 12)); c.tp += (Math.atan2(hF - hT, M.entre) - c.tp) * Math.min(1, dt * (dentroCab ? 3 : 8)); c.roll += (Math.atan2(hE - hD, 2.2) - c.roll) * Math.min(1, dt * (dentroCab ? 3 : 7));
   const acelLong = (c.v - (c.vAnt || 0)) / Math.max(dt, 1e-3); c.vAnt = c.v; c.balanco = lerp(c.balanco || 0, clamp(-acelLong * 0.006, -0.03, 0.03), Math.min(1, dt * 4));
   const curva = c.v * c.v * Math.tan(c.steer) / M.entre; c.ginga = lerp(c.ginga || 0, clamp(-curva * 0.004, -0.05, 0.05), Math.min(1, dt * 3));
-  cavalo.g.position.set(c.x, c.y, c.z); cavalo.g.rotation.set(-c.tp, c.psi, c.roll); cavalo.cab.rotation.set(c.balanco, 0, c.ginga); cavalo.cab.position.y = 0;
+  cavalo.g.position.set(c.x, c.y, c.z); cavalo.g.rotation.set(-c.tp, c.psi, c.roll); if (dentroCab) cavalo.cab.rotation.set(0, 0, 0); else cavalo.cab.rotation.set(c.balanco, 0, c.ginga); cavalo.cab.position.y = 0;
   const kx = c.x - fx * 0.3, kz = c.z - fz * 0.3, tx = Math.sin(c.phi), tz = Math.cos(c.phi), ax = kx - tx * reboque.LT, az = kz - tz * reboque.LT, hA = alturaPonto(ax, az), hK = c.y + Math.sin(c.tp) * -0.3;
   const tlx = Math.cos(c.phi), tlz = -Math.sin(c.phi), hAE = alturaPonto(ax + tlx * 1.1, az + tlz * 1.1), hAD = alturaPonto(ax - tlx * 1.1, az - tlz * 1.1);
   reboque.g.position.set(kx, hK, kz); c.rp = lerp(c.rp, Math.atan2(hK - hA, reboque.LT), Math.min(1, dt * 10)); c.rr = lerp(c.rr || 0, Math.atan2(hAE - hAD, 2.2), Math.min(1, dt * 8)); reboque.g.rotation.set(-c.rp, c.phi, c.rr * 0.7);
@@ -1814,7 +1814,7 @@ function atualizarCamera(dt) { const c = caminhao, M = cavalo.M;
   if (!jogando) { const th = 0.75 + Math.sin(tempo * 0.07) * 0.95, a = amostra(c.s, P2_).a, Fx = Math.sin(a), Fz = Math.cos(a), Ex = Math.cos(a), Ez = -Math.sin(a), cx = c.x + Math.sin(c.psi) * 1, cz = c.z + Math.cos(c.psi) * 1;
     camera.position.set(cx + (Math.cos(th) * Fx + Math.sin(th) * Ex) * 15, c.y + 3.6 + Math.sin(tempo * 0.05) * 1.2, cz + (Math.cos(th) * Fz + Math.sin(th) * Ez) * 15);
     const ch = alturaPonto(camera.position.x, camera.position.z) + 1.2; if (camera.position.y < ch) camera.position.y = ch; camera.lookAt(cx, c.y + 2.2, cz); camera.fov = 55; camera.updateProjectionMatrix(); return; }
-  const sh = tremor * 0.35; tremor = Math.max(0, tremor - dt * 1.8);
+  const sh = tremor * (camModo === 1 ? 0.05 : 0.35); tremor = Math.max(0, tremor - dt * 1.8);
   if (camModo === 1) { cavalo.cab.updateMatrixWorld(true); const o = cavalo.olho, pos = cavalo.cab.localToWorld(o.clone()); camera.position.copy(pos);
     const alvo = cavalo.cab.localToWorld(V3(o.x + Math.sin(olharYaw) * 10, o.y - 1.25 + Math.sin(olharPitch) * 10, o.z + Math.cos(olharYaw) * 10)); camera.up.set(0, 1, 0); camera.lookAt(alvo); }
   else if (camModo === 2) { const yaw = c.psi + olharYaw * 1.5, fr = M.entre + 0.6, cx = c.x + Math.sin(c.psi) * fr, cz = c.z + Math.cos(c.psi) * fr;
@@ -1830,7 +1830,7 @@ function atualizarCamera(dt) { const c = caminhao, M = cavalo.M;
     const ch = alturaPonto(camera.position.x, camera.position.z) + 1.0; if (camera.position.y < ch) camera.position.y = ch;
     camera.lookAt(cx + Math.sin(yaw) * 6, c.y + (longe ? 2.6 : 2.4), cz + Math.cos(yaw) * 6); }
   if (sh > 0) { camera.position.x += (Math.random() - 0.5) * sh; camera.position.y += (Math.random() - 0.5) * sh; }
-  const fov = (camModo === 1 ? 66 : 58) + Math.min(9, Math.abs(c.v) * 0.25); if (Math.abs(camera.fov - fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); } }
+  const fov = camModo === 1 ? 66 : 58 + Math.min(9, Math.abs(c.v) * 0.25); if (Math.abs(camera.fov - fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); } }
 
 // ===================== SOM =====================
 let AC = null, mestre = null, motor = null, vento = null, ruidoBuf = null;
@@ -2024,6 +2024,6 @@ function quadro(agora) { requestAnimationFrame(quadro);
   atualizarSom(dt);
   if (composer) composer.render(); else Rd.render(cena, camera); }
 requestAnimationFrame(quadro);
-window.__estrada = { est, salvar, caminhao, iniciarViagem, gerarCargas, get ofertas() { return ofertas; }, get rota() { return ROTA; }, carros, entregar, get camModo() { return camModo; }, set camModo(v) { camModo = v; }, set hora(v) { hora = v; }, set chuva(v) { chuvaAlvo = chuvaNivel = v; }, abrirPausa, guincho, pedacos, usarCamera };
+window.__estrada = { est, salvar, caminhao, iniciarViagem, gerarCargas, get ofertas() { return ofertas; }, get rota() { return ROTA; }, carros, entregar, get camModo() { return camModo; }, set camModo(v) { camModo = v; }, set hora(v) { hora = v; }, set chuva(v) { chuvaAlvo = chuvaNivel = v; }, abrirPausa, guincho, pedacos, usarCamera, get cam() { return camera; } };
 })();
 </script>
