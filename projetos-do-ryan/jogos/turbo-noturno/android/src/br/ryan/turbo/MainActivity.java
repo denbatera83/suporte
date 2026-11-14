@@ -2,11 +2,16 @@ package br.ryan.turbo;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.ContentValues;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.MediaStore;
+import android.util.Base64;
+import android.webkit.JavascriptInterface;
 import android.view.View;
 import android.view.WindowManager;
 import android.webkit.PermissionRequest;
@@ -16,7 +21,10 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -65,6 +73,21 @@ public class MainActivity extends Activity {
                 } });
             }
         });
+        web.addJavascriptInterface(new Object() {
+            /** Salva a foto 8K: na galeria (Android 10+) ou na pasta de fotos do app. */
+            @JavascriptInterface public String salvarFoto(String dados, String nome) {
+                try {
+                    byte[] b = Base64.decode(dados.substring(dados.indexOf(',') + 1), Base64.DEFAULT);
+                    if (Build.VERSION.SDK_INT >= 29) {
+                        ContentValues cv = new ContentValues(); cv.put(MediaStore.Images.Media.DISPLAY_NAME, nome); cv.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg"); cv.put("relative_path", "Pictures/Turbo Noturno");
+                        Uri u = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv); OutputStream o = getContentResolver().openOutputStream(u); o.write(b); o.close();
+                        return "Galeria > Turbo Noturno";
+                    }
+                    File d = getExternalFilesDir(Environment.DIRECTORY_PICTURES); if (d == null) d = getFilesDir(); File f = new File(d, nome); FileOutputStream o = new FileOutputStream(f); o.write(b); o.close();
+                    return f.getAbsolutePath();
+                } catch (Exception e) { return ""; }
+            }
+        }, "Turbo");
         setContentView(web);
         esconderBarras();
         web.loadUrl("https://" + CASA + "/index.html");

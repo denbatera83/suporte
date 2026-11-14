@@ -462,7 +462,7 @@
     <h2>OPÇÕES</h2>
     <div class="opt"><span class="label">Direção</span><div class="choices" id="steering"></div><div class="hint">Grudado: o carro não escorrega, ideal para correr. Drift: a traseira solta nas curvas. Simulação: física completa. Em qualquer modo, o freio de mão (barra de espaço) faz o carro derrapar.</div></div>
     <div class="opt"><span class="label">Ajudas</span><div class="choices" id="assists"></div><div class="hint">Controle de tração, estabilidade e freio ABS.</div></div>
-    <div class="opt"><span class="label">Gráficos</span><div class="choices" id="gfx"></div><div class="hint">Ultra é o mais bonito, para computador forte. A resolução também se ajusta sozinha.</div></div>
+    <div class="opt"><span class="label">Gráficos</span><div class="choices" id="gfx"></div><div class="hint">8K Máximo desenha até 7680×4320 com sombras 8192, nitidez de lente e mais trânsito. Se travar, a resolução baixa sozinha; se continuar lento, escolha Ultra ou Alto.</div></div>
     <div class="opt"><span class="label">Computador fraco</span><div class="choices" id="weak"></div><div class="hint">Diminui bastante os gráficos (resolução, sombras, reflexos, árvores, trânsito) para rodar em computador ou celular fraco. Vale por completo a partir da próxima corrida.</div></div>
     <div class="opt"><span class="label">Som</span><div class="choices" id="sound"></div></div>
     <div class="opt"><span class="label">Rádio do carro</span><div class="choices" id="radio-choices"></div><div class="hint">Músicas feitas pelo próprio jogo. No teclado: O troca a estação, H buzina.</div></div>
@@ -534,6 +534,7 @@
     <div class="btn-row" style="flex-direction:column;align-items:center">
       <button class="btn" id="resume">CONTINUAR</button>
       <div class="btn-row"><button class="btn sec" id="restart">Reiniciar</button><button class="btn sec" id="pause-options">Opções</button><button class="btn sec" id="to-menu">Sair para o menu</button></div>
+      <button class="btn sec" id="foto8k">📸 Tirar foto 8K</button>
     </div>
   </div>
 </div>
@@ -755,7 +756,7 @@ const DEFAULT_SAVE = {
   ownedParts: { motor: 0, turbo: 0, cambio: 0, pneus: 0, freios: 0, suspensao: 0, aero: 0, nitro: 0, peso: 0 },
   owned: {},
   look: { model: 'esportivo', color: '#0b4fd6', finish: 'metal', rimStyle: '5', rimColor: 'prata', spoiler: 'lip', stripes: 'none', stripeColor: '#ffffff', neon: 'none', tint: 'normal', head: 'branco', exhaust: 'duplo', number: 'none' },
-  settings: { assists: 1, gfx: isTouch ? 0 : 1, steer: 'arcade', v: 3 }
+  settings: { assists: 1, gfx: 4, steer: 'arcade', v: 4 }
 };
 const save = JSON.parse(JSON.stringify(DEFAULT_SAVE));
 try {
@@ -768,7 +769,8 @@ try {
 } catch (e) {}
 function persist() { try { localStorage.setItem('tn3-save', JSON.stringify(save)); } catch (e) {} }
 const settings = save.settings;
-if (settings.v !== 3) { settings.gfx = settings.gfx === 1 ? 2 : 0; if (!isTouch && settings.gfx === 0) settings.gfx = 1; settings.steer = settings.steer || 'arcade'; settings.v = 3; }
+if (settings.v !== 3 && settings.v !== 4) { settings.gfx = settings.gfx === 1 ? 2 : 0; if (!isTouch && settings.gfx === 0) settings.gfx = 1; settings.steer = settings.steer || 'arcade'; settings.v = 3; }
+if (settings.v === 3) { settings.gfx = 4; settings.weak = false; settings.v = 4; }
 if (settings.weak === undefined) settings.weak = false;
 if (save.look.model === 'foguete') save.owned['model:foguete'] = true;
 applyParts();
@@ -843,24 +845,35 @@ scene.fog = new THREE.FogExp2(0x0b0f22, 0.0022);
 scene.background = new THREE.Color(0x05060c);
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.3, 4000);
 
-let composer = null, bloomPass = null, resScale = 1;
+let composer = null, bloomPass = null, gradePass = null, resScale = 1;
 const hasPost = !!(THREE.EffectComposer && THREE.RenderPass && THREE.UnrealBloomPass && THREE.ShaderPass && THREE.GammaCorrectionShader);
-const GradeShader = { // vinheta e contraste leve, como lente de câmera
-  uniforms: { tDiffuse: { value: null } },
+const GradeShader = { // vinheta, contraste, nitidez e lente de câmera (forte no 8K Máximo)
+  uniforms: { tDiffuse: { value: null }, uPx: { value: new THREE.Vector2(1 / 1920, 1 / 1080) }, uQ: { value: 0 }, uT: { value: 0 } },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-  fragmentShader: 'uniform sampler2D tDiffuse; varying vec2 vUv; void main(){ vec4 c = texture2D(tDiffuse, vUv); vec2 d = vUv - 0.5; float v = smoothstep(0.85, 0.25, length(d * vec2(1.25, 1.0))); c.rgb *= mix(0.62, 1.0, v); c.rgb = mix(c.rgb, c.rgb * c.rgb * (3.0 - 2.0 * c.rgb), 0.25); gl_FragColor = c; }'
+  fragmentShader: `uniform sampler2D tDiffuse; uniform vec2 uPx; uniform float uQ; uniform float uT; varying vec2 vUv;
+    float hh(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main(){ vec2 d = vUv - 0.5; vec4 c = texture2D(tDiffuse, vUv);
+      if (uQ > 0.01) { vec3 bl = (texture2D(tDiffuse, vUv + vec2(uPx.x, 0.0)).rgb + texture2D(tDiffuse, vUv - vec2(uPx.x, 0.0)).rgb + texture2D(tDiffuse, vUv + vec2(0.0, uPx.y)).rgb + texture2D(tDiffuse, vUv - vec2(0.0, uPx.y)).rgb) * 0.25;
+        c.rgb = max(c.rgb + (c.rgb - bl) * 0.55 * uQ, 0.0);
+        vec2 off = d * dot(d, d) * 0.012 * uQ; c.r = texture2D(tDiffuse, vUv + off).r * 0.85 + c.r * 0.15; c.b = texture2D(tDiffuse, vUv - off).b * 0.85 + c.b * 0.15;
+        float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722)); c.rgb = mix(vec3(l), c.rgb, 1.0 + 0.1 * uQ); }
+      float v = smoothstep(0.85, 0.25, length(d * vec2(1.25, 1.0))); c.rgb *= mix(0.62, 1.0, v); c.rgb = mix(c.rgb, c.rgb * c.rgb * (3.0 - 2.0 * c.rgb), 0.25);
+      c.rgb += (hh(vUv * 1000.0 + uT) - 0.5) * 0.012 * uQ;
+      gl_FragColor = c; }`
 };
-function basePR() { const d = window.devicePixelRatio || 1; if (settings.weak) return Math.min(d, 1) * 0.7; return settings.gfx >= 2 ? Math.min(d, 2) : settings.gfx === 1 ? Math.min(d, 1.5) : Math.min(d, 1); }
-const density = () => settings.weak ? 0.35 : settings.gfx >= 3 ? 1.3 : settings.gfx === 0 ? 0.75 : 1;
+function limiteGPU() { const gl = renderer.getContext(); let lim = renderer.capabilities.maxTextureSize || 4096; try { lim = Math.min(lim, gl.getParameter(gl.MAX_RENDERBUFFER_SIZE), gl.getParameter(gl.MAX_VIEWPORT_DIMS)[0]); } catch (e) {} return lim; }
+function basePR() { const d = window.devicePixelRatio || 1; if (settings.weak) return Math.min(d, 1) * 0.7; if (settings.gfx >= 4) { const lim = Math.min(limiteGPU(), 8192); return Math.max(Math.min(d, 2), Math.min(7680 / window.innerWidth, lim / window.innerWidth, lim / window.innerHeight)); } return settings.gfx >= 2 ? Math.min(d, 2) : settings.gfx === 1 ? Math.min(d, 1.5) : Math.min(d, 1); }
+const density = () => settings.weak ? 0.35 : settings.gfx >= 4 ? 1.6 : settings.gfx >= 3 ? 1.3 : settings.gfx === 0 ? 0.75 : 1;
 function setPixelRatio() {
   renderer.setPixelRatio(basePR() * resScale);
   renderer.setSize(window.innerWidth, window.innerHeight);
   if (composer) { if (composer.setPixelRatio) composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(window.innerWidth, window.innerHeight); }
+  if (gradePass) { const v = new THREE.Vector2(); renderer.getDrawingBufferSize(v); gradePass.uniforms.uPx.value.set(1 / v.x, 1 / v.y); }
 }
 function applyGraphics() {
   const g = settings.gfx;
   renderer.shadowMap.enabled = g >= 1 && !settings.weak;
-  const size = g >= 3 ? 4096 : g === 2 ? 2048 : 1024;
+  const size = g >= 4 ? Math.min(8192, renderer.capabilities.maxTextureSize || 4096) : g >= 3 ? 4096 : g === 2 ? 2048 : 1024;
   camera.far = settings.weak ? 1100 : 4000; camera.updateProjectionMatrix();
   if (sun.shadow.mapSize.x !== size) { sun.shadow.mapSize.set(size, size); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
   scene.traverse(o => { if (o.material) [].concat(o.material).forEach(m => m.needsUpdate = true); });
@@ -868,17 +881,18 @@ function applyGraphics() {
     let rt;
     if (renderer.capabilities.isWebGL2 && THREE.WebGLMultisampleRenderTarget) { // bordas sem serrilhado
       rt = new THREE.WebGLMultisampleRenderTarget(window.innerWidth, window.innerHeight, { format: THREE.RGBAFormat });
-      rt.samples = 4;
+      let maxS = 4; try { const gl = renderer.getContext(); maxS = gl.getParameter(gl.MAX_SAMPLES) || 4; } catch (e) {} rt.samples = Math.min(8, maxS);
     }
     composer = new THREE.EffectComposer(renderer, rt);
     composer.addPass(new THREE.RenderPass(scene, camera));
     bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2), 0.75, 0.5, 0.78);
     composer.addPass(bloomPass);
     bloomPass.strength = 0.2 + 0.55 * timeCfg.dark; bloomPass.threshold = 0.78 + 0.15 * (1 - timeCfg.dark);
-    composer.addPass(new THREE.ShaderPass(GradeShader));
+    gradePass = new THREE.ShaderPass(GradeShader); composer.addPass(gradePass);
     composer.addPass(new THREE.ShaderPass(THREE.GammaCorrectionShader));
   }
-  resScale = 1;
+  resScale = g >= 4 && !settings.weak ? 0.4 : 1;
+  if (gradePass) gradePass.uniforms.uQ.value = settings.weak ? 0 : g >= 4 ? 1 : g >= 3 ? 0.6 : 0;
   setPixelRatio();
 }
 // resolução que se ajusta sozinha para o jogo não travar
@@ -889,7 +903,7 @@ function adaptResolution(realDt) {
   if (fpsT < 2) return;
   const fps = fpsN / fpsT; fpsT = 0; fpsN = 0;
   let ns = resScale;
-  if (fps < 42) ns = Math.max(0.5, resScale - 0.12); else if (fps > 57) ns = Math.min(1, resScale + 0.05);
+  const minS = settings.gfx >= 4 ? 0.18 : 0.5; if (fps < 42) ns = Math.max(minS, resScale - (settings.gfx >= 4 ? 0.08 : 0.12)); else if (fps > 57) ns = Math.min(1, resScale + 0.05);
   if (fps < 28 && resScale <= 0.5 && !settings.weak && !weakHint) { weakHint = true; toast('Está lento? Ative "Computador fraco" em Opções.'); }
   if (Math.abs(ns - resScale) > 0.001) { resScale = ns; setPixelRatio(); }
 }
@@ -2828,6 +2842,17 @@ function note(icon, title, sub) {
   setTimeout(() => { n.classList.add('out'); setTimeout(() => n.remove(), 400); }, 3600);
 }
 let toastT = null;
+function foto8K() { const lim = limiteGPU(); let W = 7680, H = 4320; if (W > lim) { W = lim; H = Math.round(lim * 9 / 16); }
+  const prAnt = renderer.getPixelRatio(), aspAnt = camera.aspect; let url = null;
+  try { renderer.setPixelRatio(1); renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix();
+    if (gradePass) gradePass.uniforms.uPx.value.set(1 / W, 1 / H);
+    if (useComposer()) { if (composer.setPixelRatio) composer.setPixelRatio(1); composer.setSize(W, H); composer.render(); } else renderer.render(scene, camera);
+    url = renderer.domElement.toDataURL('image/jpeg', 0.93); } catch (e) { url = null; }
+  camera.aspect = aspAnt; camera.updateProjectionMatrix(); setPixelRatio();
+  if (!url || url.length < 1000) { toast('Não deu para tirar a foto neste aparelho.'); return; }
+  const nome = 'turbo-noturno-' + W + 'x' + H + '-' + Date.now() + '.jpg';
+  if (window.Turbo && window.Turbo.salvarFoto) { const r = window.Turbo.salvarFoto(url, nome); toast(r ? `Foto ${W}×${H} salva em ${r}!` : 'Não consegui salvar a foto.'); }
+  else { const a = document.createElement('a'); a.href = url; a.download = nome; document.body.appendChild(a); a.click(); a.remove(); toast(`Foto ${W}×${H} salva!`); } }
 function toast(msg) {
   const t = $('toast'); t.textContent = msg; t.classList.remove('hidden');
   clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), 1800);
@@ -4514,7 +4539,7 @@ function startCityNow() {
   buildCity();
   applyParts(save.parts);
   const low = settings.gfx === 0 || settings.weak;
-  const nTraffic = settings.weak ? 8 : low ? 12 : settings.gfx >= 3 ? 28 : 22, nPeds = settings.weak ? 12 : low ? 22 : settings.gfx >= 3 ? 60 : 45;
+  const nTraffic = settings.weak ? 8 : low ? 12 : settings.gfx >= 4 ? 34 : settings.gfx >= 3 ? 28 : 22, nPeds = settings.weak ? 12 : low ? 22 : settings.gfx >= 4 ? 80 : settings.gfx >= 3 ? 60 : 45;
   city = { traffic: [], peds: [], police: [], parked: [], coins: [], markers: [], heat: 0, evade: 0, bust: 0, nearestCop: Infinity, driving: true, own: true, curLook: JSON.parse(JSON.stringify(save.look)), mission: null, objMarker: null, prompt: '', nearMarker: null, saveT: 0, walker: null };
   // seu carro, na frente da oficina
   const start = roadSpot(2, 2, 0);
@@ -6232,7 +6257,7 @@ function buildChoices(id, items, key, render) {
 }
 buildChoices('steering', [{ value: 'arcade', t: 'Grudado' }, { value: 'drift', t: 'Drift' }, { value: 'sim', t: 'Simulação' }], 'steer', (b, a) => b.textContent = a.t);
 buildChoices('assists', [{ value: 1, t: 'Ligadas' }, { value: 0, t: 'Desligadas' }], 'assists', (b, a) => b.textContent = a.t);
-buildChoices('gfx', [{ value: 0, t: 'Baixo' }, { value: 1, t: 'Médio' }, { value: 2, t: 'Alto' }, { value: 3, t: 'Ultra' }], 'gfx', (b, a) => b.textContent = a.t);
+buildChoices('gfx', [{ value: 0, t: 'Baixo' }, { value: 1, t: 'Médio' }, { value: 2, t: 'Alto' }, { value: 3, t: 'Ultra' }, { value: 4, t: '8K Máximo' }], 'gfx', (b, a) => b.textContent = a.t);
 buildChoices('weak', [{ value: false, t: 'Desligado' }, { value: true, t: 'Ligado' }], 'weak', (b, a) => b.textContent = a.t);
 function renderSound() {
   const el = $('sound'); el.innerHTML = '';
@@ -6269,6 +6294,7 @@ $('restart').onclick = () => (mode === 'city' ? startCity() : startRace(RM.id ==
 $('resume').onclick = togglePause;
 $('pause-btn').onclick = togglePause;
 $('to-menu').onclick = () => openMenu();
+$('foto8k').onclick = () => foto8K();
 document.addEventListener('visibilitychange', () => { if (document.hidden && (state === 'race' || state === 'countdown' || state === 'city')) togglePause(); });
 
 // =====================================================================
@@ -6341,6 +6367,7 @@ function frame() {
   mpTick(dt);
   updateWeather(dt);
   updateSound(); updateBoombox();
+  if (gradePass) gradePass.uniforms.uT.value = (performance.now() % 10000) / 1000;
   if (useComposer()) composer.render(); else renderer.render(scene, camera);
 }
 frame();
