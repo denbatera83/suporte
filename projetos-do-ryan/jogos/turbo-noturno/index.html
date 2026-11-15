@@ -616,6 +616,8 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/BokehShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/BokehPass.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script>
@@ -845,19 +847,27 @@ scene.fog = new THREE.FogExp2(0x0b0f22, 0.0022);
 scene.background = new THREE.Color(0x05060c);
 const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.3, 4000);
 
-let composer = null, bloomPass = null, gradePass = null, resScale = 1;
+let composer = null, bloomPass = null, gradePass = null, renderPass = null, ssaoPass = null, bokehPass = null, fxaaPass = null, resScale = 1;
+const avancado = () => settings.gfx >= 3 && !settings.weak;
 const hasPost = !!(THREE.EffectComposer && THREE.RenderPass && THREE.UnrealBloomPass && THREE.ShaderPass && THREE.GammaCorrectionShader);
 const GradeShader = { // vinheta, contraste, nitidez e lente de câmera (forte no 8K Máximo)
-  uniforms: { tDiffuse: { value: null }, uPx: { value: new THREE.Vector2(1 / 1920, 1 / 1080) }, uQ: { value: 0 }, uT: { value: 0 } },
+  uniforms: { tDiffuse: { value: null }, uPx: { value: new THREE.Vector2(1 / 1920, 1 / 1080) }, uQ: { value: 0 }, uT: { value: 0 }, uMB: { value: 0 }, uCine: { value: 0 }, uAO: { value: 0 }, tDepth: { value: null }, cNear: { value: 0.3 }, cFar: { value: 4000 } },
   vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-  fragmentShader: `uniform sampler2D tDiffuse; uniform vec2 uPx; uniform float uQ; uniform float uT; varying vec2 vUv;
+  fragmentShader: `#include <packing>
+    uniform sampler2D tDiffuse; uniform sampler2D tDepth; uniform vec2 uPx; uniform float uQ; uniform float uT; uniform float uMB; uniform float uCine; uniform float uAO; uniform float cNear; uniform float cFar; varying vec2 vUv;
+    float vz(vec2 uv){ return -perspectiveDepthToViewZ(unpackRGBAToDepth(texture2D(tDepth, uv)), cNear, cFar); }
     float hh(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
     void main(){ vec2 d = vUv - 0.5; vec4 c = texture2D(tDiffuse, vUv);
+      if (uAO > 0.01) { float z0 = vz(vUv); if (z0 < cFar * 0.8) { float occ = 0.0, r = clamp(0.75 / z0, 0.0012, 0.05), j = hh(floor(vUv / uPx / 2.0)) * 6.2832; // oclusão de ambiente pela profundidade
+          for (int i = 0; i < 16; i++) { float a = float(i) * 2.39996 + j, rr = r * (0.25 + 0.75 * fract(float(i) * 0.618 + 0.3)); vec2 o = vec2(cos(a) * uPx.x / uPx.y, sin(a)) * rr; float dz = z0 - vz(vUv + o); occ += smoothstep(0.03, 0.35, dz) * (1.0 - smoothstep(0.9 + z0 * 0.02, 2.5 + z0 * 0.05, dz)); }
+          c.rgb *= 1.0 - clamp(occ / 16.0, 0.0, 1.0) * 0.5 * min(uAO, 1.0); } }
+      if (uMB > 0.001) { vec2 cen = vec2(0.5, 0.42), dir = (cen - vUv) * uMB * 0.045 * smoothstep(0.05, 0.45, length(vUv - cen)); vec3 acc = c.rgb; for (int i = 1; i < 10; i++) acc += texture2D(tDiffuse, vUv + dir * float(i) / 9.0).rgb; c.rgb = acc / 10.0; } // desfoque de movimento
       if (uQ > 0.01) { vec3 bl = (texture2D(tDiffuse, vUv + vec2(uPx.x, 0.0)).rgb + texture2D(tDiffuse, vUv - vec2(uPx.x, 0.0)).rgb + texture2D(tDiffuse, vUv + vec2(0.0, uPx.y)).rgb + texture2D(tDiffuse, vUv - vec2(0.0, uPx.y)).rgb) * 0.25;
         c.rgb = max(c.rgb + (c.rgb - bl) * 0.55 * uQ, 0.0);
         vec2 off = d * dot(d, d) * 0.012 * uQ; c.r = texture2D(tDiffuse, vUv + off).r * 0.85 + c.r * 0.15; c.b = texture2D(tDiffuse, vUv - off).b * 0.85 + c.b * 0.15;
         float l = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722)); c.rgb = mix(vec3(l), c.rgb, 1.0 + 0.1 * uQ); }
       float v = smoothstep(0.85, 0.25, length(d * vec2(1.25, 1.0))); c.rgb *= mix(0.62, 1.0, v); c.rgb = mix(c.rgb, c.rgb * c.rgb * (3.0 - 2.0 * c.rgb), 0.25);
+      if (uCine > 0.01) { float lu = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722)); c.rgb += uCine * (mix(vec3(-0.012, 0.004, 0.022), vec3(0.03, 0.012, -0.018), smoothstep(0.08, 0.6, lu))); c.rgb = mix(c.rgb, c.rgb * c.rgb * (3.0 - 2.0 * c.rgb), 0.12 * uCine); } // cor de cinema
       c.rgb += (hh(vUv * 1000.0 + uT) - 0.5) * 0.012 * uQ;
       gl_FragColor = c; }`
 };
@@ -884,15 +894,19 @@ function applyGraphics() {
       let maxS = 4; try { const gl = renderer.getContext(); maxS = gl.getParameter(gl.MAX_SAMPLES) || 4; } catch (e) {} rt.samples = Math.min(8, maxS);
     }
     composer = new THREE.EffectComposer(renderer, rt);
-    composer.addPass(new THREE.RenderPass(scene, camera));
+    renderPass = new THREE.RenderPass(scene, camera); composer.addPass(renderPass);
     bloomPass = new THREE.UnrealBloomPass(new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2), 0.75, 0.5, 0.78);
     composer.addPass(bloomPass);
     bloomPass.strength = 0.2 + 0.55 * timeCfg.dark; bloomPass.threshold = 0.78 + 0.15 * (1 - timeCfg.dark);
+    if (THREE.BokehPass) { bokehPass = new THREE.BokehPass(scene, camera, { focus: 8, aperture: 0.00006, maxblur: 0.005, width: window.innerWidth, height: window.innerHeight }); bokehPass.needsSwap = true; composer.addPass(bokehPass); } // desfoque do fundo
     gradePass = new THREE.ShaderPass(GradeShader); composer.addPass(gradePass);
     composer.addPass(new THREE.ShaderPass(THREE.GammaCorrectionShader));
   }
+  { const av = avancado(); if (bokehPass) bokehPass.enabled = av; if (gradePass) { gradePass.uniforms.uAO.value = av && bokehPass ? (g >= 4 ? 1 : 0.8) : 0; if (bokehPass) gradePass.uniforms.tDepth.value = bokehPass.renderTargetDepth.texture; gradePass.uniforms.cNear.value = camera.near; gradePass.uniforms.cFar.value = camera.far; } }
+  // sombras suaves: borda borrada de verdade nos níveis altos
+  renderer.shadowMap.type = avancado() ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap; sun.shadow.radius = avancado() ? (g >= 4 ? 4 : 3) : 1;
   resScale = g >= 4 && !settings.weak ? 0.4 : 1;
-  if (gradePass) gradePass.uniforms.uQ.value = settings.weak ? 0 : g >= 4 ? 1 : g >= 3 ? 0.6 : 0;
+  if (gradePass) { gradePass.uniforms.uQ.value = settings.weak ? 0 : g >= 4 ? 1 : g >= 3 ? 0.6 : 0; gradePass.uniforms.uCine.value = settings.weak ? 0 : g >= 3 ? 1 : g >= 2 ? 0.5 : 0; }
   setPixelRatio();
 }
 // resolução que se ajusta sozinha para o jogo não travar
@@ -2842,6 +2856,16 @@ function note(icon, title, sub) {
   setTimeout(() => { n.classList.add('out'); setTimeout(() => n.remove(), 400); }, 3600);
 }
 let toastT = null;
+// iluminação global: fotografa o mundo em volta do carro e usa como luz refletida (cores das luzes, prédios e chão)
+let giRT = null, giCam = null, giT = 0, giEnv = null;
+function iluminacaoGlobal() { if (!avancado() || !(state === 'race' || state === 'city') || !player.car) { if (giEnv && scene.environment === giEnv) { scene.environment = envRT ? envRT.texture : null; } return; }
+  const agora = performance.now(); if (agora - giT < 700) return; giT = agora;
+  if (!giRT) { giRT = new THREE.WebGLCubeRenderTarget(128, { format: THREE.RGBAFormat, generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter }); giCam = new THREE.CubeCamera(1, 600, giRT); }
+  const g = player.car.group, vis = g.visible; g.visible = false; giCam.position.copy(g.position); giCam.position.y += 1.2;
+  const envAnt = scene.environment; scene.environment = envRT ? envRT.texture : null; const sh = renderer.shadowMap.autoUpdate; renderer.shadowMap.autoUpdate = false;
+  giCam.update(renderer, scene); renderer.shadowMap.autoUpdate = sh; g.visible = vis;
+  const novo = pmrem.fromCubemap(giRT.texture); if (giEnv && giEnv !== novo.texture) giEnvRT.dispose(); giEnvRT = novo; giEnv = novo.texture; scene.environment = giEnv; }
+let giEnvRT = null;
 function foto8K() { const lim = limiteGPU(); let W = 7680, H = 4320; if (W > lim) { W = lim; H = Math.round(lim * 9 / 16); }
   const prAnt = renderer.getPixelRatio(), aspAnt = camera.aspect; let url = null;
   try { renderer.setPixelRatio(1); renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix();
@@ -6367,13 +6391,15 @@ function frame() {
   mpTick(dt);
   updateWeather(dt);
   updateSound(); updateBoombox();
-  if (gradePass) gradePass.uniforms.uT.value = (performance.now() % 10000) / 1000;
+  if (gradePass) { gradePass.uniforms.uT.value = (performance.now() % 10000) / 1000; const corre = (state === 'race' || state === 'city') && player.car; const kmh = corre ? Math.abs(player.vF) * 3.6 : 0; const alvoMB = avancado() && corre ? clamp((kmh - 90) / 180, 0, 1) * (settings.gfx >= 4 ? 1 : 0.7) : 0; gradePass.uniforms.uMB.value += (alvoMB - gradePass.uniforms.uMB.value) * 0.1; }
+  if (bokehPass && bokehPass.enabled && player.car) { const d = camera.position.distanceTo(player.car.group.position); const u = bokehPass.uniforms; u.focus.value += (d - u.focus.value) * 0.2; const menu = state === 'menu'; u.aperture.value = menu ? 0.0004 : 0.00003; u.maxblur.value = menu ? 0.012 : 0.0025; }
+  iluminacaoGlobal();
   if (useComposer()) composer.render(); else renderer.render(scene, camera);
 }
 frame();
 
 // gancho para testes automatizados
-window.__tn = { REPLAY, COL, RM: () => RM, startMode, finishRace, ghost: () => ghostCar, ACH, ach, addXP, note, updatePlayer, input, settings, applyParts, RADIO, setRadio, ramps: () => ramps, MP, mpCreate, mpJoin, city: () => city, startCity, cityAction, player, rivals: () => rivals, state: () => state, track: { P, T, S, N }, profile: () => profile, save: () => save, PHASES, buildWorld, setupRace, startRace, CAR };
+window.__tn = { fx: () => ({ bokehPass, gradePass, renderPass }), REPLAY, COL, RM: () => RM, startMode, finishRace, ghost: () => ghostCar, ACH, ach, addXP, note, updatePlayer, input, settings, applyParts, RADIO, setRadio, ramps: () => ramps, MP, mpCreate, mpJoin, city: () => city, startCity, cityAction, player, rivals: () => rivals, state: () => state, track: { P, T, S, N }, profile: () => profile, save: () => save, PHASES, buildWorld, setupRace, startRace, CAR };
 })();
 </script>
 </body>
