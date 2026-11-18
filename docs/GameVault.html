@@ -1,0 +1,916 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>GameVault</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#0b1220">
+<style>
+  :root{
+    --bg:#0b1220; --bg2:#111a2e; --panel:#16213a; --panel2:#1c2a47;
+    --line:#26365a; --text:#e6edf7; --muted:#8fa3c4; --muted2:#5f7396;
+    --teal:#14b8a6; --teal-d:#0f766e; --amber:#f59e0b; --amber-d:#b45309;
+    --red:#ef4444; --green:#22c55e; --radius:14px;
+    --shadow:0 10px 30px rgba(0,0,0,.35);
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  button{touch-action:manipulation}
+  html,body{height:100%}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;
+    background:radial-gradient(1200px 600px at 80% -10%, #16304a 0%, transparent 60%),
+               radial-gradient(900px 500px at -10% 110%, #13303a 0%, transparent 55%), var(--bg);
+    color:var(--text); min-height:100vh;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding-block:22px 80px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+  /* ---------- Header ---------- */
+  header.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+  .logo{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo-mark{width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,var(--teal),var(--teal-d));display:grid;place-items:center;flex:none;box-shadow:var(--shadow)}
+  .logo h1{font-size:22px;letter-spacing:.2px;line-height:1.15}
+  .logo p{font-size:12.5px;color:var(--muted)}
+  .spacer{flex:1}
+  .stats{display:flex;gap:8px;flex-wrap:wrap}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 12px;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px}
+  .stat b{color:var(--text);font-size:15px}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .dot.html{background:var(--teal)} .dot.apk{background:var(--amber)}
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:18px}
+  .search{flex:1;min-width:200px;position:relative}
+  .search svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted2)}
+  .search input{
+    width:100%;background:var(--panel);border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:11px 14px 11px 40px;font-size:14px;outline:none;transition:border-color .15s;
+  }
+  .search input:focus{border-color:var(--teal)}
+  .tabs{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px;gap:2px}
+  .tabs button{
+    background:transparent;border:0;color:var(--muted);padding:8px 14px;border-radius:7px;
+    cursor:pointer;font-size:13px;font-weight:600;transition:.15s;display:flex;align-items:center;gap:6px;
+  }
+  .tabs button.active{background:var(--panel2);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+  select.genre{
+    background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:10px;
+    padding:10px 12px;font-size:13px;outline:none;cursor:pointer;max-width:180px;
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn{
+    display:inline-flex;align-items:center;gap:7px;border:0;border-radius:10px;cursor:pointer;
+    font-size:13.5px;font-weight:600;padding:11px 16px;transition:.15s;white-space:nowrap;
+  }
+  .btn-primary{background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#04211e}
+  .btn-primary:hover{filter:brightness(1.1)}
+  .btn-ghost{background:var(--panel);border:1px solid var(--line);color:var(--text)}
+  .btn-ghost:hover{border-color:var(--teal);color:var(--teal)}
+  .btn-amber{background:linear-gradient(135deg,var(--amber),var(--amber-d));color:#2a1502}
+  .btn-amber:hover{filter:brightness(1.08)}
+  .btn-danger{background:transparent;border:1px solid #5a2a2a;color:#f87171}
+  .btn-danger:hover{background:#3a1414}
+  .btn-sm{padding:7px 11px;font-size:12.5px;border-radius:8px}
+
+  /* ---------- Grid & cards ---------- */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;display:flex;flex-direction:column;gap:10px;transition:.18s;position:relative;overflow:hidden;
+  }
+  .card:hover{transform:translateY(-3px);border-color:#34507e;box-shadow:var(--shadow)}
+  .card-head{display:flex;align-items:flex-start;gap:12px;min-width:0}
+  .cover{
+    width:54px;height:54px;border-radius:10px;flex:none;display:grid;place-items:center;
+    background:var(--panel2);border:1px solid var(--line);overflow:hidden;
+  }
+  .cover img{width:100%;height:100%;object-fit:cover}
+  .card-title{min-width:0;flex:1}
+  .card-title h3{font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card-title .meta{font-size:12px;color:var(--muted);margin-top:3px}
+  .badge{
+    display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
+    padding:3px 8px;border-radius:999px;letter-spacing:.3px;
+  }
+  .badge.html{background:rgba(20,184,166,.15);color:#5eead4;border:1px solid rgba(20,184,166,.35)}
+  .badge.apk{background:rgba(245,158,11,.15);color:#fcd34d;border:1px solid rgba(245,158,11,.35)}
+  .card p.desc{font-size:12.5px;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:36px}
+  .card-actions{display:flex;gap:7px;margin-top:auto;padding-top:6px;border-top:1px dashed var(--line)}
+  .card-actions .btn{flex:1;justify-content:center}
+  .icon-btn{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:8px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer;transition:.15s;flex:none}
+  .icon-btn:hover{color:var(--text);border-color:var(--teal)}
+  .icon-btn.del:hover{color:#f87171;border-color:#5a2a2a}
+
+  .empty{
+    grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--muted);
+    background:var(--panel);border:1px dashed var(--line);border-radius:var(--radius);
+  }
+  .empty svg{margin-bottom:14px;opacity:.6}
+  .empty h3{color:var(--text);margin-bottom:6px;font-size:17px}
+  .empty p{font-size:13.5px;max-width:420px;margin:0 auto}
+
+  /* ---------- Modal ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(4,8,18,.72);backdrop-filter:blur(4px);
+    display:none;align-items:flex-start;justify-content:center;padding:30px 16px;z-index:50;overflow-y:auto;
+  }
+  .overlay.show{display:flex}
+  .modal{
+    background:var(--bg2);border:1px solid var(--line);border-radius:16px;width:100%;max-width:620px;
+    box-shadow:var(--shadow);animation:pop .18s ease;
+  }
+  @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}
+  .modal-head{display:flex;align-items:center;gap:10px;padding:18px 22px;border-bottom:1px solid var(--line)}
+  .modal-head h2{font-size:17px;flex:1}
+  .modal-body{padding:20px 22px;display:flex;flex-direction:column;gap:14px;max-height:70vh;overflow-y:auto}
+  .modal-foot{display:flex;gap:10px;justify-content:flex-end;padding:16px 22px;border-top:1px solid var(--line);flex-wrap:wrap}
+  label.field{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--muted);font-weight:600}
+  label.field .req{color:#f87171}
+  .inp,textarea.inp,select.inp{
+    background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:9px;
+    padding:10px 12px;font-size:13.5px;outline:none;font-family:inherit;width:100%;transition:border-color .15s;
+  }
+  .inp:focus,textarea.inp:focus{border-color:var(--teal)}
+  textarea.inp{resize:vertical;min-height:110px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px;line-height:1.55}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px;gap:3px}
+  .seg button{flex:1;background:transparent;border:0;color:var(--muted);padding:9px;border-radius:7px;cursor:pointer;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;gap:7px;transition:.15s}
+  .seg button.active.html{background:rgba(20,184,166,.18);color:#5eead4}
+  .seg button.active.apk{background:rgba(245,158,11,.18);color:#fcd34d}
+  .hint{font-size:11.5px;color:var(--muted2);font-weight:400}
+  .type-panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:12px}
+  .type-panel h4{font-size:12.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+  .subseg{display:flex;gap:6px;flex-wrap:wrap}
+  .subseg button{background:var(--bg2);border:1px solid var(--line);color:var(--muted);padding:6px 12px;border-radius:7px;cursor:pointer;font-size:12px;font-weight:600}
+  .subseg button.active{border-color:var(--teal);color:var(--teal);background:rgba(20,184,166,.1)}
+
+  /* ---------- Player view ---------- */
+  .player{position:fixed;inset:0;background:#000;display:none;flex-direction:column;z-index:60}
+  .player.show{display:flex}
+  .player-bar{
+    display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--bg2);
+    border-bottom:1px solid var(--line);flex-wrap:wrap;
+  }
+  .player-bar h3{font-size:15px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .player iframe{flex:1;border:0;width:100%;background:#fff}
+  .apk-detail{
+    flex:1;overflow-y:auto;padding:30px 20px;display:flex;align-items:flex-start;justify-content:center;
+    background:radial-gradient(800px 400px at 50% 0%, #1a2f4a 0%, transparent 60%), var(--bg);
+  }
+  .apk-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px;max-width:520px;width:100%;box-shadow:var(--shadow)}
+  .apk-card .cover{width:72px;height:72px;margin-bottom:14px}
+  .apk-card h2{font-size:22px;margin-bottom:4px}
+  .apk-card .sub{color:var(--muted);font-size:13px;margin-bottom:18px}
+  .kv{display:grid;grid-template-columns:130px 1fr;gap:8px 14px;font-size:13.5px;margin-bottom:18px}
+  .kv dt{color:var(--muted2)} .kv dd{color:var(--text);word-break:break-all}
+  .apk-card .desc-full{color:var(--muted);font-size:13.5px;line-height:1.6;margin-bottom:20px;white-space:pre-wrap}
+  .apk-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+  /* toast */
+  #toast{
+    position:fixed;bottom:calc(24px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:11px 18px;
+    border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:.25s;z-index:80;box-shadow:var(--shadow);
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  #toast.err{border-color:#7f1d1d;color:#fca5a5}
+
+  /* ---------- Perfil / e-mail ---------- */
+  .email-pill{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 6px 5px 14px;font-size:12px;color:var(--muted);max-width:240px}
+  .email-pill span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .email-pill button{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:999px;padding:4px 11px;font-size:11px;cursor:pointer;font-weight:700;flex:none}
+  .email-pill button:hover{border-color:var(--teal);color:var(--teal)}
+
+  /* ---------- Gate de e-mail (primeiro acesso) ---------- */
+  .gate{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;background:radial-gradient(900px 500px at 50% -10%, #16304a 0%, transparent 60%), var(--bg);padding:20px;overflow-y:auto}
+  .gate.show{display:flex}
+  .gate-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:34px 28px;max-width:410px;width:100%;text-align:center;box-shadow:var(--shadow);margin:auto}
+  .gate-card .logo-mark{margin:0 auto 16px;width:60px;height:60px;border-radius:16px}
+  .gate-card h2{font-size:21px;margin-bottom:8px}
+  .gate-card p.sub{color:var(--muted);font-size:13px;line-height:1.6;margin-bottom:18px}
+  .gate-card .inp{text-align:center;margin-bottom:6px;font-size:15px}
+  .gate-card .btn{width:100%;justify-content:center}
+  .gate-error{color:#fca5a5;font-size:12px;min-height:18px;margin-bottom:6px}
+  .email-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:16px}
+  .email-chip{background:var(--bg2);border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer}
+  .email-chip:hover{border-color:var(--teal);color:var(--teal)}
+  .gate-note{font-size:11px;color:var(--muted2);margin-top:18px;line-height:1.6}
+
+  /* ---------- Drop overlay (arrastar e soltar) ---------- */
+  .drop-overlay{position:fixed;inset:0;z-index:90;display:none;align-items:center;justify-content:center;background:rgba(4,8,18,.8);backdrop-filter:blur(6px);pointer-events:none;padding:20px}
+  .drop-overlay.show{display:flex}
+  .drop-box{border:3px dashed var(--teal);border-radius:22px;padding:46px 50px;text-align:center;background:rgba(20,184,166,.07);max-width:460px;width:100%;animation:pop .18s ease}
+  .drop-box h3{font-size:22px;margin:14px 0 8px;color:#5eead4}
+  .drop-box p{color:var(--muted);font-size:13.5px;line-height:1.6}
+
+  /* ---------- Nuvem ---------- */
+  .cloud{display:flex;align-items:center;gap:7px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--muted)}
+  .cloud i{width:8px;height:8px;border-radius:50%;background:var(--muted2);flex:none}
+  .cloud.ok{color:#5eead4;border-color:rgba(20,184,166,.4)} .cloud.ok i{background:var(--teal);box-shadow:0 0 0 3px rgba(20,184,166,.2)}
+  .cloud.wait i{background:var(--amber);animation:piscar 1s infinite alternate} .cloud.off{color:#fcd34d;border-color:rgba(245,158,11,.4)} .cloud.off i{background:var(--amber)}
+  @keyframes piscar{to{opacity:.3}}
+  .only-here{display:inline-block;font-size:10.5px;font-weight:700;color:#fcd34d;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);border-radius:999px;padding:0 6px;margin-left:2px}
+  .gate-cloud{display:flex;gap:10px;align-items:flex-start;text-align:left;background:rgba(20,184,166,.08);border:1px solid rgba(20,184,166,.3);border-radius:10px;padding:10px 12px;font-size:12.5px;color:#a7f3e9;line-height:1.5;margin-bottom:16px}
+  .chips-tit{width:100%;font-size:11.5px;color:var(--muted2);margin-bottom:4px}
+  .steps{display:grid;gap:10px;font-size:13.5px;line-height:1.6;color:var(--muted)}
+  .steps b{color:var(--text)}
+  .step{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start}
+  .step span{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--panel2);border:1px solid var(--line);color:var(--teal);font-weight:800;font-size:13px}
+  :focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+  @media (prefers-reduced-motion:reduce){.cloud.wait i{animation:none}.card:hover{transform:none}}
+  @media (max-width:560px){
+    .row2{grid-template-columns:1fr}
+    .logo h1{font-size:18px}
+    .logo-mark{width:40px;height:40px}
+    .kv{grid-template-columns:1fr;gap:2px 0}
+    .kv dt{margin-top:8px}
+    .wrap{padding-block:14px 70px}
+    header.top{gap:10px}
+    .stat{padding:6px 9px;font-size:11.5px}
+    .stat b{font-size:14px}
+    .toolbar{gap:8px}
+    .search{flex-basis:100%;min-width:0}
+    .tabs{flex:1}
+    .tabs button{flex:1;justify-content:center;padding:9px 6px}
+    select.genre{flex:1;max-width:none}
+    .btn{padding:10px 12px;font-size:12.5px}
+    .icon-btn{width:42px;height:42px}
+    .grid{grid-template-columns:1fr;gap:10px}
+    .card{padding:12px;gap:8px}
+    .cover{width:44px;height:44px;border-radius:9px}
+    .card-title h3{font-size:13.5px}
+    .card-title .meta{font-size:11px}
+    .card p.desc{font-size:11.5px;min-height:32px}
+    .empty{padding:40px 16px}
+    .modal{border-radius:14px}
+    .modal-head{padding:14px 16px}
+    .modal-body{padding:16px;max-height:66vh}
+    .modal-foot{padding:14px 16px}
+    .player-bar{padding:10px 12px;gap:8px}
+    .player-bar h3{font-size:13px}
+    .apk-detail{padding:20px 12px}
+    .apk-card{padding:20px 16px}
+    .drop-box{padding:30px 22px}
+    .drop-box h3{font-size:19px}
+    #toast{max-width:90vw;text-align:center}
+  }
+</style>
+
+<div class="wrap">
+
+  <!-- ================= Header ================= -->
+  <header class="top">
+    <div class="logo">
+      <div class="logo-mark">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#04211e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="4" fill="#fef3c7" stroke="none"/><path d="M7 10v4M5 12h4"/><circle cx="16" cy="11" r="1" fill="#0f766e" stroke="none"/><circle cx="18.5" cy="13.5" r="1" fill="#0f766e" stroke="none"/></svg>
+      </div>
+      <div>
+        <h1>GameVault</h1>
+        <p>Sua biblioteca de jogos HTML5 e APK, salva pelo seu e-mail</p>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="stats">
+      <div class="stat"><b id="stTotal">0</b> jogos</div>
+      <div class="stat"><span class="dot html"></span><b id="stHtml">0</b> HTML5</div>
+      <div class="stat"><span class="dot apk"></span><b id="stApk">0</b> APK</div>
+    </div>
+    <div class="cloud wait" id="cloudPill" role="status"><i></i><span id="cloudTxt">Conectando…</span></div>
+    <div class="email-pill" title="Perfil atual (e-mail)">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+      <span id="curEmail">—</span>
+      <button id="btnSwitch" title="Trocar de e-mail">trocar</button>
+    </div>
+  </header>
+
+  <!-- ================= Toolbar ================= -->
+  <div class="toolbar">
+    <div class="search">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input id="q" type="text" placeholder="Buscar por nome, gênero ou descrição…">
+    </div>
+    <select id="genreFilter" class="genre"><option value="">Todos os gêneros</option></select>
+    <div class="tabs" id="typeTabs">
+      <button data-t="all" class="active">Todos</button>
+      <button data-t="html"><span class="dot html"></span>HTML5</button>
+      <button data-t="apk"><span class="dot apk"></span>APK</button>
+    </div>
+    <button class="btn btn-amber" id="btnSync" title="Levar seus jogos para outro celular/computador">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      Celular e computador
+    </button>
+    <button class="btn btn-ghost" id="btnExport" title="Salvar cópia de segurança em JSON">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Exportar
+    </button>
+    <button class="btn btn-ghost" id="btnImport" title="Restaurar de um arquivo JSON">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Importar
+    </button>
+    <input type="file" id="fileImport" accept="application/json,.json" hidden>
+    <button class="btn btn-ghost" id="btnPickFile" title="Adicionar jogo a partir de arquivo (HTML ou APK) — ideal no celular">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+      Selecionar arquivo
+    </button>
+    <input type="file" id="filePick" accept=".html,.htm,.apk,text/html,application/vnd.android.package-archive,application/octet-stream" multiple hidden>
+    <button class="btn btn-primary" id="btnAdd">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Adicionar jogo
+    </button>
+  </div>
+
+  <!-- ================= Grid ================= -->
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- ================= Add / Edit modal ================= -->
+<div class="overlay" id="overlay">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h2 id="modalTitle">Adicionar jogo</h2>
+      <button class="icon-btn" id="btnCloseModal" aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <label class="field">Tipo do jogo
+        <div class="seg" id="typeSeg">
+          <button type="button" data-t="html" class="active html">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            HTML5 (joga no navegador)
+          </button>
+          <button type="button" data-t="apk" class="apk">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+            APK (Android)
+          </button>
+        </div>
+      </label>
+
+      <div class="row2">
+        <label class="field">Nome <span class="req">*</span>
+          <input class="inp" id="fName" type="text" placeholder="Ex: Corrida Maluca" required>
+        </label>
+        <label class="field">Gênero
+          <input class="inp" id="fGenre" type="text" list="genreList" placeholder="Ex: Ação, Puzzle, RPG…">
+          <datalist id="genreList"></datalist>
+        </label>
+      </div>
+
+      <label class="field">Descrição
+        <textarea class="inp" id="fDesc" rows="2" placeholder="Sobre o jogo, controles, observações…"></textarea>
+      </label>
+
+      <label class="field">URL da capa (opcional)
+        <input class="inp" id="fCover" type="url" placeholder="https://…/imagem.png">
+      </label>
+
+      <!-- HTML5 panel -->
+      <div class="type-panel" id="panelHtml">
+        <h4>Conteúdo do jogo HTML5</h4>
+        <div class="subseg" id="htmlMode">
+          <button type="button" data-m="code" class="active">Colar código-fonte</button>
+          <button type="button" data-m="url">Usar link (URL)</button>
+        </div>
+        <div id="htmlCodeWrap">
+          <label class="field">Código HTML completo <span class="req">*</span>
+            <textarea class="inp" id="fHtmlCode" rows="7" placeholder='<!DOCTYPE html>&#10;<html>&#10;  <body>…seu jogo aqui…</body>&#10;</html>' spellcheck="false"></textarea>
+            <span class="hint">Cole o HTML completo do jogo (com CSS/JS embutidos). Ele roda direto no app.</span>
+          </label>
+        </div>
+        <div id="htmlUrlWrap" style="display:none">
+          <label class="field">URL do jogo <span class="req">*</span>
+            <input class="inp" id="fHtmlUrl" type="url" placeholder="https://exemplo.com/jogo.html">
+            <span class="hint">O site precisa permitir carregamento em iframe (X-Frame-Options). Se bloquear, use o modo código-fonte.</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- APK panel -->
+      <div class="type-panel" id="panelApk" style="display:none">
+        <h4>Dados do APK (Android)</h4>
+        <div class="row2">
+          <label class="field">Nome do pacote
+            <input class="inp" id="fPkg" type="text" placeholder="com.exemplo.jogo">
+          </label>
+          <label class="field">Versão
+            <input class="inp" id="fVer" type="text" placeholder="1.0.0">
+          </label>
+        </div>
+        <label class="field">Link de download do APK
+          <input class="inp" id="fApkUrl" type="url" placeholder="https://…/jogo.apk">
+        </label>
+        <p class="hint" id="apkStoredNote" hidden>O arquivo deste APK está guardado só neste aparelho. Coloque um link de download acima para ele aparecer também nos outros aparelhos.</p>
+        <label class="field">Tamanho / notas
+          <input class="inp" id="fSize" type="text" placeholder="Ex: 45 MB • requer Android 8+">
+        </label>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="btnCancel">Cancelar</button>
+      <button class="btn btn-primary" id="btnSave">Salvar jogo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Player / detail ================= -->
+<div class="player" id="player">
+  <div class="player-bar">
+    <button class="btn btn-ghost btn-sm" id="btnBack">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      Voltar
+    </button>
+    <h3 id="playerTitle"></h3>
+    <span class="badge" id="playerBadge"></span>
+    <button class="icon-btn" id="btnFull" title="Tela cheia">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+    </button>
+  </div>
+  <iframe id="gameFrame" title="Jogo" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-pointer-lock" allow="fullscreen; autoplay"></iframe>
+  <div class="apk-detail" id="apkDetail" style="display:none"></div>
+</div>
+
+<!-- ================= Modal Sincronizar ================= -->
+<div class="overlay" id="syncOverlay" style="z-index:70">
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h2>Ver no celular e no computador</h2>
+      <button class="icon-btn" id="btnCloseSync" aria-label="Fechar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="gap:14px">
+      <div class="steps">
+        <div class="step"><span>1</span><div><b>No computador:</b> abra o GameVault pelo link do claude.ai e entre com seu e-mail. Os jogos que você adicionar ficam salvos na nuvem.</div></div>
+        <div class="step"><span>2</span><div><b>No celular:</b> abra o mesmo link (entrando na mesma conta do Claude) e digite o <b>mesmo e-mail</b>. A lista aparece igual, e muda nos dois na hora.</div></div>
+      </div>
+      <div class="hint">Jogos HTML (colados, por link ou arquivos de até 8 MB) e APKs por link vão para a nuvem. Arquivos APK escolhidos do aparelho ficam só nele (aparecem com a etiqueta “só aqui”): para levá-los, coloque um link de download no APK.</div>
+      <div class="hint">Sem internet ou fora do claude.ai, os jogos ficam só no aparelho. Para levar assim, use <b>Exportar backup</b> aqui e <b>Importar backup</b> no outro.</div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" id="btnSyncImport">Importar backup</button>
+      <button class="btn btn-primary" id="btnSyncExport">Exportar backup</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= Gate de e-mail (primeiro acesso / trocar perfil) ================= -->
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div class="logo-mark">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#04211e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="4" fill="#fef3c7" stroke="none"/><path d="M7 10v4M5 12h4"/><circle cx="16" cy="11" r="1" fill="#0f766e" stroke="none"/><circle cx="18.5" cy="13.5" r="1" fill="#0f766e" stroke="none"/></svg>
+    </div>
+    <h2>Bem-vindo ao GameVault</h2>
+    <p class="sub">Digite seu e-mail para entrar. Seus jogos ficam guardados nele.</p>
+    <div class="gate-cloud"><span aria-hidden="true">☁️</span><span id="gateCloud">Use o mesmo e-mail no celular e no computador: seus jogos aparecem nos dois.</span></div>
+    <input class="inp" id="gateEmail" type="email" placeholder="seu@email.com" autocomplete="email" inputmode="email">
+    <div class="gate-error" id="gateError"></div>
+    <button class="btn btn-primary" id="btnEnter">Entrar / Criar perfil</button>
+    <div class="email-chips" id="emailChips"></div>
+    <p class="gate-note">Não precisa de senha: quem abrir este GameVault e digitar o mesmo e-mail vê a mesma lista.</p>
+  </div>
+</div>
+
+<!-- ================= Drop overlay (arrastar e soltar) ================= -->
+<div class="drop-overlay" id="dropOverlay">
+  <div class="drop-box">
+    <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#5eead4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+    <h3>Solte o(s) arquivo(s) aqui</h3>
+    <p>Arquivos <b>.html</b> (jogo HTML5, jogável no app) e <b>.apk</b> (Android) são adicionados automaticamente à biblioteca.</p>
+  </div>
+</div>
+
+<div class="overlay" id="confirmOverlay" style="z-index:85;align-items:center">
+  <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="confirmMsg" style="max-width:420px">
+    <div class="modal-body"><p id="confirmMsg" style="font-size:15px;line-height:1.5"></p></div>
+    <div class="modal-foot"><button class="btn btn-ghost" id="btnConfirmCancel">Cancelar</button><button class="btn btn-danger" id="btnConfirmOk">Excluir</button></div>
+  </div>
+</div>
+
+<div id="toast" role="status"></div>
+
+<script>
+(function(){
+  "use strict";
+  /* GameVault: biblioteca de jogos. Com a nuvem ligada (aberto pelo link do claude.ai), os jogos ficam salvos
+     pelo e-mail e aparecem em qualquer aparelho que entrar com o mesmo e-mail. Sem a nuvem, tudo fica neste aparelho. */
+  const OLD_KEY = "gamevault.library.v1";
+  const PROFILES_KEY = "gamevault.profiles.v1";
+  const ACTIVE_KEY = "gamevault.activeEmail.v1";
+  const CHUNK = 80000;               // caracteres por pedaço de código na nuvem (fica abaixo do limite de cada registro)
+  const MAX_NUVEM = 8*1024*1024;     // arquivo HTML até 8 MB vai para a nuvem
+  let games = [];
+  let profiles = {};
+  let activeEmail = null;
+  let editingId = null;
+  let curType = "html";
+  let htmlMode = "code";
+  let filterType = "all";
+  let filterGenre = "";
+  let query = "";
+  let nuvem = null, baixar = null, unsubJogos = null, nuvemJogos = [], nuvemPronta = false, migrado = {};
+
+  const $ = id => document.getElementById(id);
+  const grid = $("grid"), overlay = $("overlay"), player = $("player"), gate = $("gate");
+  const ls = { get(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }, set(k,v){ try{ localStorage.setItem(k,v); return true; }catch(e){ return false; } }, del(k){ try{ localStorage.removeItem(k); }catch(e){} } };
+
+  /* ---------- Neste aparelho (perfis por e-mail) ---------- */
+  function loadProfiles(){ try{ profiles = JSON.parse(ls.get(PROFILES_KEY)||"{}")||{}; }catch(e){ profiles={}; } }
+  function locais(){ return (profiles[activeEmail] && Array.isArray(profiles[activeEmail].games)) ? profiles[activeEmail].games : []; }
+  function saveLocal(list){
+    if(!activeEmail) return;
+    profiles[activeEmail] = Object.assign({}, profiles[activeEmail], {games:list, savedAt:new Date().toISOString()});
+    if(!ls.set(PROFILES_KEY, JSON.stringify(profiles))) toast("Sem espaço neste aparelho. Exporte um backup e remova jogos.", true);
+    ls.set(ACTIVE_KEY, activeEmail);
+  }
+  // junta o que está na nuvem com o que só existe neste aparelho (APKs e arquivos grandes)
+  function juntar(){
+    const loc = locais().filter(g => nuvem ? g.local : true);
+    games = (nuvem ? nuvemJogos : []).concat(loc).sort((a,b)=>String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
+    render();
+  }
+  function setActiveEmail(email){
+    activeEmail = email.toLowerCase().trim();
+    ls.set(ACTIVE_KEY, activeEmail);
+    if(!profiles[activeEmail]){
+      let migrated = [];
+      try{ const old = JSON.parse(ls.get(OLD_KEY)||"[]"); if(Array.isArray(old)&&old.length) migrated = old; }catch(e){}
+      profiles[activeEmail] = {games: migrated, createdAt: new Date().toISOString()};
+      if(migrated.length) ls.del(OLD_KEY);
+      ls.set(PROFILES_KEY, JSON.stringify(profiles));
+    }
+    $("curEmail").textContent = activeEmail;
+    nuvemJogos = []; nuvemPronta = false;
+    juntar();
+    assinarNuvem();
+  }
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+  const BLOB_LIMIT = 1.5*1024*1024;
+  const fmtSize = b => { if(b<1024) return b+" B"; if(b<1048576) return (b/1024).toFixed(1)+" KB"; return (b/1048576).toFixed(1)+" MB"; };
+
+  /* ---------- Nuvem (salva pelo e-mail) ---------- */
+  const chave = e => e.toLowerCase().trim().replace(/[^a-z0-9_\-.~:@+]/g, "_").slice(0, 180);
+  const contaRef = () => nuvem.doc("contas/" + chave(activeEmail));
+  const jogosCol = () => nuvem.collection("contas/" + chave(activeEmail) + "/jogos");
+  const codigosCol = () => nuvem.collection("contas/" + chave(activeEmail) + "/codigos");
+  function setNuvem(estado){
+    const el = $("cloudPill"), txt = {
+      ok: ["ok", "Salvo na nuvem", "Seus jogos aparecem em qualquer aparelho que entrar com este e-mail"],
+      conectando: ["wait", "Conectando à nuvem…", "Buscando seus jogos"],
+      lento: ["wait", "Nuvem sem resposta ainda", "A lista pode estar desatualizada. Verifique a internet."],
+      erro: ["off", "Nuvem indisponível", "Os jogos novos ficam só neste aparelho por enquanto"],
+      local: ["off", "Só neste aparelho", "Abra pelo link do GameVault no claude.ai para salvar na nuvem e ver no celular"]
+    }[estado];
+    el.className = "cloud " + txt[0]; $("cloudTxt").textContent = txt[1]; el.title = txt[2];
+    $("gateCloud").textContent = estado === "local" ? "Abra este app pelo link do claude.ai para salvar seus jogos na nuvem e vê-los no celular e no computador." : "Use o mesmo e-mail no celular e no computador: seus jogos aparecem nos dois.";
+  }
+  function assinarNuvem(){
+    if(unsubJogos){ unsubJogos(); unsubJogos = null; }
+    if(!nuvem || !activeEmail){ setNuvem(nuvem ? "conectando" : "local"); return; }
+    setNuvem("conectando");
+    const timer = setTimeout(()=>setNuvem("lento"), 10000);
+    unsubJogos = jogosCol().onSnapshot(snap => {
+      nuvemJogos = snap.docs.map(d => Object.assign({}, d.data(), {id: d.id}));
+      if(!snap.metadata.fromCache){ clearTimeout(timer); setNuvem("ok"); if(!nuvemPronta){ nuvemPronta = true; enviarLocaisParaNuvem(); } }
+      juntar();
+    }, err => { clearTimeout(timer); setNuvem("erro"); console.warn(err); });
+    contaRef().get().then(s => { if(!s.exists) return contaRef().set({email: activeEmail, criadoEm: new Date().toISOString()}); }).catch(()=>{});
+  }
+  // jogos que estavam só neste aparelho (de antes da nuvem) sobem uma vez
+  async function enviarLocaisParaNuvem(){
+    if(migrado[activeEmail]) return; migrado[activeEmail] = true;
+    const sobe = locais().filter(g => !g.local && !g.blobId && !nuvemJogos.some(n => n.id === g.id));
+    if(!sobe.length) return;
+    let ok = 0; for(const g of sobe){ try{ await nuvemSalvar(g); ok++; }catch(e){ break; } }
+    if(ok){ saveLocal(locais().filter(g => g.local || g.blobId)); toast(ok + " jogo(s) deste aparelho foram para a nuvem."); }
+  }
+  async function nuvemSalvar(g){
+    const d = Object.assign({}, g); delete d.local;
+    const antigas = (nuvemJogos.find(x=>x.id===g.id)||{}).partes || 0;
+    if(d.type==="html" && d.htmlMode==="code" && d.htmlCode && d.htmlCode.length > CHUNK){
+      const n = Math.ceil(d.htmlCode.length / CHUNK);
+      for(let i=0;i<n;i++) await codigosCol().doc(g.id+"~"+i).set({t: d.htmlCode.slice(i*CHUNK, (i+1)*CHUNK), i, n});
+      for(let i=n;i<antigas;i++) await codigosCol().doc(g.id+"~"+i).delete();
+      d.htmlCode = ""; d.partes = n;
+    } else { for(let i=0;i<antigas;i++) await codigosCol().doc(g.id+"~"+i).delete(); delete d.partes; }
+    Object.keys(d).forEach(k => { if(d[k]===undefined) delete d[k]; });
+    await jogosCol().doc(g.id).set(d);
+  }
+  async function nuvemApagar(g){
+    await jogosCol().doc(g.id).delete();
+    for(let i=0;i<(g.partes||0);i++) await codigosCol().doc(g.id+"~"+i).delete();
+  }
+  async function codigoDe(g){
+    if(!g.partes) return g.htmlCode || "";
+    const snaps = await Promise.all(Array.from({length:g.partes}, (_, i) => codigosCol().doc(g.id+"~"+i).get()));
+    return snaps.map(s => s.exists ? s.data().t : "").join("");
+  }
+  function erroNuvem(e){
+    const c = e && e.code;
+    if(c==="invalid_argument") toast("Sem permissão para salvar nesta biblioteca (peça acesso de editor ao dono).", true);
+    else if(c==="quota_exceeded") toast("A nuvem está cheia. Apague jogos antigos para liberar espaço.", true);
+    else toast("Não consegui salvar na nuvem. Verifique a internet e tente de novo.", true);
+  }
+
+  /* ---------- IndexedDB (APKs e arquivos que ficam só neste aparelho) ---------- */
+  let _dbp=null;
+  function idb(){ if(_dbp) return _dbp; _dbp=new Promise((res,rej)=>{ const r=indexedDB.open("gamevault.blobs",1); r.onupgradeneeded=()=>r.result.createObjectStore("blobs"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); return _dbp; }
+  const idbPut=(k,v)=>idb().then(db=>new Promise((res,rej)=>{const tx=db.transaction("blobs","readwrite");tx.objectStore("blobs").put(v,k);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);}));
+  const idbGet=(k)=>idb().then(db=>new Promise((res,rej)=>{const r=db.transaction("blobs").objectStore("blobs").get(k);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}));
+  const idbDel=(k)=>idb().then(db=>new Promise((res,rej)=>{const tx=db.transaction("blobs","readwrite");tx.objectStore("blobs").delete(k);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);})).catch(()=>{});
+
+  /* ---------- Adicionar a partir de arquivo ---------- */
+  async function addGameFromFile(file){
+    if(!activeEmail){ openGate(); return; }
+    const ext=(file.name.split(".").pop()||"").toLowerCase();
+    const name=file.name.replace(/\.[^.]+$/,"");
+    const now=new Date().toISOString(), id=uid();
+    let entry;
+    if(ext==="html"||ext==="htm"){
+      if(nuvem && file.size<=MAX_NUVEM){
+        entry={id,type:"html",htmlMode:"code",htmlCode:await file.text(),name,genre:"",desc:"Importado de arquivo ("+fmtSize(file.size)+").",cover:"",createdAt:now,updatedAt:now};
+      } else if(file.size>BLOB_LIMIT){
+        await idbPut(id, file);
+        entry={id,local:true,type:"html",htmlMode:"blob",blobId:id,name,genre:"",desc:"Arquivo grande ("+fmtSize(file.size)+"), guardado só neste aparelho.",cover:"",createdAt:now,updatedAt:now};
+      } else {
+        entry={id,type:"html",htmlMode:"code",htmlCode:await file.text(),name,genre:"",desc:"Importado de arquivo ("+fmtSize(file.size)+").",cover:"",createdAt:now,updatedAt:now};
+      }
+    } else if(ext==="apk"){
+      await idbPut(id, file);
+      entry={id,local:true,type:"apk",apkStored:true,blobId:id,apkUrl:"",name,package:"",version:"",size:fmtSize(file.size)+" • guardado só neste aparelho",genre:"",desc:"Arquivo APK guardado só neste aparelho. Para aparecer nos outros aparelhos, edite e coloque um link de download.",cover:"",createdAt:now,updatedAt:now};
+    } else { toast("Arquivo não suportado: "+file.name+" (use .html ou .apk)", true); return; }
+    await gravar(entry);
+    toast("Adicionado: "+name+(entry.local && nuvem ? " (só neste aparelho)" : ""));
+  }
+  // grava um jogo onde ele mora (nuvem ou aparelho)
+  async function gravar(g){
+    if(nuvem && !g.local){
+      try{ await nuvemSalvar(g); }
+      catch(e){ erroNuvem(e); g.local = true; const l = locais().filter(x=>x.id!==g.id); l.unshift(g); saveLocal(l); juntar(); }
+      return;
+    }
+    const l = locais().filter(x=>x.id!==g.id); l.unshift(g); saveLocal(l); juntar();
+  }
+
+  /* ---------- Toast ---------- */
+  let toastTimer;
+  function toast(msg, err){
+    const t = $("toast"); t.textContent = msg; t.classList.toggle("err", !!err); t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove("show"), 3200);
+  }
+  /* ---------- Confirmação dentro da página ---------- */
+  let confirmFn = null;
+  function perguntar(msg, botao, fn){ $("confirmMsg").textContent = msg; $("btnConfirmOk").textContent = botao; confirmFn = fn; $("confirmOverlay").classList.add("show"); setTimeout(()=>$("btnConfirmCancel").focus(), 50); }
+  function fecharPergunta(){ $("confirmOverlay").classList.remove("show"); confirmFn = null; }
+
+  /* ---------- Entrar com e-mail ---------- */
+  function openGate(){
+    $("gateEmail").value = ""; $("gateError").textContent = "";
+    const chips = Object.keys(profiles).filter(e=>e!==activeEmail);
+    $("emailChips").innerHTML = chips.length ? '<div class="chips-tit">Ou entre em um e-mail já usado neste aparelho:</div>' + chips.map(e=>`<button class="email-chip" data-e="${esc(e)}">${esc(e)}</button>`).join("") : "";
+    gate.classList.add("show"); setTimeout(()=>$("gateEmail").focus(), 60);
+  }
+  function submitEmail(){
+    const v = $("gateEmail").value.trim().toLowerCase();
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)){ $("gateError").textContent = "Digite um e-mail válido, como nome@gmail.com."; return; }
+    setActiveEmail(v); gate.classList.remove("show"); toast("Entrou como "+activeEmail);
+  }
+
+  const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  /* ---------- Ícones ---------- */
+  const iconHtml = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5eead4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>';
+  const iconApk  = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fcd34d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>';
+  const iconPlay = '<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>';
+  const iconDl   = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+  const iconLocal = '<span class="only-here" title="Guardado só neste aparelho">só aqui</span>';
+
+  /* ---------- Desenhar ---------- */
+  function genres(){ const s = new Set(); games.forEach(g => { if(g.genre && g.genre.trim()) s.add(g.genre.trim()); }); return [...s].sort((a,b)=>a.localeCompare(b,"pt")); }
+  function refreshGenreOptions(){
+    const gs = genres();
+    $("genreFilter").innerHTML = '<option value="">Todos os gêneros</option>' + gs.map(g=>`<option value="${esc(g)}" ${g===filterGenre?"selected":""}>${esc(g)}</option>`).join("");
+    $("genreList").innerHTML = gs.map(g=>`<option value="${esc(g)}">`).join("");
+  }
+  function updateStats(){ $("stTotal").textContent = games.length; $("stHtml").textContent = games.filter(g=>g.type==="html").length; $("stApk").textContent = games.filter(g=>g.type==="apk").length; }
+  function coverHtml(g){ if(g.cover && /^https?:\/\//i.test(g.cover)) return `<img src="${esc(g.cover)}" alt="" onerror="this.remove()">`; return g.type==="html" ? iconHtml : iconApk; }
+  function render(){
+    updateStats(); refreshGenreOptions();
+    const q = query.trim().toLowerCase();
+    const list = games.filter(g => {
+      if(filterType!=="all" && g.type!==filterType) return false;
+      if(filterGenre && g.genre!==filterGenre) return false;
+      if(q){ const hay = (g.name+" "+(g.genre||"")+" "+(g.desc||"")+" "+(g.package||"")).toLowerCase(); if(!hay.includes(q)) return false; }
+      return true;
+    });
+    if(!list.length){
+      grid.innerHTML = `<div class="empty">
+          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="4"/><path d="M7 10v4M5 12h4"/><circle cx="16" cy="11" r=".8" fill="currentColor"/><circle cx="18.5" cy="13.5" r=".8" fill="currentColor"/></svg>
+          <h3>${games.length ? "Nenhum jogo encontrado" : (nuvem && !nuvemPronta ? "Buscando seus jogos na nuvem…" : "Sua biblioteca está vazia")}</h3>
+          <p>${games.length ? "Tente outro termo de busca ou limpe os filtros." : "Toque em “Adicionar jogo” ou “Selecionar arquivo”, ou arraste um .html/.apk para a tela. " + (nuvem ? "Com este e-mail, o jogo aparece no celular e no computador." : "Tudo fica salvo neste aparelho.")}</p>
+        </div>`;
+      return;
+    }
+    grid.innerHTML = list.map(g => `
+      <div class="card">
+        <div class="card-head">
+          <div class="cover">${coverHtml(g)}</div>
+          <div class="card-title">
+            <h3 title="${esc(g.name)}">${esc(g.name)}</h3>
+            <div class="meta">${esc(g.genre||"Sem gênero")}${nuvem && g.local ? " · " + iconLocal : ""}</div>
+          </div>
+          <span class="badge ${g.type==="apk"?"apk":"html"}">${g.type==="html"?"HTML5":"APK"}</span>
+        </div>
+        <p class="desc">${esc(g.desc || (g.type==="html" ? (g.htmlMode==="url"?"Jogo por link: "+g.htmlUrl : "Jogo HTML por código") : (g.package||"Pacote Android")))}</p>
+        <div class="card-actions">
+          <button class="btn btn-sm ${g.type==="html"?"btn-primary":"btn-amber"}" data-act="open" data-id="${esc(g.id)}">${g.type==="html" ? iconPlay+" Jogar" : iconDl+" Ver / Baixar"}</button>
+          <button class="icon-btn" data-act="edit" data-id="${esc(g.id)}" title="Editar" aria-label="Editar ${esc(g.name)}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+          <button class="icon-btn del" data-act="del" data-id="${esc(g.id)}" title="Excluir" aria-label="Excluir ${esc(g.name)}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        </div>
+      </div>`).join("");
+  }
+
+  /* ---------- Formulário ---------- */
+  async function openModal(g){
+    editingId = g ? g.id : null;
+    $("modalTitle").textContent = g ? "Editar jogo" : "Adicionar jogo";
+    curType = g ? g.type : "html";
+    htmlMode = g && g.type==="html" ? (g.htmlMode==="url" ? "url" : "code") : "code";
+    syncTypeSeg(); syncHtmlMode();
+    $("fName").value = g ? g.name : ""; $("fGenre").value = g ? (g.genre||"") : ""; $("fDesc").value = g ? (g.desc||"") : ""; $("fCover").value = g ? (g.cover||"") : "";
+    $("fHtmlCode").value = (g && g.type==="html" && g.htmlMode==="code") ? (g.partes ? "Carregando código…" : (g.htmlCode||"")) : "";
+    $("fHtmlUrl").value = (g && g.type==="html" && g.htmlMode==="url") ? (g.htmlUrl||"") : "";
+    $("fPkg").value = (g && g.type==="apk") ? (g.package||"") : ""; $("fVer").value = (g && g.type==="apk") ? (g.version||"") : "";
+    $("fApkUrl").value = (g && g.type==="apk") ? (g.apkUrl||"") : ""; $("fSize").value = (g && g.type==="apk") ? (g.size||"") : "";
+    $("fHtmlCode").disabled = false;
+    if(g && g.blobId && g.type==="html"){ $("fHtmlCode").value = "O arquivo deste jogo está guardado no aparelho e não pode ser editado aqui."; $("fHtmlCode").disabled = true; }
+    if(g && g.apkStored) $("apkStoredNote").hidden = false; else $("apkStoredNote").hidden = true;
+    overlay.classList.add("show"); setTimeout(()=>$("fName").focus(), 50);
+    if(g && g.partes){ try{ $("fHtmlCode").value = await codigoDe(g); }catch(e){ toast("Não consegui carregar o código.", true); } }
+  }
+  function closeModal(){ overlay.classList.remove("show"); editingId=null; }
+  function syncTypeSeg(){ document.querySelectorAll("#typeSeg button").forEach(b=> b.classList.toggle("active", b.dataset.t===curType)); $("panelHtml").style.display = curType==="html" ? "" : "none"; $("panelApk").style.display = curType==="apk" ? "" : "none"; }
+  function syncHtmlMode(){ document.querySelectorAll("#htmlMode button").forEach(b=> b.classList.toggle("active", b.dataset.m===htmlMode)); $("htmlCodeWrap").style.display = htmlMode==="code" ? "" : "none"; $("htmlUrlWrap").style.display = htmlMode==="url" ? "" : "none"; }
+  async function saveGame(){
+    const name = $("fName").value.trim();
+    if(!name){ toast("Escreva o nome do jogo.", true); $("fName").focus(); return; }
+    const cover = $("fCover").value.trim();
+    if(cover && !/^https?:\/\//i.test(cover)){ toast("A capa precisa ser um link que começa com https://", true); return; }
+    const base = { name, genre: $("fGenre").value.trim(), desc: $("fDesc").value.trim(), cover, updatedAt: new Date().toISOString() };
+    const orig = editingId ? games.find(x=>x.id===editingId) : null;
+    if(curType==="html"){
+      if(orig && orig.htmlMode==="blob" && orig.blobId) Object.assign(base, {type:"html", htmlMode:"blob", blobId:orig.blobId, local:true});
+      else if(htmlMode==="code"){ const code = $("fHtmlCode").value; if(!code.trim()){ toast("Cole o código HTML do jogo.", true); return; } Object.assign(base, {type:"html", htmlMode:"code", htmlCode:code}); }
+      else { const url = $("fHtmlUrl").value.trim(); if(!/^https?:\/\//i.test(url)){ toast("Coloque um link válido (começando com https://).", true); return; } Object.assign(base, {type:"html", htmlMode:"url", htmlUrl:url}); }
+    } else {
+      const url = $("fApkUrl").value.trim();
+      if(url && /^https?:\/\//i.test(url)) Object.assign(base, {type:"apk", package:$("fPkg").value.trim(), version:$("fVer").value.trim(), apkUrl:url, size:$("fSize").value.trim(), apkStored:false, blobId:undefined, local:false});
+      else if(orig && orig.apkStored && orig.blobId) Object.assign(base, {type:"apk", apkStored:true, blobId:orig.blobId, local:true, apkUrl:"", package:$("fPkg").value.trim(), version:$("fVer").value.trim(), size:$("fSize").value.trim()||orig.size||""});
+      else { toast("Coloque o link de download do APK (começando com https://).", true); return; }
+    }
+    const full = Object.assign({}, orig||{}, base, {id: orig ? orig.id : uid(), createdAt: orig ? orig.createdAt : new Date().toISOString()});
+    if(full.type!=="html"){ delete full.htmlCode; delete full.htmlUrl; delete full.htmlMode; delete full.partes; } else { delete full.apkUrl; delete full.package; delete full.version; delete full.size; delete full.apkStored; }
+    if(full.htmlMode==="url") delete full.htmlCode; if(full.htmlMode==="code") delete full.htmlUrl;
+    if(!full.local) delete full.blobId;
+    const btn = $("btnSave"); btn.disabled = true; btn.textContent = "Salvando…";
+    // se mudou de lugar (do aparelho para a nuvem), tira da lista do aparelho
+    if(orig && orig.local && !full.local){ saveLocal(locais().filter(x=>x.id!==orig.id)); if(orig.blobId) idbDel(orig.blobId); }
+    await gravar(full);
+    btn.disabled = false; btn.textContent = "Salvar jogo";
+    toast(orig ? "Jogo atualizado." : (nuvem && !full.local ? "Jogo salvo na nuvem." : "Jogo salvo neste aparelho."));
+    closeModal();
+  }
+
+  /* ---------- Jogar / ver APK ---------- */
+  async function openGame(id){
+    const g = games.find(x=>x.id===id); if(!g) return;
+    $("playerTitle").textContent = g.name + (g.genre? "  •  "+g.genre : "");
+    const badge = $("playerBadge"); badge.className = "badge " + (g.type==="apk"?"apk":"html"); badge.textContent = g.type==="html" ? "HTML5" : "APK";
+    const frame = $("gameFrame"), apk = $("apkDetail");
+    const carregando = "<!DOCTYPE html><html><body style='margin:0;background:#0b1220;color:#8fa3c4;font-family:system-ui,sans-serif;display:grid;place-items:center;height:100vh;font-size:15px'>Carregando jogo…</body></html>";
+    player.classList.add("show"); document.body.style.overflow = "hidden";
+    if(g.type==="html"){
+      apk.style.display = "none"; frame.style.display = "";
+      if(g.htmlMode==="url"){ frame.removeAttribute("srcdoc"); frame.src = g.htmlUrl; }
+      else if(g.htmlMode==="blob"){ frame.srcdoc = carregando; idbGet(g.blobId).then(b=>b?b.text():"").then(t=>{ if(t) frame.srcdoc = t; else toast("O arquivo deste jogo não está neste aparelho.", true); }).catch(()=>toast("Erro ao carregar o jogo.", true)); }
+      else if(g.partes){ frame.srcdoc = carregando; try{ frame.srcdoc = await codigoDe(g); }catch(e){ toast("Não consegui baixar o jogo da nuvem.", true); } }
+      else { frame.srcdoc = g.htmlCode || ""; }
+      return;
+    }
+    frame.style.display = "none"; apk.style.display = "";
+    const dlLine = g.apkStored
+      ? `<dt>Arquivo</dt><dd style="color:#5eead4">Guardado só neste aparelho</dd>`
+      : `<dt>Download</dt><dd><a href="${esc(g.apkUrl)}" target="_blank" rel="noopener" style="color:#5eead4;word-break:break-all">${esc(g.apkUrl)}</a></dd>`;
+    const dlBtn = g.apkStored ? `<button class="btn btn-amber" id="btnDlStored">${iconDl} Baixar APK</button>` : `<a class="btn btn-amber" href="${esc(g.apkUrl)}" target="_blank" rel="noopener">${iconDl} Baixar APK</a>`;
+    const copyBtn = g.apkStored ? "" : `<button class="btn btn-ghost" id="btnCopyLink">Copiar link</button>`;
+    apk.innerHTML = `<div class="apk-card"><div class="cover">${coverHtml(g)}</div><h2>${esc(g.name)}</h2><div class="sub">${esc(g.genre||"Android")} ${g.version? "• v"+esc(g.version):""}</div>
+        <dl class="kv">${g.package?`<dt>Pacote</dt><dd>${esc(g.package)}</dd>`:""}${g.version?`<dt>Versão</dt><dd>${esc(g.version)}</dd>`:""}${g.size?`<dt>Tamanho / notas</dt><dd>${esc(g.size)}</dd>`:""}${dlLine}</dl>
+        ${g.desc?`<div class="desc-full">${esc(g.desc)}</div>`:""}<div class="apk-actions">${dlBtn}${copyBtn}</div></div>`;
+    const copy = $("btnCopyLink");
+    if(copy) copy.onclick = () => { if(navigator.clipboard) navigator.clipboard.writeText(g.apkUrl).then(()=>toast("Link copiado.")).catch(()=>toast("Não deu para copiar. Segure o dedo no link para copiar.", true)); };
+    const dl = $("btnDlStored");
+    if(dl) dl.onclick = () => {
+      idbGet(g.blobId).then(blob=>{
+        if(!blob){ toast("O arquivo APK não está neste aparelho.", true); return; }
+        const url = URL.createObjectURL(blob), a = document.createElement("a"); a.href=url; a.download=g.name+".apk"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url), 5000);
+        if(window.claude) toast("Se o download não começar, abra o GameVault fora do claude.ai para baixar arquivos APK.");
+      }).catch(()=>toast("Erro ao preparar o download.", true));
+    };
+  }
+  function closePlayer(){ player.classList.remove("show"); document.body.style.overflow = ""; const f = $("gameFrame"); f.src="about:blank"; f.removeAttribute("srcdoc"); }
+
+  /* ---------- Backup ---------- */
+  async function exportJson(){
+    if(!games.length){ toast("A biblioteca está vazia, não há o que exportar.", true); return; }
+    const lista = [];
+    for(const g of games){ if(g.blobId) continue; const c = Object.assign({}, g); delete c.local; if(c.partes){ try{ c.htmlCode = await codigoDe(g); }catch(e){} delete c.partes; } lista.push(c); }
+    const json = JSON.stringify({app:"GameVault", email: activeEmail, exportedAt:new Date().toISOString(), games: lista}, null, 2);
+    const nome = "gamevault-backup-" + new Date().toISOString().slice(0,10) + ".json";
+    if(baixar){ try{ await baixar.save({filename: nome, data: new Blob([json], {type:"application/json"})}); toast("Backup salvo."); }catch(e){ if(e && e.code!=="declined") toast("Não deu para salvar o backup aqui.", true); } return; }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([json], {type:"application/json"})); a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+    toast(games.some(g=>g.blobId) ? "Backup exportado (APKs e arquivos guardados só no aparelho ficam de fora)." : "Backup exportado.");
+  }
+  function importJson(file){
+    const reader = new FileReader();
+    reader.onload = async e => {
+      try{
+        const data = JSON.parse(e.target.result), arr = Array.isArray(data) ? data : (data.games||[]);
+        if(!arr.length) throw new Error("vazio");
+        let added = 0;
+        for(const g of arr){
+          if(!g || !g.name || !g.type || g.blobId) continue;
+          if(games.some(x => x.name===g.name && x.type===g.type)) continue;
+          const novo = Object.assign({}, g, {id: g.id && /^[a-z0-9]+$/i.test(g.id) ? g.id : uid()}); delete novo.local; delete novo.partes;
+          await gravar(novo); added++;
+        }
+        toast(added ? `${added} jogo(s) importado(s)${nuvem ? " para a nuvem" : ""}.` : "Nenhum jogo novo (já estavam aqui).");
+      }catch(err){ toast("Arquivo inválido. Use um backup .json do GameVault.", true); }
+    };
+    reader.readAsText(file);
+  }
+
+  /* ---------- Eventos ---------- */
+  $("btnEnter").onclick = submitEmail;
+  $("gateEmail").addEventListener("keydown", e=>{ if(e.key==="Enter") submitEmail(); });
+  $("btnSwitch").onclick = openGate;
+  $("emailChips").addEventListener("click", e=>{ const c = e.target.closest(".email-chip"); if(!c) return; setActiveEmail(c.dataset.e); gate.classList.remove("show"); toast("Entrou como "+activeEmail); });
+  $("btnAdd").onclick = ()=>{ if(!activeEmail) return openGate(); openModal(null); };
+  const syncOverlay = $("syncOverlay");
+  $("btnSync").onclick = ()=>syncOverlay.classList.add("show");
+  $("btnCloseSync").onclick = ()=>syncOverlay.classList.remove("show");
+  syncOverlay.addEventListener("click", e=>{ if(e.target===syncOverlay) syncOverlay.classList.remove("show"); });
+  $("btnSyncExport").onclick = ()=>{ exportJson(); };
+  $("btnSyncImport").onclick = ()=>{ syncOverlay.classList.remove("show"); $("fileImport").click(); };
+  $("btnCloseModal").onclick = closeModal; $("btnCancel").onclick = closeModal; $("btnSave").onclick = saveGame;
+  overlay.addEventListener("click", e => { if(e.target===overlay) closeModal(); });
+  $("btnConfirmCancel").onclick = fecharPergunta; $("btnConfirmOk").onclick = () => { const f = confirmFn; fecharPergunta(); if(f) f(); };
+  $("confirmOverlay").addEventListener("click", e => { if(e.target===$("confirmOverlay")) fecharPergunta(); });
+  document.addEventListener("keydown", e => { if(e.key==="Escape"){ if($("confirmOverlay").classList.contains("show")) fecharPergunta(); else if(player.classList.contains("show")) closePlayer(); else if(overlay.classList.contains("show")) closeModal(); else if(syncOverlay.classList.contains("show")) syncOverlay.classList.remove("show"); } });
+  document.querySelectorAll("#typeSeg button").forEach(b=> b.onclick = ()=>{ curType=b.dataset.t; syncTypeSeg(); });
+  document.querySelectorAll("#htmlMode button").forEach(b=> b.onclick = ()=>{ htmlMode=b.dataset.m; syncHtmlMode(); });
+  $("q").addEventListener("input", e => { query=e.target.value; render(); });
+  $("genreFilter").addEventListener("change", e => { filterGenre=e.target.value; render(); });
+  document.querySelectorAll("#typeTabs button").forEach(b=> b.onclick = ()=>{ filterType = b.dataset.t; document.querySelectorAll("#typeTabs button").forEach(x=>x.classList.toggle("active", x===b)); render(); });
+  grid.addEventListener("click", e => {
+    const btn = e.target.closest("[data-act]"); if(!btn) return;
+    const id = btn.dataset.id, act = btn.dataset.act, g = games.find(x=>x.id===id); if(!g) return;
+    if(act==="open") openGame(id);
+    else if(act==="edit") openModal(g);
+    else if(act==="del") perguntar(`Excluir “${g.name}”? ${nuvem && !g.local ? "Ele some também dos outros aparelhos com este e-mail." : ""}`, "Excluir", async () => {
+      if(g.local || !nuvem){ if(g.blobId) idbDel(g.blobId); saveLocal(locais().filter(x=>x.id!==id)); juntar(); toast("Jogo removido."); return; }
+      try{ await nuvemApagar(g); toast("Jogo removido."); }catch(err){ erroNuvem(err); }
+    });
+  });
+  $("btnBack").onclick = closePlayer;
+  $("btnFull").onclick = () => { const f = $("gameFrame"); if(document.fullscreenElement) document.exitFullscreen(); else if(f.style.display!=="none" && f.requestFullscreen) f.requestFullscreen().catch(()=>toast("Tela cheia indisponível aqui.", true)); else toast("Tela cheia indisponível aqui.", true); };
+  $("btnExport").onclick = exportJson;
+  $("btnImport").onclick = ()=>$("fileImport").click();
+  $("fileImport").addEventListener("change", e => { if(e.target.files[0]) importJson(e.target.files[0]); e.target.value=""; });
+  $("btnPickFile").onclick = ()=>$("filePick").click();
+  $("filePick").addEventListener("change", e => { Array.from(e.target.files||[]).forEach(f=>addGameFromFile(f).catch(err=>{console.error(err);toast("Erro ao importar: "+f.name,true);})); e.target.value=""; });
+
+  /* ---------- Arrastar e soltar ---------- */
+  let dragDepth = 0; const dropOverlay = $("dropOverlay");
+  window.addEventListener("dragenter", e=>{ e.preventDefault(); if(e.dataTransfer && Array.from(e.dataTransfer.types||[]).includes("Files")){ dragDepth++; dropOverlay.classList.add("show"); } });
+  window.addEventListener("dragover", e=>{ e.preventDefault(); if(e.dataTransfer) e.dataTransfer.dropEffect="copy"; });
+  window.addEventListener("dragleave", e=>{ e.preventDefault(); dragDepth=Math.max(0,dragDepth-1); if(dragDepth===0) dropOverlay.classList.remove("show"); });
+  window.addEventListener("drop", e=>{ e.preventDefault(); dragDepth=0; dropOverlay.classList.remove("show"); Array.from((e.dataTransfer&&e.dataTransfer.files)||[]).forEach(f=>addGameFromFile(f).catch(err=>{ console.error(err); toast("Erro ao importar: "+f.name, true); })); });
+
+  /* ---------- Início ---------- */
+  loadProfiles();
+  setNuvem(window.claude && window.claude.use ? "conectando" : "local");
+  const savedEmail = ls.get(ACTIVE_KEY);
+  if(savedEmail && profiles[savedEmail]) setActiveEmail(savedEmail);
+  else { activeEmail = null; $("curEmail").textContent = "—"; render(); openGate(); }
+  if(window.claude && window.claude.use){
+    window.claude.use("downloads").then(d => { baixar = d; }).catch(()=>{});
+    window.claude.use("db").then(d => { nuvem = d; if(!nuvem){ setNuvem("local"); return; } juntar(); assinarNuvem(); }).catch(() => setNuvem("local"));
+  }
+})();
+</script>
+
+</body>
+</html>
