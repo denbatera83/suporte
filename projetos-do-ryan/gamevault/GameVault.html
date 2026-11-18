@@ -66,6 +66,7 @@
     display:inline-flex;align-items:center;gap:7px;border:0;border-radius:10px;cursor:pointer;
     font-size:13.5px;font-weight:600;padding:11px 16px;transition:.15s;white-space:nowrap;
   }
+  a.btn{text-decoration:none}
   .btn-primary{background:linear-gradient(135deg,var(--teal),var(--teal-d));color:#04211e}
   .btn-primary:hover{filter:brightness(1.1)}
   .btn-ghost{background:var(--panel);border:1px solid var(--line);color:var(--text)}
@@ -280,6 +281,7 @@
       <div class="stat"><span class="dot apk"></span><b id="stApk">0</b> APK</div>
     </div>
     <div class="cloud wait" id="cloudPill" role="status"><i></i><span id="cloudTxt">Conectando…</span></div>
+    <a class="btn btn-ghost btn-sm" id="linkNuvem" data-nuvem href="https://claude.ai/artifact/6SmdgBFZhWJt6YV3EqMKjm" target="_blank" rel="noopener" hidden>☁️ Abrir com nuvem</a>
     <div class="email-pill" title="Perfil atual (e-mail)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
       <span id="curEmail">—</span>
@@ -466,6 +468,7 @@
     <h2>Bem-vindo ao GameVault</h2>
     <p class="sub">Digite seu e-mail para entrar. Seus jogos ficam guardados nele.</p>
     <div class="gate-cloud"><span aria-hidden="true">☁️</span><span id="gateCloud">Use o mesmo e-mail no celular e no computador: seus jogos aparecem nos dois.</span></div>
+    <a class="btn btn-ghost" id="gateNuvem" data-nuvem href="https://claude.ai/artifact/6SmdgBFZhWJt6YV3EqMKjm" target="_blank" rel="noopener" hidden style="margin-bottom:14px">☁️ Abrir a versão com nuvem</a>
     <input class="inp" id="gateEmail" type="email" placeholder="seu@email.com" autocomplete="email" inputmode="email">
     <div class="gate-error" id="gateError"></div>
     <button class="btn btn-primary" id="btnEnter">Entrar / Criar perfil</button>
@@ -565,6 +568,7 @@
       local: ["off", "Só neste aparelho", "Abra pelo link do GameVault no claude.ai para salvar na nuvem e ver no celular"]
     }[estado];
     el.className = "cloud " + txt[0]; $("cloudTxt").textContent = txt[1]; el.title = txt[2];
+    $("linkNuvem").hidden = estado !== "local"; $("gateNuvem").hidden = estado !== "local";
     $("gateCloud").textContent = estado === "local" ? "Abra este app pelo link do claude.ai para salvar seus jogos na nuvem e vê-los no celular e no computador." : "Use o mesmo e-mail no celular e no computador: seus jogos aparecem nos dois.";
   }
   function assinarNuvem(){
@@ -829,6 +833,7 @@
     for(const g of games){ if(g.blobId) continue; const c = Object.assign({}, g); delete c.local; if(c.partes){ try{ c.htmlCode = await codigoDe(g); }catch(e){} delete c.partes; } lista.push(c); }
     const json = JSON.stringify({app:"GameVault", email: activeEmail, exportedAt:new Date().toISOString(), games: lista}, null, 2);
     const nome = "gamevault-backup-" + new Date().toISOString().slice(0,10) + ".json";
+    if(window.GameVaultApp){ const onde = window.GameVaultApp.salvarArquivo(nome, json); toast(onde ? "Backup salvo em " + onde : "Não consegui salvar o backup.", !onde); return; }
     if(baixar){ try{ await baixar.save({filename: nome, data: new Blob([json], {type:"application/json"})}); toast("Backup salvo."); }catch(e){ if(e && e.code!=="declined") toast("Não deu para salvar o backup aqui.", true); } return; }
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([json], {type:"application/json"})); a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
     toast(games.some(g=>g.blobId) ? "Backup exportado (APKs e arquivos guardados só no aparelho ficam de fora)." : "Backup exportado.");
@@ -884,6 +889,7 @@
       try{ await nuvemApagar(g); toast("Jogo removido."); }catch(err){ erroNuvem(err); }
     });
   });
+  document.querySelectorAll("[data-nuvem]").forEach(a => a.addEventListener("click", e => { if(window.GameVaultApp){ e.preventDefault(); window.GameVaultApp.abrir(a.href); } }));
   $("btnBack").onclick = closePlayer;
   $("btnFull").onclick = () => { const f = $("gameFrame"); if(document.fullscreenElement) document.exitFullscreen(); else if(f.style.display!=="none" && f.requestFullscreen) f.requestFullscreen().catch(()=>toast("Tela cheia indisponível aqui.", true)); else toast("Tela cheia indisponível aqui.", true); };
   $("btnExport").onclick = exportJson;
