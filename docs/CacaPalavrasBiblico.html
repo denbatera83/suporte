@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Caça-Palavras Bíblico</title>
+<meta name="theme-color" content="#1c7ea8">
+<style>
+  /* Layout: céu e mar ao fundo; em cima, título, fase, tempo e estrelas; no meio, a grade de letras; embaixo (ou ao lado, na tela deitada), as pistas da Bíblia. */
+  :root { --bg: #9fd6ee; --card: rgba(255,255,255,.9); --card2: rgba(255,255,255,.72); --ink: #12313f; --mut: #4d6b78; --ac: #0e6f95; --ac2: #f0a92e; --ok: #1f9e6a; --bd: rgba(14,111,149,.22); --sombra: 0 12px 34px rgba(8,50,70,.22);
+    --serif: Georgia, "Times New Roman", serif; --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0d2230; --card: rgba(14,32,44,.9); --card2: rgba(14,32,44,.72); --ink: #e6f3f8; --mut: #9ab8c6; --ac: #6cc4e8; --ac2: #f3bf5c; --ok: #4fd39a; --bd: rgba(108,196,232,.28); --sombra: 0 12px 34px rgba(0,0,0,.45); color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg: #0d2230; --card: rgba(14,32,44,.9); --card2: rgba(14,32,44,.72); --ink: #e6f3f8; --mut: #9ab8c6; --ac: #6cc4e8; --ac2: #f3bf5c; --ok: #4fd39a; --bd: rgba(108,196,232,.28); --sombra: 0 12px 34px rgba(0,0,0,.45); color-scheme: dark; }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html, body { margin: 0; min-height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible { outline: 3px solid var(--ac2); outline-offset: 2px; }
+  /* mar ao fundo */
+  #mar { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: linear-gradient(#7ec8f0 0, #bfe6f7 40%, #3fa7c9 40%, #1c7ea8 74%); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) #mar { filter: brightness(.45) saturate(.9); } }
+  :root[data-theme="dark"] #mar { filter: brightness(.45) saturate(.9); }
+  .sol { position: absolute; top: 7%; right: 12%; width: 92px; height: 92px; border-radius: 50%; background: radial-gradient(#fff8d6, #ffe48a 60%, transparent 71%); box-shadow: 0 0 90px 34px rgba(255,230,150,.5); }
+  .nuvem { position: absolute; height: 26px; border-radius: 20px; background: rgba(255,255,255,.75); filter: blur(1px); animation: nuvem 70s linear infinite; }
+  .nuvem::before, .nuvem::after { content: ""; position: absolute; background: inherit; border-radius: 50%; }
+  .nuvem::before { width: 46px; height: 40px; left: 18px; top: -18px; } .nuvem::after { width: 34px; height: 30px; left: 54px; top: -12px; }
+  @keyframes nuvem { from { transform: translateX(-30vw); } to { transform: translateX(130vw); } }
+  .onda { position: absolute; left: 0; width: 200%; height: 14%; }
+  .o1 { bottom: 34%; fill: rgba(255,255,255,.22); animation: mv 18s linear infinite; } .o2 { bottom: 27%; fill: rgba(255,255,255,.38); animation: mv 11s linear infinite reverse; } .o3 { bottom: 18%; fill: rgba(240,250,253,.92); animation: mv 7s linear infinite; }
+  .areia { position: absolute; left: 0; right: 0; bottom: 0; height: 20%; background: linear-gradient(#f2dca8, #d4b878); }
+  @keyframes mv { to { transform: translateX(-50%); } }
+  @media (prefers-reduced-motion: reduce) { .onda, .nuvem { animation: none; } }
+  /* moldura */
+  .app { max-width: 1060px; margin: 0 auto; padding: max(12px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+  .vidro { background: var(--card); border: 1px solid var(--bd); border-radius: 16px; box-shadow: var(--sombra); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .icone { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--bd); background: var(--card); display: grid; place-items: center; font-size: 19px; box-shadow: var(--sombra); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 0; }
+  .topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .btn { border: 0; border-radius: 12px; padding: 12px 18px; font: 700 16px var(--sans); background: var(--ac); color: #fff; box-shadow: 0 6px 16px rgba(14,111,149,.3); }
+  :root[data-theme="dark"] .btn:not(.sec) { color: #082331; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn:not(.sec) { color: #082331; } }
+  .btn.sec { background: var(--card); color: var(--ink); border: 1px solid var(--bd); box-shadow: none; }
+  .btn:active, .icone:active { transform: scale(.96); }
+  .btn:disabled { opacity: .45; cursor: default; transform: none; }
+  /* tela inicial */
+  .inicio { min-height: calc(100vh - 40px); display: grid; align-content: center; justify-items: center; gap: 18px; text-align: center; padding: 20px 0 60px; }
+  .logo { font: 700 clamp(40px, 10vw, 68px)/1 var(--serif); color: #fff; text-shadow: 0 3px 18px rgba(0,40,70,.55); margin: 0; letter-spacing: .3px; }
+  .logo span { display: block; font-size: .48em; letter-spacing: .32em; text-transform: uppercase; margin-top: 10px; color: #fff7d6; }
+  .versiculo { font: italic 16px/1.5 var(--serif); color: #fff; text-shadow: 0 1px 8px rgba(0,40,70,.7); max-width: 34ch; margin: 0; }
+  .versiculo small { display: block; font-style: normal; font-size: 13px; opacity: .9; margin-top: 4px; }
+  .resumo { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .pilula { padding: 7px 14px; border-radius: 99px; font: 700 14px var(--sans); }
+  .botoes { display: grid; gap: 10px; width: min(100%, 320px); }
+  .botoes .btn { font-size: 18px; padding: 15px; }
+  /* fases */
+  .titulo { font: 700 26px/1.1 var(--serif); margin: 0; color: #fff; text-shadow: 0 2px 12px rgba(0,40,70,.6); }
+  .fases { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 12px; margin-top: 16px; }
+  .fase { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; text-align: left; padding: 14px; border-radius: 16px; border: 2px solid transparent; }
+  .fase .num { grid-row: span 2; width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center; font: 700 20px var(--serif); background: var(--ac); color: #fff; }
+  .fase h3 { margin: 0; font: 700 17px var(--serif); }
+  .fase p { margin: 0; color: var(--mut); font-size: 13px; }
+  .fase .est { grid-column: 2; font-size: 15px; letter-spacing: 2px; color: var(--ac2); }
+  .fase:disabled { opacity: .55; cursor: default; } .fase:disabled .num { background: var(--mut); }
+  .fase.feita { border-color: var(--ok); }
+  /* jogo */
+  .jogo { display: grid; gap: 12px; }
+  .barra { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+  .barra .info { flex: 1; min-width: 0; }
+  .barra h2 { margin: 0; font: 700 18px/1.15 var(--serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .barra .meta { font-size: 13px; color: var(--mut); display: flex; gap: 12px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+  .prog { height: 6px; border-radius: 9px; background: var(--bd); overflow: hidden; margin-top: 6px; }
+  .prog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--ac), var(--ok)); transition: width .4s; }
+  .corpo { display: grid; gap: 12px; }
+  @media (min-width: 820px) and (min-aspect-ratio: 1/1) { .corpo { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: start; } }
+  .quadro { padding: 8px; position: relative; }
+  .grade { position: relative; display: grid; gap: 2px; user-select: none; -webkit-user-select: none; touch-action: none; }
+  .c { aspect-ratio: 1; display: grid; place-items: center; border-radius: 8px; font: 700 clamp(15px, 4.6vw, 24px) var(--serif); color: var(--ink); pointer-events: none; position: relative; z-index: 1; transition: color .2s, transform .2s; }
+  .c.achada { color: #0b2a38; } .c.dica { animation: brilho 1s ease-in-out 3; }
+  :root[data-theme="dark"] .c.achada { color: #fff; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .c.achada { color: #fff; } }
+  @keyframes brilho { 50% { transform: scale(1.35); color: var(--ac2); } }
+  @media (min-width: 820px) and (min-aspect-ratio: 1/1) { .c { font-size: clamp(16px, 2.1vw, 24px); } }
+  svg.tinta { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 0; }
+  .lado { display: grid; gap: 10px; }
+  .pistas { display: grid; gap: 8px; }
+  .pista { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: start; padding: 10px 12px; border-radius: 12px; background: var(--card2); border: 1px solid var(--bd); transition: border-color .3s, background .3s; }
+  .pista .bola { grid-row: span 2; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 700 13px var(--sans); background: var(--bd); color: var(--ink); margin-top: 1px; }
+  .pista .txt { font: 15px/1.4 var(--serif); }
+  .pista .ref { font-size: 12px; color: var(--mut); display: flex; justify-content: space-between; gap: 8px; }
+  .pista .resp { font: 700 12px var(--sans); letter-spacing: .14em; color: var(--mut); }
+  .pista.ok { border-color: var(--ok); background: var(--card); } .pista.ok .bola { background: var(--ok); color: #fff; } .pista.ok .resp { color: var(--ok); }
+  .acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+  .acoes .btn { flex: 1; min-width: 130px; }
+  /* vitória */
+  .vitoria { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 20px; background: rgba(6,30,44,.55); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+  .vitoria .vidro { max-width: 420px; width: 100%; padding: 24px; text-align: center; display: grid; gap: 12px; animation: sobe .4s ease-out; }
+  @keyframes sobe { from { transform: translateY(30px) scale(.96); opacity: 0; } }
+  .vitoria h2 { margin: 0; font: 700 30px var(--serif); color: var(--ac); }
+  .vitoria .estrelas { font-size: 44px; letter-spacing: 6px; color: var(--ac2); }
+  .vitoria p { margin: 0; color: var(--mut); line-height: 1.5; }
+  .vitoria blockquote { margin: 0; font: italic 16px/1.5 var(--serif); color: var(--ink); background: var(--card2); border-radius: 12px; padding: 12px; }
+  .vitoria .linha { display: flex; gap: 10px; } .vitoria .linha .btn { flex: 1; }
+  #confete { position: fixed; inset: 0; pointer-events: none; z-index: 25; }
+  .aviso { position: fixed; left: 50%; bottom: max(18px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 30; padding: 10px 18px; border-radius: 99px; font: 700 15px var(--sans); background: var(--ink); color: var(--bg); box-shadow: var(--sombra); transition: opacity .3s; pointer-events: none; }
+  .ajustes { display: grid; gap: 10px; padding: 16px; margin-top: 16px; max-width: 460px; }
+  .ajuste { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .ajuste span small { display: block; color: var(--mut); font-size: 12px; }
+  .chave { width: 52px; height: 30px; border-radius: 99px; border: 0; background: var(--bd); position: relative; padding: 0; flex: none; }
+  .chave::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); transition: left .2s; }
+  .chave[aria-checked="true"] { background: var(--ok); } .chave[aria-checked="true"]::after { left: 25px; }
+</style>
+
+<div id="mar" aria-hidden="true">
+  <div class="sol"></div>
+  <div class="nuvem" style="top:12%;width:110px;animation-delay:-10s"></div><div class="nuvem" style="top:22%;width:80px;animation-delay:-42s;animation-duration:90s"></div>
+  <svg class="onda o1" viewBox="0 0 1200 100" preserveAspectRatio="none"><path d="M0 50 Q75 20 150 50 T300 50 T450 50 T600 50 T750 50 T900 50 T1050 50 T1200 50 V100 H0Z"/></svg>
+  <svg class="onda o2" viewBox="0 0 1200 100" preserveAspectRatio="none"><path d="M0 55 Q100 25 200 55 T400 55 T600 55 T800 55 T1000 55 T1200 55 V100 H0Z"/></svg>
+  <svg class="onda o3" viewBox="0 0 1200 100" preserveAspectRatio="none"><path d="M0 60 Q60 40 120 60 T240 60 T360 60 T480 60 T600 60 T720 60 T840 60 T960 60 T1080 60 T1200 60 V100 H0Z"/></svg>
+  <div class="areia"></div>
+</div>
+
+<div class="app">
+  <!-- INÍCIO -->
+  <section id="t-inicio" class="inicio">
+    <h1 class="logo">Caça-Palavras<span>Bíblico</span></h1>
+    <p class="versiculo">“Lâmpada para os meus pés é a tua palavra e luz para o meu caminho.”<small>Salmos 119:105</small></p>
+    <div class="resumo"><span class="pilula vidro" id="r-est">⭐ 0 de 36</span><span class="pilula vidro" id="r-fase">Fase 1 de 12</span></div>
+    <div class="botoes"><button class="btn" id="b-jogar" type="button">Jogar</button><button class="btn sec" id="b-fases" type="button">Escolher fase</button><button class="btn sec" id="b-ajustes" type="button">Ajustes</button></div>
+  </section>
+
+  <!-- FASES -->
+  <section id="t-fases" hidden>
+    <div class="topo"><button class="icone" type="button" data-voltar aria-label="Voltar">←</button><h2 class="titulo">Escolha a fase</h2><button class="icone" type="button" data-som aria-label="Som">🔊</button></div>
+    <div class="fases" id="lista-fases"></div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section id="t-ajustes" hidden>
+    <div class="topo"><button class="icone" type="button" data-voltar aria-label="Voltar">←</button><h2 class="titulo">Ajustes</h2><span style="width:44px"></span></div>
+    <div class="ajustes vidro">
+      <div class="ajuste"><span>Mostrar as palavras<small>Modo fácil: a resposta aparece embaixo da pista</small></span><button class="chave" type="button" role="switch" id="a-facil" aria-label="Mostrar as palavras"></button></div>
+      <div class="ajuste"><span>Som do mar e efeitos</span><button class="chave" type="button" role="switch" id="a-som" aria-label="Som"></button></div>
+      <div class="ajuste"><span>Tema<small>Claro, escuro ou igual ao celular</small></span><button class="btn sec" type="button" id="a-tema" style="padding:8px 14px">Automático</button></div>
+      <div class="ajuste"><span>Apagar progresso<small>Volta tudo para a fase 1</small></span><button class="btn sec" type="button" id="a-zerar" style="padding:8px 14px">Apagar</button></div>
+    </div>
+  </section>
+
+  <!-- JOGO -->
+  <section id="t-jogo" class="jogo" hidden>
+    <div class="barra vidro">
+      <button class="icone" type="button" data-voltar aria-label="Voltar para as fases">←</button>
+      <div class="info"><h2 id="j-tit">Fase</h2><div class="meta"><span id="j-tempo">⏱ 0:00</span><span id="j-cont">0 de 0 palavras</span><span id="j-dicas">💡 3 dicas</span></div><div class="prog"><i id="j-prog"></i></div></div>
+      <button class="icone" type="button" data-som aria-label="Som">🔊</button>
+    </div>
+    <div class="corpo">
+      <div class="quadro vidro"><div class="grade" id="grade" role="grid" aria-label="Grade de letras"><svg class="tinta" id="tinta"></svg></div></div>
+      <div class="lado">
+        <div class="acoes"><button class="btn sec" id="b-dica" type="button">💡 Dica</button><button class="btn sec" id="b-nova" type="button">↻ Embaralhar</button></div>
+        <div class="pistas" id="pistas"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="vitoria" id="vitoria" hidden><div class="vidro">
+  <h2 id="v-tit">Muito bem!</h2>
+  <div class="estrelas" id="v-est">★★★</div>
+  <p id="v-info"></p>
+  <blockquote id="v-vers"></blockquote>
+  <div class="linha"><button class="btn sec" id="v-fases" type="button">Fases</button><button class="btn" id="v-prox" type="button">Próxima fase</button></div>
+</div></div>
+<canvas id="confete"></canvas>
+<div class="aviso" id="aviso" hidden></div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const N = 12;
+// ===================== AS FASES =====================
+// [palavra na grade, como aparece, pista, referência]
+const FASES = [
+  { nome: 'A Criação', livro: 'Gênesis 1–3', dirs: 'reto', vers: ['No princípio, criou Deus os céus e a terra.', 'Gênesis 1:1'], p: [
+    ['LUZ', 'Luz', 'No primeiro dia Deus disse: “Haja…”', 'Gn 1:3'], ['CEUS', 'Céus', 'No princípio, criou Deus os ___ e a terra.', 'Gn 1:1'],
+    ['SOL', 'Sol', 'O luminar maior, para governar o dia.', 'Gn 1:16'], ['LUA', 'Lua', 'O luminar menor, para governar a noite.', 'Gn 1:16'],
+    ['ADAO', 'Adão', 'O primeiro homem, formado do pó da terra.', 'Gn 2:7'], ['EVA', 'Eva', 'Mãe de todos os viventes.', 'Gn 3:20'],
+    ['EDEN', 'Éden', 'Jardim que Deus plantou no oriente.', 'Gn 2:8'], ['SERPENTE', 'Serpente', 'O mais astuto dos animais do campo.', 'Gn 3:1']] },
+  { nome: 'A Arca de Noé', livro: 'Gênesis 6–9', dirs: 'reto', vers: ['Porei nas nuvens o meu arco; será por sinal da aliança.', 'Gênesis 9:13'], p: [
+    ['NOE', 'Noé', 'Homem justo, que andava com Deus.', 'Gn 6:9'], ['ARCA', 'Arca', 'Feita de madeira de gofer, com três andares.', 'Gn 6:14-16'],
+    ['QUARENTA', 'Quarenta', 'Dias e noites de chuva sobre a terra.', 'Gn 7:12'], ['CORVO', 'Corvo', 'A primeira ave que Noé soltou.', 'Gn 8:7'],
+    ['POMBA', 'Pomba', 'Voltou com uma folha de oliveira no bico.', 'Gn 8:11'], ['ARARATE', 'Ararate', 'Montes onde a arca repousou.', 'Gn 8:4'],
+    ['ARCO', 'Arco', 'Sinal da aliança, posto nas nuvens.', 'Gn 9:13']] },
+  { nome: 'Os Patriarcas', livro: 'Gênesis 12–32', dirs: 'reto', vers: ['Olha para os céus e conta as estrelas… Será assim a tua posteridade.', 'Gênesis 15:5'], p: [
+    ['ABRAAO', 'Abraão', 'Deus disse que sua descendência seria como as estrelas.', 'Gn 15:5'], ['SARA', 'Sara', 'Riu consigo mesma ao ouvir a promessa de um filho.', 'Gn 18:12'],
+    ['ISAQUE', 'Isaque', 'O filho da promessa; seu nome lembra riso.', 'Gn 21:3-6'], ['REBECA', 'Rebeca', 'Deu água aos camelos do servo de Abraão.', 'Gn 24:18-19'],
+    ['ESAU', 'Esaú', 'Trocou a primogenitura por um prato de lentilhas.', 'Gn 25:34'], ['JACO', 'Jacó', 'Sonhou com uma escada que chegava ao céu.', 'Gn 28:12'],
+    ['ISRAEL', 'Israel', 'O novo nome que Jacó recebeu.', 'Gn 32:28']] },
+  { nome: 'José do Egito', livro: 'Gênesis 37–45', dirs: 'reto', vers: ['Vós, na verdade, intentastes o mal contra mim; porém Deus o tornou em bem.', 'Gênesis 50:20'], p: [
+    ['JOSE', 'José', 'Filho amado de Jacó, vendido pelos irmãos.', 'Gn 37:3,28'], ['TUNICA', 'Túnica', 'O presente especial que Jacó deu a José.', 'Gn 37:3'],
+    ['EGITO', 'Egito', 'Para onde José foi levado como escravo.', 'Gn 37:28'], ['FARAO', 'Faraó', 'Rei que sonhou com vacas gordas e magras.', 'Gn 41:1-4'],
+    ['SETE', 'Sete', 'Quantos anos de fartura e quantos de fome.', 'Gn 41:29-30'], ['TRIGO', 'Trigo', 'Os irmãos desceram ao Egito para comprar…', 'Gn 42:3'],
+    ['BENJAMIM', 'Benjamim', 'O irmão caçula; o copo foi achado no seu saco.', 'Gn 44:12']] },
+  { nome: 'Moisés e o Êxodo', livro: 'Êxodo 2–31', dirs: 'diag', vers: ['O Senhor pelejará por vós, e vós vos calareis.', 'Êxodo 14:14'], p: [
+    ['MOISES', 'Moisés', 'Tirado das águas pela filha de Faraó.', 'Êx 2:10'], ['SARCA', 'Sarça', 'Ardia em fogo e não se consumia.', 'Êx 3:2'],
+    ['ARAO', 'Arão', 'Irmão de Moisés, que falava por ele ao povo.', 'Êx 4:14-16'], ['PASCOA', 'Páscoa', 'A festa do cordeiro, na noite da saída do Egito.', 'Êx 12:11'],
+    ['MANA', 'Maná', 'O pão do céu que caía no deserto.', 'Êx 16:31'], ['SINAI', 'Sinai', 'O monte onde Deus entregou a Lei.', 'Êx 19:20'],
+    ['TABUAS', 'Tábuas', 'Onde os mandamentos foram escritos pelo dedo de Deus.', 'Êx 31:18']] },
+  { nome: 'Davi, o Pastor', livro: '1 Samuel 16–18', dirs: 'diag', vers: ['O Senhor é o meu pastor; nada me faltará.', 'Salmos 23:1'], p: [
+    ['DAVI', 'Davi', 'O jovem pastor ungido por Samuel.', '1Sm 16:13'], ['HARPA', 'Harpa', 'Davi a tocava para acalmar o rei.', '1Sm 16:23'],
+    ['SAUL', 'Saul', 'O primeiro rei de Israel.', '1Sm 10:24'], ['GOLIAS', 'Golias', 'O gigante filisteu de Gate.', '1Sm 17:4'],
+    ['PEDRAS', 'Pedras', 'Davi escolheu cinco ___ lisas do ribeiro.', '1Sm 17:40'], ['FUNDA', 'Funda', 'A arma simples com que Davi venceu o gigante.', '1Sm 17:50'],
+    ['JONATAS', 'Jônatas', 'Filho de Saul e grande amigo de Davi.', '1Sm 18:1']] },
+  { nome: 'Os Profetas', livro: '1 Reis a Jonas', dirs: 'diag', vers: ['O meu Deus enviou o seu anjo e fechou a boca aos leões.', 'Daniel 6:22'], p: [
+    ['ELIAS', 'Elias', 'Subiu ao céu num redemoinho.', '2Rs 2:11'], ['CORVOS', 'Corvos', 'Levavam pão e carne a Elias junto ao ribeiro.', '1Rs 17:6'],
+    ['DANIEL', 'Daniel', 'Foi lançado na cova por orar ao seu Deus.', 'Dn 6:16'], ['LEOES', 'Leões', 'Deus fechou a boca aos ___.', 'Dn 6:22'],
+    ['JONAS', 'Jonas', 'Fugiu para Társis em vez de ir a Nínive.', 'Jn 1:3'], ['PEIXE', 'Peixe', 'Engoliu Jonas por três dias e três noites.', 'Jn 1:17'],
+    ['NINIVE', 'Nínive', 'A grande cidade que se arrependeu.', 'Jn 3:5']] },
+  { nome: 'O Nascimento de Jesus', livro: 'Mateus 1–2 · Lucas 2', dirs: 'diag', vers: ['Eis aqui vos trago novas de grande alegria, que o será para todo o povo.', 'Lucas 2:10'], p: [
+    ['JESUS', 'Jesus', 'O nome que o anjo deu, porque ele salvaria o seu povo.', 'Mt 1:21'], ['MARIA', 'Maria', 'A mãe de Jesus.', 'Lc 1:30-31'],
+    ['BELEM', 'Belém', 'A cidade onde Jesus nasceu.', 'Mt 2:1'], ['MANJEDOURA', 'Manjedoura', 'Onde o menino foi deitado.', 'Lc 2:7'],
+    ['PASTORES', 'Pastores', 'Guardavam os rebanhos durante a noite.', 'Lc 2:8'], ['ESTRELA', 'Estrela', 'Foi adiante dos magos até parar sobre o menino.', 'Mt 2:9'],
+    ['MIRRA', 'Mirra', 'Ouro, incenso e…', 'Mt 2:11']] },
+  { nome: 'Os Milagres', livro: 'Evangelhos', dirs: 'tudo', vers: ['Para Deus não haverá impossíveis em todas as suas promessas.', 'Lucas 1:37'], p: [
+    ['CANA', 'Caná', 'Cidade das bodas onde a água virou vinho.', 'Jo 2:1-11'], ['VINHO', 'Vinho', 'No que Jesus transformou a água.', 'Jo 2:9'],
+    ['CINCO', 'Cinco', '___ pães e dois peixinhos.', 'Jo 6:9'], ['MAR', 'Mar', 'Jesus andou sobre o ___.', 'Mt 14:25'],
+    ['TEMPESTADE', 'Tempestade', 'Jesus a acalmou dizendo: “Cala-te, aquieta-te!”', 'Mc 4:39'], ['BARTIMEU', 'Bartimeu', 'O cego de Jericó que gritava: “Filho de Davi!”', 'Mc 10:46'],
+    ['LAZARO', 'Lázaro', 'O amigo de Jesus que saiu do túmulo.', 'Jo 11:43-44']] },
+  { nome: 'Os Discípulos', livro: 'Evangelhos', dirs: 'tudo', vers: ['Vinde após mim, e eu vos farei pescadores de homens.', 'Mateus 4:19'], p: [
+    ['DOZE', 'Doze', 'Quantos apóstolos Jesus escolheu.', 'Mc 3:14'], ['PESCADORES', 'Pescadores', 'Jesus prometeu fazê-los ___ de homens.', 'Mt 4:19'],
+    ['ANDRE', 'André', 'Irmão de Pedro, também pescador.', 'Mt 4:18'], ['TIAGO', 'Tiago', 'Filho de Zebedeu, irmão de João.', 'Mt 4:21'],
+    ['MATEUS', 'Mateus', 'Estava sentado na coletoria quando Jesus o chamou.', 'Mt 9:9'], ['TOME', 'Tomé', 'Quis ver as marcas dos cravos para crer.', 'Jo 20:25'],
+    ['PEDRO', 'Pedro', 'Negou Jesus três vezes antes de o galo cantar.', 'Lc 22:61']] },
+  { nome: 'As Parábolas', livro: 'Mateus · Lucas', dirs: 'tudo', vers: ['Haverá alegria no céu por um pecador que se arrepende.', 'Lucas 15:7'], p: [
+    ['ROCHA', 'Rocha', 'O homem prudente edificou a casa sobre a…', 'Mt 7:24'], ['SEMEADOR', 'Semeador', 'Saiu a semear; parte caiu à beira do caminho.', 'Mt 13:3-4'],
+    ['MOSTARDA', 'Mostarda', 'A menor das sementes, que vira uma árvore.', 'Mt 13:31-32'], ['TALENTOS', 'Talentos', 'O senhor os confiou aos seus servos.', 'Mt 25:15'],
+    ['SAMARITANO', 'Samaritano', 'Cuidou do homem ferido à beira do caminho.', 'Lc 10:33'], ['OVELHA', 'Ovelha', 'Uma de cem se perdeu, e o pastor foi buscá-la.', 'Lc 15:4'],
+    ['MOEDA', 'Moeda', 'A mulher varreu a casa até achá-la.', 'Lc 15:8']] },
+  { nome: 'A Ressurreição', livro: 'Evangelhos', dirs: 'tudo', vers: ['Ele não está aqui, mas ressuscitou.', 'Lucas 24:6'], p: [
+    ['GALO', 'Galo', 'Cantou logo depois que Pedro negou.', 'Lc 22:60'], ['CRUZ', 'Cruz', 'Jesus saiu levando a sua…', 'Jo 19:17'],
+    ['TERCEIRO', 'Terceiro', 'Ressuscitaria ao ___ dia.', 'Lc 24:7'], ['PEDRA', 'Pedra', 'Já estava removida da entrada do túmulo.', 'Mc 16:4'],
+    ['ANJO', 'Anjo', 'Disse às mulheres: “Não temais.”', 'Mt 28:5'], ['MADALENA', 'Madalena', 'Maria ___ foi a primeira a ver Jesus ressuscitado.', 'Mc 16:9'],
+    ['EMAUS', 'Emaús', 'A aldeia para onde iam dois discípulos.', 'Lc 24:13']] }];
+const DIRS = { reto: [[1, 0], [0, 1]], diag: [[1, 0], [0, 1], [1, 1], [1, -1]], tudo: [[1, 0], [0, 1], [1, 1], [1, -1], [-1, 0], [0, -1], [-1, -1], [-1, 1]] };
+const NOME_DIRS = { reto: 'Palavras na horizontal e na vertical', diag: 'Agora também na diagonal', tudo: 'Em todas as direções, até de trás para frente' };
+const CORES = ['#f3d98a', '#9ec5e8', '#b9e3b0', '#f2b3c6', '#c9b8f0', '#ffcc9e', '#a6e3df', '#e8d6a0', '#f5b8a8', '#b8d8f5'];
+
+// ===================== SALVAR =====================
+const CHAVE = 'caca-palavras-biblico-1';
+const est = { estrelas: Array(FASES.length).fill(0), facil: false, som: true, tema: 'auto' };
+try { const d = JSON.parse(localStorage.getItem(CHAVE) || 'null'); if (d) Object.assign(est, d); } catch (e) {}
+while (est.estrelas.length < FASES.length) est.estrelas.push(0);
+const salvar = () => { try { localStorage.setItem(CHAVE, JSON.stringify(est)); } catch (e) {} };
+const liberada = i => i === 0 || est.estrelas[i - 1] > 0;
+function aplicarTema() { if (est.tema === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', est.tema); $('a-tema').textContent = { auto: 'Automático', light: 'Claro', dark: 'Escuro' }[est.tema]; }
+aplicarTema();
+
+// ===================== SOM =====================
+let AC = null, mar = null;
+function iniciarSom() { if (AC) { if (AC.state !== 'running') AC.resume(); return; }
+  try { AC = new (window.AudioContext || window.webkitAudioContext)(); const buf = AC.createBuffer(1, AC.sampleRate * 4, AC.sampleRate), d = buf.getChannelData(0); let b = 0; for (let i = 0; i < d.length; i++) { b = (b + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = b * 3.5; }
+    const s = AC.createBufferSource(); s.buffer = buf; s.loop = true; const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 520; const g = AC.createGain(); g.gain.value = 0;
+    const lfo = AC.createOscillator(), lg = AC.createGain(); lfo.frequency.value = 0.11; lg.gain.value = 0.05; lfo.connect(lg); lg.connect(g.gain); s.connect(f); f.connect(g); g.connect(AC.destination); s.start(); lfo.start(); mar = g; atualizarSom(); } catch (e) { AC = null; } }
+function atualizarSom() { if (mar) mar.gain.setTargetAtTime(est.som ? 0.07 : 0, AC.currentTime, 0.4); document.querySelectorAll('[data-som]').forEach(b => { b.textContent = est.som ? '🔊' : '🔇'; b.setAttribute('aria-label', est.som ? 'Desligar som' : 'Ligar som'); }); $('a-som').setAttribute('aria-checked', String(est.som)); }
+function tom(f, dur, at = 0, tipo = 'sine', vol = 0.12) { if (!AC || !est.som) return; const t = AC.currentTime + at, o = AC.createOscillator(), g = AC.createGain(); o.type = tipo; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + 0.05); }
+const somAchou = () => [523, 659, 784].forEach((f, i) => tom(f, 0.35, i * 0.07, 'triangle'));
+const somErro = () => tom(196, 0.18, 0, 'sine', 0.06);
+const somVitoria = () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tom(f, 0.45, i * 0.12, 'triangle', 0.1));
+const somToque = () => tom(880, 0.05, 0, 'sine', 0.03);
+addEventListener('pointerdown', iniciarSom, { once: true });
+
+// ===================== TELAS =====================
+let tela = 'inicio';
+function mostrar(t) { tela = t; ['inicio', 'fases', 'ajustes', 'jogo'].forEach(x => { $('t-' + x).hidden = x !== t; }); if (t !== 'jogo') pararRelogio(); if (t === 'fases') desenharFases(); if (t === 'inicio') resumo(); scrollTo(0, 0); }
+function resumo() { const tot = est.estrelas.reduce((a, b) => a + b, 0); $('r-est').textContent = `⭐ ${tot} de ${FASES.length * 3}`; const prox = proximaFase(); $('r-fase').textContent = prox < FASES.length ? `Fase ${prox + 1} de ${FASES.length}` : 'Todas as fases completas!'; }
+const proximaFase = () => { const i = est.estrelas.findIndex(e => e === 0); return i < 0 ? FASES.length : i; };
+function desenharFases() { const box = $('lista-fases'); box.innerHTML = '';
+  FASES.forEach((f, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'fase vidro' + (est.estrelas[i] ? ' feita' : ''); b.disabled = !liberada(i);
+    b.innerHTML = `<span class="num">${liberada(i) ? i + 1 : '🔒'}</span><h3></h3><p></p><span class="est"></span>`; b.querySelector('h3').textContent = f.nome; b.querySelector('p').textContent = `${f.livro} · ${f.p.length} palavras`;
+    b.querySelector('.est').textContent = '★'.repeat(est.estrelas[i]) + '☆'.repeat(3 - est.estrelas[i]); b.addEventListener('click', () => comecar(i)); box.appendChild(b); }); }
+document.querySelectorAll('[data-voltar]').forEach(b => b.addEventListener('click', () => mostrar(tela === 'jogo' ? 'fases' : 'inicio')));
+document.querySelectorAll('[data-som]').forEach(b => b.addEventListener('click', () => { iniciarSom(); est.som = !est.som; salvar(); atualizarSom(); }));
+$('b-jogar').addEventListener('click', () => comecar(Math.min(proximaFase(), FASES.length - 1)));
+$('b-fases').addEventListener('click', () => mostrar('fases'));
+$('b-ajustes').addEventListener('click', () => { $('a-facil').setAttribute('aria-checked', String(est.facil)); atualizarSom(); mostrar('ajustes'); });
+$('a-facil').addEventListener('click', () => { est.facil = !est.facil; salvar(); $('a-facil').setAttribute('aria-checked', String(est.facil)); });
+$('a-som').addEventListener('click', () => { iniciarSom(); est.som = !est.som; salvar(); atualizarSom(); });
+$('a-tema').addEventListener('click', () => { est.tema = { auto: 'light', light: 'dark', dark: 'auto' }[est.tema]; salvar(); aplicarTema(); });
+$('a-zerar').addEventListener('click', () => { if (!confirm('Apagar todas as estrelas e voltar para a fase 1?')) return; est.estrelas = Array(FASES.length).fill(0); salvar(); aviso('Progresso apagado.'); });
+let avisoT = 0; function aviso(t) { const a = $('aviso'); a.textContent = t; a.hidden = false; clearTimeout(avisoT); avisoT = setTimeout(() => { a.hidden = true; }, 2200); }
+
+// ===================== MONTAR A GRADE =====================
+const LETRAS = 'AAAAAAEEEEEEOOOOOIIIIUUUSSSRRRNNNMMTTTDDLLCCPPBGVFHQJZX';
+let J = null; // estado da partida
+function montarGrade(fase) { const dirs = DIRS[fase.dirs];
+  for (let tentativa = 0; tentativa < 300; tentativa++) { const g = Array.from({ length: N }, () => Array(N).fill('')), pos = []; let ok = true;
+    const palavras = [...fase.p].sort((a, b) => b[0].length - a[0].length);
+    for (const [w] of palavras) { let colocou = false;
+      for (let k = 0; k < 400 && !colocou; k++) { const [dx, dy] = dirs[(Math.random() * dirs.length) | 0], x0 = (Math.random() * N) | 0, y0 = (Math.random() * N) | 0, x1 = x0 + dx * (w.length - 1), y1 = y0 + dy * (w.length - 1);
+        if (x1 < 0 || x1 >= N || y1 < 0 || y1 >= N) continue; let livre = true;
+        for (let i = 0; i < w.length; i++) { const c = g[y0 + dy * i][x0 + dx * i]; if (c && c !== w[i]) { livre = false; break; } }
+        if (!livre) continue; for (let i = 0; i < w.length; i++) g[y0 + dy * i][x0 + dx * i] = w[i]; pos.push({ w, x0, y0, dx, dy }); colocou = true; }
+      if (!colocou) { ok = false; break; } }
+    if (!ok) continue;
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (!g[y][x]) g[y][x] = LETRAS[(Math.random() * LETRAS.length) | 0];
+    return { g, pos }; }
+  throw new Error('não coube'); }
+
+// ===================== JOGAR =====================
+let relogio = 0;
+function pararRelogio() { clearInterval(relogio); relogio = 0; }
+function comecar(i) { if (!liberada(i)) return; iniciarSom(); const f = FASES[i], m = montarGrade(f);
+  J = { i, f, g: m.g, pos: m.pos, achadas: new Set(), dicas: 3, dicasUsadas: 0, t0: Date.now(), sel: null, traco: null };
+  $('j-tit').textContent = `Fase ${i + 1} · ${f.nome}`; desenharGrade(); desenharPistas(); atualizarBarra(); mostrar('jogo'); aviso(NOME_DIRS[f.dirs]);
+  pararRelogio(); relogio = setInterval(atualizarBarra, 1000); }
+function desenharGrade() { const gr = $('grade'), svg = $('tinta'); gr.querySelectorAll('.c').forEach(c => c.remove()); svg.innerHTML = ''; gr.style.gridTemplateColumns = `repeat(${N}, 1fr)`;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const c = document.createElement('div'); c.className = 'c'; c.textContent = J.g[y][x]; c.dataset.x = x; c.dataset.y = y; c.setAttribute('role', 'gridcell'); gr.appendChild(c); }
+  J.pos.forEach(p => { if (J.achadas.has(p.w)) marcar(p, false); }); }
+function desenharPistas() { const box = $('pistas'); box.innerHTML = '';
+  J.f.p.forEach(([w, nome, txt, ref], k) => { const d = document.createElement('div'), ok = J.achadas.has(w); d.className = 'pista' + (ok ? ' ok' : ''); d.id = 'p-' + w;
+    d.innerHTML = `<span class="bola">${ok ? '✓' : k + 1}</span><span class="txt"></span><span class="ref"><span></span><span class="resp"></span></span>`;
+    d.querySelector('.txt').textContent = txt; d.querySelector('.ref span').textContent = ref; d.querySelector('.resp').textContent = ok || est.facil ? nome.toUpperCase() : `${w.length} letras`; box.appendChild(d); }); }
+function atualizarBarra() { if (!J) return; const s = Math.floor((Date.now() - J.t0) / 1000); $('j-tempo').textContent = `⏱ ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  $('j-cont').textContent = `${J.achadas.size} de ${J.f.p.length} palavras`; $('j-dicas').textContent = `💡 ${J.dicas} ${J.dicas === 1 ? 'dica' : 'dicas'}`; $('j-prog').style.width = (J.achadas.size / J.f.p.length * 100) + '%'; $('b-dica').disabled = J.dicas <= 0; }
+// traço (cápsula) desenhado por cima das letras
+function centro(x, y) { const gr = $('grade'), c = gr.children[1 + y * N + x], r = c.getBoundingClientRect(), g = gr.getBoundingClientRect(); return [r.left - g.left + r.width / 2, r.top - g.top + r.height / 2, r.width]; }
+function capsula(x0, y0, x1, y1, cor, opac) { const [ax, ay, w] = centro(x0, y0), [bx, by] = centro(x1, y1), l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  l.setAttribute('x1', ax); l.setAttribute('y1', ay); l.setAttribute('x2', bx); l.setAttribute('y2', by); l.setAttribute('stroke', cor); l.setAttribute('stroke-width', w * 0.86); l.setAttribute('stroke-linecap', 'round'); l.setAttribute('opacity', opac); $('tinta').appendChild(l); return l; }
+function marcar(p, anima = true) { const k = J.f.p.findIndex(q => q[0] === p.w), cor = CORES[k % CORES.length];
+  const l = capsula(p.x0, p.y0, p.x0 + p.dx * (p.w.length - 1), p.y0 + p.dy * (p.w.length - 1), cor, 0.85); l.dataset.palavra = p.w;
+  if (anima) { const len = Math.hypot(+l.getAttribute('x2') - +l.getAttribute('x1'), +l.getAttribute('y2') - +l.getAttribute('y1')) + 1; l.style.strokeDasharray = len; l.style.strokeDashoffset = len; l.getBoundingClientRect(); l.style.transition = 'stroke-dashoffset .35s ease-out'; l.style.strokeDashoffset = 0; }
+  for (let i = 0; i < p.w.length; i++) $('grade').children[1 + (p.y0 + p.dy * i) * N + p.x0 + p.dx * i].classList.add('achada'); }
+addEventListener('resize', () => { if (tela === 'jogo' && J) { $('tinta').innerHTML = ''; J.pos.forEach(p => { if (J.achadas.has(p.w)) marcar(p, false); }); } });
+// arrastar o dedo para escolher letras
+function celulaEm(ev) { const gr = $('grade'), r = gr.getBoundingClientRect(), x = Math.floor((ev.clientX - r.left) / r.width * N), y = Math.floor((ev.clientY - r.top) / r.height * N); return [Math.max(0, Math.min(N - 1, x)), Math.max(0, Math.min(N - 1, y))]; }
+function ajustar([sx, sy], [ex, ey]) { let dx = ex - sx, dy = ey - sy; if (!dx && !dy) return [sx, sy, 0, 0, 1];
+  const a = Math.atan2(dy, dx), oito = Math.round(a / (Math.PI / 4)), ux = Math.round(Math.cos(oito * Math.PI / 4)), uy = Math.round(Math.sin(oito * Math.PI / 4));
+  let n = Math.max(Math.abs(dx), Math.abs(dy)); while (n > 0 && (sx + ux * n < 0 || sx + ux * n >= N || sy + uy * n < 0 || sy + uy * n >= N)) n--; return [sx, sy, ux, uy, n + 1]; }
+const grade = $('grade');
+grade.addEventListener('pointerdown', ev => { if (!J) return; ev.preventDefault(); try { grade.setPointerCapture(ev.pointerId); } catch (e) {} const ini = celulaEm(ev); J.sel = { ini, fim: ini, id: ev.pointerId }; somToque(); desenharSelecao(); });
+grade.addEventListener('pointermove', ev => { if (!J || !J.sel || ev.pointerId !== J.sel.id) return; const c = celulaEm(ev); if (c[0] !== J.sel.fim[0] || c[1] !== J.sel.fim[1]) { J.sel.fim = c; desenharSelecao(); } });
+const soltar = ev => { if (!J || !J.sel || ev.pointerId !== J.sel.id) return; const [sx, sy, ux, uy, n] = ajustar(J.sel.ini, J.sel.fim); J.sel = null; if (J.traco) { J.traco.remove(); J.traco = null; }
+  let s = ''; for (let i = 0; i < n; i++) s += J.g[sy + uy * i][sx + ux * i]; const r = [...s].reverse().join('');
+  const p = J.pos.find(q => !J.achadas.has(q.w) && ((q.w === s && q.x0 === sx && q.y0 === sy && q.dx === ux && q.dy === uy) || (q.w === r && q.x0 === sx + ux * (n - 1) && q.y0 === sy + uy * (n - 1) && q.dx === -ux && q.dy === -uy)));
+  if (p) achou(p); else if (n > 2) somErro(); };
+grade.addEventListener('pointerup', soltar); grade.addEventListener('pointercancel', soltar);
+function desenharSelecao() { if (J.traco) J.traco.remove(); const [sx, sy, ux, uy, n] = ajustar(J.sel.ini, J.sel.fim); J.traco = capsula(sx, sy, sx + ux * (n - 1), sy + uy * (n - 1), 'var(--ac)', 0.35); }
+function achou(p) { J.achadas.add(p.w); marcar(p); somAchou(); const item = J.f.p.find(q => q[0] === p.w); desenharPistas(); atualizarBarra(); aviso(`✓ ${item[1]}!`);
+  if (J.achadas.size === J.f.p.length) setTimeout(vitoria, 650); }
+$('b-dica').addEventListener('click', () => { if (!J || J.dicas <= 0) return; const p = J.pos.find(q => !J.achadas.has(q.w)); if (!p) return; J.dicas--; J.dicasUsadas++; atualizarBarra();
+  const c = grade.children[1 + p.y0 * N + p.x0]; c.classList.remove('dica'); void c.offsetWidth; c.classList.add('dica'); tom(660, 0.3, 0, 'sine', 0.08);
+  const item = J.f.p.find(q => q[0] === p.w), el = $('p-' + p.w); if (el) { el.querySelector('.resp').textContent = item[1].toUpperCase(); }
+  aviso(`A palavra “${item[1]}” começa na letra que está brilhando.`); });
+$('b-nova').addEventListener('click', () => { if (!J) return; const m = montarGrade(J.f); J.g = m.g; J.pos = m.pos; desenharGrade(); aviso('Letras embaralhadas! As palavras já achadas continuam marcadas.'); });
+
+// ===================== VITÓRIA =====================
+function vitoria() { pararRelogio(); const s = Math.floor((Date.now() - J.t0) / 1000), estrelas = J.dicasUsadas === 0 ? 3 : J.dicasUsadas <= 2 ? 2 : 1;
+  est.estrelas[J.i] = Math.max(est.estrelas[J.i], estrelas); salvar(); somVitoria(); confete();
+  $('v-tit').textContent = J.i === FASES.length - 1 ? 'Você completou tudo!' : 'Fase completa!'; $('v-est').textContent = '★'.repeat(estrelas) + '☆'.repeat(3 - estrelas);
+  $('v-info').textContent = `${J.f.p.length} palavras em ${Math.floor(s / 60)} min ${s % 60} s${J.dicasUsadas ? ` · ${J.dicasUsadas} ${J.dicasUsadas === 1 ? 'dica' : 'dicas'}` : ' · sem dicas'}`;
+  $('v-vers').innerHTML = ''; $('v-vers').append(`“${J.f.vers[0]}”`, document.createElement('br')); const sm = document.createElement('small'); sm.textContent = J.f.vers[1]; $('v-vers').append(sm);
+  $('v-prox').hidden = J.i >= FASES.length - 1; $('vitoria').hidden = false; $('v-prox').focus(); }
+$('v-prox').addEventListener('click', () => { $('vitoria').hidden = true; comecar(J.i + 1); });
+$('v-fases').addEventListener('click', () => { $('vitoria').hidden = true; mostrar('fases'); });
+function confete() { if (matchMedia('(prefers-reduced-motion: reduce)').matches) return; const cv = $('confete'), g = cv.getContext('2d'), W = cv.width = innerWidth, H = cv.height = innerHeight, ps = [];
+  for (let i = 0; i < 140; i++) ps.push({ x: W / 2 + (Math.random() - 0.5) * 80, y: H * 0.35, vx: (Math.random() - 0.5) * 12, vy: -Math.random() * 12 - 4, r: Math.random() * 6.28, c: CORES[i % CORES.length], s: 6 + Math.random() * 6 });
+  let t = 0; const passo = () => { g.clearRect(0, 0, W, H); ps.forEach(p => { p.vy += 0.35; p.x += p.vx; p.y += p.vy; p.r += 0.2; g.save(); g.translate(p.x, p.y); g.rotate(p.r); g.fillStyle = p.c; g.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); g.restore(); }); if (++t < 150) requestAnimationFrame(passo); else g.clearRect(0, 0, W, H); }; passo(); }
+
+resumo(); atualizarSom();
+window.__cp = { est, get J() { return J; }, comecar, FASES };
+})();
+</script>
