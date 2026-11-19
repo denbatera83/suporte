@@ -53,6 +53,9 @@
   #b-mic[aria-pressed="true"] { border-color: #7aff60; color: #7aff60; }
   #bussola { top: calc(max(10px, env(safe-area-inset-top, 0px)) + 160px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; font: 700 14px var(--titulo); letter-spacing: .05em; color: var(--texto, #e4ead2); padding: 6px 12px; }
   #bus-seta { display: inline-block; color: #ffb630; font-size: 18px; transition: transform .1s linear; }
+  #b-sil { pointer-events: auto; display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; font: 700 14px var(--titulo); letter-spacing: .05em; text-transform: uppercase; color: var(--texto, #e4ead2); cursor: pointer; border: 2px solid rgba(255,77,61,.6); }
+  #b-sil b { margin-left: auto; color: #ff4d3d; }
+  #b-sil[aria-pressed="true"] { border-color: #7aff60; background: rgba(60,140,40,.3); } #b-sil[aria-pressed="true"] b { color: #7aff60; }
   #sismo canvas { width: 140px; height: 28px; }
   #vinheta { position: fixed; inset: 0; z-index: 2; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(150,255,40,.35)); transition: opacity .4s; }
   #dano { position: fixed; inset: 0; z-index: 2; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 40%, rgba(255,40,20,.5)); transition: opacity .3s; }
@@ -108,6 +111,7 @@
   <div class="placa barra" id="b-energia">Diesel<div class="b"><i></i></div><b class="num">100</b></div>
   <div class="placa barra" id="b-casco">Casco<div class="b"><i></i></div><b class="num">100</b></div>
   <div class="placa barra" id="b-traje" hidden>Traje<div class="b"><i></i></div><b class="num">100</b></div>
+  <button class="placa" id="b-sil" type="button" aria-pressed="false"><span id="sil-ico">🔊</span> Silenciador <b id="sil-txt">DESLIGADO</b></button>
 </div>
 <div class="hud" id="hud-mochila"></div>
 <div class="hud placa" id="mic" hidden><span>🎤</span><div class="mb"><i></i></div><b id="mic-txt">silêncio</b></div>
@@ -116,7 +120,7 @@
 <div id="mira" hidden></div>
 <div class="hud placa" id="acao" hidden><svg id="anel" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(228,234,210,.2)" stroke-width="4"/><circle id="anel-p" cx="18" cy="18" r="15" fill="none" stroke="#ffb630" stroke-width="4" stroke-dasharray="94.2" stroke-dashoffset="94.2" transform="rotate(-90 18 18)"/></svg><kbd>E</kbd><span id="acao-txt"></span></div>
 <div id="aviso" class="placa" hidden></div>
-<div class="hud" id="dicas"><kbd>W A S D</kbd> andar · <kbd>SHIFT</kbd> correr · <kbd>E</kbd> segurar para usar · <kbd>F</kbd> lanterna · <kbd>ESC</kbd> pausa</div>
+<div class="hud" id="dicas"><kbd>W A S D</kbd> andar · <kbd>SHIFT</kbd> correr · <kbd>E</kbd> segurar para usar · <kbd>F</kbd> lanterna · <kbd>G</kbd> silenciador · <kbd>ESC</kbd> pausa</div>
 <div class="ctl" id="joy"><div class="base"><i></i></div></div>
 <div class="ctl" id="botoes"><button type="button" id="t-luz">Lanterna</button><button type="button" id="t-acao">Usar</button></div>
 <button type="button" id="t-menu" aria-label="Pausa">II</button>
@@ -132,7 +136,7 @@
       <div class="placa regra"><b>Ar puro</b>O filtro precisa de energia e de filtros novos. Rachaduras deixam a radiação entrar.</div>
       <div class="placa regra"><b>Lá fora</b>Siga as setas verdes até a porta de SAÍDA. Explore o posto, o mercado, o hospital e a torre de rádio. Cuidado com os gigantes!</div>
     </div>
-    <p class="teclas"><kbd>W A S D</kbd> andar · <kbd>MOUSE</kbd> olhar (clique na tela) · <kbd>E</kbd> segurar para usar · <kbd>F</kbd> lanterna · <kbd>SHIFT</kbd> correr</p>
+    <p class="teclas"><kbd>W A S D</kbd> andar · <kbd>MOUSE</kbd> olhar (clique na tela) · <kbd>E</kbd> segurar para usar · <kbd>F</kbd> lanterna · <kbd>G</kbd> silenciador · <kbd>SHIFT</kbd> correr</p>
     <div class="linha"><button class="principal" id="b-jogar" type="button">Começar</button><button id="b-novo" type="button" hidden>Novo jogo</button><button id="b-tela" type="button">Tela cheia</button><button id="b-mic" type="button" aria-pressed="false">🎤 Microfone: desligado</button></div>
     <p class="mic-nota" id="mic-nota">Com o microfone ligado, os colossos ouvem a sua voz de verdade. Fale baixinho!</p>
     <div class="linha"><span class="rot">Gráficos</span><div class="linha" id="qual" role="group" aria-label="Gráficos"><button type="button" data-q="0">Leve</button><button type="button" data-q="1">Normal</button><button type="button" data-q="2">Ultra</button></div></div>
@@ -1267,6 +1271,13 @@ const armario = grupo(-2.35, 0, -26, Math.PI / 2); add(new THREE.BoxGeometry(1.2
 const trajeMesh = new THREE.Group(); armario.add(trajeMesh); trajeMesh.position.set(0, 0, 0.35);
 add(new THREE.CylinderGeometry(0.25, 0.25, 1.1, 12), M.amarelo, 0, 1.15, 0, trajeMesh); add(new THREE.SphereGeometry(0.2, 14, 10), M.amarelo, 0, 1.85, 0, trajeMesh); add(new THREE.CircleGeometry(0.13, 16), std({ color: 0x223322, roughness: 0.1, metalness: 0.6 }), 0, 1.86, 0.19, trajeMesh);
 usavel(armario, { id: 'traje', txt: 'Vestir/tirar o traje', segurar: 1.5 });
+// BOTÃO DO SILENCIADOR na parede da sala de máquinas (abafa o barulho do gerador)
+const painelSil = grupo(-4.6, 0, -20.9);
+add(new THREE.BoxGeometry(0.9, 1.1, 0.14), M.metalEsc, 0, 1.45, 0, painelSil); add(new THREE.BoxGeometry(0.95, 0.12, 0.16), M.faixa, 0, 2.05, 0, painelSil);
+const botaoSil = add(new THREE.CylinderGeometry(0.17, 0.19, 0.12, 24).rotateX(Math.PI / 2), std({ color: 0x400808, emissive: 0xff2010, emissiveIntensity: 1.2 }), 0, 1.38, 0.12, painelSil);
+{ const t = tex(256, 64, (g, w, h) => { g.fillStyle = '#151513'; g.fillRect(0, 0, w, h); g.fillStyle = '#e4ead2'; g.font = '700 34px Oswald, Arial'; g.textAlign = 'center'; g.fillText('SILENCIADOR', w / 2, 44); });
+  add(new THREE.PlaneGeometry(0.8, 0.2), std({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.6 }), 0, 1.82, 0.08, painelSil); }
+usavel(painelSil, { id: 'silenciador', txt: 'Apertar o botão do silenciador', segurar: 0.4 });
 // PORTA DE SAÍDA: porta blindada grande no fim da eclusa, com placa verde e setas no chão
 const portaSaida = grupo(0, 0, -30.92);
 add(new THREE.BoxGeometry(3.3, 0.3, 0.35), M.faixa, 0, 2.75, 0, portaSaida); for (const sx of [-1.5, 1.5]) add(new THREE.BoxGeometry(0.3, 2.9, 0.35), M.faixa, sx, 1.45, 0, portaSaida);
@@ -1428,7 +1439,7 @@ COLOSSOS.forEach(novoAlvo);
 const CHAVE = 'ultimo-abrigo-1', ITENS = [['racao', '🥫', 'Ração'], ['agua', '💧', 'Água'], ['galao', '⛽', 'Diesel'], ['filtro', '🌀', 'Filtro'], ['peca', '🔩', 'Peça'], ['remedio', '💊', 'Remédio']];
 const MOCHILA = 10, MIN_POR_SEG = 3, HATCH = { x: SX, z: SZ };
 function novoEstado() { return { min: 8 * 60, saude: 100, rad: 0, comida: 85, agua: 80, ar: 100, diesel: 60, filtroVida: 55, casco: 100, gerador: true, traje: false, trajeAr: 100,
-  inv: { racao: 4, agua: 4, galao: 2, filtro: 1, peca: 2, remedio: 1 }, rachas: [], ultimaCaixa: 0, avisos: {}, coletas: {}, sinal: false }; }
+  inv: { racao: 4, agua: 4, galao: 2, filtro: 1, peca: 2, remedio: 1 }, rachas: [], ultimaCaixa: 0, avisos: {}, coletas: {}, sinal: false, silenciador: false }; }
 let E = novoEstado();
 const jog = { x: -5, z: -6, yaw: -Math.PI / 2, pitch: 0, fora: false, lanterna: false, mochila: 0, dormindo: 0, fase: 0 };
 function salvar() { try { localStorage.setItem(CHAVE, JSON.stringify({ E, jog: { x: jog.x, z: jog.z, yaw: jog.yaw } })); } catch (e) {} }
@@ -1491,7 +1502,7 @@ function hud() { barra('b-saude', E.saude, E.saude < 30); barra('b-rad', E.rad, 
   barra('b-ar', E.ar, E.ar < 40); barra('b-energia', E.diesel, E.diesel < 15 || !E.gerador); barra('b-casco', E.casco, E.casco < 40);
   $('b-traje').hidden = !E.traje; if (E.traje) barra('b-traje', E.trajeAr, E.trajeAr < 25);
   const h = Math.floor(horaDec()), m = Math.floor(E.min % 60); const t = `Dia ${dia()}`; if (hudAnt.dia !== t) { hudAnt.dia = t; $('h-dia').textContent = t; }
-  $('h-hora').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}${E.gerador ? '' : ' · SILÊNCIO'}`; desenharMochila(); }
+  $('h-hora').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}${!E.gerador ? ' · SILÊNCIO' : E.silenciador ? ' · 🔇' : ''}`; desenharMochila(); }
 // sismógrafo
 const sctx = $('sismografo').getContext('2d'), sismoHist = new Array(70).fill(0);
 function desenharSismo(v, alerta) { sismoHist.push(v); sismoHist.shift(); sctx.clearRect(0, 0, 280, 56); sctx.strokeStyle = alerta > 60 ? '#ff4d3d' : '#ffb630'; sctx.lineWidth = 2; sctx.beginPath();
@@ -1509,7 +1520,7 @@ function desenharRadar() { const g = rctx, W = 256, c = 128; varre += 0.25; g.fi
 
 // ===================== CONTROLES =====================
 const teclas = new Set(); let travado = false, jogando = false, pausado = false, segurando = false, segurTeclado = false, segurToque = false;
-addEventListener('keydown', e => { const k = e.key.toLowerCase(); teclas.add(k); if (!jogando) return; if (k === 'e') segurTeclado = true; if (k === 'f') alternarLanterna(); if (k === 'escape') { if (!pausado) abrirPausa(); else fecharPausa(); } });
+addEventListener('keydown', e => { const k = e.key.toLowerCase(); teclas.add(k); if (!jogando) return; if (k === 'e') segurTeclado = true; if (k === 'f') alternarLanterna(); if (k === 'g') alternarSilenciador(); if (k === 'escape') { if (!pausado) abrirPausa(); else fecharPausa(); } });
 addEventListener('keyup', e => { const k = e.key.toLowerCase(); teclas.delete(k); if (k === 'e') segurTeclado = false; }); addEventListener('blur', () => { teclas.clear(); segurTeclado = false; });
 function prender() { if (toque || travado || !canvas.requestPointerLock) return; try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 document.addEventListener('pointerlockchange', () => { travado = document.pointerLockElement === canvas; if (!travado && jogando && !pausado && !toque) abrirPausa(); });
@@ -1527,6 +1538,11 @@ canvas.addEventListener('pointermove', e => { if (e.pointerId !== olhar.id) retu
 const bAcao = $('t-acao'); bAcao.addEventListener('pointerdown', e => { e.preventDefault(); iniciarAudio(); segurToque = true; bAcao.classList.add('on'); try { bAcao.setPointerCapture(e.pointerId); } catch (er) {} });
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => bAcao.addEventListener(ev, () => { segurToque = false; bAcao.classList.remove('on'); }));
 $('t-luz').addEventListener('click', alternarLanterna); $('t-menu').addEventListener('click', () => abrirPausa());
+function alternarSilenciador() { if (!jogando) return; E.silenciador = !E.silenciador; tom(E.silenciador ? 500 : 300, E.silenciador ? 900 : 200, 0.15, 'square', 0.06); chiado(0.5, E.silenciador ? 300 : 900, 0.12);
+  aviso(E.silenciador ? 'Silenciador LIGADO: os gigantes não ouvem mais o gerador! (gasta um pouco mais de diesel)' : 'Silenciador desligado: o gerador voltou a fazer barulho.', E.silenciador ? 'bom' : 'info', 4); textoSil(); salvar(); }
+function textoSil() { const b = $('b-sil'); b.setAttribute('aria-pressed', String(!!E.silenciador)); $('sil-txt').textContent = E.silenciador ? 'LIGADO' : 'DESLIGADO'; $('sil-ico').textContent = (E.silenciador ? '🔇' : '🔊') + (toque ? '' : ' G'); }
+$('b-sil').addEventListener('click', e => { e.stopPropagation(); iniciarAudio(); alternarSilenciador(); });
+$('b-sil').addEventListener('pointerdown', e => e.stopPropagation());
 function alternarLanterna() { jog.lanterna = !jog.lanterna; $('t-luz').classList.toggle('on', jog.lanterna); tom(1200, 900, 0.05, 'square', 0.04); }
 
 // ===================== LANTERNA E LUZES =====================
@@ -1543,6 +1559,7 @@ function textoAcao(u) { if (u.id === 'gerador') return E.gerador ? 'Desligar o g
   if (u.id === 'diesel') return `Pôr diesel no gerador (${E.inv.galao} galões)`; if (u.id === 'filtro') return `Trocar o filtro de ar (${E.inv.filtro}) · filtro em ${Math.round(E.filtroVida)}%`;
   if (u.id === 'racha') return `Tapar a rachadura (${E.inv.peca} peças)`;
   if (u.id === 'saque') return E.coletas[u.lugar] === dia() ? 'Já pegou tudo aqui hoje (volte amanhã)' : u.txt; if (u.id === 'torre') return E.sinal ? 'O sinal de socorro já está ligado' : u.txt;
+  if (u.id === 'silenciador') return E.silenciador ? 'Desligar o silenciador' : 'Ligar o silenciador (gerador sem barulho)';
   if (u.id === 'subir') return E.traje ? 'Abrir a porta e sair' : 'Vestir o traje e sair pela porta'; return u.txt; }
 function usar(u) {
   const inv = E.inv;
@@ -1561,6 +1578,7 @@ function usar(u) {
     case 'subir': if (!E.traje) { E.traje = true; trajeMesh.visible = false; tom(300, 500, 0.4, 'triangle', 0.06); aviso('Você vestiu o traje amarelo.', 'bom'); }
       if (E.trajeAr < 15) { somErro(); aviso('O ar do traje está acabando. Deixe recarregar com o gerador ligado.', 'ruim'); } else irPara(true); break;
     case 'descer': irPara(false); break;
+    case 'silenciador': alternarSilenciador(); break;
     case 'caixa': abrirCaixa(u.caixa); break;
     case 'saque': if (E.coletas[u.lugar] === dia()) { somErro(); aviso('Já pegou tudo aqui hoje. Volte amanhã!', 'info'); }
       else if (MOCHILA - jog.mochila < u.itens.length) { somErro(); aviso(`A mochila não tem espaço (precisa de ${u.itens.length}). Volte ao abrigo para esvaziar.`, 'ruim'); }
@@ -1604,7 +1622,7 @@ function simular(dtReal) {
   const mult = jog.dormindo > 0 ? 20 : 1, dmin = dtReal * MIN_POR_SEG * mult, h = dmin / 60, diaAntes = dia(); E.min += dmin;
   if (jog.dormindo > 0) { jog.dormindo -= dmin; if (jog.dormindo <= 0) { jog.dormindo = 0; $('fade').classList.remove('ver'); aviso('Você acordou.', 'info'); } }
   E.comida = Math.max(0, E.comida - 2.2 * h); E.agua = Math.max(0, E.agua - 3 * h);
-  if (E.gerador) { E.diesel -= 2.6 * h; if (E.diesel <= 0) { E.diesel = 0; E.gerador = false; aviso('O gerador parou: acabou o diesel!', 'ruim', 4); tom(220, 40, 1.5, 'sawtooth', 0.12); } }
+  if (E.gerador) { E.diesel -= 2.6 * (E.silenciador ? 1.35 : 1) * h; if (E.diesel <= 0) { E.diesel = 0; E.gerador = false; aviso('O gerador parou: acabou o diesel!', 'ruim', 4); tom(220, 40, 1.5, 'sawtooth', 0.12); } }
   const filtroOk = E.gerador && E.filtroVida > 0; if (filtroOk) E.filtroVida = Math.max(0, E.filtroVida - 2 * h);
   const vazam = E.rachas.length; E.ar = clamp(E.ar + (filtroOk ? 14 : -7) * h - vazam * 5 * h, 0, 100);
   if (!jog.fora) { if (E.ar < 45) E.rad += (45 - E.ar) * 0.12 * h; else if (E.ar > 70) E.rad = Math.max(0, E.rad - 1.5 * h); if (E.gerador) E.trajeAr = Math.min(100, E.trajeAr + 1.5 * dtReal); }
@@ -1622,7 +1640,7 @@ function simular(dtReal) {
   if (E.saude <= 0) return fimDeJogo(false);
   if (dia() >= diaResgate() && horaDec() >= 12) return fimDeJogo(true); }
 function simularColossos(dt, correndo) {
-  const voz = barulhoMic(), barulho = jog.fora ? 0 : (E.gerador ? 2 : 0) + (radioT > 0 ? 1.5 : 0) + (reparando ? 2 : 0) + voz; alertaMax = 0; let perto = Infinity;
+  const voz = barulhoMic(), barulho = jog.fora ? 0 : (E.gerador && !E.silenciador ? 2 : 0) + (radioT > 0 ? 1.5 : 0) + (reparando ? 2 : 0) + voz; alertaMax = 0; let perto = Infinity;
   for (const c of COLOSSOS) {
     // para onde ir
     let tx = c.alvo.x, tz = c.alvo.z, vel = 2.4;
@@ -1684,7 +1702,7 @@ function atualizarVisual(dt, perto) {
     $('bus-seta').style.transform = `rotate(${(-rel * 180 / Math.PI).toFixed(0)}deg)`; $('bus-txt').textContent = dist < 8 ? 'ABRIGO AQUI' : `ABRIGO ${Math.round(dist)} m`; }
   if (!jog.fora) {
     cena.fog.color.setHex(0x050605); cena.fog.density = 0.035; cena.background.setHex(0x050605);
-    const ligado = E.gerador; LUZES.forEach((L, i) => { const pisc = flicker > 0 && Math.sin(t * 40 + i * 7) > 0.2 - flicker ? 0.15 : 1; L.l.intensity = ligado ? L.base * pisc : 0; L.lamp.material = ligado && pisc > 0.5 ? M.luz : M.metalEsc; });
+    const ligado = E.gerador; botaoSil.material.emissive.setHex(E.silenciador ? 0x33ff33 : 0xff2010); botaoSil.position.z = E.silenciador ? 0.08 : 0.12; LUZES.forEach((L, i) => { const pisc = flicker > 0 && Math.sin(t * 40 + i * 7) > 0.2 - flicker ? 0.15 : 1; L.l.intensity = ligado ? L.base * pisc : 0; L.lamp.material = ligado && pisc > 0.5 ? M.luz : M.metalEsc; });
     emerg.forEach((l, i) => { l.intensity = ligado ? 0 : 0.9 + Math.sin(t * 3 + i) * 0.3; });
     M.luzVerm.emissiveIntensity = ligado ? 0.4 : 1.5 + Math.sin(t * 3) * 0.5;
     pistoes.forEach((p, i) => { p.position.y = 1.75 + (ligado ? Math.sin(t * 18 + i * 2.1) * 0.08 : 0); }); ledGer.material.emissive.setHex(ligado ? 0x33ff33 : 0xff2010);
@@ -1701,7 +1719,7 @@ function atualizarVisual(dt, perto) {
   if (filtroPass) { filtroPass.uniforms.uT.value = t; filtroPass.uniforms.uTreme.value = tr; filtroPass.uniforms.uVerde.value = jog.fora ? 0.55 : clamp((60 - E.ar) / 60, 0, 0.5); }
   $('vinheta').style.opacity = clamp((E.rad - 40) / 60, 0, 0.9);
   // sons contínuos
-  if (AC) { const tt = AC.currentTime, dGer = Math.hypot(jog.x + 6.2, jog.z + 18.3); humGer.gain.setTargetAtTime(E.gerador && !jog.fora && jogando && !pausado ? 0.06 + 0.12 * clamp(1 - dGer / 14, 0, 1) : 0.0001, tt, 0.2);
+  if (AC) { const tt = AC.currentTime, dGer = Math.hypot(jog.x + 6.2, jog.z + 18.3); humGer.gain.setTargetAtTime(E.gerador && !jog.fora && jogando && !pausado ? (0.06 + 0.12 * clamp(1 - dGer / 14, 0, 1)) * (E.silenciador ? 0.3 : 1) : 0.0001, tt, 0.2);
     vento.gain.setTargetAtTime(jog.fora && jogando && !pausado ? 0.09 : 0.0001, tt, 0.4); ventoAbr.gain.setTargetAtTime(!jog.fora && jogando && !pausado ? 0.05 + tremor * 0.3 : 0.0001, tt, 0.2);
     const taxa = jog.fora ? 2 + (POCAS.some(p => Math.hypot(jog.x - p.x, jog.z - p.z) < p.r + 3) ? 18 : 0) : (E.ar < 45 ? (45 - E.ar) * 0.4 : 0) + E.rachas.length * 0.8;
     geigerT -= dt; if (taxa > 0 && geigerT <= 0 && jogando && !pausado) { geiger(); geigerT = -Math.log(Math.random()) / taxa; }
@@ -1715,7 +1733,7 @@ let ultimoRadar = 0, salvarT = 0;
 function comecar(novo) { iniciarAudio(); if (novo || !carregar()) { E = novoEstado(); Object.assign(jog, { x: -5, z: -6, yaw: -Math.PI / 2, pitch: 0, fora: false, mochila: 0, dormindo: 0 }); COLOSSOS.forEach(c => { c.alerta = 0; c.ataque = 0; c.perseguir = 0; }); }
   rachaduras.forEach((r, i) => { r.aberta = E.rachas.includes(i); r.g.visible = r.aberta; }); trajeMesh.visible = !E.traje; jog.fora = false; abrigo.visible = true; sup.visible = false; jog.dormindo = 0;
   if (!ehPiso(jog.x, jog.z)) { jog.x = -5; jog.z = -6; }
-  espalharCaixas(); $('menu').hidden = true; $('fim').hidden = true; jogando = true; pausado = false; document.body.classList.add('jogando'); $('mira').hidden = false; prender();
+  espalharCaixas(); $('menu').hidden = true; $('fim').hidden = true; jogando = true; pausado = false; document.body.classList.add('jogando'); $('mira').hidden = false; textoSil(); prender();
   aviso(dia() === 1 && E.min < 9 * 60 ? 'Dia 1. Aguente até o resgate no dia 10. Ouça o rádio na sala de controle.' : `Dia ${dia()}. Continue resistindo.`, 'info', 5);
   $('dicas').hidden = false; setTimeout(() => { $('dicas').hidden = true; }, 14000); }
 function abrirPausa() { if (!jogando || pausado) return; pausado = true; $('p-info').textContent = `Dia ${dia()} de ${diaResgate()} · saúde ${Math.round(E.saude)} · ${E.rachas.length} rachaduras abertas`; $('pausa').hidden = false; if (document.pointerLockElement) document.exitPointerLock(); }
