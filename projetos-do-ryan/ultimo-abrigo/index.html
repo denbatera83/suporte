@@ -58,7 +58,7 @@
   #chat { position: fixed; z-index: 8; right: max(12px, env(safe-area-inset-right, 0px)); top: max(12px, env(safe-area-inset-top, 0px)); bottom: max(12px, env(safe-area-inset-bottom, 0px)); width: min(420px, calc(100vw - 24px)); display: flex; flex-direction: column; gap: 8px; padding: 12px;
     background: rgba(4,16,24,.92); border: 1px solid rgba(80,220,255,.45); border-radius: 12px; box-shadow: 0 0 40px rgba(60,200,255,.18); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); user-select: text; -webkit-user-select: text; touch-action: auto; }
   .chat-cab { display: flex; align-items: center; gap: 10px; } .chat-cab b { display: block; font: 700 20px var(--titulo); letter-spacing: .08em; color: #7fe8ff; } .chat-cab small { font: 500 11px var(--mono); color: var(--suave); }
-  .chat-cab button { padding: 6px 10px; font-size: 15px; } #c-voz { margin-left: auto; } #c-voz[aria-pressed="false"] { opacity: .45; }
+  .chat-cab button { padding: 6px 10px; font-size: 15px; } #c-auto { margin-left: auto; font-size: 12px; } #c-auto[aria-pressed="true"] { border-color: #3ccfff; color: #7fe8ff; background: rgba(60,200,255,.15); } #c-auto[aria-pressed="false"] { opacity: .5; } #c-voz[aria-pressed="false"] { opacity: .45; }
   .orbe { width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #e8fdff, #3ccfff 40%, #075a80 75%); box-shadow: 0 0 18px #3ccfff; animation: pulsa 2s ease-in-out infinite; flex: none; }
   #chat.pensando .orbe { animation-duration: .5s; }
   @keyframes pulsa { 50% { transform: scale(.88); box-shadow: 0 0 8px #3ccfff; } }
@@ -69,6 +69,10 @@
   #c-rapidas { display: flex; flex-wrap: wrap; gap: 6px; } #c-rapidas button { padding: 6px 9px; font-size: 12px; letter-spacing: .02em; }
   #c-form { display: flex; gap: 8px; } #c-txt { flex: 1; min-width: 0; font: 500 16px var(--texto); color: var(--tinta); background: rgba(255,255,255,.07); border: 1px solid rgba(80,220,255,.4); border-radius: 8px; padding: 10px 12px; }
   #c-txt:focus { outline: 2px solid #3ccfff; outline-offset: 1px; } #c-form button { padding: 10px 14px; }
+  #hp-gig { top: calc(max(10px, env(safe-area-inset-top, 0px)) + 208px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; font: 700 13px var(--titulo); letter-spacing: .06em; color: #ff8a60; }
+  #hp-gig .hb { width: 160px; height: 9px; border-radius: 3px; background: rgba(255,255,255,.12); overflow: hidden; } #hp-gig .hb i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #ff4d3d, #ffb630); transition: width .15s; }
+  #botoes #t-tiro { width: 92px; height: 92px; border-color: #3ccfff; color: #7fe8ff; font-size: 15px; } #botoes #t-tiro.on { background: rgba(60,200,255,.3); }
+  #mira.arma { width: 14px; height: 14px; margin: -7px; border-color: #7fe8ff; box-shadow: 0 0 6px #3ccfff; }
   #sismo canvas { width: 140px; height: 28px; }
   #vinheta { position: fixed; inset: 0; z-index: 2; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(150,255,40,.35)); transition: opacity .4s; }
   #dano { position: fixed; inset: 0; z-index: 2; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 40%, rgba(255,40,20,.5)); transition: opacity .3s; }
@@ -130,23 +134,24 @@
 </div>
 <div class="hud" id="hud-mochila"></div>
 <div class="hud placa" id="mic" hidden><span>🎤</span><div class="mb"><i></i></div><b id="mic-txt">silêncio</b></div>
+<div class="hud placa" id="hp-gig" hidden><span>🦾 GIGANTE</span><div class="hb"><i></i></div></div>
 <div class="hud placa" id="bussola" hidden><span id="bus-seta">▲</span><b id="bus-txt">ABRIGO</b></div>
 <div class="hud placa" id="sismo" hidden><span>⚠ COLOSSO PERTO</span><canvas id="sismografo" width="280" height="56"></canvas></div>
 <div id="mira" hidden></div>
 <div class="hud placa" id="acao" hidden><svg id="anel" viewBox="0 0 36 36"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(228,234,210,.2)" stroke-width="4"/><circle id="anel-p" cx="18" cy="18" r="15" fill="none" stroke="#ffb630" stroke-width="4" stroke-dasharray="94.2" stroke-dashoffset="94.2" transform="rotate(-90 18 18)"/></svg><kbd>E</kbd><span id="acao-txt"></span></div>
 <div id="aviso" class="placa" hidden></div>
-<div class="hud" id="dicas"><kbd>W A S D</kbd> andar · <kbd>SHIFT</kbd> correr · <kbd>E</kbd> segurar para usar · <kbd>F</kbd> lanterna · <kbd>G</kbd> silenciador · <kbd>T</kbd> falar com a ÍRIS · <kbd>ESC</kbd> pausa</div>
+<div class="hud" id="dicas"><kbd>W A S D</kbd> andar · <kbd>SHIFT</kbd> correr · <kbd>E</kbd> segurar para usar · <kbd>F</kbd> lanterna · <kbd>G</kbd> silenciador · <kbd>T</kbd> falar com a ÍRIS · <kbd>CLIQUE</kbd> ou <kbd>ESPAÇO</kbd> atirar · <kbd>ESC</kbd> pausa</div>
 <div class="ctl" id="joy"><div class="base"><i></i></div></div>
-<div class="ctl" id="botoes"><button type="button" id="t-luz">Lanterna</button><button type="button" id="t-acao">Usar</button></div>
+<div class="ctl" id="botoes"><button type="button" id="t-luz">Lanterna</button><button type="button" id="t-acao">Usar</button><button type="button" id="t-tiro" hidden>Atirar</button></div>
 <button type="button" id="t-menu" aria-label="Pausa">II</button>
 <div id="fade"></div>
 <div id="chat" hidden role="dialog" aria-label="Conversa com a ÍRIS">
   <div class="chat-cab"><div class="orbe" aria-hidden="true"></div><div><b>ÍRIS</b><small>Inteligência do Abrigo 7</small></div>
-    <button type="button" id="c-voz" aria-pressed="true" title="Voz da ÍRIS">🔊</button><button type="button" id="c-fechar" aria-label="Fechar">✕</button></div>
+    <button type="button" id="c-auto" aria-pressed="true" title="Piloto automático: a ÍRIS cuida de tudo sozinha">🤖 Auto</button><button type="button" id="c-voz" style="margin-left:0" aria-pressed="true" title="Voz da ÍRIS">🔊</button><button type="button" id="c-fechar" aria-label="Fechar">✕</button></div>
   <div id="c-msgs" aria-live="polite"></div>
   <div id="c-rapidas">
     <button type="button" data-f="Busca comida para mim">🥫 Comida</button><button type="button" data-f="Busca água">💧 Água</button><button type="button" data-f="Busca remédio">💊 Remédio</button>
-    <button type="button" data-f="Busca filtro de ar">🌀 Filtro</button><button type="button" data-f="Busca peças">🔩 Peças</button><button type="button" data-f="Como está o abrigo?">📊 Abrigo</button><button type="button" data-f="Onde estão os gigantes?">🦾 Gigantes</button>
+    <button type="button" data-f="Busca filtro de ar">🌀 Filtro</button><button type="button" data-f="Busca peças">🔩 Peças</button><button type="button" data-f="Como está o abrigo?">📊 Abrigo</button><button type="button" data-f="Onde estão os gigantes?">🦾 Gigantes</button><button type="button" data-f="Conserta tudo e me dá o que eu preciso">🛠 Cuidar de mim</button><button type="button" data-f="Onde fica o arsenal?">🗺 Mapa</button><button type="button" data-f="Me dá uma dica">💡 Dica</button>
   </div>
   <form id="c-form" autocomplete="off"><input id="c-txt" type="text" maxlength="300" placeholder="Fale com a ÍRIS…" aria-label="Mensagem para a ÍRIS"><button type="submit" class="principal">Enviar</button></form>
 </div>
@@ -158,10 +163,10 @@
     <p class="sub">O ar lá em cima é radioativo e colossos de metal andam pela cidade em ruínas. Cada passo deles faz a terra tremer. Seu abrigo futurista tem paredes de titânio, escudo de energia, torres de laser, placas solares com energia infinita e a ÍRIS, uma inteligência artificial que conversa com você e manda um drone buscar recursos. Aguente até o resgate do dia 10.</p>
     <div class="regras">
       <div class="placa regra"><b>ÍRIS</b>Aperte o botão 🤖 ÍRIS (ou T) para conversar. Peça comida, água ou remédio e o drone vai buscar.</div>
-      <div class="placa regra"><b>Silêncio</b>Barulho atrai os colossos. Use o silenciador 🔇 ou desligue o gerador quando o chão tremer.</div>
+      <div class="placa regra"><b>Armas</b>Mísseis e lasers atiram sozinhos quando um gigante chega perto. Pegue o canhão de plasma no ARSENAL (ala leste) para atirar também!</div>
       <div class="placa regra"><b>Lá fora</b>Siga as setas verdes até a porta de SAÍDA. Explore o posto, o mercado, o hospital e a torre de rádio. Cuidado com os gigantes!</div>
     </div>
-    <p class="teclas"><kbd>W A S D</kbd> andar · <kbd>MOUSE</kbd> olhar (clique na tela) · <kbd>E</kbd> segurar para usar · <kbd>F</kbd> lanterna · <kbd>G</kbd> silenciador · <kbd>T</kbd> falar com a ÍRIS · <kbd>SHIFT</kbd> correr</p>
+    <p class="teclas"><kbd>W A S D</kbd> andar · <kbd>MOUSE</kbd> olhar (clique na tela) · <kbd>E</kbd> segurar para usar · <kbd>F</kbd> lanterna · <kbd>G</kbd> silenciador · <kbd>T</kbd> falar com a ÍRIS · <kbd>CLIQUE</kbd>/<kbd>ESPAÇO</kbd> atirar · <kbd>SHIFT</kbd> correr</p>
     <div class="linha"><button class="principal" id="b-jogar" type="button">Começar</button><button id="b-novo" type="button" hidden>Novo jogo</button><button id="b-tela" type="button">Tela cheia</button><button id="b-mic" type="button" aria-pressed="false">🎤 Microfone: desligado</button></div>
     <p class="mic-nota" id="mic-nota">Com o microfone ligado, os colossos ouvem a sua voz de verdade. Fale baixinho!</p>
     <div class="linha"><span class="rot">Gráficos</span><div class="linha" id="qual" role="group" aria-label="Gráficos"><button type="button" data-q="0">Leve</button><button type="button" data-q="1">Normal</button><button type="button" data-q="2">Ultra</button></div></div>
@@ -272,10 +277,12 @@ function add(geo, mat, x, y, z, pai = cena, sombra = false) { const m = new THRE
 
 // ===================== O ABRIGO (mapa em quadradinhos de 1 m) =====================
 // coluna c -> x = c - 9.5 ; linha r -> z = -r - 0.5
-const COLS = 20, LINHAS = 32, ALT = 3, PISO = new Uint8Array(COLS * LINHAS);
+const COLS = 32, LINHAS = 32, ALT = 3, PISO = new Uint8Array(COLS * LINHAS);
 const ret = (c0, c1, r0, r1) => { for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) PISO[r * COLS + c] = 1; };
 ret(9, 10, 1, 27); ret(1, 7, 3, 9); ret(12, 18, 3, 9); ret(1, 7, 13, 20); ret(12, 18, 13, 20); ret(7, 12, 24, 30);
 ret(8, 8, 5, 6); ret(11, 11, 5, 6); ret(8, 8, 16, 17); ret(11, 11, 16, 17);
+// ala nova: passagem de cima, corredor leste, estufa, arsenal e núcleo da ÍRIS
+ret(9, 21, 0, 1); ret(20, 21, 0, 27); ret(19, 19, 5, 6); ret(19, 19, 16, 17); ret(23, 30, 3, 9); ret(22, 22, 5, 6); ret(23, 30, 13, 20); ret(22, 22, 16, 17); ret(17, 26, 24, 30);
 const ehPiso = (x, z) => { const c = Math.floor(x + 10), r = Math.floor(-z); return c >= 0 && c < COLS && r >= 0 && r < LINHAS && PISO[r * COLS + c] === 1; };
 const abrigo = new THREE.Group(); cena.add(abrigo);
 { // paredes: uma face para cada lado de piso que encosta em parede
@@ -289,12 +296,12 @@ const abrigo = new THREE.Group(); cena.add(abrigo);
   const paredes = new THREE.Mesh(g, M.parede); paredes.receiveShadow = true; abrigo.add(paredes);
   const gs = new THREE.BufferGeometry(); gs.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3)); gs.setIndex(si); abrigo.add(new THREE.Mesh(gs, M.neon));
   const pisoG = new THREE.PlaneGeometry(COLS, LINHAS).rotateX(-Math.PI / 2); const puv = pisoG.attributes.uv; for (let i = 0; i < puv.count; i++) puv.setXY(i, puv.getX(i) * COLS / 2, puv.getY(i) * LINHAS / 2);
-  add(pisoG, M.piso, 0, 0, -LINHAS / 2, abrigo); const teto = add(pisoG.clone().rotateX(Math.PI), M.teto, 0, ALT, -LINHAS / 2, abrigo); }
+  add(pisoG, M.piso, COLS / 2 - 10, 0, -LINHAS / 2, abrigo); const teto = add(pisoG.clone().rotateX(Math.PI), M.teto, COLS / 2 - 10, ALT, -LINHAS / 2, abrigo); }
 // canos no teto do corredor e faixas de perigo
 for (const x of [-0.75, 0.75]) add(new THREE.CylinderGeometry(0.07, 0.07, 27, 8).rotateX(Math.PI / 2), M.metal, x, ALT - 0.15, -14, abrigo);
 add(new THREE.BoxGeometry(6, 0.02, 0.3), M.faixa, 0, 0.011, -23.7, abrigo);
 // luzes de cada cômodo (sempre existem; o gerador muda a força)
-const LUZES = [[-5, -6.5, 'dorm'], [5, -6.5, 'coz'], [-5, -17, 'maq'], [5, -17, 'ctl'], [0, -3, 'cor'], [0, -11, 'cor'], [0, -20, 'cor'], [0, -27, 'ecl']].map(([x, z, nome]) => {
+const LUZES = [[-5, -6.5, 'dorm'], [5, -6.5, 'coz'], [-5, -17, 'maq'], [5, -17, 'ctl'], [0, -3, 'cor'], [0, -11, 'cor'], [0, -20, 'cor'], [0, -27, 'ecl'], [11, -4, 'cor'], [11, -14, 'cor'], [17, -6.5, 'est'], [17, -17, 'ars'], [12, -27.5, 'nuc']].map(([x, z, nome]) => {
   const l = new THREE.PointLight(0xd8f2ff, 1, 11, 1.6); l.position.set(x, ALT - 0.35, z); abrigo.add(l);
   const lamp = add(new THREE.BoxGeometry(1.8, 0.05, 0.3), M.luz, x, ALT - 0.06, z, abrigo); const grade = add(new THREE.BoxGeometry(1, 0.12, 0.32), M.metalEsc, x, ALT - 0.03, z, abrigo); grade.scale.set(1, 0.4, 1);
   return { l, lamp, nome, base: nome === 'cor' ? 0.8 : 1.15, pisca: 0 }; });
@@ -394,7 +401,37 @@ montarDrone(droneMesh);
     g.font = '600 24px Arial'; ['🛡  Escudo de energia: ATIVO', '🧱  Paredes de titânio: 5 metros', '🔫  Torres de laser: 2', '☀  Placas solares: energia ∞', '🛸  Drone de suprimentos: pronto', '🤖  ÍRIS: online'].forEach((l, i) => { g.fillStyle = '#d8f6ff'; g.fillText(l, 30, 100 + i * 36); }); });
   add(new THREE.PlaneGeometry(2.4, 1.5), std({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.9 }), 8.97, 1.7, -16.5, abrigo).rotation.y = -Math.PI / 2; }
 { const t = tex(512, 96, (g, w, h) => { g.fillStyle = '#04141c'; g.fillRect(0, 0, w, h); g.fillStyle = '#7fe8ff'; g.font = '700 50px Oswald, Arial'; g.textAlign = 'center'; g.fillText('ABRIGO 7 · BEM-VINDO', w / 2, 66); });
-  add(new THREE.PlaneGeometry(1.9, 0.36), std({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 1 }), 0, 2.6, -1.02, abrigo).rotation.y = Math.PI; }
+  add(new THREE.PlaneGeometry(1.9, 0.36), std({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 1 }), 0, 2.6, -0.02, abrigo).rotation.y = Math.PI; }
+// ===== ALA NOVA =====
+const OBST2 = []; const obstLinha = (x1, z1, x2, z2, rr0) => { const n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, z2 - z1) / 0.5)); for (let k = 0; k <= n; k++) OBST2.push([lerp(x1, x2, k / n), lerp(z1, z2, k / n), rr0]); };
+const placaParede = (txt, x, y, z, ry, cor = '#7fe8ff', w = 1.8) => { const t = tex(512, 110, (g, W, H) => { g.fillStyle = '#04141c'; g.fillRect(0, 0, W, H); g.fillStyle = cor; g.font = '700 58px Oswald, Arial'; g.textAlign = 'center'; g.fillText(txt, W / 2, 76); });
+  add(new THREE.PlaneGeometry(w, w * 110 / 512), std({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 1 }), x, y, z, abrigo).rotation.y = ry; };
+// ESTUFA: plantas que dão comida
+const plantaM = std({ color: 0x3fae3a, roughness: 0.7 }), frutaM = std({ color: 0xd84020, roughness: 0.5 }), luzRoxa = new THREE.PointLight(0xd060ff, 0.9, 10, 2); luzRoxa.position.set(17, 2.5, -6.5); abrigo.add(luzRoxa);
+const estufa = grupo(17, 0, -6.5);
+for (const dz of [-2, 0, 2]) { add(new THREE.BoxGeometry(6, 0.7, 0.9), M.branco, 0, 0.35, dz, estufa); add(new THREE.BoxGeometry(5.8, 0.06, 0.8), std({ color: 0x2a1c10, roughness: 1 }), 0, 0.72, dz, estufa);
+  for (let k = 0; k < 9; k++) { const x = -2.6 + k * 0.65; add(new THREE.ConeGeometry(0.18, 0.55, 7), plantaM, x, 0.98, dz, estufa); if (k % 2) add(new THREE.SphereGeometry(0.06, 8, 6), frutaM, x + 0.08, 0.95, dz + 0.1, estufa); }
+  add(new THREE.BoxGeometry(6, 0.04, 0.3), std({ color: 0x220a33, emissive: 0xd060ff, emissiveIntensity: 2 }), 0, 2.3, dz, estufa); obstLinha(14, -6.5 + dz, 20, -6.5 + dz, 0.45); }
+usavel(estufa, { id: 'estufa', txt: 'Colher a horta (comida e água)', segurar: 2 }); placaParede('🌱 ESTUFA', 17, 2.3, -3.02, Math.PI, '#9dff70');
+// ARSENAL: o canhão de plasma e as armas
+const arsenal = new THREE.Group(); abrigo.add(arsenal);
+function montarCanhao(pai) { const corpoM = std({ color: 0xdfe6ea, roughness: 0.3, metalness: 0.6 }); add(new THREE.BoxGeometry(0.1, 0.12, 0.45), corpoM, 0, 0, 0, pai); add(new THREE.CylinderGeometry(0.035, 0.045, 0.32, 12).rotateX(Math.PI / 2), M.metalEsc, 0, 0.02, -0.36, pai);
+  add(new THREE.BoxGeometry(0.06, 0.16, 0.08), M.metalEsc, 0, -0.12, 0.08, pai); for (const z of [-0.12, 0, 0.12]) add(new THREE.TorusGeometry(0.05, 0.012, 6, 16), M.neon, 0, 0.02, z - 0.1, pai); add(new THREE.SphereGeometry(0.035, 10, 8), M.neon, 0, 0.02, -0.53, pai); }
+const mesaArma = grupo(17, 0, -17); add(new THREE.BoxGeometry(2.2, 0.9, 1), M.metalEsc, 0, 0.45, 0, mesaArma); add(new THREE.BoxGeometry(2.2, 0.04, 1), M.neon, 0, 0.91, 0, mesaArma);
+const canhaoMesa = new THREE.Group(); canhaoMesa.position.set(0, 1.02, 0); canhaoMesa.rotation.set(0, 0.5, Math.PI / 2); canhaoMesa.scale.setScalar(1.6); mesaArma.add(canhaoMesa); montarCanhao(canhaoMesa);
+usavel(mesaArma, { id: 'arma', txt: 'Pegar o canhão de plasma', segurar: 1 }); OBST2.push([17, -17, 1.1]);
+for (const z of [-14.5, -16.5, -18.5]) { const rack = grupo(20.7, 0, z, -Math.PI / 2); add(new THREE.BoxGeometry(1.6, 2.2, 0.3), M.metalEsc, 0, 1.1, 0, rack); for (const y of [0.7, 1.3, 1.9]) { const a = new THREE.Group(); a.position.set(0, y, 0.2); a.rotation.set(0, Math.PI / 2, 0); a.scale.setScalar(1.8); rack.add(a); montarCanhao(a); } }
+for (const x of [14.5, 16]) { const cx = grupo(x, 0, -20.3); add(new THREE.BoxGeometry(1.2, 0.7, 0.7), M.verdeMil, 0, 0.35, 0, cx); add(new THREE.BoxGeometry(1.22, 0.1, 0.72), M.amarelo, 0, 0.5, 0, cx); OBST2.push([x, -20.3, 0.7]); }
+placaParede('🔫 ARSENAL', 17, 2.3, -12.98, Math.PI, '#ff8a60');
+// NÚCLEO DA ÍRIS: o cérebro do abrigo
+const nucleo = grupo(12, 0, -28.2); add(new THREE.CylinderGeometry(0.9, 1.1, 0.4, 32), M.metalEsc, 0, 0.2, 0, nucleo);
+const colunaIris = add(new THREE.CylinderGeometry(0.35, 0.35, 2.4, 24, 1, true), new THREE.MeshBasicMaterial({ color: 0x3ccfff, transparent: true, opacity: 0.35, toneMapped: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }), 0, 1.6, 0, nucleo);
+const aneisNucleo = [0.6, 0.85, 1.1].map((rr0, k) => add(new THREE.TorusGeometry(rr0, 0.03, 8, 48).rotateX(Math.PI / 2), M.neon, 0, 0.9 + k * 0.6, 0, nucleo)); add(new THREE.CylinderGeometry(0.9, 0.9, 0.2, 32), M.metalEsc, 0, 2.9, 0, nucleo);
+const luzNucleo = new THREE.PointLight(0x3ccfff, 1.4, 9, 2); luzNucleo.position.set(0, 1.6, 0); nucleo.add(luzNucleo); usavel(nucleo, { id: 'iris', txt: 'Conversar com a ÍRIS (núcleo)', segurar: 0 }); OBST2.push([12, -28.2, 1.2]);
+const ledsServ = []; for (const x of [8, 9.2, 14.8, 16]) { const s = grupo(x, 0, -30.6); add(new THREE.BoxGeometry(1, 2.4, 0.7), M.metalEsc, 0, 1.2, 0, s); OBST2.push([x, -30.6, 0.6]);
+  for (let k = 0; k < 8; k++) { const l = add(new THREE.BoxGeometry(0.06, 0.03, 0.02), new THREE.MeshBasicMaterial({ color: 0x3ccfff, toneMapped: false }), -0.3 + (k % 4) * 0.2, 0.6 + Math.floor(k / 4) * 1.1, 0.36, s); ledsServ.push(l); } }
+placaParede('🤖 NÚCLEO DA ÍRIS', 14.6, 2.4, -24.02, Math.PI);
+placaParede('ALA LESTE ➜', 3.2, 2.2, -0.02, Math.PI, '#7fe8ff', 1.4);
 // rachaduras (lugares onde podem abrir)
 const LUGARES_RACHA = [[-9.48, 1.4, -5, Math.PI / 2], [-6, 1.8, -2.02, 0], [9.48, 1.6, -4, -Math.PI / 2], [6.5, 1.2, -9.98, Math.PI], [-9.48, 1.5, -16, Math.PI / 2], [-4, 2, -12.02, 0], [9.48, 1.4, -15, -Math.PI / 2], [3.5, 1.8, -12.02, 0], [-0.98, 1.5, -12.5, -Math.PI / 2], [0.98, 1.7, -8, Math.PI / 2], [-2.98, 1.6, -28, Math.PI / 2], [2.98, 1.3, -29, -Math.PI / 2]];
 const rachaduras = LUGARES_RACHA.map(([x, y, z, ry], i) => { const g = grupo(x, y, z, ry); const m = add(new THREE.PlaneGeometry(1.3, 1.3), new THREE.MeshStandardMaterial({ map: tRacha, transparent: true, depthWrite: false, roughness: 1, emissive: 0x66ff22, emissiveIntensity: 0.25, emissiveMap: tRacha }), 0, 0, 0.01, g);
@@ -516,6 +553,15 @@ const TORRES = [-2.4, 2.4].map(sx => { const base = new THREE.Group(); base.posi
     add(new THREE.CylinderGeometry(0.08, 0.08, 1.4, 8), M.metal, 0, 0.7, 0, pl, true); const placa = add(new THREE.BoxGeometry(4, 0.08, 2.2), mSolar, 0, 1.45, 0, pl, true); placa.rotation.x = 0.5; BLOQ.push([SX + x, SZ + z, 1.3]); }
   const tPl = tex(512, 128, (g, w, h) => { g.fillStyle = '#04141c'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffd040'; g.font = '700 60px Oswald, Arial'; g.textAlign = 'center'; g.fillText('☀ ENERGIA SOLAR ∞', w / 2, 86); });
   add(new THREE.PlaneGeometry(4, 1), std({ map: tPl, emissive: 0xffffff, emissiveMap: tPl, emissiveIntensity: 0.8, side: THREE.DoubleSide }), SX, 4.6, SZ - 2.6, sup); }
+// lançadores de mísseis em volta do escudo
+const LANCADORES = [0.8, 2.35, 3.9, 5.5].map(a => { const g = new THREE.Group(); g.position.set(SX + Math.cos(a) * 14, 0, SZ - 5 + Math.sin(a) * 14); sup.add(g); BLOQ.push([g.position.x, g.position.z, 1.4]);
+  add(new THREE.BoxGeometry(2, 1, 2), M.metalEsc, 0, 0.5, 0, g, true); const cab = new THREE.Group(); cab.position.y = 1.4; g.add(cab); cab.rotation.order = 'YXZ';
+  add(new THREE.BoxGeometry(1.6, 0.9, 1.6), M.branco, 0, 0, 0, cab, true); for (const [x, y] of [[-0.4, 0.2], [0.4, 0.2], [-0.4, -0.2], [0.4, -0.2]]) add(new THREE.CylinderGeometry(0.16, 0.16, 0.1, 12).rotateX(Math.PI / 2), M.vermelho, x, y, 0.82, cab);
+  add(new THREE.BoxGeometry(1.62, 0.12, 1.62), M.faixa, 0, -0.5, 0, cab); return { g, cab }; });
+const MISSEIS = [], missilGeo = new THREE.CylinderGeometry(0.12, 0.12, 1.2, 8).rotateX(Math.PI / 2), missilM = std({ color: 0xe8e8e0, roughness: 0.4 });
+for (let i = 0; i < 12; i++) { const m = new THREE.Mesh(missilGeo, missilM); m.visible = false; sup.add(m); const fogo = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: 0xffa040, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); fogo.scale.setScalar(1.6); fogo.position.z = 0.8; m.add(fogo); MISSEIS.push({ m, ativo: false, alvo: null, v: new THREE.Vector3() }); }
+const EXPLOSOES = []; for (let i = 0; i < 10; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: 0xffb040, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); s.visible = false; sup.add(s); EXPLOSOES.push({ s, t: 0 }); }
+const BALAS = []; for (let i = 0; i < 16; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: 0x60e8ff, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); s.scale.setScalar(0.6); s.visible = false; cena.add(s); BALAS.push({ s, ativo: false, de: new THREE.Vector3(), para: new THREE.Vector3(), t: 0, dur: 0, alvo: null }); }
 const droneSup = new THREE.Group(); droneSup.visible = false; sup.add(droneSup); const helicesSup = montarDrone(droneSup); droneSup.scale.setScalar(2.2);
 for (let i = BLOQ.length - 1; i >= 0; i--) if (BLOQ[i][3]) BLOQ.splice(i, 1); // libera o espaço reservado dos lugares
 // caixas de suprimentos
@@ -547,7 +593,7 @@ function montarColosso(i) {
     add(new THREE.CylinderGeometry(2.2, 2.6, 0.8, 8), placas, 0, -12, 0, joelho, true); pernas.push({ quadril, coxa, joelho, fase: [0, Math.PI, Math.PI, 0][k], sx, sz }); });
   // fumaça das chaminés
   const fumaca = []; for (let k = 0; k < 14; k++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: 0x2a2a24, transparent: true, opacity: 0.4, depthWrite: false })); s.scale.setScalar(3); sup.add(s); fumaca.push({ s, t: k / 14 }); }
-  const c = { g, corpo, olho, holo, cone, mancha, pernas, fumaca, x: SX + Math.cos(i * 2.1) * 90, z: SZ + Math.sin(i * 2.1) * 90, rot: 0, fase: rr(0, 6), alvo: null, alerta: 0, viu: 0, perseguir: 0, passoAnt: 0, ataque: 0 };
+  const c = { g, corpo, olho, holo, cone, mancha, pernas, fumaca, x: SX + Math.cos(i * 2.1) * 90, z: SZ + Math.sin(i * 2.1) * 90, rot: 0, fase: rr(0, 6), alvo: null, hp: 250, hpMax: 250, fugindo: false, feridoT: 0, alerta: 0, viu: 0, perseguir: 0, passoAnt: 0, ataque: 0 };
   COLOSSOS.push(c); return c; }
 for (let i = 0; i < 3; i++) montarColosso(i);
 function novoAlvo(c) { const a = R() * 6.28, d = rr(25, 172); c.alvo = { x: SX + Math.cos(a) * d, z: SZ + Math.sin(a) * d }; }
@@ -557,7 +603,7 @@ COLOSSOS.forEach(novoAlvo);
 const CHAVE = 'ultimo-abrigo-1', ITENS = [['racao', '🥫', 'Ração'], ['agua', '💧', 'Água'], ['filtro', '🌀', 'Filtro'], ['peca', '🔩', 'Peça'], ['remedio', '💊', 'Remédio']];
 const MOCHILA = 10, MIN_POR_SEG = 3, HATCH = { x: SX, z: SZ };
 function novoEstado() { return { min: 8 * 60, saude: 100, rad: 0, comida: 85, agua: 80, ar: 100, diesel: 60, filtroVida: 55, casco: 100, gerador: true, traje: false, trajeAr: 100,
-  inv: { racao: 4, agua: 4, galao: 2, filtro: 1, peca: 2, remedio: 1 }, rachas: [], ultimaCaixa: 0, avisos: {}, coletas: {}, sinal: false, silenciador: false, drone: null }; }
+  inv: { racao: 4, agua: 4, galao: 2, filtro: 1, peca: 2, remedio: 1 }, rachas: [], ultimaCaixa: 0, avisos: {}, coletas: {}, sinal: false, silenciador: false, drone: null, arma: false, auto: true }; }
 let E = novoEstado();
 const jog = { x: -5, z: -6, yaw: -Math.PI / 2, pitch: 0, fora: false, lanterna: false, mochila: 0, dormindo: 0, fase: 0 };
 function salvar() { try { localStorage.setItem(CHAVE, JSON.stringify({ E, jog: { x: jog.x, z: jog.z, yaw: jog.yaw } })); } catch (e) {} }
@@ -639,13 +685,15 @@ function desenharRadar() { const g = rctx, W = 256, c = 128; varre += 0.25; g.fi
 // ===================== CONTROLES =====================
 const teclas = new Set(); let travado = false, jogando = false, pausado = false, segurando = false, segurTeclado = false, segurToque = false;
 let chatAberto = false;
-addEventListener('keydown', e => { if (chatAberto) { if (e.key === 'Escape') fecharChat(); return; } const k = e.key.toLowerCase(); teclas.add(k); if (!jogando) return; if (k === 't' && !pausado) { e.preventDefault(); teclas.clear(); abrirChat(); return; } if (k === 'e') segurTeclado = true; if (k === 'f') alternarLanterna(); if (k === 'g') alternarSilenciador(); if (k === 'escape') { if (!pausado) abrirPausa(); else fecharPausa(); } });
+addEventListener('keydown', e => { if (chatAberto) { if (e.key === 'Escape') fecharChat(); return; } const k = e.key.toLowerCase(); teclas.add(k); if (!jogando) return; if (k === 't' && !pausado) { e.preventDefault(); teclas.clear(); abrirChat(); return; } if (k === 'e') segurTeclado = true; if (k === ' ' && E.arma) { e.preventDefault(); atirando = true; } if (k === 'f') alternarLanterna(); if (k === 'g') alternarSilenciador(); if (k === 'escape') { if (!pausado) abrirPausa(); else fecharPausa(); } });
 addEventListener('keyup', e => { const k = e.key.toLowerCase(); teclas.delete(k); if (k === 'e') segurTeclado = false; }); addEventListener('blur', () => { teclas.clear(); segurTeclado = false; });
 function prender() { if (toque || travado || !canvas.requestPointerLock) return; try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (e) {} }
 document.addEventListener('pointerlockchange', () => { travado = document.pointerLockElement === canvas; if (!travado && jogando && !pausado && !toque) abrirPausa(); });
 addEventListener('mousemove', e => { if (travado && jogando && !pausado) { jog.yaw -= (e.movementX || 0) * 0.0024; jog.pitch = clamp(jog.pitch - (e.movementY || 0) * 0.0024, -1.35, 1.35); } });
-canvas.addEventListener('mousedown', e => { if (jogando && !pausado && !toque) { if (!travado) prender(); else if (e.button === 0) segurTeclado = true; } });
-addEventListener('mouseup', e => { if (e.button === 0 && !teclas.has('e')) segurTeclado = false; });
+let atirando = false;
+canvas.addEventListener('mousedown', e => { if (jogando && !pausado && !toque) { if (!travado) prender(); else if (e.button === 0) { if (E.arma && !alvoAcao) atirando = true; else segurTeclado = true; } } });
+addEventListener('mouseup', e => { if (e.button === 0) { atirando = false; if (!teclas.has('e')) segurTeclado = false; } });
+addEventListener('keyup', e => { if (e.key === ' ') atirando = false; });
 const joy = { id: null, x: 0, y: 0, dx: 0, dy: 0 }, olhar = { id: null, x: 0, y: 0 }, base = document.querySelector('#joy .base'), knob = base.querySelector('i');
 $('joy').addEventListener('pointerdown', e => { e.preventDefault(); joy.id = e.pointerId; joy.x = e.clientX; joy.y = e.clientY; base.style.left = e.clientX + 'px'; base.style.top = e.clientY + 'px'; base.style.opacity = 1; try { $('joy').setPointerCapture(e.pointerId); } catch (er) {} });
 $('joy').addEventListener('pointermove', e => { if (e.pointerId !== joy.id) return; let dx = e.clientX - joy.x, dy = e.clientY - joy.y; const d = Math.hypot(dx, dy); if (d > 50) { dx *= 50 / d; dy *= 50 / d; } joy.dx = dx / 50; joy.dy = dy / 50; knob.style.transform = `translate(${dx}px,${dy}px)`; });
@@ -678,6 +726,7 @@ function textoAcao(u) { if (u.id === 'gerador') return E.gerador ? 'Desligar o g
   if (u.id === 'diesel') return 'Tanque de energia (solar ∞)'; if (u.id === 'filtro') return `Trocar o filtro de ar (${E.inv.filtro}) · filtro em ${Math.round(E.filtroVida)}%`;
   if (u.id === 'racha') return `Tapar a rachadura (${E.inv.peca} peças)`;
   if (u.id === 'saque') return E.coletas[u.lugar] === dia() ? 'Já pegou tudo aqui hoje (volte amanhã)' : u.txt; if (u.id === 'torre') return E.sinal ? 'O sinal de socorro já está ligado' : u.txt;
+  if (u.id === 'arma') return E.arma ? 'O canhão já está com você' : u.txt; if (u.id === 'estufa') return E.coletas.estufa === dia() ? 'Horta já colhida hoje' : u.txt;
   if (u.id === 'silenciador') return E.silenciador ? 'Desligar o silenciador' : 'Ligar o silenciador (gerador sem barulho)';
   if (u.id === 'subir') return E.traje ? 'Abrir a porta e sair' : 'Vestir o traje e sair pela porta'; return u.txt; }
 function usar(u) {
@@ -699,6 +748,8 @@ function usar(u) {
       if (E.trajeAr < 15) { somErro(); aviso('O ar do traje está acabando. Deixe recarregar com o gerador ligado.', 'ruim'); } else irPara(true); break;
     case 'descer': irPara(false); break;
     case 'silenciador': alternarSilenciador(); break;
+    case 'arma': if (E.arma) { aviso('Você já está com o canhão de plasma.', 'info'); break; } E.arma = true; canhaoMesa.visible = false; somItem(); tom(400, 1600, 0.4, 'sawtooth', 0.06); aviso('🔫 Você pegou o CANHÃO DE PLASMA! Lá fora, clique (ou aperte ESPAÇO / Atirar) para atirar nos gigantes.', 'bom', 6); break;
+    case 'estufa': if (E.coletas.estufa === dia()) { aviso('A horta já foi colhida hoje. Amanhã tem mais!', 'info'); break; } E.coletas.estufa = dia(); E.inv.racao += 2; E.inv.agua += 1; somItem(); aviso('🌱 Colheu a horta: 🥫 🥫 💧', 'bom'); break;
     case 'caixa': abrirCaixa(u.caixa); break;
     case 'saque': if (E.coletas[u.lugar] === dia()) { somErro(); aviso('Já pegou tudo aqui hoje. Volte amanhã!', 'info'); }
       else if (MOCHILA - jog.mochila < u.itens.length) { somErro(); aviso(`A mochila não tem espaço (precisa de ${u.itens.length}). Volte ao abrigo para esvaziar.`, 'ruim'); }
@@ -723,7 +774,7 @@ function irPara(fora) { if (fora) portaAbre = 1; setTimeout(() => $('fade').clas
     abrigo.visible = !fora; sup.visible = fora; $('fade').classList.remove('ver'); portaAbre = 0; salvar(); }, fora ? 1200 : 700); }
 
 // ===================== JOGADOR =====================
-const OBST = [[4, -14.2, 0.6], [-7.8, -4.2, 1.0], [-7.8, -8.4, 1.0], [-2.9, -3.4, 0.45], [5, -6.2, 1.15], [3, -8.6, 0.55], [-6.2, -18.3, 1.5], [-7.6, -14.4, 0.95], [-3.2, -19.6, 0.45], [4.6, -19.6, 0.8], [6.4, -19.6, 0.8], [-2.35, -26, 0.5]];
+const OBST = [...OBST2, [4, -14.2, 0.6], [-7.8, -4.2, 1.0], [-7.8, -8.4, 1.0], [-2.9, -3.4, 0.45], [5, -6.2, 1.15], [3, -8.6, 0.55], [-6.2, -18.3, 1.5], [-7.6, -14.4, 0.95], [-3.2, -19.6, 0.45], [4.6, -19.6, 0.8], [6.4, -19.6, 0.8], [-2.35, -26, 0.5]];
 function livre(x, z) { const r = 0.28;
   if (!jog.fora) { for (const [dx, dz] of [[r, r], [-r, r], [r, -r], [-r, -r]]) if (!ehPiso(x + dx, z + dz)) return false; for (const [ox, oz, or] of OBST) if (Math.hypot(x - ox, z - oz) < or + r) return false; return true; }
   if (Math.hypot(x - SX, z - SZ) > RAIO_SUP) return false; for (const [bx, bz, br] of BLOQ) if (Math.hypot(x - bx, z - bz) < br + r) return false; return true; }
@@ -737,6 +788,7 @@ function mover(dt) { let f = 0, s = 0; if (teclas.has('w') || teclas.has('arrowu
   return correr ? 2 : 1; }
 
 // ===================== SIMULAÇÃO =====================
+const armaVM = new THREE.Group(); camera.add(armaVM); if (!camera.parent) cena.add(camera); montarCanhao(armaVM); armaVM.scale.setScalar(0.6); armaVM.rotation.y = 0; armaVM.visible = false;
 let tremor = 0, flicker = 0, alertaMax = 0, geigerT = 0, alarmeT = 0;
 function simular(dtReal) {
   const mult = jog.dormindo > 0 ? 20 : 1, dmin = dtReal * MIN_POR_SEG * mult, h = dmin / 60, diaAntes = dia(); E.min += dmin;
@@ -763,11 +815,12 @@ function simularColossos(dt, correndo) {
   laserT = Math.max(0, laserT - dt);
   const voz = barulhoMic(), barulho = jog.fora ? 0 : (E.gerador && !E.silenciador ? 2 : 0) + (radioT > 0 ? 1.5 : 0) + (reparando ? 2 : 0) + voz; alertaMax = 0; let perto = Infinity;
   for (const c of COLOSSOS) {
+    c.feridoT = Math.max(0, c.feridoT - dt); if (!c.fugindo && c.feridoT <= 0) c.hp = Math.min(c.hpMax, c.hp + 2 * dt);
     // para onde ir
     let tx = c.alvo.x, tz = c.alvo.z, vel = 2.4;
-    if (c.ataque) { tx = HATCH.x; tz = HATCH.z; vel = 3.4; } else if (c.perseguir > 0 && jog.fora) { tx = jog.x; tz = jog.z; vel = 3.6; c.perseguir -= dt; }
+    if (c.fugindo) vel = 5.5; else if (c.ataque) { tx = HATCH.x; tz = HATCH.z; vel = 3.4; } else if (c.perseguir > 0 && jog.fora) { tx = jog.x; tz = jog.z; vel = 3.6; c.perseguir -= dt; }
     const dx = tx - c.x, dz = tz - c.z, d = Math.hypot(dx, dz);
-    if (!c.ataque && !(c.perseguir > 0) && d < 6) novoAlvo(c);
+    if (c.fugindo) { if (d < 8) { c.fugindo = false; c.hp = c.hpMax * 0.7; novoAlvo(c); } } else if (!c.ataque && !(c.perseguir > 0) && d < 6) novoAlvo(c);
     const quer = Math.atan2(dx, dz); let dr = ((quer - c.rot + Math.PI * 3) % (Math.PI * 2)) - Math.PI; c.rot += clamp(dr, -0.5 * dt, 0.5 * dt);
     const anda = d > (c.ataque ? 10 : 2) ? vel : 0; c.x += Math.sin(c.rot) * anda * dt; c.z += Math.cos(c.rot) * anda * dt;
     const faseAnt = c.fase; c.fase += dt * (anda ? 1.7 * vel / 2.4 : 0.3);
@@ -776,27 +829,56 @@ function simularColossos(dt, correndo) {
     if (anda && Math.floor(faseAnt / Math.PI) !== Math.floor(c.fase / Math.PI)) { const L = Math.pow(clamp(1 - dP / 170, 0, 1), 1.5); estrondo(L); tremor = Math.max(tremor, L * (jog.fora ? 0.9 : 1.2)); if (!jog.fora && L > 0.2) { flicker = Math.max(flicker, L); soltarPoeira(Math.round(L * 40), jog.x, jog.z); } }
     if (Math.random() < dt * 0.04 * (c.alerta > 50 || c.perseguir > 0 ? 4 : 1)) rugido(Math.pow(clamp(1 - dP / 200, 0, 1), 1.3));
     // dentro do abrigo: barulho chama os colossos
-    if (!jog.fora) { if (dH < 80 && barulho > 0) c.alerta = Math.min(100, c.alerta + barulho * (1 - dH / 80) * dt * 3.2 * (noite() ? 1.4 : 1)); else c.alerta = Math.max(0, c.alerta - dt * 6); }
+    if (!jog.fora && !c.fugindo) { if (dH < 80 && barulho > 0) c.alerta = Math.min(100, c.alerta + barulho * (1 - dH / 80) * dt * 3.2 * (noite() ? 1.4 : 1)); else c.alerta = Math.max(0, c.alerta - dt * 6); }
     else c.alerta = Math.max(0, c.alerta - dt * 6);
     if (!jog.fora && voz > 2 && dH < 80 && Math.random() < dt) aviso('Shhh! Os colossos estão ouvindo a sua voz!', 'ruim', 2);
     if (!c.ataque && c.alerta >= 100) { c.ataque = 1; rugido(1); aviso('UM COLOSSO OUVIU O ABRIGO E ESTÁ VINDO! DESLIGUE O GERADOR!', 'ruim', 5); }
     if (c.ataque && c.alerta < 40) { c.ataque = 0; novoAlvo(c); aviso('O colosso perdeu o interesse…', 'bom', 3); }
-    if (laserT <= 0 && dH < 48 && (c.ataque || (c.perseguir > 0 && jog.fora && Math.hypot(jog.x - HATCH.x, jog.z - HATCH.z) < 40))) dispararLaser(c);
     if (c.ataque && dH < 12) ataqueAoAbrigo(c);
     alertaMax = Math.max(alertaMax, c.alerta);
     // lá fora: a luz do holofote procura você
-    if (jog.fora) { const fx = Math.sin(c.rot), fz = Math.cos(c.rot), mx = c.x + fx * 24, mz = c.z + fz * 24, dentroEscudo = Math.hypot(jog.x - SX, jog.z - (SZ - 5)) < 17, naLuz = !dentroEscudo && Math.hypot(jog.x - mx, jog.z - mz) < 8, ouviuVoz = voz > 0 && dP < 65, ouviu = !dentroEscudo && ((correndo && dP < 30) || ouviuVoz);
+    if (jog.fora && !c.fugindo) { const fx = Math.sin(c.rot), fz = Math.cos(c.rot), mx = c.x + fx * 24, mz = c.z + fz * 24, dentroEscudo = Math.hypot(jog.x - SX, jog.z - (SZ - 5)) < 17, naLuz = !dentroEscudo && Math.hypot(jog.x - mx, jog.z - mz) < 8, ouviuVoz = voz > 0 && dP < 65, ouviu = !dentroEscudo && ((correndo && dP < 30) || ouviuVoz);
       if (ouviuVoz && !dentroEscudo) { c.viu = Math.min(100, c.viu + voz * 22 * (1 - dP / 65) * dt); if (voz > 1.5) aviso('O COLOSSO OUVIU A SUA VOZ! FIQUE QUIETO!', 'ruim', 1.5); }
       if (naLuz || ouviu) c.viu = Math.min(100, c.viu + (naLuz ? 70 : 25) * dt); else c.viu = Math.max(0, c.viu - 30 * dt);
       if (naLuz && c.viu > 30) aviso('A LUZ DO COLOSSO ESTÁ EM VOCÊ! CORRA!', 'ruim', 1);
       if (c.viu >= 100) { c.viu = 0; c.perseguir = 9; E.saude -= 28; E.rad = Math.min(100, E.rad + 8); tremor = 1.4; $('dano').style.opacity = 1; setTimeout(() => { $('dano').style.opacity = 0; }, 400); estrondo(1); rugido(1);
         const a = Math.atan2(jog.x - c.x, jog.z - c.z); for (let k = 0; k < 20; k++) { const nx = jog.x + Math.sin(a) * 0.4, nz = jog.z + Math.cos(a) * 0.4; if (livre(nx, nz)) { jog.x = nx; jog.z = nz; } } aviso('Onda de choque! Saia da luz e se esconda!', 'ruim', 3); } }
     animarColosso(c, dt); }
-  return perto; }
+  defesas(dt); return perto; }
 let laserT = 0, laserVis = 0, laserAlvo = null;
 function dispararLaser(c) { laserT = 45; laserVis = 0.8; laserAlvo = c; c.ataque = 0; c.alerta = 10; c.perseguir = 0; c.viu = 0; novoAlvo(c);
   for (let k = 0; k < 6; k++) tom(1800 - k * 120, 300, 0.18, 'sawtooth', 0.06, k * 0.09); rugido(0.8);
   aviso('⚡ As torres de laser atiraram e espantaram o gigante!', 'bom', 4); }
+// ===== ARMAS: defesas automáticas e o canhão do jogador =====
+let missilT = 0, lancadorI = 0, zapT = 0, avisoDefesaT = 0, tiroT = 0, ultimoFerido = null;
+const centroColosso = (c, v) => v.set(c.x, 22, c.z);
+function ferir(c, dano) { if (c.fugindo) return; c.hp -= dano; c.feridoT = 4; ultimoFerido = c; if (c.hp <= 0) fugir(c); }
+function fugir(c) { c.hp = 0; c.fugindo = true; c.ataque = 0; c.alerta = 0; c.perseguir = 0; c.viu = 0; const a = Math.atan2(c.z - SZ, c.x - SX); c.alvo = { x: SX + Math.cos(a) * 175, z: SZ + Math.sin(a) * 175 };
+  rugido(1); estrondo(0.8); aviso('💥 O gigante foi muito atingido e FUGIU!', 'bom', 4); if (typeof irisAvisa === 'function') irisAvisa('Acertamos! O gigante fugiu! 💥'); }
+function explodir(p, L) { const ex = EXPLOSOES.find(e => e.t <= 0) || EXPLOSOES[0]; ex.s.position.copy(p); ex.t = 0.7; ex.s.visible = true; const dJ = jog.fora ? camera.position.distanceTo(p) : Math.hypot(p.x - HATCH.x, p.z - HATCH.z) + 40; estrondo(clamp(1 - dJ / 200, 0.05, 1) * L); }
+function defesas(dt) { let alvo = null, md = 62;
+  for (const c of COLOSSOS) { if (c.fugindo) continue; const d = Math.hypot(c.x - HATCH.x, c.z - HATCH.z); if (d < md) { md = d; alvo = c; } }
+  avisoDefesaT -= dt;
+  if (alvo) { laserAlvo = alvo; laserVis = 0.25; ferir(alvo, 5 * dt);
+    if (avisoDefesaT <= 0) { avisoDefesaT = 40; aviso('⚔ Gigante chegando! As armas do abrigo estão atirando!', 'info', 4); if (typeof irisAvisa === 'function') irisAvisa('Gigante chegando! Ativei as armas! ⚔'); }
+    zapT -= dt; if (zapT <= 0) { zapT = 0.35; const L = jog.fora ? clamp(1 - Math.hypot(jog.x - HATCH.x, jog.z - HATCH.z) / 120, 0.1, 1) : 0.15; tom(1600, 400, 0.15, 'sawtooth', 0.05 * L); }
+    missilT -= dt; if (missilT <= 0 && !alvo.fugindo) { missilT = 1.6; const L = LANCADORES[lancadorI++ % LANCADORES.length], m = MISSEIS.find(x => !x.ativo);
+      if (m) { m.ativo = true; m.alvo = alvo; m.m.visible = true; m.m.position.set(L.g.position.x, 2.2, L.g.position.z); m.v.set(0, 18, 0); chiado(0.8, 900, jog.fora ? 0.15 : 0.03, 'bandpass'); } } }
+  const tmp = new THREE.Vector3(), dir = new THREE.Vector3();
+  for (const m of MISSEIS) { if (!m.ativo) continue; centroColosso(m.alvo, tmp); dir.subVectors(tmp, m.m.position); const dist = dir.length(); dir.normalize();
+    m.v.lerp(dir.multiplyScalar(48), Math.min(1, dt * 3)); m.m.position.addScaledVector(m.v, dt); m.m.lookAt(m.m.position.clone().sub(m.v));
+    if (dist < 4 || m.m.position.y < 0) { m.ativo = false; m.m.visible = false; explodir(m.m.position, 1); ferir(m.alvo, 22); } }
+  // canhão de plasma do jogador
+  tiroT -= dt; if (atirando && E.arma && tiroT <= 0 && !jog.dormindo) { tiroT = 0.22; atirar(); }
+  for (const b of BALAS) { if (!b.ativo) continue; b.t += dt; const k = Math.min(1, b.t / b.dur); b.s.position.lerpVectors(b.de, b.para, k); if (k >= 1) { b.ativo = false; b.s.visible = false; if (b.alvo) { ferir(b.alvo, 8); explodir(b.para, 0.25); b.alvo.feridoT = 4; if (!b.alvo.fugindo && jog.fora && Math.hypot(jog.x - SX, jog.z - (SZ - 5)) > 17) b.alvo.perseguir = Math.max(b.alvo.perseguir, 4); } } }
+  for (const e of EXPLOSOES) { if (e.t <= 0) continue; e.t -= dt; const k = 1 - e.t / 0.7; e.s.scale.setScalar(4 + k * 14); e.s.material.opacity = Math.max(0, 1 - k); if (e.t <= 0) e.s.visible = false; } }
+const raioTiro = new THREE.Raycaster();
+function atirar() { raioTiro.setFromCamera(centro, camera); raioTiro.far = 260; let alvoC = null, ponto = null;
+  if (jog.fora) { const hits = raioTiro.intersectObjects(COLOSSOS.filter(c => !c.fugindo).map(c => c.g), true); if (hits[0]) { ponto = hits[0].point; alvoC = COLOSSOS.find(c => { let o = hits[0].object; while (o) { if (o === c.g) return true; o = o.parent; } return false; }); } }
+  if (!ponto) ponto = raioTiro.ray.origin.clone().addScaledVector(raioTiro.ray.direction, jog.fora ? 120 : 12);
+  const b = BALAS.find(x => !x.ativo) || BALAS[0]; b.ativo = true; b.s.visible = true; b.de.copy(camera.position).addScaledVector(raioTiro.ray.direction, 0.6).add(new THREE.Vector3(0, -0.15, 0)); b.para.copy(ponto); b.t = 0; b.dur = Math.max(0.05, b.de.distanceTo(ponto) / 140); b.alvo = alvoC;
+  tom(1200, 300, 0.12, 'square', 0.05); chiado(0.1, 3000, 0.05, 'highpass'); recuo = 1; }
+let recuo = 0;
 function ataqueAoAbrigo(c) { c.ataque = 0; c.alerta = 0; novoAlvo(c); E.casco = Math.max(0, E.casco - 7); E.filtroVida = Math.max(0, E.filtroVida - 6);
   [0, 0.7, 1.4].forEach(t => setTimeout(() => { estrondo(1); tremor = 1.6; flicker = 1; if (!jog.fora) soltarPoeira(80, jog.x, jog.z); }, t * 1000));
   const fechadas = rachaduras.map((r, i) => i).filter(i => !rachaduras[i].aberta); for (let k = 0; k < (Math.random() < 0.5 ? 1 : 0) && fechadas.length; k++) { const i = fechadas.splice((Math.random() * fechadas.length) | 0, 1)[0]; rachaduras[i].aberta = true; rachaduras[i].g.visible = true; E.rachas.push(i); }
@@ -847,6 +929,11 @@ function atualizarVisual(dt, perto) {
     droneSup.visible = !!E.drone; if (E.drone) { const a = t * 0.4; droneSup.position.set(SX + Math.cos(a) * 30, 9 + Math.sin(t * 2) * 0.5, SZ + Math.sin(a) * 30); droneSup.rotation.y = -a; helicesSup.forEach(h => h.rotation.y += dt * 30); } CAIXAS.forEach(c => { if (!c.aberta) c.sinal.material.opacity = 0.4 + Math.sin(t * 3) * 0.25; });
     solSup.position.set(jog.x + 60, 120, jog.z - 50); solSup.target.position.set(jog.x, 0, jog.z);
   }
+  armaVM.visible = !!E.arma && jogando; if (armaVM.visible) { recuo = Math.max(0, recuo - dt * 8); armaVM.position.set(0.2, -0.18 + Math.sin(jog.fase) * 0.01, -0.42 + recuo * 0.05); armaVM.rotation.x = recuo * 0.15; }
+  $('mira').classList.toggle('arma', !!E.arma && jog.fora); $('t-tiro').hidden = !(E.arma && jog.fora);
+  canhaoMesa.visible = !E.arma; aneisNucleo.forEach((a, k) => { a.rotation.z = t * (0.5 + k * 0.3) * (k % 2 ? -1 : 1); a.position.y = 0.9 + k * 0.6 + Math.sin(t * 1.5 + k) * 0.05; }); colunaIris.material.opacity = 0.28 + Math.sin(t * (falando ? 12 : 2)) * 0.1;
+  if (!jog.fora) ledsServ.forEach((l, i) => { l.visible = Math.sin(t * 3 + i * 1.7) > -0.3; });
+  const fer = COLOSSOS.filter(c => c.feridoT > 0 && !c.fugindo).sort((a, b) => b.feridoT - a.feridoT)[0], hg = $('hp-gig'); hg.hidden = !(fer && jogando); if (fer) hg.querySelector('i').style.width = Math.max(0, fer.hp / fer.hpMax * 100).toFixed(0) + '%';
   if (bloom) bloom.strength = jog.fora ? 0.9 : 0.75;
   if (filtroPass) { filtroPass.uniforms.uT.value = t; filtroPass.uniforms.uTreme.value = tr; filtroPass.uniforms.uVerde.value = jog.fora ? 0.55 : clamp((60 - E.ar) / 60, 0, 0.5); }
   $('vinheta').style.opacity = clamp((E.rad - 40) / 60, 0, 0.9);
@@ -917,7 +1004,7 @@ window.__abrigo = { MARCOS, mic, E: () => E, jog, salvar, COLOSSOS, usar, rachad
 // No link do Claude ela usa a IA de verdade (capacidade "sample") com ferramentas do jogo.
 // No APK e no HTML sem internet ela usa um cérebro simples de palavras-chave.
 const NOMES = { racao: ['🥫', 'ração', 'rações'], agua: ['💧', 'água', 'águas'], filtro: ['🌀', 'filtro de ar', 'filtros de ar'], peca: ['🔩', 'peça', 'peças'], remedio: ['💊', 'remédio', 'remédios'], tudo: ['📦', 'um pouco de tudo', 'um pouco de tudo'] };
-const DRONE_SEG = 40;
+const DRONE_SEG = 30;
 let falando = false, vozLigada = true, cerebro = null, tts = null, iaFalhou = false, pensando = false;
 const historico = [];
 try { vozLigada = localStorage.getItem('abrigo-voz') !== '0'; } catch (e) {}
@@ -931,10 +1018,10 @@ function atualizarDroneHud() { const el = $('drone-st'); if (!E.drone) { if (!el
   const t = `Drone buscando ${n[0]} · volta em ${Math.max(1, Math.ceil(E.drone.resta))} s`; if ($('drone-txt').textContent !== t) $('drone-txt').textContent = t; }
 function enviarDrone(item, qtd) { item = String(item || '').toLowerCase(); if (!NOMES[item]) return { ok: false, msg: 'Não conheço esse recurso. Posso buscar ração, água, remédio, filtro de ar ou peças.' };
   if (E.drone) return { ok: false, msg: `O drone já está lá fora buscando ${NOMES[E.drone.item][1]}. Ele volta em ${Math.ceil(E.drone.resta)} segundos!` };
-  qtd = item === 'tudo' ? 1 : clamp(Math.round(Number(qtd) || 3), 1, 4); E.drone = { item, qtd, resta: DRONE_SEG };
+  qtd = item === 'tudo' ? 1 : clamp(Math.round(Number(qtd) || 3), 1, 5); E.drone = { item, qtd, resta: DRONE_SEG };
   [0, 0.15, 0.3].forEach(t => tom(300 + t * 900, 700 + t * 600, 0.3, 'triangle', 0.05, t)); chiado(1.2, 2500, 0.06, 'bandpass'); atualizarDroneHud(); salvar();
   return { ok: true, msg: `Drone enviado para buscar ${item === 'tudo' ? 'um pouco de tudo' : nomeItem(item, qtd)}. Volta em ${DRONE_SEG} segundos.` }; }
-function tickDrone(dt) { if (!E.drone) return; E.drone.resta -= dt;
+function tickDrone(dt) { autoT -= dt; if (E.auto && autoT <= 0) { autoT = 3; pilotoAuto(); } if (!E.drone) return; E.drone.resta -= dt;
   if (E.drone.resta <= 0) { const d = E.drone; E.drone = null; let txt;
     if (d.item === 'tudo') { ['racao', 'agua', 'remedio', 'filtro', 'peca'].forEach(k => E.inv[k]++); txt = 'O drone voltou com um pouco de tudo: 🥫 💧 💊 🌀 🔩!'; }
     else { E.inv[d.item] += d.qtd; txt = `O drone voltou com ${nomeItem(d.item, d.qtd)}! Já guardei no estoque.`; }
@@ -947,7 +1034,9 @@ function estado() { const p = COLOSSOS.map(k => Math.hypot(k.x - HATCH.x, k.z - 
     ar_puro: Math.round(E.ar), radiacao: Math.round(E.rad), casco: Math.round(E.casco), filtro_de_ar: Math.round(E.filtroVida), gerador: E.gerador ? 'ligado' : 'desligado', silenciador: E.silenciador ? 'ligado' : 'desligado',
     rachaduras_abertas: E.rachas.length, estoque: { racao: E.inv.racao, agua: E.inv.agua, remedio: E.inv.remedio, filtro: E.inv.filtro, peca: E.inv.peca },
     drone: E.drone ? `fora, buscando ${E.drone.item}, volta em ${Math.ceil(E.drone.resta)} s` : 'na base, pronto', jogador: jog.fora ? 'lá fora na superfície' : 'dentro do abrigo',
-    gigante_mais_perto_metros: Math.round(p), alerta_dos_gigantes: Math.round(alertaMax) }; }
+    gigante_mais_perto_metros: Math.round(p), alerta_dos_gigantes: Math.round(alertaMax), onde_o_jogador_esta: salaDe(jog.x, jog.z), tem_canhao_de_plasma: !!E.arma, piloto_automatico: E.auto ? 'ligado' : 'desligado',
+    sinal_de_socorro: E.sinal ? 'ligado (resgate no dia 9)' : 'desligado (ligue na torre de rádio para o resgate vir no dia 9)', horta_colhida_hoje: E.coletas.estufa === dia(),
+    defesas: 'escudo de energia, paredes de titânio, 2 torres de laser e 4 lançadores de mísseis que atiram sozinhos quando um gigante chega a 60 m', gigantes_fugindo: COLOSSOS.filter(c => c.fugindo).length }; }
 function textoEstado() { const s = estado(), dicas = [];
   if (s.comida < 30) dicas.push('você está com fome, coma uma ração'); if (s.agua < 30) dicas.push('beba água'); if (s.radiacao > 40) dicas.push('tome um remédio'); if (s.filtro_de_ar < 25) dicas.push('troque o filtro de ar'); if (s.rachaduras_abertas) dicas.push(`tape ${s.rachaduras_abertas === 1 ? 'a rachadura' : 'as rachaduras'} com peças`);
   return `Dia ${s.dia}, ${s.hora}. Saúde ${s.saude}, comida ${s.comida}, água ${s.agua}, ar puro ${s.ar_puro}%, radiação ${s.radiacao}.\nEstoque: 🥫${s.estoque.racao} 💧${s.estoque.agua} 💊${s.estoque.remedio} 🌀${s.estoque.filtro} 🔩${s.estoque.peca}.\n` + (dicas.length ? 'Dica: ' + dicas.join(', ') + '.' : 'Está tudo bem! O abrigo está seguro. 💙'); }
@@ -955,12 +1044,63 @@ function textoGigantes() { const s = estado(); return `O gigante mais perto est�
 function mudarSilenciador(ligar) { if (!!E.silenciador !== !!ligar) alternarSilenciador(); return E.silenciador ? 'Silenciador ligado.' : 'Silenciador desligado.'; }
 function mudarGerador(ligar) { if (E.gerador !== !!ligar) usar({ id: 'gerador' }); return E.gerador ? 'Gerador ligado.' : 'Gerador desligado.'; }
 
+// ---- mapa ----
+const SALAS = [['dormitório', -5.5, -6.5, [-9, -2, -10, -3]], ['cozinha', 5.5, -6.5, [2, 9, -10, -3]], ['sala de máquinas', -5.5, -17, [-9, -2, -21, -13]], ['sala de controle', 5.5, -17, [2, 9, -21, -13]],
+  ['eclusa e porta de saída', 0, -28, [-3, 3, -31, -24]], ['estufa', 17, -6.5, [13, 21, -10, -3]], ['arsenal', 17, -17, [13, 21, -21, -13]], ['núcleo da ÍRIS', 12, -27.5, [7, 17, -31, -24]]];
+function salaDe(x, z) { if (jog.fora) return 'lá fora na superfície'; const s = SALAS.find(([, , , [x0, x1, z0, z1]]) => x >= x0 && x <= x1 && z >= z0 && z <= z1); return s ? s[0] : 'no corredor'; }
+function direcao(dx, dz) { let rel = Math.atan2(dx, dz) - (jog.yaw + Math.PI); rel = Math.atan2(Math.sin(rel), Math.cos(rel)); const d = Math.round(Math.hypot(dx, dz));
+  return (Math.abs(rel) < 0.6 ? 'em frente' : rel < -0.6 && rel > -2.4 ? 'à sua direita' : rel > 0.6 && rel < 2.4 ? 'à sua esquerda' : 'atrás de você') + `, a ${d} metros`; }
+function mapa() { if (jog.fora) return { voce_esta: 'lá fora', abrigo: direcao(HATCH.x - jog.x, HATCH.z - jog.z), lugares: MARCOS.map(m => ({ nome: m.nome, onde: direcao(m.x - jog.x, m.z - jog.z) })) };
+  return { voce_esta: salaDe(jog.x, jog.z), salas: SALAS.map(([n, x, z]) => ({ nome: n, onde: direcao(x - jog.x, z - jog.z) })), dica: 'A ala leste (estufa, arsenal e núcleo) fica pelo corredor de cima, passando a placa ALA LESTE.' }; }
+function consertarTudo() { let n = 0; rachaduras.forEach((rc, i) => { if (rc.aberta && E.inv.peca > 0) { E.inv.peca--; rc.aberta = false; rc.g.visible = false; E.rachas = E.rachas.filter(k => k !== i); E.casco = Math.min(100, E.casco + 6); n++; } }); if (n) { tom(500, 700, 0.2, 'square', 0.06); salvar(); } return n; }
+function usarRecurso(acao) { const inv = E.inv; if (jog.fora && acao !== 'consertar') return 'Os recursos ficam guardados no abrigo. Volte para dentro que eu te ajudo!';
+  switch (acao) { case 'comer': if (!inv.racao) return 'Acabaram as rações. ' + enviarDrone('racao', 4).msg; usar({ id: 'comer' }); return 'Pronto, você comeu uma ração! 🥫';
+    case 'beber': if (!inv.agua) return 'Acabou a água. ' + enviarDrone('agua', 4).msg; usar({ id: 'beber' }); return 'Pronto, você bebeu água! 💧';
+    case 'remedio': if (!inv.remedio) return 'Sem remédio. ' + enviarDrone('remedio', 3).msg; usar({ id: 'remedio' }); return 'Tomou o remédio. A radiação baixou! 💊';
+    case 'trocar_filtro': if (!inv.filtro) return 'Sem filtro. ' + enviarDrone('filtro', 3).msg; usar({ id: 'filtro' }); return 'Filtro de ar novo instalado! 🌀';
+    case 'consertar': { if (!E.rachas.length) return 'Não tem nenhuma rachadura. O abrigo está inteiro! 🛡'; const n = consertarTudo(); return n ? `Consertei ${n} ${n === 1 ? 'rachadura' : 'rachaduras'}! 🔧` + (E.rachas.length ? ' Ainda faltam peças para o resto.' : '') : 'Sem peças para consertar. ' + enviarDrone('peca', 4).msg; } }
+  return 'Não sei fazer isso ainda.'; }
+function cuidarDeTudo() { const feitos = []; if (!jog.fora) { if (E.comida < 70 && E.inv.racao) feitos.push(usarRecurso('comer')); if (E.agua < 70 && E.inv.agua) feitos.push(usarRecurso('beber')); if (E.rad > 25 && E.inv.remedio) feitos.push(usarRecurso('remedio')); if (E.filtroVida < 40 && E.inv.filtro) feitos.push(usarRecurso('trocar_filtro')); }
+  if (E.rachas.length && E.inv.peca) feitos.push(usarRecurso('consertar')); if (!E.drone) { const f = ['racao', 'agua', 'remedio', 'filtro', 'peca'].sort((a, b) => E.inv[a] - E.inv[b])[0]; if (E.inv[f] <= 2) feitos.push(enviarDrone(f, 4).msg); }
+  return feitos.length ? feitos.join('\n') : 'Está tudo certinho! Você está bem e o abrigo também. 💙'; }
+function dica() { const s = estado(); if (!E.arma) return 'Dica: vá até o ARSENAL na ala leste e pegue o canhão de plasma. Lá fora você pode atirar nos gigantes! 🔫';
+  if (!E.sinal) return 'Dica: lá fora tem uma torre de rádio com feixe vermelho. Ligue o sinal de socorro e o resgate chega um dia antes!';
+  if (E.coletas.estufa !== dia()) return 'Dica: a horta da ESTUFA dá comida e água todo dia. Vá colher! 🌱';
+  if (s.alerta_dos_gigantes > 30) return 'Dica: os gigantes estão desconfiados. Ligue o silenciador e fale baixinho. 🤫';
+  return ['Dica: dentro do escudo azul lá fora os gigantes não te veem.', 'Dica: o drone traz até 5 coisas por viagem. É só me pedir!', 'Dica: se um gigante te perseguir, corra para dentro do escudo — as armas vão atirar nele!', 'Dica: com o piloto automático ligado eu cuido da comida, da água e das rachaduras para você.'][Math.floor(Math.random() * 4)]; }
+// ---- avisos e piloto automático ----
+let ultAvisoIris = 0, autoT = 2;
+function irisAvisa(txt) { const ag = performance.now(); if (ag - ultAvisoIris < 8000) return; ultAvisoIris = ag; dizIris(txt); }
+function pilotoAuto() { if (!jogando || jog.dormindo) return;
+  if (!jog.fora) { if (E.comida < 30 && E.inv.racao) return dizIris('🤖 ' + usarRecurso('comer') + ' Você estava com fome.'); if (E.agua < 30 && E.inv.agua) return dizIris('🤖 ' + usarRecurso('beber') + ' Você estava com sede.');
+    if (E.rad > 50 && E.inv.remedio) return dizIris('🤖 ' + usarRecurso('remedio')); if (E.filtroVida < 20 && E.inv.filtro) return dizIris('🤖 ' + usarRecurso('trocar_filtro')); }
+  if (E.rachas.length && E.inv.peca) return dizIris('🤖 ' + usarRecurso('consertar'));
+  if (alertaMax > 45 && E.gerador && !E.silenciador) { alternarSilenciador(); return dizIris('🤖 Os gigantes estavam ouvindo o gerador. Liguei o silenciador! 🤫'); }
+  if (!E.drone) { const f = ['racao', 'agua', 'remedio', 'filtro', 'peca'].sort((a, b) => E.inv[a] - E.inv[b])[0]; if (E.inv[f] <= 1) { const r = enviarDrone(f, 4); if (r.ok) dizIris(`🤖 Estava acabando ${NOMES[f][1]}. Mandei o drone buscar! 🛸`); } } }
+function textoAuto() { const b = $('c-auto'); b.setAttribute('aria-pressed', String(!!E.auto)); b.textContent = E.auto ? '🤖 Auto' : '🤖 Auto: off'; }
+function mudarAuto(lig) { E.auto = !!lig; textoAuto(); salvar(); return E.auto ? 'Piloto automático LIGADO: eu cuido da comida, água, remédio, filtro, rachaduras e do drone para você! 🤖' : 'Piloto automático desligado. Agora você manda em tudo!'; }
+
 // ---- cérebro simples (sem internet) ----
 const semAcento = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const PALAVRAS = [['racao', ['comida', 'racao', 'racoes', 'fome', 'comer', 'lanche', 'almoco', 'janta', 'lata']], ['agua', ['agua', 'sede', 'beber']], ['remedio', ['remedio', 'radiacao', 'doente', 'curar', 'cura']], ['filtro', ['filtro']], ['peca', ['peca', 'rachadura', 'consert', 'buraco']]];
 function cerebroLocal(txt) { const s = ' ' + semAcento(txt).replace(/[^a-z0-9 ]/g, ' ') + ' ', tem = (...w) => w.some(x => s.includes(x));
   const num = (s.match(/ ([1-4]) /) || [])[1] || (tem(' um ', ' uma ') ? 1 : tem(' dois ', ' duas ') ? 2 : tem(' tres ') ? 3 : tem(' quatro ', ' muito', ' bastante') ? 4 : 3);
   const itens = PALAVRAS.filter(([, ws]) => ws.some(w => s.includes(w))).map(([k]) => k), pergunta = tem('como esta', 'quanto', 'quantos', 'quantas', 'tem ');
+  const CHAVES = [[0, ['dormitorio', 'quarto', 'cama']], [1, ['cozinha', 'despensa']], [2, ['maquina', 'gerador', 'filtro']], [3, ['controle', 'radar', 'radio']], [4, ['saida', 'eclusa', 'porta', 'traje']], [5, ['estufa', 'horta']], [6, ['arsenal', 'canhao', 'arma']], [7, ['nucleo']]];
+  const fora = { posto: 'posto', mercado: 'mercado', hospital: 'hospital', torre: 'torre' }; let lugar = null;
+  for (const m of MARCOS) if (s.includes(fora[m.lugar] || '#')) lugar = [m.nome, m.x, m.z, true]; if (!lugar) for (const [i, ws] of CHAVES) if (ws.some(w => s.includes(w))) { lugar = [SALAS[i][0], SALAS[i][1], SALAS[i][2], false]; break; }
+  if (tem('onde fica', 'onde e ', 'onde esta', 'como chego', 'caminho', 'mapa') && !tem('gigante', 'monstro', 'colosso', 'drone') ) { if (lugar) { const [n, x, z, ehFora] = lugar; if (ehFora && !jog.fora) return `${n[0].toUpperCase() + n.slice(1)} fica lá fora. Saia pela porta de SAÍDA e siga o feixe de luz colorido!`; if (!ehFora && jog.fora) return `${n[0].toUpperCase() + n.slice(1)} fica dentro do abrigo. A entrada está ${direcao(HATCH.x - jog.x, HATCH.z - jog.z)}.`; return `${n[0].toUpperCase() + n.slice(1)}: ${direcao(x - jog.x, z - jog.z)}. 🗺`; }
+    const m = mapa(); return jog.fora ? `O abrigo está ${m.abrigo}.\n` + m.lugares.map(l => `${l.nome}: ${l.onde}`).join('\n') : `Você está: ${m.voce_esta}.\n` + m.salas.map(l => `${l.nome}: ${l.onde}`).join('\n'); }
+  if (tem('cuida', 'conserta tudo', 'preciso de tudo', 'me ajuda', 'ajuda')) return cuidarDeTudo();
+  if (tem('automatic', 'piloto')) return mudarAuto(!tem('deslig', 'para ', 'tira'));
+  if (tem('dica', 'o que eu faco', 'o que faco', 'conselho', 'estrategia')) return dica();
+  if (tem('canhao', 'arma', 'atirar', 'tiro', 'pistola', 'laser', 'missil', 'defesa', 'torre')) return E.arma ? 'Você já tem o canhão de plasma! Lá fora, clique ou aperte ESPAÇO para atirar. E as armas do abrigo (2 lasers e 4 lançadores de mísseis) atiram sozinhas quando um gigante chega perto. ⚔' : 'O canhão de plasma está no ARSENAL, na ala leste: vá pelo corredor de cima até a placa ALA LESTE. As armas do abrigo já atiram sozinhas nos gigantes! ⚔';
+  if (tem('estou com fome', 'to com fome', 'tô com fome', 'quero comer', 'come pra mim', 'me da comida', 'comer')) return usarRecurso('comer');
+  if (tem('estou com sede', 'to com sede', 'quero beber', 'beber agua', 'me da agua')) return usarRecurso('beber');
+  if (tem('consert', 'tapa', 'rachadura')) return usarRecurso('consertar');
+  if (tem('troca o filtro', 'trocar filtro', 'troque o filtro')) return usarRecurso('trocar_filtro');
+  if (tem('toma remedio', 'tomar remedio', 'me da remedio', 'estou doente', 'radiacao alta')) return usarRecurso('remedio');
+  if (tem('horta', 'estufa', 'planta')) return E.coletas.estufa === dia() ? 'A horta da estufa já foi colhida hoje. Amanhã tem mais! 🌱' : 'A horta da ESTUFA (ala leste) está pronta para colher: dá 2 rações e 1 água! 🌱';
   if (tem(' oi ', ' ola ', 'bom dia', 'boa tarde', 'boa noite', ' e ai ') && !itens.length) return `Oi! Eu sou a ÍRIS. 💙 Quer que eu busque alguma coisa com o drone? É só pedir: comida, água, remédio, filtro ou peças.`;
   if (tem('obrigad', 'valeu', 'brigad')) return 'De nada! Estou sempre aqui para te ajudar. 💙';
   if (tem('quem e voce', 'seu nome', 'o que voce faz', 'quem e vc')) return 'Eu sou a ÍRIS, a inteligência artificial do Abrigo 7. Eu cuido do abrigo, vigio os gigantes e mando o drone buscar recursos para você!';
@@ -978,13 +1118,19 @@ function cerebroLocal(txt) { const s = ' ' + semAcento(txt).replace(/[^a-z0-9 ]/
   return 'Posso te ajudar assim:\n🛸 "Busca comida" (ou água, remédio, filtro, peças)\n📊 "Como está o abrigo?"\n🦾 "Onde estão os gigantes?"\n🔇 "Liga o silenciador"'; }
 
 // ---- cérebro de verdade (IA do Claude, no link) ----
-const INSTRUCOES = 'Você é a ÍRIS, a inteligência artificial do Abrigo 7, um bunker futurista e superprotegido num jogo de sobrevivência. Você conversa com uma criança que está jogando. ' +
+const INSTRUCOES = 'Você é a ÍRIS, a inteligência artificial do Abrigo 7, um bunker futurista e superprotegido num jogo de sobrevivência. Você conversa com uma criança que está jogando. Você é muito esperta, prestativa e toma iniciativa: resolva o problema da criança usando as ferramentas, sem pedir confirmação, e depois diga o que fez e qual é o próximo passo. ' +
+  'O abrigo tem: dormitório, cozinha, sala de máquinas (gerador e filtro), sala de controle (radar e rádio), eclusa com a porta de SAÍDA, e na ala leste: estufa (horta que dá comida), arsenal (canhão de plasma para atirar nos gigantes) e o núcleo da ÍRIS. Lá fora: posto, mercado, hospital, torre de rádio, escudo de energia, placas solares (energia infinita), 2 lasers e 4 lançadores de mísseis automáticos. Para direções use ver_mapa. Para fome, sede, radiação, filtro ou rachaduras use usar_recurso. ' +
   'Responda sempre em português do Brasil, com no máximo 3 frases curtas e simples, de um jeito carinhoso e animado, como uma amiga robô. Pode usar 1 ou 2 emojis. ' +
   'Quando a criança pedir um recurso (comida, água, remédio, filtro de ar, peças ou um pouco de tudo), use a ferramenta enviar_drone. Para saber como está o abrigo, use ver_abrigo; para os gigantes, use ver_gigantes. Nunca invente números. ' +
   'Fale só de coisas boas para crianças. Se pedirem algo fora do jogo, responda curtinho e com carinho e volte para o jogo.';
 const FERRAMENTAS = [
   { name: 'enviar_drone', description: 'Manda o drone buscar recursos lá fora. Ele volta em 40 segundos. Só um pedido por vez.', inputSchema: { type: 'object', properties: { item: { type: 'string', enum: ['racao', 'agua', 'remedio', 'filtro', 'peca', 'tudo'] }, quantidade: { type: 'integer', minimum: 1, maximum: 4 } }, required: ['item'] },
     execute: ({ item, quantidade }) => { const r = enviarDrone(item, quantidade); if (r.ok) addMsg('🛸 ' + r.msg, 'acao'); return r.msg; } },
+  { name: 'usar_recurso', description: 'Usa um recurso do estoque pelo jogador: comer, beber, remedio, trocar_filtro ou consertar (tapa as rachaduras com peças). Se faltar, manda o drone.', inputSchema: { type: 'object', properties: { acao: { type: 'string', enum: ['comer', 'beber', 'remedio', 'trocar_filtro', 'consertar'] } }, required: ['acao'] }, execute: ({ acao }) => { const r = usarRecurso(String(acao)); addMsg('🛠 ' + r, 'acao'); return r; } },
+  { name: 'cuidar_de_tudo', description: 'Faz tudo que o jogador precisa de uma vez: come, bebe, remédio, filtro, conserta e manda o drone buscar o que está acabando.', execute: () => { const r = cuidarDeTudo(); addMsg('🛠 ' + r, 'acao'); return r; } },
+  { name: 'ver_mapa', description: 'Diz em que sala o jogador está e para que lado (frente, direita, esquerda, atrás) e a quantos metros ficam as salas do abrigo ou os lugares lá fora.', execute: () => JSON.stringify(mapa()) },
+  { name: 'piloto_automatico', description: 'Liga ou desliga o piloto automático (a ÍRIS cuida sozinha da comida, água, remédio, filtro, rachaduras, silenciador e drone).', inputSchema: { type: 'object', properties: { ligado: { type: 'boolean' } }, required: ['ligado'] }, execute: ({ ligado }) => { const r = mudarAuto(ligado === true || ligado === 'true'); addMsg('🤖 ' + r, 'acao'); return r; } },
+  { name: 'dar_dica', description: 'Uma dica boa para o que o jogador deve fazer agora.', execute: () => dica() },
   { name: 'ver_abrigo', description: 'Mostra saúde, comida, água, ar puro, radiação, estoque, rachaduras, dia, hora e o drone.', execute: () => JSON.stringify(estado()) },
   { name: 'ver_gigantes', description: 'Mostra a distância do gigante mais perto e o alerta deles.', execute: () => JSON.stringify({ metros: estado().gigante_mais_perto_metros, alerta: estado().alerta_dos_gigantes }) },
   { name: 'silenciador', description: 'Liga ou desliga o silenciador do gerador (com ele ligado os gigantes não ouvem o gerador).', inputSchema: { type: 'object', properties: { ligado: { type: 'boolean' } }, required: ['ligado'] }, execute: ({ ligado }) => { const r = mudarSilenciador(ligado === true || ligado === 'true'); addMsg('🔇 ' + r, 'acao'); return r; } },
@@ -1008,7 +1154,7 @@ async function enviarMsg(txt) { txt = String(txt || '').trim().slice(0, 300); if
   catch (e) { if (e && ['not_granted', 'sampling_disabled', 'not_declared', 'tools_unavailable'].includes(e.code)) iaFalhou = true; resp = ''; }
   if (!resp) resp = cerebroLocal(txt);
   espera.remove(); historico.push({ r: 'user', t: txt }); dizIris(resp); pensando = false; $('chat').classList.remove('pensando'); tom(900, 1300, 0.08, 'sine', 0.04); }
-function abrirChat() { if (!jogando || chatAberto) return; iniciarAudio(); chatAberto = true; pausado = true; teclas.clear(); segurTeclado = segurToque = false; joy.dx = joy.dy = 0;
+function abrirChat() { if (!jogando || chatAberto) return; iniciarAudio(); chatAberto = true; atirando = false; textoAuto(); pausado = true; teclas.clear(); segurTeclado = segurToque = false; joy.dx = joy.dy = 0;
   if (document.pointerLockElement) document.exitPointerLock(); $('chat').hidden = false; $('acao').hidden = true;
   if (!$('c-msgs').children.length) dizIris(`Oi! Eu sou a ÍRIS, a inteligência do abrigo. 💙 ${E.drone ? 'O drone já está buscando coisas.' : 'Quer que eu mande o drone buscar alguma coisa?'}`);
   tom(700, 1100, 0.12, 'sine', 0.05); if (!toque) setTimeout(() => $('c-txt').focus(), 30); }
@@ -1016,12 +1162,15 @@ function fecharChat() { if (!chatAberto) return; chatAberto = false; $('chat').h
 $('c-form').addEventListener('submit', e => { e.preventDefault(); enviarMsg($('c-txt').value); });
 document.querySelectorAll('#c-rapidas button').forEach(b => b.addEventListener('click', () => enviarMsg(b.dataset.f)));
 $('c-fechar').addEventListener('click', fecharChat);
+$('c-auto').addEventListener('click', () => { const r = mudarAuto(!E.auto); addMsg('🤖 ' + r, 'acao'); });
+const bTiro = $('t-tiro'); bTiro.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); iniciarAudio(); atirando = true; bTiro.classList.add('on'); try { bTiro.setPointerCapture(e.pointerId); } catch (er) {} });
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => bTiro.addEventListener(ev, () => { atirando = false; bTiro.classList.remove('on'); }));
 $('c-voz').setAttribute('aria-pressed', String(vozLigada));
 $('c-voz').addEventListener('click', () => { vozLigada = !vozLigada; $('c-voz').setAttribute('aria-pressed', String(vozLigada)); $('c-voz').textContent = vozLigada ? '🔊' : '🔇'; try { localStorage.setItem('abrigo-voz', vozLigada ? '1' : '0'); } catch (e) {} if (!vozLigada) { if (tts) tts.stop(); else if (window.speechSynthesis) speechSynthesis.cancel(); } });
 if (!vozLigada) $('c-voz').textContent = '🔇';
 ['pointerdown', 'keydown', 'keyup', 'touchstart'].forEach(ev => $('chat').addEventListener(ev, e => { e.stopPropagation(); if (ev === 'keydown' && e.key === 'Escape') fecharChat(); }));
 $('b-iris').addEventListener('pointerdown', e => e.stopPropagation()); $('b-iris').addEventListener('click', e => { e.stopPropagation(); abrirChat(); });
 if (!toque) $('iris-tecla').textContent = 'tecla T';
-Object.assign(window.__abrigo, { abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
+Object.assign(window.__abrigo, { mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
 })();
 </script>
