@@ -6,9 +6,10 @@ JAR=/usr/lib/android-sdk/platforms/android-23/android.jar
 L=$1; KS=$2; PW=${3:-ryanvr123}
 rm -rf assets build && mkdir -p assets/lib build/gen build/obj build/dex
 sed -e 's#https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js#/lib/three.min.js#' \
+    -e 's#https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js#/lib/peerjs.min.js#' \
     -e 's#https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/[a-z]*/#/lib/#' ../index.html | \
   { printf '<!doctype html>\n<html lang="pt-BR">\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'; cat; } > assets/index.html
-cp "$L/three/three.min.js" "$L"/three/examples/js/*/*.js assets/lib/
+cp "$L/three/three.min.js" "$L"/three/examples/js/*/*.js "$L/peerjs.min.js" assets/lib/
 aapt package -f -m -J build/gen -M AndroidManifest.xml -S res -A assets -I "$JAR" -F build/app.unsigned.apk
 javac --release 8 -nowarn -classpath "$JAR" -d build/obj src/br/ryan/ultimoabrigo/*.java build/gen/br/ryan/ultimoabrigo/R.java
 dalvik-exchange --dex --output=build/dex/classes.dex build/obj

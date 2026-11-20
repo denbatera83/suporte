@@ -83,6 +83,14 @@
     body.toque #b-sil, body.toque #b-iris, body.toque #b-loja { padding: 7px 8px; font-size: 12px; }
     body.toque #t-menu { right: calc(max(12px, env(safe-area-inset-right, 0px)) + 196px); }
   }
+
+  #h-sala { top: calc(max(10px, env(safe-area-inset-top, 0px)) + 168px); left: max(12px, env(safe-area-inset-left, 0px)); font: 600 12px var(--mono); color: #9dff70; padding: 6px 10px; }
+  .multi { width: 100%; display: grid; gap: 8px; padding: 12px; border-radius: 8px; border: 1px solid rgba(80,220,255,.35); background: rgba(10,30,40,.45); }
+  .multi h3 { margin: 0; font: 700 18px var(--titulo); letter-spacing: .06em; color: #7fe8ff; }
+  .multi input { min-width: 0; font: 500 16px var(--texto); color: var(--tinta); background: rgba(255,255,255,.07); border: 1px solid var(--linha); border-radius: 6px; padding: 9px 11px; }
+  .multi input#mp-codigo { width: 7.5em; } .multi input#mp-nome { width: 12em; }
+  #lista-salas { display: flex; flex-wrap: wrap; gap: 6px; } #lista-salas .vazio, #mp-status { font: 500 13px/1.4 var(--mono); color: var(--suave); margin: 0; }
+  #lista-salas .sala { display: grid; text-align: left; gap: 2px; padding: 8px 12px; } #lista-salas .sala b { color: #9dff70; } #lista-salas .sala span { font: 500 12px var(--mono); text-transform: none; color: var(--suave); }
   #drone-st { font: 600 12px var(--mono); color: #7fe8ff; }
   #chat { position: fixed; z-index: 8; right: max(12px, env(safe-area-inset-right, 0px)); top: max(12px, env(safe-area-inset-top, 0px)); bottom: max(12px, env(safe-area-inset-bottom, 0px)); width: min(420px, calc(100vw - 24px)); display: flex; flex-direction: column; gap: 8px; padding: 12px;
     background: rgba(4,16,24,.92); border: 1px solid rgba(80,220,255,.45); border-radius: 12px; box-shadow: 0 0 40px rgba(60,200,255,.18); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); user-select: text; -webkit-user-select: text; touch-action: auto; }
@@ -163,6 +171,7 @@
   <div class="placa" id="drone-st" hidden>🛸 <span id="drone-txt">Drone</span></div>
 </div>
 <div class="hud" id="hud-mochila"></div>
+<div class="hud placa" id="h-sala" hidden></div>
 <div class="hud placa" id="mic" hidden><span>🎤</span><div class="mb"><i></i></div><b id="mic-txt">silêncio</b></div>
 <div class="hud placa" id="hp-gig" hidden><span>🦾 GIGANTE</span><div class="hb"><i></i></div></div>
 <div class="hud placa" id="bussola" hidden><span id="bus-seta">▲</span><b id="bus-txt">ABRIGO</b></div>
@@ -198,17 +207,25 @@
   <div class="bloco">
     <span class="fita">Abrigo 7 · Ano 2097 · o abrigo mais protegido do mundo</span>
     <h1>Último<span>Abrigo</span></h1>
-    <p class="sub">O ar lá em cima é radioativo e colossos de metal andam pela cidade em ruínas. Cada passo deles faz a terra tremer. Seu abrigo futurista tem paredes de titânio, escudo de energia, torres de laser, placas solares com energia infinita e a ÍRIS, uma inteligência artificial que conversa com você e manda um drone buscar recursos. Aguente até o resgate do dia 10.</p>
+    <p class="sub">O ar lá em cima é radioativo e colossos de metal andam pela cidade em ruínas. Cada passo deles faz a terra tremer. Seu abrigo começa velho e ENFERRUJADO: junte moedas para reformá-lo até virar um abrigo futurista com paredes de titânio, escudo de energia, torres de laser, placas solares com energia infinita e a ÍRIS, uma inteligência artificial que conversa com você e manda um drone buscar recursos. Aguente até o resgate do dia 10.</p>
     <div class="regras">
       <div class="placa regra"><b>ÍRIS</b>Aperte o botão 🤖 ÍRIS (ou T) para conversar. Peça comida, água ou remédio e o drone vai buscar.</div>
-      <div class="placa regra"><b>Moedas 🪙</b>Ganhe moedas abrindo caixas, pegando coisas nos lugares, fazendo gigantes fugirem e sobrevivendo os dias. Use em ⬆ MELHORIAS (ou U) para deixar o casco, o campo de força, as armas, a ÍRIS e a mochila mais fortes!</div>
+      <div class="placa regra"><b>Moedas 🪙</b>O abrigo começa ENFERRUJADO, sem campo de força e sem armas! Ganhe moedas abrindo caixas, pegando coisas nos lugares, fazendo gigantes fugirem e sobrevivendo os dias. Use em ⬆ MELHORIAS (ou U) para reformar o abrigo e comprar o campo de força, as armas, o canhão e muito mais!</div>
       <div class="placa regra"><b>Sala de comando 🎛</b>Na sala de controle tem botões para ligar e desligar o CAMPO DE FORÇA e as ARMAS do abrigo.</div>
-      <div class="placa regra"><b>Armas</b>Mísseis e lasers atiram sozinhos quando um gigante chega perto. Pegue o canhão de plasma no ARSENAL (ala leste) para atirar também!</div>
+      <div class="placa regra"><b>Armas</b>Depois de comprar, os mísseis e lasers atiram sozinhos quando um gigante chega perto. Compre o canhão de plasma e pegue no ARSENAL (ala leste) para atirar também!</div>
       <div class="placa regra"><b>Lá fora</b>Siga as setas verdes até a porta de SAÍDA. Explore o posto, o mercado, o hospital e a torre de rádio. Cuidado com os gigantes!</div>
     </div>
     <p class="teclas"><kbd>W A S D</kbd> andar · <kbd>MOUSE</kbd> olhar (clique na tela) · <kbd>E</kbd> segurar para usar · <kbd>F</kbd> lanterna · <kbd>G</kbd> silenciador · <kbd>T</kbd> falar com a ÍRIS · <kbd>CLIQUE</kbd>/<kbd>ESPAÇO</kbd> atirar · <kbd>SHIFT</kbd> correr</p>
     <div class="linha"><button class="principal" id="b-jogar" type="button">Começar</button><button id="b-novo" type="button" hidden>Novo jogo</button><button id="b-tela" type="button">Tela cheia</button><button id="b-mic" type="button" aria-pressed="false">🎤 Microfone: desligado</button></div>
     <p class="mic-nota" id="mic-nota">Com o microfone ligado, os colossos ouvem a sua voz de verdade. Fale baixinho!</p>
+    <div class="multi">
+      <h3>👥 Jogar com amigos</h3>
+      <p class="mic-nota" style="margin:0">Cada amigo joga no próprio aparelho, com internet. Vocês veem um ao outro e enfrentam os mesmos gigantes!</p>
+      <div class="linha"><input id="mp-nome" maxlength="12" placeholder="Seu nome" autocomplete="off" aria-label="Seu nome"><button class="principal" id="b-criar" type="button">Criar sala</button><button id="b-procurar" type="button">Procurar salas</button></div>
+      <div id="lista-salas"></div>
+      <div class="linha"><input id="mp-codigo" inputmode="numeric" maxlength="2" placeholder="Nº da sala" aria-label="Número da sala"><button id="b-entrar" type="button">Entrar</button></div>
+      <p id="mp-status"></p>
+    </div>
     <div class="linha"><span class="rot">Gráficos</span><div class="linha" id="qual" role="group" aria-label="Gráficos"><button type="button" data-q="0">Leve</button><button type="button" data-q="1">Normal</button><button type="button" data-q="2">Ultra</button></div></div>
   </div>
 </div>
@@ -230,6 +247,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/GammaCorrectionShader.js"></script>
@@ -493,6 +511,22 @@ const rachaduras = LUGARES_RACHA.map(([x, y, z, ry], i) => { const g = grupo(x, 
 const poeira = (() => { const n = 400, p = new Float32Array(n * 3), v = new Float32Array(n); for (let i = 0; i < n; i++) { p[i * 3 + 1] = -10; } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
   const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xb0a890, size: 0.035, transparent: true, opacity: 0.8 })); pts.frustumCulled = false; abrigo.add(pts); return { pts, p, v, n, i: 0 }; })();
 function soltarPoeira(qtd, x, z) { for (let k = 0; k < qtd; k++) { const i = poeira.i++ % poeira.n; poeira.p[i * 3] = x + rr(-4, 4); poeira.p[i * 3 + 1] = ALT - 0.05; poeira.p[i * 3 + 2] = z + rr(-4, 4); poeira.v[i] = rr(0.2, 0.8); } }
+// ===================== VISUAL DO ABRIGO POR NÍVEL (0 enferrujado → 3 titânio brilhante) =====================
+function enferrujar(t, semente0) { const src = t.image, c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const g = c.getContext('2d'), Rr = semente(semente0), W = c.width, H = c.height;
+  g.drawImage(src, 0, 0); g.fillStyle = 'rgba(70,40,20,.35)'; g.fillRect(0, 0, W, H);
+  for (let k = 0; k < 70; k++) { const x = Rr() * W, y = Rr() * H, r = 6 + Rr() * W * 0.12, gr = g.createRadialGradient(x, y, 0, x, y, r); const cor = Rr() < 0.5 ? '120,58,22' : '80,38,16'; gr.addColorStop(0, `rgba(${cor},.75)`); gr.addColorStop(1, `rgba(${cor},0)`); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+  for (let k = 0; k < 40; k++) { const x = Rr() * W, y = Rr() * H, l = 20 + Rr() * H * 0.4; g.fillStyle = `rgba(${90 + Rr() * 50 | 0},45,18,${0.25 + Rr() * 0.35})`; g.fillRect(x, y, 1 + Rr() * 3, l); }
+  for (let k = 0; k < 300; k++) { g.fillStyle = `rgba(30,15,5,${Rr() * 0.5})`; g.fillRect(Rr() * W, Rr() * H, 2, 2); }
+  const nt = new THREE.CanvasTexture(c); nt.encoding = THREE.sRGBEncoding; nt.wrapS = t.wrapS; nt.wrapT = t.wrapT; nt.repeat.copy(t.repeat); nt.anisotropy = t.anisotropy; return nt; }
+const VIS = { orig: { parede: M.parede.map, piso: M.piso.map, teto: M.teto.map }, ferr: { parede: enferrujar(M.parede.map, 71), piso: enferrujar(M.piso.map, 72), teto: enferrujar(M.teto.map, 73) }, nivel: -1 };
+const VISUAIS = [ // por nível do casco: textura, brilho do metal, cor do neon, cor e força das luzes
+  { ferr: true, rough: 0.85, metal: 0.25, neon: 0x2a1206, luz: 0xffb060, mult: 0.55, lamp: 0xffa040 },
+  { ferr: false, rough: 0.5, metal: 0.45, neon: 0x3a4448, luz: 0xfff2dc, mult: 0.85, lamp: 0xfff0d0 },
+  { ferr: false, rough: 0.38, metal: 0.55, neon: 0x3ccfff, luz: 0xd8f2ff, mult: 1, lamp: 0xd8f6ff },
+  { ferr: false, rough: 0.22, metal: 0.8, neon: 0x7ff6ff, luz: 0xe8faff, mult: 1.15, lamp: 0xeaffff }];
+function visualAbrigo(n) { if (VIS.nivel === n) return VISUAIS[n]; VIS.nivel = n; const v = VISUAIS[n], fonte = v.ferr ? VIS.ferr : VIS.orig;
+  for (const k of ['parede', 'piso', 'teto']) { M[k].map = fonte[k]; M[k].needsUpdate = true; } M.parede.roughness = v.rough; M.parede.metalness = v.metal; M.piso.roughness = v.rough * 0.8; M.piso.metalness = v.metal;
+  M.metal.color.setHex(v.ferr ? 0x6a4a35 : 0x6d7268); M.luz.emissive.setHex(v.lamp); LUZES.forEach(L => L.l.color.setHex(v.luz)); return v; }
 
 // ===================== A SUPERFÍCIE (fica longe do abrigo no mapa) =====================
 const SX = 0, SZ = 500, RAIO_SUP = 190;
@@ -666,15 +700,16 @@ const relampago = new THREE.PointLight(0xc8d4ff, 0, 400, 1); relampago.position.
 const CHAVE = 'ultimo-abrigo-1', ITENS = [['racao', '🥫', 'Ração'], ['agua', '💧', 'Água'], ['filtro', '🌀', 'Filtro'], ['peca', '🔩', 'Peça'], ['remedio', '💊', 'Remédio']];
 const MIN_POR_SEG = 3, HATCH = { x: SX, z: SZ };
 function novoEstado() { return { min: 8 * 60, saude: 100, rad: 0, comida: 85, agua: 80, ar: 100, diesel: 60, filtroVida: 55, casco: 100, gerador: true, traje: false, trajeAr: 100,
-  inv: { racao: 4, agua: 4, galao: 2, filtro: 1, peca: 2, remedio: 1 }, rachas: [], ultimaCaixa: 0, avisos: {}, coletas: {}, sinal: false, silenciador: false, drone: null, arma: false, auto: true, campo: true, armas: true, moedas: 30, nivel: { casco: 0, escudo: 0, torres: 0, arma: 0, iris: 0, mochila: 0 } }; }
+  inv: { racao: 4, agua: 4, galao: 2, filtro: 1, peca: 2, remedio: 1 }, rachas: [], ultimaCaixa: 0, avisos: {}, coletas: {}, sinal: false, silenciador: false, drone: null, arma: false, auto: true, campo: true, armas: true, v2: true, moedas: 40, nivel: { casco: 0, escudo: 0, torres: 0, arma: 0, iris: 0, mochila: 0 } }; }
 // níveis das melhorias (0 a 3) e o que cada um muda
 const NV = k => (E.nivel && E.nivel[k]) || 0;
-const mochilaMax = () => 10 + NV('mochila') * 4, raioEscudo = () => 17 * (1 + NV('escudo') * 0.2);
+const mochilaMax = () => 6 + NV('mochila') * 4, raioEscudo = () => NV('escudo') ? 17 * (1 + (NV('escudo') - 1) * 0.25) : 0;
+const temEscudo = () => NV('escudo') > 0 && E.campo !== false, nvAcima = k => Math.max(0, NV(k) - 1);
 function ganhar(n, motivo) { E.moedas = (E.moedas || 0) + n; hudAnt.moch = ''; if (motivo) { const d = document.createElement('div'); d.className = 'moeda-voa'; d.textContent = `+${n} 🪙 ${motivo}`; document.body.appendChild(d); setTimeout(() => d.remove(), 1800); tom(1500, 2100, 0.12, 'triangle', 0.05); } }
 let E = novoEstado();
 const jog = { x: -5, z: -6, yaw: -Math.PI / 2, pitch: 0, fora: false, lanterna: false, mochila: 0, dormindo: 0, fase: 0 };
 function salvar() { try { localStorage.setItem(CHAVE, JSON.stringify({ E, jog: { x: jog.x, z: jog.z, yaw: jog.yaw } })); } catch (e) {} }
-function carregar() { try { const d = JSON.parse(localStorage.getItem(CHAVE) || 'null'); if (!d || !d.E || d.E.saude <= 0) return false; E = Object.assign(novoEstado(), d.E); E.inv = Object.assign(novoEstado().inv, d.E.inv); E.nivel = Object.assign(novoEstado().nivel, d.E.nivel || {}); if (d.jog) Object.assign(jog, d.jog); return true; } catch (e) { return false; } }
+function carregar() { try { const d = JSON.parse(localStorage.getItem(CHAVE) || 'null'); if (!d || !d.E || d.E.saude <= 0) return false; E = Object.assign(novoEstado(), d.E); E.inv = Object.assign(novoEstado().inv, d.E.inv); E.nivel = Object.assign(novoEstado().nivel, d.E.nivel || {}); if (!d.E.v2) { E.v2 = true; const n = E.nivel; n.casco = Math.max(n.casco + 2, 2); n.escudo = Math.max(n.escudo + 1, 1); n.torres = Math.max(n.torres + 1, 1); n.iris = Math.max(n.iris + 1, 1); n.mochila = Math.max(n.mochila + 1, 1); n.arma = E.arma ? Math.max(n.arma + 1, 1) : 0; for (const k in n) n[k] = Math.min(3, n[k]); } if (d.jog) Object.assign(jog, d.jog); return true; } catch (e) { return false; } }
 const temSalvo = (() => { try { const d = JSON.parse(localStorage.getItem(CHAVE) || 'null'); return !!(d && d.E && d.E.saude > 0); } catch (e) { return false; } })();
 const dia = () => Math.floor(E.min / 1440) + 1, horaDec = () => (E.min % 1440) / 60;
 const diaResgate = () => E.sinal ? 9 : 10;
@@ -794,7 +829,7 @@ function textoAcao(u) { if (u.id === 'gerador') return E.gerador ? 'Desligar o g
   if (u.id === 'diesel') return 'Tanque de energia (solar ∞)'; if (u.id === 'filtro') return `Trocar o filtro de ar (${E.inv.filtro}) · filtro em ${Math.round(E.filtroVida)}%`;
   if (u.id === 'racha') return `Tapar a rachadura (${E.inv.peca} peças)`;
   if (u.id === 'saque') return E.coletas[u.lugar] === dia() ? 'Já pegou tudo aqui hoje (volte amanhã)' : u.txt; if (u.id === 'torre') return E.sinal ? 'O sinal de socorro já está ligado' : u.txt;
-  if (u.id === 'arma') return E.arma ? 'O canhão já está com você' : u.txt; if (u.id === 'estufa') return E.coletas.estufa === dia() ? 'Horta já colhida hoje' : u.txt;
+  if (u.id === 'arma') return E.arma ? 'O canhão já está com você' : NV('arma') ? u.txt : '🔒 Canhão trancado: compre em ⬆ MELHORIAS'; if (u.id === 'estufa') return E.coletas.estufa === dia() ? 'Horta já colhida hoje' : u.txt;
   if (u.id === 'silenciador') return E.silenciador ? 'Desligar o silenciador' : 'Ligar o silenciador (gerador sem barulho)';
   if (u.id === 'subir') return E.traje ? 'Abrir a porta e sair' : 'Vestir o traje e sair pela porta'; return u.txt; }
 function usar(u) {
@@ -816,9 +851,9 @@ function usar(u) {
       if (E.trajeAr < 15) { somErro(); aviso('O ar do traje está acabando. Deixe recarregar com o gerador ligado.', 'ruim'); } else irPara(true); break;
     case 'descer': irPara(false); break;
     case 'silenciador': alternarSilenciador(); break;
-    case 'campo': mudarCampo(E.campo === false); break;
-    case 'armas': mudarArmas(E.armas === false); break;
-    case 'arma': if (E.arma) { aviso('Você já está com o canhão de plasma.', 'info'); break; } E.arma = true; canhaoMesa.visible = false; somItem(); tom(400, 1600, 0.4, 'sawtooth', 0.06); aviso('🔫 Você pegou o CANHÃO DE PLASMA! Lá fora, clique (ou aperte ESPAÇO / Atirar) para atirar nos gigantes.', 'bom', 6); break;
+    case 'campo': if (!NV('escudo')) { somErro(); aviso('O abrigo ainda não tem CAMPO DE FORÇA. Compre em ⬆ MELHORIAS!', 'ruim', 4); break; } mudarCampo(E.campo === false); break;
+    case 'armas': if (!NV('torres')) { somErro(); aviso('O abrigo ainda não tem ARMAS. Compre os lasers e mísseis em ⬆ MELHORIAS!', 'ruim', 4); break; } mudarArmas(E.armas === false); break;
+    case 'arma': if (!E.arma && !NV('arma')) { somErro(); aviso('O canhão de plasma está trancado. Compre em ⬆ MELHORIAS (40 🪙)!', 'ruim', 4); break; } if (E.arma) { aviso('Você já está com o canhão de plasma.', 'info'); break; } E.arma = true; canhaoMesa.visible = false; somItem(); tom(400, 1600, 0.4, 'sawtooth', 0.06); aviso('🔫 Você pegou o CANHÃO DE PLASMA! Lá fora, clique (ou aperte ESPAÇO / Atirar) para atirar nos gigantes.', 'bom', 6); break;
     case 'estufa': if (E.coletas.estufa === dia()) { aviso('A horta já foi colhida hoje. Amanhã tem mais!', 'info'); break; } E.coletas.estufa = dia(); E.inv.racao += 2; E.inv.agua += 1; somItem(); aviso('🌱 Colheu a horta: 🥫 🥫 💧', 'bom'); break;
     case 'caixa': abrirCaixa(u.caixa); break;
     case 'saque': if (E.coletas[u.lugar] === dia()) { somErro(); aviso('Já pegou tudo aqui hoje. Volte amanhã!', 'info'); }
@@ -834,9 +869,9 @@ function usar(u) {
 function mensagemRadio() { const d = dia(); if (E.sinal) return d >= 8 ? 'Rádio: "Recebemos o seu sinal da torre! Chegamos no dia 9 ao meio-dia!"' : 'Rádio: "…sinal de socorro recebido do abrigo 7… resgate antecipado para o dia 9…"'; const m = { 1: 'Rádio: "…a todos os abrigos… o resgate sairá no dia 10… mantenham o silêncio quando o chão tremer…"', 3: 'Rádio: "…abrigo 4 não responde… colossos atraídos por barulho de gerador…"', 5: 'Rádio: "…comboio a caminho… estoques de filtro nas ruínas ao norte…"', 7: 'Rádio: "…faltam poucos dias… aguentem firme…"', 9: 'Rádio: "…amanhã ao meio-dia passamos pelo abrigo 7. Estejam vivos!"', 10: 'Rádio: "Comboio chegando ao meio-dia! Aguente só mais um pouco!"' };
   for (let k = d; k >= 1; k--) if (m[k]) return m[k]; return 'Rádio: chiado…'; }
 
-function mudarCampo(on) { E.campo = !!on; if (on) { tom(300, 900, 0.5, 'sine', 0.08); chiado(0.6, 2000, 0.06, 'bandpass'); aviso('🔵 CAMPO DE FORÇA LIGADO! Dentro dele você está protegido.', 'bom', 4); }
+function mudarCampo(on) { if (!NV('escudo')) return 'O abrigo ainda não tem campo de força. Precisa comprar em ⬆ MELHORIAS (40 🪙)!'; E.campo = !!on; if (on) { tom(300, 900, 0.5, 'sine', 0.08); chiado(0.6, 2000, 0.06, 'bandpass'); aviso('🔵 CAMPO DE FORÇA LIGADO! Dentro dele você está protegido.', 'bom', 4); }
   else { tom(900, 200, 0.6, 'sawtooth', 0.06); aviso('⚠ CAMPO DE FORÇA DESLIGADO! Lá fora ninguém está protegido e os pisões estragam mais o abrigo.', 'ruim', 5); } salvar(); return on ? 'Campo de força ligado. 🔵' : 'Campo de força desligado. Cuidado! ⚠'; }
-function mudarArmas(on) { E.armas = !!on; if (on) { [0, 0.12].forEach(t => tom(500, 1200, 0.2, 'square', 0.06, t)); aviso('⚔ ARMAS LIGADAS! Os lasers e mísseis vão atirar nos gigantes.', 'bom', 4); }
+function mudarArmas(on) { if (!NV('torres')) return 'O abrigo ainda não tem armas. Precisa comprar os lasers e mísseis em ⬆ MELHORIAS (40 🪙)!'; E.armas = !!on; if (on) { [0, 0.12].forEach(t => tom(500, 1200, 0.2, 'square', 0.06, t)); aviso('⚔ ARMAS LIGADAS! Os lasers e mísseis vão atirar nos gigantes.', 'bom', 4); }
   else { tom(800, 200, 0.5, 'square', 0.05); laserVis = 0; aviso('🔕 ARMAS DESLIGADAS. Os lasers e mísseis não vão atirar.', 'info', 4); } salvar(); return on ? 'Armas do abrigo ligadas. ⚔' : 'Armas do abrigo desligadas.'; }
 function abrirCaixa(c) { if (jog.mochila >= mochilaMax()) { somErro(); aviso('Mochila cheia! Volte ao abrigo para guardar.', 'ruim'); return; }
   c.aberta = true; c.sinal.visible = false; const sorte = [['racao', 28], ['agua', 28], ['filtro', 17], ['peca', 20], ['remedio', 7]], achou = [];
@@ -912,7 +947,7 @@ function simularColossos(dt, correndo) {
     if (c.ataque && dH < 12) ataqueAoAbrigo(c);
     alertaMax = Math.max(alertaMax, c.alerta);
     // lá fora: a luz do holofote procura você
-    if (jog.fora && !c.fugindo) { const fx = Math.sin(c.rot), fz = Math.cos(c.rot), mx = c.x + fx * 24, mz = c.z + fz * 24, dentroEscudo = (E.campo !== false && Math.hypot(jog.x - SX, jog.z - (SZ - 5)) < raioEscudo()), naLuz = !dentroEscudo && Math.hypot(jog.x - mx, jog.z - mz) < 8, ouviuVoz = voz > 0 && dP < 65, ouviu = !dentroEscudo && ((correndo && dP < 30) || ouviuVoz);
+    if (jog.fora && !c.fugindo) { const fx = Math.sin(c.rot), fz = Math.cos(c.rot), mx = c.x + fx * 24, mz = c.z + fz * 24, dentroEscudo = (temEscudo() && Math.hypot(jog.x - SX, jog.z - (SZ - 5)) < raioEscudo()), naLuz = !dentroEscudo && Math.hypot(jog.x - mx, jog.z - mz) < 8, ouviuVoz = voz > 0 && dP < 65, ouviu = !dentroEscudo && ((correndo && dP < 30) || ouviuVoz);
       if (ouviuVoz && !dentroEscudo) { c.viu = Math.min(100, c.viu + voz * 22 * (1 - dP / 65) * dt); if (voz > 1.5) aviso('O COLOSSO OUVIU A SUA VOZ! FIQUE QUIETO!', 'ruim', 1.5); }
       if (naLuz || ouviu) c.viu = Math.min(100, c.viu + (naLuz ? 70 : 25) * dt); else c.viu = Math.max(0, c.viu - 30 * dt);
       if (naLuz && c.viu > 30) aviso('A LUZ DO COLOSSO ESTÁ EM VOCÊ! CORRA!', 'ruim', 1);
@@ -931,22 +966,22 @@ function ferir(c, dano) { if (c.fugindo) return; c.hp -= dano; c.feridoT = 4; ul
 function fugir(c) { c.hp = 0; c.fugindo = true; c.ataque = 0; c.alerta = 0; c.perseguir = 0; c.viu = 0; const a = Math.atan2(c.z - SZ, c.x - SX); c.alvo = { x: SX + Math.cos(a) * 175, z: SZ + Math.sin(a) * 175 };
   rugido(1); estrondo(0.8); ganhar(50, 'gigante fugiu'); aviso('💥 O gigante foi muito atingido e FUGIU! +50 🪙', 'bom', 4); if (typeof irisAvisa === 'function') irisAvisa('Acertamos! O gigante fugiu! 💥'); }
 function explodir(p, L) { const ex = EXPLOSOES.find(e => e.t <= 0) || EXPLOSOES[0]; ex.s.position.copy(p); ex.t = 0.7; ex.s.visible = true; const dJ = jog.fora ? camera.position.distanceTo(p) : Math.hypot(p.x - HATCH.x, p.z - HATCH.z) + 40; estrondo(clamp(1 - dJ / 200, 0.05, 1) * L); }
-function defesas(dt) { let alvo = null, md = 62 + NV('escudo') * 10; const fT = 1 + NV('torres') * 0.6;
+function defesas(dt) { let alvo = null, md = 62 + nvAcima('escudo') * 10; const fT = 1 + nvAcima('torres') * 0.6;
   for (const c of COLOSSOS) { if (c.fugindo) continue; const d = Math.hypot(c.x - HATCH.x, c.z - HATCH.z); if (d < md) { md = d; alvo = c; } }
-  if (E.armas === false) alvo = null;
+  if (E.armas === false || !NV('torres')) alvo = null;
   avisoDefesaT -= dt;
   if (alvo) { laserAlvo = alvo; laserVis = 0.25; ferir(alvo, 5 * fT * dt);
     if (avisoDefesaT <= 0) { avisoDefesaT = 40; aviso('⚔ Gigante chegando! As armas do abrigo estão atirando!', 'info', 4); if (typeof irisAvisa === 'function') irisAvisa('Gigante chegando! Ativei as armas! ⚔'); }
     zapT -= dt; if (zapT <= 0) { zapT = 0.35; const L = jog.fora ? clamp(1 - Math.hypot(jog.x - HATCH.x, jog.z - HATCH.z) / 120, 0.1, 1) : 0.15; tom(1600, 400, 0.15, 'sawtooth', 0.05 * L); }
-    missilT -= dt; if (missilT <= 0 && !alvo.fugindo) { missilT = 1.6 / (1 + NV('torres') * 0.3); const L = LANCADORES[lancadorI++ % LANCADORES.length], m = MISSEIS.find(x => !x.ativo);
+    missilT -= dt; if (missilT <= 0 && !alvo.fugindo) { missilT = 1.6 / (1 + nvAcima('torres') * 0.3); const L = LANCADORES[lancadorI++ % LANCADORES.length], m = MISSEIS.find(x => !x.ativo);
       if (m) { m.ativo = true; m.alvo = alvo; m.m.visible = true; m.m.position.set(L.g.position.x, 2.2, L.g.position.z); m.v.set(0, 18, 0); chiado(0.8, 900, jog.fora ? 0.15 : 0.03, 'bandpass'); } } }
   const tmp = new THREE.Vector3(), dir = new THREE.Vector3();
   for (const m of MISSEIS) { if (!m.ativo) continue; centroColosso(m.alvo, tmp); dir.subVectors(tmp, m.m.position); const dist = dir.length(); dir.normalize();
     m.v.lerp(dir.multiplyScalar(48), Math.min(1, dt * 3)); m.m.position.addScaledVector(m.v, dt); m.m.lookAt(m.m.position.clone().sub(m.v));
     if (dist < 4 || m.m.position.y < 0) { m.ativo = false; m.m.visible = false; explodir(m.m.position, 1); ferir(m.alvo, 22 * fT); } }
   // canhão de plasma do jogador
-  tiroT -= dt; if (atirando && E.arma && tiroT <= 0 && !jog.dormindo) { tiroT = 0.22 / (1 + NV('arma') * 0.3); atirar(); }
-  for (const b of BALAS) { if (!b.ativo) continue; b.t += dt; const k = Math.min(1, b.t / b.dur); b.s.position.lerpVectors(b.de, b.para, k); if (k >= 1) { b.ativo = false; b.s.visible = false; if (b.alvo) { ferir(b.alvo, 8 * (1 + NV('arma') * 0.6)); if (Math.random() < 0.25) ganhar(1); explodir(b.para, 0.25); b.alvo.feridoT = 4; if (!b.alvo.fugindo && jog.fora && (E.campo === false || Math.hypot(jog.x - SX, jog.z - (SZ - 5)) > raioEscudo())) b.alvo.perseguir = Math.max(b.alvo.perseguir, 4); } } }
+  tiroT -= dt; if (atirando && E.arma && tiroT <= 0 && !jog.dormindo) { tiroT = 0.22 / (1 + nvAcima('arma') * 0.3); atirar(); }
+  for (const b of BALAS) { if (!b.ativo) continue; b.t += dt; const k = Math.min(1, b.t / b.dur); b.s.position.lerpVectors(b.de, b.para, k); if (k >= 1) { b.ativo = false; b.s.visible = false; if (b.alvo) { const dnb = 8 * (1 + nvAcima('arma') * 0.6); if (NET.modo && !NET.host) NET.dano[COLOSSOS.indexOf(b.alvo)] += dnb; ferir(b.alvo, dnb); if (Math.random() < 0.25) ganhar(1); explodir(b.para, 0.25); b.alvo.feridoT = 4; if (!b.alvo.fugindo && jog.fora && (!temEscudo() || Math.hypot(jog.x - SX, jog.z - (SZ - 5)) > raioEscudo())) b.alvo.perseguir = Math.max(b.alvo.perseguir, 4); } } }
   for (const e of EXPLOSOES) { if (e.t <= 0) continue; e.t -= dt; const k = 1 - e.t / 0.7; e.s.scale.setScalar(4 + k * 14); e.s.material.opacity = Math.max(0, 1 - k); if (e.t <= 0) e.s.visible = false; } }
 const raioTiro = new THREE.Raycaster();
 function atirar() { raioTiro.setFromCamera(centro, camera); raioTiro.far = 260; let alvoC = null, ponto = null;
@@ -955,7 +990,7 @@ function atirar() { raioTiro.setFromCamera(centro, camera); raioTiro.far = 260; 
   const b = BALAS.find(x => !x.ativo) || BALAS[0]; b.ativo = true; b.s.visible = true; b.de.copy(camera.position).addScaledVector(raioTiro.ray.direction, 0.6).add(new THREE.Vector3(0, -0.15, 0)); b.para.copy(ponto); b.t = 0; b.dur = Math.max(0.05, b.de.distanceTo(ponto) / 140); b.alvo = alvoC;
   tom(1200, 300, 0.12, 'square', 0.05); chiado(0.1, 3000, 0.05, 'highpass'); recuo = 1; }
 let recuo = 0;
-function ataqueAoAbrigo(c) { c.ataque = 0; c.alerta = 0; novoAlvo(c); const prot = (1 - NV('casco') * 0.25) * (E.campo === false ? 1.5 : 1); E.casco = Math.max(0, E.casco - 7 * prot); E.filtroVida = Math.max(0, E.filtroVida - 6);
+function ataqueAoAbrigo(c) { c.ataque = 0; c.alerta = 0; novoAlvo(c); const prot = (1.3 - NV('casco') * 0.25) * (temEscudo() ? 1 : 1.3); E.casco = Math.max(0, E.casco - 7 * prot); E.filtroVida = Math.max(0, E.filtroVida - 6);
   [0, 0.7, 1.4].forEach(t => setTimeout(() => { estrondo(1); tremor = 1.6; flicker = 1; if (!jog.fora) soltarPoeira(80, jog.x, jog.z); }, t * 1000));
   const fechadas = rachaduras.map((r, i) => i).filter(i => !rachaduras[i].aberta); for (let k = 0; k < (Math.random() < 0.5 * prot ? 1 : 0) && fechadas.length; k++) { const i = fechadas.splice((Math.random() * fechadas.length) | 0, 1)[0]; rachaduras[i].aberta = true; rachaduras[i].g.visible = true; E.rachas.push(i); }
   if (!jog.fora) { E.saude -= 8 * prot; $('dano').style.opacity = 1; setTimeout(() => { $('dano').style.opacity = 0; }, 500); }
@@ -986,10 +1021,10 @@ function atualizarVisual(dt, perto) {
     $('bus-seta').style.transform = `rotate(${(-rel * 180 / Math.PI).toFixed(0)}deg)`; $('bus-txt').textContent = dist < 8 ? 'ABRIGO AQUI' : `ABRIGO ${Math.round(dist)} m`; }
   if (!jog.fora) {
     cena.fog.color.setHex(0x050605); cena.fog.density = 0.035; cena.background.setHex(0x050605);
-    M.neon.color.setHex(E.gerador ? 0x3ccfff : 0x5a0a08); irisOrbe.position.y = 1.35 + Math.sin(t * 1.6) * 0.06; irisAneis[0].rotation.set(t * 0.9, t * 0.6, 0); irisAneis[1].rotation.set(-t * 0.5, 0, t * 0.8); irisBrilho.material.opacity = 0.6 + Math.sin(t * (falando ? 14 : 2)) * 0.25;
+    const vis = visualAbrigo(NV('casco')); M.neon.color.setHex(E.gerador ? vis.neon : 0x5a0a08); irisOrbe.position.y = 1.35 + Math.sin(t * 1.6) * 0.06; irisAneis[0].rotation.set(t * 0.9, t * 0.6, 0); irisAneis[1].rotation.set(-t * 0.5, 0, t * 0.8); irisBrilho.material.opacity = 0.6 + Math.sin(t * (falando ? 14 : 2)) * 0.25;
     droneMesh.visible = !E.drone; { const cOn = E.campo !== false, aOn = E.armas !== false; if (telaCampo.material.map !== (cOn ? tCampoOn : tCampoOff)) { telaCampo.material.map = cOn ? tCampoOn : tCampoOff; telaCampo.material.needsUpdate = true; } if (telaArmas.material.map !== (aOn ? tArmasOn : tArmasOff)) { telaArmas.material.map = aOn ? tArmasOn : tArmasOff; telaArmas.material.needsUpdate = true; }
       botaoCampo.material.emissive.setHex(cOn ? 0x3ccfff : 0x501010); botaoArmas.material.emissive.setHex(aOn ? 0xffb630 : 0x501010); botaoCampo.position.y = cOn ? 1.1 : 1.07; botaoArmas.position.y = aOn ? 1.1 : 1.07; }
-    const ligado = E.gerador; botaoSil.material.emissive.setHex(E.silenciador ? 0x33ff33 : 0xff2010); botaoSil.position.z = E.silenciador ? 0.08 : 0.12; LUZES.forEach((L, i) => { const pisc = flicker > 0 && Math.sin(t * 40 + i * 7) > 0.2 - flicker ? 0.15 : 1; L.l.intensity = ligado ? L.base * pisc : 0; L.lamp.material = ligado && pisc > 0.5 ? M.luz : M.metalEsc; });
+    const ligado = E.gerador; botaoSil.material.emissive.setHex(E.silenciador ? 0x33ff33 : 0xff2010); botaoSil.position.z = E.silenciador ? 0.08 : 0.12; LUZES.forEach((L, i) => { const pisc = flicker > 0 && Math.sin(t * 40 + i * 7) > 0.2 - flicker ? 0.15 : 1; L.l.intensity = ligado ? L.base * pisc * vis.mult * (vis.ferr && Math.sin(t * 23 + i * 5) > 0.97 ? 0.3 : 1) : 0; L.lamp.material = ligado && pisc > 0.5 ? M.luz : M.metalEsc; });
     emerg.forEach((l, i) => { l.intensity = ligado ? 0 : 0.9 + Math.sin(t * 3 + i) * 0.3; });
     M.luzVerm.emissiveIntensity = ligado ? 0.4 : 1.5 + Math.sin(t * 3) * 0.5;
     pistoes.forEach((p, i) => { p.position.y = 1.75 + (ligado ? Math.sin(t * 18 + i * 2.1) * 0.08 : 0); }); ledGer.material.emissive.setHex(ligado ? 0x33ff33 : 0xff2010);
@@ -1000,7 +1035,7 @@ function atualizarVisual(dt, perto) {
   } else {
     const nt = noite() ? 1 : 0, nf = lerpCor(nt); cena.fog.color.setHex(nf); cena.background.setHex(nf); cena.fog.density = (noite() ? 0.068 : 0.05) + Math.sin(t * 0.13) * 0.006; ceu.material.uniforms.uNoite.value = nt; solSup.intensity = noite() ? 0.04 : 0.28; ambSup.intensity = (noite() ? 0.14 : 0.32) + raioFlash * 2.2;
     nevoaAssusta(dt, t, nt);
-    farolEnt.intensity = 1 + Math.sin(t * 4) * 0.6; escudoGrade.material.opacity = 0.12 + Math.sin(t * 1.5) * 0.05 + (laserVis > 0 ? 0.2 : 0); escudoGrade.rotation.y = t * 0.02; escudo.scale.setScalar(raioEscudo() / 17); escudo.visible = E.campo !== false;
+    farolEnt.intensity = 1 + Math.sin(t * 4) * 0.6; escudoGrade.material.opacity = 0.12 + Math.sin(t * 1.5) * 0.05 + (laserVis > 0 ? 0.2 : 0); escudoGrade.rotation.y = t * 0.02; escudo.visible = temEscudo(); if (escudo.visible) escudo.scale.setScalar(raioEscudo() / 17); { const tOn = NV('torres') > 0; TORRES.forEach(T => T.base.visible = tOn); LANCADORES.forEach(L => L.g.visible = tOn); }
     let alvoT = laserAlvo; if (!alvoT || laserVis <= 0) { let md = 1e9; COLOSSOS.forEach(c => { const d = Math.hypot(c.x - SX, c.z - SZ); if (d < md) { md = d; alvoT = c; } }); }
     TORRES.forEach(T => { const wp = T.base.position, dx = alvoT.x - wp.x, dz = alvoT.z - wp.z, hz = Math.hypot(dx, dz), dy = 24 - wp.y; T.cab.rotation.order = 'YXZ'; T.cab.rotation.y = Math.atan2(dx, dz); T.cab.rotation.x = -Math.atan2(dy, hz);
       T.raio.visible = laserVis > 0; if (laserVis > 0) T.raio.scale.set(1, 1, Math.hypot(hz, dy)); });
@@ -1092,6 +1127,7 @@ function quadro(agora) { requestAnimationFrame(quadro);
   } else if (!jogando) { // menu: câmera passeando pela superfície com os colossos
     menuT += dt; abrigo.visible = false; sup.visible = true; perto = simularColossos(dt, false); jog.fora = true;
     const c = COLOSSOS[0]; camera.position.set(c.x + Math.cos(menuT * 0.05) * 70, 6 + Math.sin(menuT * 0.1) * 2, c.z + Math.sin(menuT * 0.05) * 70); camera.lookAt(c.x, 18, c.z); }
+  atualizarRede(dt);
   if (jogando || !$('menu').hidden) atualizarVisual(dt, perto);
   if (!jogando && !$('menu').hidden) { camera.rotation.order = 'YXZ'; }
   if (avisoT > 0) { avisoT -= dt; if (avisoT <= 0) $('aviso').hidden = true; }
@@ -1104,7 +1140,7 @@ window.__abrigo = { MARCOS, mic, E: () => E, jog, salvar, COLOSSOS, usar, rachad
 // No link do Claude ela usa a IA de verdade (capacidade "sample") com ferramentas do jogo.
 // No APK e no HTML sem internet ela usa um cérebro simples de palavras-chave.
 const NOMES = { racao: ['🥫', 'ração', 'rações'], agua: ['💧', 'água', 'águas'], filtro: ['🌀', 'filtro de ar', 'filtros de ar'], peca: ['🔩', 'peça', 'peças'], remedio: ['💊', 'remédio', 'remédios'], tudo: ['📦', 'um pouco de tudo', 'um pouco de tudo'] };
-const droneSeg = () => 30 - NV('iris') * 6, droneMax = () => 5 + NV('iris') * 2;
+const droneSeg = () => 45 - NV('iris') * 10, droneMax = () => 3 + NV('iris') * 2;
 let falando = false, vozLigada = true, cerebro = null, tts = null, iaFalhou = false, pensando = false;
 const historico = [];
 try { vozLigada = localStorage.getItem('abrigo-voz') !== '0'; } catch (e) {}
@@ -1134,7 +1170,7 @@ function estado() { const p = COLOSSOS.map(k => Math.hypot(k.x - HATCH.x, k.z - 
     ar_puro: Math.round(E.ar), radiacao: Math.round(E.rad), casco: Math.round(E.casco), filtro_de_ar: Math.round(E.filtroVida), gerador: E.gerador ? 'ligado' : 'desligado', silenciador: E.silenciador ? 'ligado' : 'desligado',
     rachaduras_abertas: E.rachas.length, estoque: { racao: E.inv.racao, agua: E.inv.agua, remedio: E.inv.remedio, filtro: E.inv.filtro, peca: E.inv.peca },
     drone: E.drone ? `fora, buscando ${E.drone.item}, volta em ${Math.ceil(E.drone.resta)} s` : 'na base, pronto', jogador: jog.fora ? 'lá fora na superfície' : 'dentro do abrigo',
-    gigante_mais_perto_metros: Math.round(p), alerta_dos_gigantes: Math.round(alertaMax), onde_o_jogador_esta: salaDe(jog.x, jog.z), tem_canhao_de_plasma: !!E.arma, moedas: E.moedas || 0, campo_de_forca: E.campo !== false ? 'ligado' : 'desligado', armas_do_abrigo: E.armas !== false ? 'ligadas' : 'desligadas', niveis_das_melhorias: E.nivel, piloto_automatico: E.auto ? 'ligado' : 'desligado',
+    gigante_mais_perto_metros: Math.round(p), alerta_dos_gigantes: Math.round(alertaMax), onde_o_jogador_esta: salaDe(jog.x, jog.z), tem_canhao_de_plasma: !!E.arma, moedas: E.moedas || 0, campo_de_forca: !NV('escudo') ? 'não comprado ainda' : E.campo !== false ? 'ligado' : 'desligado', armas_do_abrigo: !NV('torres') ? 'não compradas ainda' : E.armas !== false ? 'ligadas' : 'desligadas', abrigo_visual: ['enferrujado', 'metal limpo', 'futurista', 'titânio brilhante'][NV('casco')], niveis_das_melhorias: E.nivel, piloto_automatico: E.auto ? 'ligado' : 'desligado',
     sinal_de_socorro: E.sinal ? 'ligado (resgate no dia 9)' : 'desligado (ligue na torre de rádio para o resgate vir no dia 9)', horta_colhida_hoje: E.coletas.estufa === dia(),
     defesas: 'escudo de energia, paredes de titânio, 2 torres de laser e 4 lançadores de mísseis que atiram sozinhos quando um gigante chega a 60 m', gigantes_fugindo: COLOSSOS.filter(c => c.fugindo).length }; }
 function textoEstado() { const s = estado(), dicas = [];
@@ -1163,7 +1199,7 @@ function usarRecurso(acao) { const inv = E.inv; if (jog.fora && acao !== 'conser
 function cuidarDeTudo() { const feitos = []; if (!jog.fora) { if (E.comida < 70 && E.inv.racao) feitos.push(usarRecurso('comer')); if (E.agua < 70 && E.inv.agua) feitos.push(usarRecurso('beber')); if (E.rad > 25 && E.inv.remedio) feitos.push(usarRecurso('remedio')); if (E.filtroVida < 40 && E.inv.filtro) feitos.push(usarRecurso('trocar_filtro')); }
   if (E.rachas.length && E.inv.peca) feitos.push(usarRecurso('consertar')); if (!E.drone) { const f = ['racao', 'agua', 'remedio', 'filtro', 'peca'].sort((a, b) => E.inv[a] - E.inv[b])[0]; if (E.inv[f] <= 2) feitos.push(enviarDrone(f, 4).msg); }
   return feitos.length ? feitos.join('\n') : 'Está tudo certinho! Você está bem e o abrigo também. 💙'; }
-function dica() { const s = estado(); if (!E.arma) return 'Dica: vá até o ARSENAL na ala leste e pegue o canhão de plasma. Lá fora você pode atirar nos gigantes! 🔫';
+function dica() { const s = estado(); if (!NV('escudo')) return `Dica: o abrigo está todo enferrujado e sem proteção! Junte 🪙 e compre o CAMPO DE FORÇA em ⬆ MELHORIAS. Você tem ${E.moedas} moedas.`; if (!NV('torres')) return 'Dica: compre os LASERS E MÍSSEIS em ⬆ MELHORIAS para o abrigo se defender sozinho! ⚔'; if (!E.arma && !NV('arma')) return 'Dica: compre o CANHÃO DE PLASMA em ⬆ MELHORIAS para atirar nos gigantes! 🔫'; if (!E.arma) return 'Dica: vá até o ARSENAL na ala leste e pegue o canhão de plasma. Lá fora você pode atirar nos gigantes! 🔫';
   if (!E.sinal) return 'Dica: lá fora tem uma torre de rádio com feixe vermelho. Ligue o sinal de socorro e o resgate chega um dia antes!';
   if (E.coletas.estufa !== dia()) return 'Dica: a horta da ESTUFA dá comida e água todo dia. Vá colher! 🌱';
   if (s.alerta_dos_gigantes > 30) return 'Dica: os gigantes estão desconfiados. Ligue o silenciador e fale baixinho. 🤫';
@@ -1232,6 +1268,7 @@ const INSTRUCOES = 'Você é a ÍRIS, a inteligência artificial do Abrigo 7, um
   'Responda sempre em português do Brasil, com no máximo 3 frases curtas e simples, de um jeito carinhoso e animado, como uma amiga robô. Pode usar 1 ou 2 emojis. ' +
   'Quando a criança pedir um recurso (comida, água, remédio, filtro de ar, peças ou um pouco de tudo), use a ferramenta enviar_drone. Para saber como está o abrigo, use ver_abrigo; para os gigantes, use ver_gigantes. Nunca invente números. ' +
   'Na SALA DE COMANDO (dentro da sala de controle) tem botões para ligar e desligar o campo de força e as armas; você também pode fazer isso com campo_de_forca e armas_do_abrigo. ' +
+  'O abrigo COMEÇA ENFERRUJADO, sem campo de força, sem armas e sem canhão: tudo isso precisa ser comprado com moedas nas melhorias (nível 1 = 40, 2 = 90, 3 = 160). Se pedirem para ligar algo que ainda não foi comprado, explique que precisa comprar. ' +
   'O jogador ganha moedas 🪙 abrindo caixas, pegando coisas nos lugares, ligando o sinal da torre, fazendo gigantes fugirem e sobrevivendo cada dia. Com elas compra melhorias no botão ⬆ MELHORIAS (tecla U) ou pedindo para você com comprar_melhoria. ' +
   'Fale só de coisas boas para crianças. Se pedirem algo fora do jogo, responda curtinho e com carinho e volte para o jogo.';
 const FERRAMENTAS = [
@@ -1287,16 +1324,16 @@ $('b-iris').addEventListener('pointerdown', e => e.stopPropagation()); $('b-iris
 if (!toque) $('iris-tecla').textContent = 'tecla T';
 // ===================== OFICINA: moedas e melhorias =====================
 const MELHORIAS = [
-  ['casco', '🛡', 'Casco de titânio', l => `Os pisões dos gigantes fazem só ${100 - l * 25}% do estrago. Ao comprar, o casco volta a 100.`],
-  ['escudo', '🔵', 'Campo de força', l => `Escudo ${l * 20}% maior · as armas acertam gigantes a ${62 + l * 10} m.`],
-  ['torres', '⚔', 'Lasers e mísseis', l => `Dano das armas do abrigo ×${(1 + l * 0.6).toFixed(1)} · mísseis mais rápidos.`],
-  ['arma', '🔫', 'Canhão de plasma', l => `Dano ×${(1 + l * 0.6).toFixed(1)} · atira ${l * 30}% mais rápido.`],
-  ['iris', '🤖', 'ÍRIS e drone', l => `Drone volta em ${30 - l * 6} s e traz até ${5 + l * 2} coisas.`],
-  ['mochila', '🎒', 'Mochila grande', l => `Cabem ${10 + l * 4} coisas lá fora.`]];
+  ['casco', '🛠', 'Reforma do abrigo', l => ['', 'Tira toda a FERRUGEM: metal limpo e casco mais forte.', 'Abrigo FUTURISTA com luzes neon e casco reforçado.', 'TITÂNIO BRILHANTE: o abrigo mais forte do mundo!'][l]],
+  ['escudo', '🔵', 'Campo de força', l => l === 1 ? 'Liga o CAMPO DE FORÇA: dentro dele você fica protegido dos gigantes.' : `Escudo ${(l - 1) * 25}% maior · as armas acertam a ${62 + (l - 1) * 10} m.`],
+  ['torres', '⚔', 'Lasers e mísseis', l => l === 1 ? 'Instala 2 LASERS e 4 LANÇADORES DE MÍSSEIS que atiram sozinhos.' : `Dano das armas do abrigo ×${(1 + (l - 1) * 0.6).toFixed(1)} · mísseis mais rápidos.`],
+  ['arma', '🔫', 'Canhão de plasma', l => l === 1 ? 'Destrava o CANHÃO DE PLASMA para você atirar nos gigantes.' : `Dano ×${(1 + (l - 1) * 0.6).toFixed(1)} · atira ${(l - 1) * 30}% mais rápido.`],
+  ['iris', '🤖', 'ÍRIS e drone', l => `Drone volta em ${45 - l * 10} s e traz até ${3 + l * 2} coisas.`],
+  ['mochila', '🎒', 'Mochila grande', l => `Cabem ${6 + l * 4} coisas lá fora.`]];
 const PRECO = [40, 90, 160], MAXNV = 3;
 function comprar(id) { const l = NV(id); if (l >= MAXNV) return { ok: false, msg: 'Já está no nível máximo!' }; const p = PRECO[l];
   if ((E.moedas || 0) < p) return { ok: false, msg: `Faltam ${p - (E.moedas || 0)} 🪙. Abra caixas, pegue coisas nos lugares, faça gigantes fugirem e sobreviva os dias.` };
-  E.moedas -= p; E.nivel[id] = l + 1; if (id === 'casco') E.casco = 100; if (id === 'escudo') escudo.scale.setScalar(raioEscudo() / 17);
+  E.moedas -= p; E.nivel[id] = l + 1; if (id === 'casco') E.casco = 100; if (id === 'escudo') E.campo = true; if (id === 'torres') E.armas = true; if (id === 'arma' && l === 0) { E.arma = true; canhaoMesa.visible = false; }
   const nome = MELHORIAS.find(m => m[0] === id)[2]; [0, 0.1, 0.2].forEach((t, i) => tom(600 + i * 300, 900 + i * 300, 0.15, 'triangle', 0.07, t)); hudAnt.moch = ''; salvar();
   return { ok: true, msg: `⬆ ${nome} subiu para o nível ${l + 1}!` }; }
 function desenharLoja() { $('l-moedas').textContent = E.moedas || 0; const box = $('l-lista'); box.innerHTML = '';
@@ -1314,6 +1351,111 @@ $('b-loja').addEventListener('pointerdown', e => e.stopPropagation()); $('b-loja
 if (!toque) $('loja-tecla').textContent = 'tecla U';
 document.addEventListener('pointerlockchange', () => { if ((lojaAberta || chatAberto) && document.pointerLockElement) document.exitPointerLock(); });
 
-Object.assign(window.__abrigo, { mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
+// ===================== MULTIJOGADOR: jogar com amigos =====================
+// No link do Claude: sala compartilhada (room). No APK e no arquivo HTML: conexão direta pela internet (PeerJS).
+// Quem cria a sala é o "dono": os gigantes e a hora do dia dele valem para todos. Cada um tem o seu próprio estoque.
+const NET = { modo: null, codigo: 0, eu: null, host: false, peer: null, conns: new Map(), room: null, lobby: null, envT: 0, dano: [0, 0, 0], ultDano: new Map(), hostId: null };
+const remotos = new Map(); let meuNome = '';
+try { meuNome = localStorage.getItem('abrigo-nome') || ''; } catch (e) {}
+const limparNome = s => String(s || '').replace(/[^\p{L}\p{N} _-]/gu, '').trim().slice(0, 12);
+const MAX_SALAS = 30, idSala = n => 'ultimo-abrigo-sala-' + n, naClaude = () => !!(window.claude && typeof window.claude.use === 'function');
+const esperar = ms => new Promise(r => setTimeout(r, ms));
+const numerosSala = () => { const a = Array.from({ length: MAX_SALAS }, (_, i) => i + 1); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const CORES_AMIGO = [0xd8a018, 0x3ccfff, 0xff6a3d, 0x9dff70, 0xd060ff, 0xff4d8a];
+function criarAmigo(nome, cor) { const g = new THREE.Group(), m = std({ color: cor, roughness: 0.55 }), esc = std({ color: 0x1a1d1a, roughness: 0.4, metalness: 0.5 });
+  const corpo = add(new THREE.CylinderGeometry(0.26, 0.24, 0.75, 12), m, 0, 1.15, 0, g); add(new THREE.SphereGeometry(0.22, 14, 10), m, 0, 1.68, 0, g);
+  add(new THREE.BoxGeometry(0.3, 0.14, 0.06), new THREE.MeshBasicMaterial({ color: 0x7fe8ff, toneMapped: false }), 0, 1.7, -0.19, g); add(new THREE.BoxGeometry(0.36, 0.45, 0.18), esc, 0, 1.2, 0.26, g);
+  const pernas = [-0.11, 0.11].map(x => { const p = new THREE.Group(); p.position.set(x, 0.78, 0); g.add(p); add(new THREE.CylinderGeometry(0.09, 0.08, 0.76, 8), m, 0, -0.38, 0, p); return p; });
+  const bracos = [-0.33, 0.33].map(x => { const p = new THREE.Group(); p.position.set(x, 1.45, 0); g.add(p); add(new THREE.CylinderGeometry(0.07, 0.06, 0.62, 8), m, 0, -0.3, 0, p); return p; });
+  const luz = new THREE.PointLight(0xfff0d0, 0.6, 6, 2); luz.position.set(0, 1.7, -0.4); g.add(luz);
+  const t = tex(256, 64, (c, w, h) => { c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(0, 0, w, h); c.fillStyle = '#ffffff'; c.font = '700 38px Oswald, Arial'; c.textAlign = 'center'; c.fillText(nome, w / 2, 46); });
+  const placa = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthWrite: false, fog: false })); placa.scale.set(1.2, 0.3, 1); placa.position.y = 2.2; g.add(placa);
+  cena.add(g); return { g, pernas, bracos, fase: 0 }; }
+function atualizarRemoto(id, s) {
+  if (!s || typeof s !== 'object' || typeof s.x !== 'number' || typeof s.z !== 'number') return;
+  let r = remotos.get(id); const nome = limparNome(s.n) || 'Amigo', cor = CORES_AMIGO[(Number(s.c) || 0) % CORES_AMIGO.length];
+  if (!r || r.nome !== nome) { if (r) cena.remove(r.a.g); r = Object.assign(r || { x: s.x, z: s.z, yaw: s.a || 0 }, { a: criarAmigo(nome, cor), nome }); remotos.set(id, r); if (jogando) aviso(`👥 ${nome} entrou no jogo!`, 'bom', 3); }
+  r.s = s; r.visto = performance.now();
+  if (s.h) { NET.hostId = id; aplicarMundo(s); }
+  if (NET.host && Array.isArray(s.d)) { const ant = NET.ultDano.get(id) || [0, 0, 0]; s.d.forEach((v, i) => { const dv = Number(v) - (ant[i] || 0); if (dv > 0 && dv < 500 && COLOSSOS[i]) ferir(COLOSSOS[i], dv); }); NET.ultDano.set(id, s.d.map(Number)); }
+  painelSala(); }
+function removerRemoto(id) { const r = remotos.get(id); if (!r) return; cena.remove(r.a.g); remotos.delete(id); if (jogando) aviso(`👋 ${r.nome} saiu do jogo.`, 'info', 3); painelSala(); }
+// o dono manda os gigantes e a hora; os amigos copiam
+function aplicarMundo(s) { if (NET.host) return;
+  if (Array.isArray(s.g)) s.g.forEach((v, i) => { const c = COLOSSOS[i]; if (!c || !Array.isArray(v)) return; c.netX = v[0]; c.netZ = v[1]; c.netRot = v[2]; c.hp = v[3];
+    if (v[4] && !c.fugindo) fugir(c); else if (!v[4] && c.fugindo) { c.fugindo = false; } });
+  if (typeof s.m === 'number' && Math.abs(s.m - E.min) > 20) E.min = s.m; }
+function estadoLocal() { const s = { n: meuNome || 'Amigo', c: NET.minhaCor || 0, x: +jog.x.toFixed(2), z: +jog.z.toFixed(2), a: +jog.yaw.toFixed(2), v: jog.vel || 0, sl: NET.codigo };
+  if (NET.host) { s.h = 1; s.g = COLOSSOS.map(c => [+c.x.toFixed(1), +c.z.toFixed(1), +c.rot.toFixed(2), Math.round(c.hp), c.fugindo ? 1 : 0]); s.m = Math.round(E.min); } else s.d = NET.dano.map(v => Math.round(v));
+  return s; }
+function painelSala() { const el = $('h-sala'); if (!NET.modo) { el.hidden = true; return; } el.hidden = false; el.textContent = `👥 ${remotos.size + 1} na SALA ${NET.codigo}${NET.host ? ' · você é o dono' : ''}`; }
+// ---------- sala do Claude ----------
+async function abrirLobby() { if (NET.lobby) return NET.lobby; try { const room = await window.claude.use('room'); if (room) NET.lobby = room; } catch (e) {} return NET.lobby; }
+function salasDoLobby() { const m = new Map(); if (!NET.lobby) return []; for (const p of NET.lobby.peers()) { const pr = p.presence || {}, n = pr.sl; if (typeof n !== 'number' || p.sameTab) continue; const it = m.get(n) || { n, dono: '', qtd: 0 }; it.qtd++; if (pr.h || !it.dono) it.dono = limparNome(pr.n); m.set(n, it); } return [...m.values()].sort((a, b) => a.n - b.n); }
+async function conectarRoom(n, criar) {
+  try { const room = await abrirLobby(); if (!room) return 'Não foi possível abrir a sala aqui.';
+    const r = await room.join('abrigo-sala-' + n); Object.assign(NET, { room: r, modo: 'room', codigo: n, host: !!criar }); room.presence({ sl: n, n: meuNome, h: criar ? 1 : 0 }).catch(() => {});
+    r.onPeers(ch => { for (const p of ch.peers) if (!p.sameTab && p.kind === 'viewer') atualizarRemoto(p.peer, p.presence); for (const p of ch.left) removerRemoto(p.peer); });
+    return null; } catch (e) { return 'Não foi possível entrar na sala (' + (e && e.code || 'erro') + ').'; } }
+// ---------- conexão direta (APK e arquivo) ----------
+const textoErro = t => t === 'network' || t === 'server-error' || t === 'socket-error' ? 'Sem conexão com o servidor. Confira a internet.' : t === 'browser-incompatible' ? 'Este aparelho não aceita jogar junto.' : t || 'Erro de conexão.';
+function novoPeer(id) { return new Promise(res => { if (!window.Peer) { res({ erro: 'Não deu para carregar a conexão. Confira a internet.' }); return; }
+  let p, aberto = false; try { p = id ? new window.Peer(id) : new window.Peer(); } catch (e) { res({ erro: 'Conexão indisponível neste aparelho.' }); return; }
+  const tm = setTimeout(() => { if (!aberto) { try { p.destroy(); } catch (e) {} res({ erro: 'A conexão demorou demais. Confira a internet.' }); } }, 12000);
+  p.on('open', () => { aberto = true; clearTimeout(tm); res({ peer: p }); }); p.on('error', e => { if (aberto) return; clearTimeout(tm); try { p.destroy(); } catch (er) {} res({ erro: e && e.type }); }); }); }
+async function criarSalaPeer() { for (const n of numerosSala().slice(0, 10)) { const r = await novoPeer(idSala(n));
+    if (r.peer) { Object.assign(NET, { peer: r.peer, host: true, eu: r.peer.id, modo: 'peer', codigo: n }); r.peer.on('connection', ligarConexao); r.peer.on('error', () => {}); return null; }
+    if (r.erro !== 'unavailable-id') return textoErro(r.erro); } return 'Muitas salas abertas agora. Tente de novo.'; }
+async function entrarSalaPeer(n) { const r = await novoPeer(); if (!r.peer) return textoErro(r.erro); const peer = r.peer; Object.assign(NET, { peer, host: false, eu: peer.id }); peer.on('connection', ligarConexao);
+  const erro = await new Promise(res => { const tm = setTimeout(() => res('A sala ' + n + ' não respondeu.'), 9000);
+    peer.on('error', e => { if (e && e.type === 'peer-unavailable') { clearTimeout(tm); res('A sala ' + n + ' não existe agora. Procure as salas abertas.'); } });
+    const c = peer.connect(idSala(n), { metadata: { nome: meuNome } }); ligarConexao(c); c.on('open', () => { clearTimeout(tm); NET.modo = 'peer'; NET.codigo = n; res(null); }); });
+  if (erro) { try { peer.destroy(); } catch (e) {} NET.peer = null; } return erro; }
+async function procurarSalasPeer() { const r = await novoPeer(); if (!r.peer) return { erro: textoErro(r.erro) }; const peer = r.peer, achadas = []; peer.on('error', () => {});
+  for (let n = 1; n <= MAX_SALAS; n++) { const c = peer.connect(idSala(n), { metadata: { sonda: true } }); c.on('open', () => { try { c.send({ t: 'info?' }); } catch (e) {} });
+    c.on('data', d => { if (d && d.t === 'info' && !achadas.some(a => a.n === n)) achadas.push({ n, dono: limparNome(d.dono), qtd: Number(d.qtd) || 1 }); try { c.close(); } catch (e) {} }); }
+  await esperar(7000); try { peer.destroy(); } catch (e) {} return { salas: achadas.sort((a, b) => a.n - b.n) }; }
+function ligarConexao(c) {
+  if (c.metadata && c.metadata.sonda) { c.on('data', d => { if (d && d.t === 'info?' && NET.host) { try { c.send({ t: 'info', dono: meuNome, qtd: NET.conns.size + 1 }); } catch (e) {} setTimeout(() => { try { c.close(); } catch (e) {} }, 800); } }); return; }
+  c.on('open', () => { NET.conns.set(c.peer, c); painelSala(); }); c.on('data', d => receber(c.peer, d));
+  c.on('close', () => { NET.conns.delete(c.peer); removerRemoto(c.peer); if (NET.host) difundir({ t: 'sai', id: c.peer }); else if (c.peer === idSala(NET.codigo)) { aviso('O dono da sala saiu. Você continua jogando sozinho.', 'info', 5); sairSala(); } }); }
+function difundir(msg, exceto) { for (const [k, c] of NET.conns) if (k !== exceto && c.open) { try { c.send(msg); } catch (e) {} } }
+function receber(de, d) { if (!d || typeof d !== 'object') return;
+  if (d.t === 'st') { const id = NET.host ? de : String(d.id || de); if (id === NET.eu) return; atualizarRemoto(id, d.s); if (NET.host) difundir({ t: 'st', id: de, s: d.s }, de); }
+  else if (d.t === 'sai' && !NET.host) removerRemoto(String(d.id)); }
+function enviarEstado() { const s = estadoLocal(); if (NET.modo === 'room' && NET.room) NET.room.presence(s).catch(() => {}); else if (NET.modo === 'peer') difundir(NET.host ? { t: 'st', id: NET.eu, s } : { t: 'st', s }); }
+function sairSala() { if (NET.peer) { try { NET.peer.destroy(); } catch (e) {} } if (NET.lobby) NET.lobby.presence({}).catch(() => {}); if (NET.room) { try { NET.room.leave(); } catch (e) {} } for (const id of [...remotos.keys()]) removerRemoto(id);
+  Object.assign(NET, { modo: null, codigo: 0, peer: null, host: false, room: null, hostId: null }); NET.conns.clear(); COLOSSOS.forEach(c => { c.netX = undefined; }); painelSala(); }
+function atualizarRede(dt) { if (!NET.modo) return;
+  NET.envT -= dt; if (NET.envT <= 0) { NET.envT = NET.modo === 'room' ? 0.2 : 0.1; enviarEstado(); }
+  const agora = performance.now(), k = Math.min(1, dt * 8);
+  if (!NET.host) COLOSSOS.forEach(c => { if (c.netX === undefined) return; if (Math.hypot(c.netX - c.x, c.netZ - c.z) > 30) { c.x = c.netX; c.z = c.netZ; } else { c.x += (c.netX - c.x) * k; c.z += (c.netZ - c.z) * k; } let dr = c.netRot - c.rot; dr = Math.atan2(Math.sin(dr), Math.cos(dr)); c.rot += dr * k; });
+  for (const [id, r] of remotos) { if (!r.s) continue; if (NET.modo === 'peer' && agora - r.visto > 8000) { removerRemoto(id); continue; }
+    const s = r.s, ax = r.x, az = r.z; if (Math.hypot(s.x - r.x, s.z - r.z) > 12) { r.x = s.x; r.z = s.z; } else { r.x += (s.x - r.x) * k; r.z += (s.z - r.z) * k; }
+    let da = s.a - r.yaw; da = Math.atan2(Math.sin(da), Math.cos(da)); r.yaw += da * k; const vel = Math.hypot(r.x - ax, r.z - az) / Math.max(dt, 0.001);
+    r.a.g.position.set(r.x, 0, r.z); r.a.g.rotation.y = r.yaw; r.a.fase += dt * Math.min(vel, 6) * 2.2; const bal = Math.sin(r.a.fase) * Math.min(1, vel / 2) * 0.6;
+    r.a.pernas[0].rotation.x = bal; r.a.pernas[1].rotation.x = -bal; r.a.bracos[0].rotation.x = -bal; r.a.bracos[1].rotation.x = bal; } }
+// ---------- botões do menu ----------
+function mostrarSalas(lista) { const el = $('lista-salas'); el.innerHTML = ''; if (!lista.length) { el.innerHTML = '<span class="vazio">Nenhuma sala aberta agora. Crie uma e chame seus amigos!</span>'; return; }
+  for (const s of lista) { const b = document.createElement('button'); b.type = 'button'; b.className = 'sala'; const num = document.createElement('b'); num.textContent = 'SALA ' + s.n; const info = document.createElement('span'); info.textContent = `${s.dono || 'Amigo'} · ${s.qtd} jogando`; b.append(num, info); b.addEventListener('click', () => jogarJunto(false, s.n)); el.appendChild(b); } }
+let procurando = false;
+async function procurarSalas() { if (procurando || NET.modo) return; procurando = true; $('b-procurar').disabled = true; $('lista-salas').innerHTML = '<span class="vazio">Procurando salas abertas...</span>';
+  if (naClaude()) { await abrirLobby(); await esperar(1500); mostrarSalas(salasDoLobby()); }
+  else { const r = await procurarSalasPeer(); if (r.erro) { $('lista-salas').innerHTML = '<span class="vazio"></span>'; $('lista-salas').firstChild.textContent = r.erro; } else mostrarSalas(r.salas); }
+  $('b-procurar').disabled = false; procurando = false; }
+async function jogarJunto(criar, numero) { iniciarAudio(); if (NET.modo) { comecar(false); return; }
+  meuNome = limparNome($('mp-nome').value) || 'Amigo'; $('mp-nome').value = meuNome; try { localStorage.setItem('abrigo-nome', meuNome); } catch (e) {}
+  let h = 0; for (const ch of meuNome) h = (h * 31 + ch.codePointAt(0)) >>> 0; NET.minhaCor = h % CORES_AMIGO.length;
+  let n = numero || (criar ? 0 : parseInt($('mp-codigo').value, 10));
+  if (!criar && !(n >= 1 && n <= MAX_SALAS)) { $('mp-status').textContent = `Toque numa sala da lista ou digite um número de 1 a ${MAX_SALAS}.`; return; }
+  $('mp-status').textContent = criar ? 'Criando a sala...' : 'Entrando na sala ' + n + '...'; $('b-criar').disabled = $('b-entrar').disabled = true; let erro;
+  if (naClaude()) { if (criar) { await abrirLobby(); const usados = new Set(salasDoLobby().map(x => x.n)); n = numerosSala().find(x => !usados.has(x)) || 1; } erro = await conectarRoom(n, criar); }
+  else erro = criar ? await criarSalaPeer() : await entrarSalaPeer(n);
+  $('b-criar').disabled = $('b-entrar').disabled = false; if (erro) { $('mp-status').textContent = erro; return; }
+  $('mp-status').textContent = `Você está na SALA ${NET.codigo}. Seus amigos acham ela em "Procurar salas".`; painelSala(); comecar(false);
+  aviso(criar ? `👥 SALA ${NET.codigo} criada! Diga o número para o seu amigo.` : `👥 Você entrou na SALA ${NET.codigo}! Os gigantes são os mesmos do dono da sala.`, 'bom', 6); }
+$('mp-nome').value = meuNome;
+$('b-criar').addEventListener('click', () => jogarJunto(true)); $('b-entrar').addEventListener('click', () => jogarJunto(false)); $('b-procurar').addEventListener('click', procurarSalas);
+Object.assign(window.__abrigo, { NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
 })();
 </script>
