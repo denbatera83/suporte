@@ -1,0 +1,308 @@
+package br.ryan.vr;
+
+import android.Manifest;
+import android.app.Activity;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.webkit.PermissionRequest;
+import android.webkit.WebResourceError;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+import android.content.Intent;
+import android.graphics.Color;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.WindowManager;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
+import android.webkit.WebView;
+import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
+
+/** Ryan VR: abre o saguão de realidade virtual (HTML + A-Frame) em tela cheia, deitado, para o Cardboard. */
+public class MainActivity extends Activity {
+    private static final int ESCOLHER_VIDEO = 42, PEDIR_CAMERA = 7, OUVIR_VOZ = 43;
+    // as páginas abrem num endereço seguro interno (https://ryan.vr/...) entregue de dentro do app:
+    // assim a câmera e o reconhecimento da mão funcionam, sem precisar de internet
+    // endereço reservado pelo Android para páginas de dentro do app (o mesmo do WebViewAssetLoader oficial)
+    private static final String CASA = "appassets.androidplatform.net";
+    private boolean usouReserva = false;
+    private PermissionRequest pedidoCamera;
+    private WebView web;
+    private FrameLayout raiz;
+    private View telaCheia;
+    private WebChromeClient.CustomViewCallback avisoSaida;
+    private ValueCallback<Uri[]> escolha;
+    private NavegadorVR navVR; // Google (ou outro site) dentro do VR, nas duas telas
+    private String appsJson; // lista de apps do celular (guardada depois da primeira vez)
+
+    /** A página do Ryan VR chama window.RyanApp.abrirNavegadorVR(url) para abrir um site sem sair do óculos. */
+    public class Ponte {
+        @android.webkit.JavascriptInterface public void abrirNavegadorVR(final String url) {
+            runOnUiThread(new Runnable() { public void run() { abreNavegadorVR(url, false); } });
+        }
+        /** Meus sites: abre um site no VR; modoPC = abre a versão de computador (ex.: WhatsApp Web). */
+        @android.webkit.JavascriptInterface public void abrirSiteVR(final String url, final boolean modoPC) {
+            runOnUiThread(new Runnable() { public void run() { abreNavegadorVR(url, modoPC); } });
+        }
+        /** A página manda a mão (lida pela câmera) para o navegador VR: x, y de 0 a 1; x < 0 = sem mão. */
+        @android.webkit.JavascriptInterface public void maoNav(final float x, final float y, final boolean pinca) {
+            runOnUiThread(new Runnable() { public void run() { if (navVR != null) navVR.mao(x, y, pinca); } });
+        }
+        @android.webkit.JavascriptInterface public boolean temNavegadorVR() { return true; }
+        /** Apps do Richard: lista dos apps do celular (nome, pacote e ícone pequeno em PNG), em JSON. */
+        @android.webkit.JavascriptInterface public String listarApps() {
+            if (appsJson != null) return appsJson;
+            try {
+                android.content.pm.PackageManager pm = getPackageManager();
+                Intent i = new Intent(Intent.ACTION_MAIN); i.addCategory(Intent.CATEGORY_LAUNCHER);
+                java.util.List<android.content.pm.ResolveInfo> lista = pm.queryIntentActivities(i, 0);
+                java.util.Collections.sort(lista, new android.content.pm.ResolveInfo.DisplayNameComparator(pm));
+                org.json.JSONArray arr = new org.json.JSONArray();
+                for (android.content.pm.ResolveInfo r : lista) {
+                    String pacote = r.activityInfo.packageName; if (pacote.equals(getPackageName())) continue;
+                    org.json.JSONObject o = new org.json.JSONObject();
+                    o.put("nome", String.valueOf(r.loadLabel(pm))); o.put("pacote", pacote);
+                    try {
+                        android.graphics.drawable.Drawable d = r.loadIcon(pm);
+                        android.graphics.Bitmap b = android.graphics.Bitmap.createBitmap(96, 96, android.graphics.Bitmap.Config.ARGB_8888);
+                        android.graphics.Canvas c = new android.graphics.Canvas(b); d.setBounds(0, 0, 96, 96); d.draw(c);
+                        java.io.ByteArrayOutputStream bo = new java.io.ByteArrayOutputStream(); b.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, bo);
+                        o.put("icone", "data:image/png;base64," + android.util.Base64.encodeToString(bo.toByteArray(), android.util.Base64.NO_WRAP));
+                    } catch (Exception e) { /* sem ícone: a página desenha a letra */ }
+                    arr.put(o);
+                }
+                appsJson = arr.toString();
+            } catch (Exception e) { appsJson = "[]"; }
+            return appsJson;
+        }
+        /** Abre um app do celular (fora do VR: o Android não desenha um app dentro de outro). Voltar = Ryan VR. */
+        @android.webkit.JavascriptInterface public boolean abrirApp(final String pacote) {
+            Intent i = getPackageManager().getLaunchIntentForPackage(pacote);
+            if (i == null) return false;
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            try { startActivity(i); return true; } catch (Exception e) { return false; }
+        }
+        /** 💬 Abre um link do WhatsApp (wa.me) no app do WhatsApp: a mensagem vem pronta e a pessoa aperta Enviar lá. */
+        @android.webkit.JavascriptInterface public boolean abrirLink(final String url) {
+            String u = url == null ? "" : url.trim();
+            if (!(u.startsWith("https://wa.me/") || u.startsWith("https://api.whatsapp.com/"))) return false;
+            Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(u)); i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            try { startActivity(i); return true; } catch (Exception e) { return false; }
+        }
+        /** 🎙️ Abre o Assistente do celular (Google/Gemini), do jeito oficial. */
+        @android.webkit.JavascriptInterface public boolean abrirAssistente() {
+            String[] acoes = { Intent.ACTION_VOICE_COMMAND, "android.intent.action.ASSIST" };
+            for (String a : acoes) { Intent i = new Intent(a); i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); try { startActivity(i); return true; } catch (Exception e) { } }
+            return false;
+        }
+        /** 🎤 Ouve a voz (tela de voz do Google, sem permissão de microfone no app): o texto volta em window.__voz(texto). */
+        @android.webkit.JavascriptInterface public boolean ouvirVoz() {
+            runOnUiThread(new Runnable() { public void run() {
+                Intent i = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+                i.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+                i.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "pt-BR");
+                i.putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Fale agora");
+                try { startActivityForResult(i, OUVIR_VOZ); } catch (Exception e) { devolveVoz(null); }
+            } });
+            return true;
+        }
+        /** 📸 Foto da tela: a página manda a imagem (data:image/jpeg;base64,...) e o app guarda na galeria. */
+        @android.webkit.JavascriptInterface public boolean salvarFoto(String dataUrl) {
+            try {
+                int v = dataUrl.indexOf(','); byte[] b = android.util.Base64.decode(dataUrl.substring(v + 1), android.util.Base64.DEFAULT);
+                android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeByteArray(b, 0, b.length);
+                return android.provider.MediaStore.Images.Media.insertImage(getContentResolver(), bmp, "RyanVR-" + System.currentTimeMillis(), "Foto do Ryan VR") != null;
+            } catch (Exception e) { return false; } /* sem permissão de galeria: a foto fica no app Fotos do Ryan VR */
+        }
+    }
+    private void abreNavegadorVR(String url, boolean modoPC) {
+        if (navVR != null || url == null || !(url.startsWith("https://") || url.startsWith("http://"))) return;
+        web.evaluateJavascript("window.__pausaCena && window.__pausaCena(true)", null);
+        navVR = new NavegadorVR(this, url, modoPC, new NavegadorVR.AoFechar() { public void fechou() {
+            if (navVR != null) { raiz.removeView(navVR); navVR = null; }
+            web.evaluateJavascript("window.__pausaCena && window.__pausaCena(false)", null);
+            esconderBarras();
+        }});
+        raiz.addView(navVR, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        esconderBarras();
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        WebView.setWebContentsDebuggingEnabled(true); // permite ver erros pelo chrome://inspect no computador
+        raiz = new FrameLayout(this);
+        raiz.setBackgroundColor(Color.rgb(26, 22, 48));
+        web = new WebView(this);
+        WebSettings s = web.getSettings();
+        s.setJavaScriptEnabled(true);
+        s.setDomStorageEnabled(true);
+        s.setAllowFileAccess(true);
+        s.setAllowFileAccessFromFileURLs(true);
+        s.setMediaPlaybackRequiresUserGesture(false);
+        s.setLoadWithOverviewMode(true);
+        s.setUseWideViewPort(true);
+        web.setWebViewClient(new WebViewClient() {
+            // links que tentam abrir outro app (whatsapp://, intent://...) não tiram você do Ryan VR
+            public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) { String u = r.getUrl().toString().toLowerCase(); return !(u.startsWith("http") || u.startsWith("file:") || u.startsWith("about:") || u.startsWith("data:") || u.startsWith("blob:")); }
+            @Override public boolean shouldOverrideUrlLoading(WebView v, String url) { String u = url == null ? "" : url.toLowerCase(); return !(u.startsWith("http") || u.startsWith("file:") || u.startsWith("about:") || u.startsWith("data:") || u.startsWith("blob:")); }
+            @Override
+            public WebResourceResponse shouldInterceptRequest(WebView v, WebResourceRequest req) {
+                Uri u = req.getUrl();
+                if (!"https".equals(u.getScheme()) || !CASA.equals(u.getHost())) return null;
+                String caminho = u.getPath(); if (caminho == null || caminho.equals("/")) caminho = "/ryan-vr/index.html";
+                if (caminho.endsWith("/")) caminho += "index.html";
+                try {
+                    InputStream in = getAssets().open(caminho.substring(1));
+                    Map<String, String> cab = new HashMap<String, String>();
+                    cab.put("Access-Control-Allow-Origin", "*");
+                    cab.put("Cache-Control", "no-cache");
+                    return new WebResourceResponse(tipo(caminho), "UTF-8", 200, "OK", cab, in);
+                } catch (Exception e) {
+                    return new WebResourceResponse("text/plain", "UTF-8", 404, "Not Found", new HashMap<String, String>(), null);
+                }
+            }
+            // se a página principal não abrir pelo endereço seguro, abre a cópia de reserva direto dos arquivos
+            @Override
+            public void onReceivedError(WebView v, WebResourceRequest req, WebResourceError err) {
+                if (req.isForMainFrame() && !usouReserva && CASA.equals(req.getUrl().getHost())) { // só as páginas do Ryan VR (não o Google)
+                    usouReserva = true;
+                    String c = req.getUrl().getPath();
+                    v.loadUrl("file:///android_asset" + (c == null || c.equals("/") ? "/ryan-vr/index.html" : c));
+                }
+            }
+        });
+        web.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                telaCheia = view; avisoSaida = callback;
+                raiz.addView(view, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                esconderBarras();
+            }
+            @Override
+            public void onHideCustomView() {
+                if (telaCheia != null) { raiz.removeView(telaCheia); telaCheia = null; }
+                esconderBarras();
+            }
+            // Modo Casa: a página pede a câmera; o app pede a permissão do Android se ainda não tiver
+            @Override
+            public void onPermissionRequest(final PermissionRequest r) {
+                runOnUiThread(new Runnable() { public void run() {
+                    boolean querCamera = false;
+                    for (String x : r.getResources()) if (PermissionRequest.RESOURCE_VIDEO_CAPTURE.equals(x)) querCamera = true;
+                    if (!querCamera) { r.deny(); return; }
+                    if (Build.VERSION.SDK_INT >= 23 && checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                        pedidoCamera = r; requestPermissions(new String[]{ Manifest.permission.CAMERA }, PEDIR_CAMERA);
+                    } else r.grant(new String[]{ PermissionRequest.RESOURCE_VIDEO_CAPTURE });
+                }});
+            }
+            // "Meus vídeos": abre a galeria para escolher um vídeo
+            @Override
+            public boolean onShowFileChooser(WebView w, ValueCallback<Uri[]> cb, FileChooserParams p) {
+                if (escolha != null) escolha.onReceiveValue(null);
+                escolha = cb;
+                Intent i = new Intent(Intent.ACTION_GET_CONTENT);
+                i.addCategory(Intent.CATEGORY_OPENABLE);
+                // o tipo vem da página: vídeo, fotos ou músicas (e várias de uma vez, quando ela pede)
+                String tipo = "video/*";
+                String[] aceita = p.getAcceptTypes();
+                if (aceita != null && aceita.length > 0 && aceita[0] != null && aceita[0].length() > 0) tipo = aceita[0];
+                i.setType(tipo);
+                if (p.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE) i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                String titulo = tipo.startsWith("image") ? "Escolha as fotos" : tipo.startsWith("audio") ? "Escolha as músicas" : "Escolha um vídeo";
+                try { startActivityForResult(Intent.createChooser(i, titulo), ESCOLHER_VIDEO); }
+                catch (Exception e) { escolha = null; return false; }
+                return true;
+            }
+        });
+        web.addJavascriptInterface(new Ponte(), "RyanApp");
+        raiz.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        setContentView(raiz);
+        esconderBarras();
+        web.loadUrl("https://" + CASA + "/ryan-vr/index.html");
+    }
+
+    @Override
+    protected void onActivityResult(int req, int res, Intent data) {
+        super.onActivityResult(req, res, data);
+        if (req == OUVIR_VOZ) {
+            String txt = null;
+            if (res == RESULT_OK && data != null) { java.util.ArrayList<String> l = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS); if (l != null && !l.isEmpty()) txt = l.get(0); }
+            devolveVoz(txt); esconderBarras(); return;
+        }
+        if (req != ESCOLHER_VIDEO || escolha == null) return;
+        Uri[] r = null;
+        if (res == RESULT_OK && data != null) {
+            if (data.getClipData() != null) { // vários arquivos
+                int n = data.getClipData().getItemCount(); r = new Uri[n];
+                for (int k = 0; k < n; k++) r[k] = data.getClipData().getItemAt(k).getUri();
+            } else if (data.getData() != null) r = new Uri[]{ data.getData() };
+        }
+        escolha.onReceiveValue(r);
+        escolha = null;
+        esconderBarras();
+    }
+
+    private void devolveVoz(String txt) {
+        if (web != null) web.evaluateJavascript("window.__voz && window.__voz(" + (txt == null ? "null" : org.json.JSONObject.quote(txt)) + ")", null);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int req, String[] perms, int[] res) {
+        if (req != PEDIR_CAMERA || pedidoCamera == null) return;
+        if (res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED) pedidoCamera.grant(new String[]{ PermissionRequest.RESOURCE_VIDEO_CAPTURE });
+        else pedidoCamera.deny();
+        pedidoCamera = null;
+        esconderBarras();
+    }
+
+    private static String tipo(String c) {
+        c = c.toLowerCase();
+        if (c.endsWith(".html")) return "text/html";
+        if (c.endsWith(".js") || c.endsWith(".mjs")) return "application/javascript";
+        if (c.endsWith(".wasm")) return "application/wasm";
+        if (c.endsWith(".json")) return "application/json";
+        if (c.endsWith(".png")) return "image/png";
+        if (c.endsWith(".css")) return "text/css";
+        return "application/octet-stream";
+    }
+
+    private void esconderBarras() {
+        View d = getWindow().getDecorView();
+        d.setSystemUiVisibility(View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) { super.onWindowFocusChanged(hasFocus); if (hasFocus) esconderBarras(); }
+    @Override
+    protected void onPause() { super.onPause(); if (web != null) web.onPause(); }
+    @Override
+    protected void onResume() { super.onResume(); if (web != null) web.onResume(); esconderBarras(); }
+
+    @Override
+    public void onBackPressed() {
+        if (navVR != null) { if (!navVR.voltar()) navVR.fechar(); return; } // no navegador VR: volta a página; na primeira, volta ao Ryan VR
+        if (telaCheia != null) { raiz.removeView(telaCheia); telaCheia = null; if (avisoSaida != null) avisoSaida.onCustomViewHidden(); return; }
+        // dentro de um jogo do Ryan VR, o voltar abre a pausa (e, de novo, sai do jogo)
+        web.evaluateJavascript("(window.__voltar && window.__voltar()) ? 1 : 0", new android.webkit.ValueCallback<String>() {
+            @Override public void onReceiveValue(String v) {
+                if ("1".equals(v)) return;
+                if (web.canGoBack()) { web.goBack(); return; } // volta do jogo para o Ryan VR
+                finish();
+            }
+        });
+    }
+}

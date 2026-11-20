@@ -1,0 +1,383 @@
+<title>SOS Família</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap">
+<style>
+  /* Layout: uma tela só — faixa de quem será avisado em cima, o botão de alarme como único objeto dominante no centro, e os números de emergência do Brasil embaixo. */
+  :root {
+    --fundo: #eceff2; --cartao: #ffffff; --tinta: #14181d; --suave: #5a636e; --linha: #d3d8de;
+    --sos: #d0142c; --sos-claro: #f0465a; --sos-escuro: #8f0c1b; --sobre-sos: #ffffff;
+    --ok: #13703f; --ok-fundo: #dff2e6; --falha: #b3261e; --falha-fundo: #fbe1de; --espera: #7a5600; --espera-fundo: #fbefd2;
+    --display: "Archivo", "Arial Black", "Helvetica Neue", system-ui, sans-serif;
+    --texto: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --fundo: #0e1114; --cartao: #171b20; --tinta: #eef1f4; --suave: #9aa3ad; --linha: #2a3038;
+    --sos: #e1253c; --sos-claro: #ff5a6c; --sos-escuro: #7d0a17; --sobre-sos: #ffffff;
+    --ok: #4fd08a; --ok-fundo: #12301f; --falha: #ff7b6e; --falha-fundo: #3a1714; --espera: #f0b84a; --espera-fundo: #33270c; color-scheme: dark; } }
+  :root[data-theme="dark"] {
+    --fundo: #0e1114; --cartao: #171b20; --tinta: #eef1f4; --suave: #9aa3ad; --linha: #2a3038;
+    --sos: #e1253c; --sos-claro: #ff5a6c; --sos-escuro: #7d0a17; --sobre-sos: #ffffff;
+    --ok: #4fd08a; --ok-fundo: #12301f; --falha: #ff7b6e; --falha-fundo: #3a1714; --espera: #f0b84a; --espera-fundo: #33270c; color-scheme: dark; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; }
+  body { background: var(--fundo); color: var(--tinta); font: 16px/1.45 var(--texto); -webkit-tap-highlight-color: transparent; }
+  #app { min-height: 100%; max-width: 560px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 12px 20px; display: grid; }
+  .tela { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  button, a.botao { font: inherit; color: inherit; cursor: pointer; }
+  button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid var(--sos-claro); outline-offset: 2px; }
+  h1, h2 { font-family: var(--display); font-weight: 900; line-height: 1.05; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+  h1 { font-size: 30px; } h2 { font-size: 22px; }
+  p { margin: 0; }
+
+  .previa { background: var(--espera-fundo); color: var(--espera); border-radius: 12px; padding: 10px 14px; font-size: 14px; font-weight: 600; }
+  .topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .marca { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 900; font-size: 20px; text-transform: uppercase; letter-spacing: .04em; }
+  .marca i { width: 14px; height: 14px; border-radius: 50%; background: var(--sos); box-shadow: 0 0 0 4px color-mix(in srgb, var(--sos) 25%, transparent); }
+  .link { background: none; border: 1.5px solid var(--linha); border-radius: 999px; padding: 8px 16px; font-weight: 600; font-size: 15px; }
+  .link:hover { border-color: var(--suave); }
+  .avisa { font-size: 15px; color: var(--suave); text-align: center; min-height: 22px; }
+  .avisa b { color: var(--tinta); }
+
+  /* o botão: um disco vermelho grande, com anel que pulsa devagar */
+  .palco { display: grid; place-items: center; padding-block: 12px; }
+  .sos { position: relative; width: min(76vw, 44vh, 330px); aspect-ratio: 1; max-width: 100%; border-radius: 50%; border: none; color: var(--sobre-sos);
+    background: radial-gradient(circle at 38% 30%, var(--sos-claro), var(--sos) 48%, var(--sos-escuro) 100%);
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--sos) 18%, transparent), 0 18px 40px color-mix(in srgb, var(--sos-escuro) 55%, transparent), inset 0 -10px 24px rgba(0,0,0,.25), inset 0 8px 18px rgba(255,255,255,.25);
+    display: grid; place-content: center; gap: 4px; text-align: center; transition: transform .12s; }
+  .sos::after { content: ""; position: absolute; inset: -10px; border-radius: 50%; border: 3px solid var(--sos); opacity: .5; animation: pulso 2.2s ease-out infinite; pointer-events: none; }
+  .sos:active { transform: scale(.96); }
+  .sos-txt { font-family: var(--display); font-weight: 900; font-size: clamp(64px, 20vw, 110px); line-height: .9; letter-spacing: .02em; }
+  .sos-sub { font-weight: 600; font-size: 15px; opacity: .92; padding-inline: 20px; }
+  @keyframes pulso { from { transform: scale(1); opacity: .55; } to { transform: scale(1.18); opacity: 0; } }
+  .nota { text-align: center; font-size: 14px; color: var(--suave); }
+
+  .numeros { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .num { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 76px; padding: 10px 6px; border-radius: 16px; background: var(--cartao); border: 1.5px solid var(--linha); text-decoration: none; color: var(--tinta); text-align: center; }
+  .num b { font-family: var(--display); font-weight: 900; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .num span { font-size: 13px; color: var(--suave); font-weight: 600; line-height: 1.2; }
+  .num.desmaio b { color: var(--sos); }
+  .cartao { background: var(--cartao); border: 1.5px solid var(--linha); border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .cartao.alerta-perm { border-color: var(--espera); }
+  .linha-btn { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+  /* contagem: tela toda vermelha */
+  .contagem { position: fixed; inset: 0; z-index: 20; background: var(--sos); color: var(--sobre-sos); display: grid; place-content: center; justify-items: center; gap: 18px; text-align: center;
+    padding: max(24px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+  .contagem[hidden] { display: none !important; }
+  .contagem p { font-size: 20px; font-weight: 700; }
+  .contagem .numero { font-family: var(--display); font-weight: 900; font-size: min(42vw, 220px); line-height: .85; font-variant-numeric: tabular-nums; }
+  .cancelar { background: #ffffff; color: #8f0c1b; border: none; border-radius: 999px; font-family: var(--display); font-weight: 900; font-size: 26px; padding: 18px 44px; letter-spacing: .04em; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+
+  /* tela do alerta */
+  .status { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+  .bolinha { flex: none; width: 12px; height: 12px; border-radius: 50%; background: var(--espera); }
+  .bolinha.ok { background: var(--ok); } .bolinha.falha { background: var(--falha); }
+  .lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .pessoa { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+  .pessoa .quem { min-width: 0; display: flex; flex-direction: column; }
+  .pessoa .quem b { font-size: 17px; }
+  .pessoa .quem span { color: var(--suave); font-size: 14px; font-variant-numeric: tabular-nums; user-select: all; }
+  .pill { font-size: 13px; font-weight: 700; border-radius: 999px; padding: 5px 12px; background: var(--espera-fundo); color: var(--espera); white-space: nowrap; }
+  .pill.ok { background: var(--ok-fundo); color: var(--ok); } .pill.falha { background: var(--falha-fundo); color: var(--falha); }
+  .mini { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 14px; border-radius: 12px; border: 1.5px solid var(--linha); background: var(--fundo); font-weight: 700; font-size: 14px; text-decoration: none; color: var(--tinta); }
+  .mini.forte { background: var(--sos); color: var(--sobre-sos); border-color: var(--sos); }
+  .msg { font-size: 15px; background: var(--fundo); border-radius: 12px; padding: 12px; overflow-wrap: anywhere; user-select: all; }
+  .grande { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 58px; border-radius: 16px; border: 1.5px solid var(--linha); background: var(--cartao); font-weight: 700; font-size: 17px; text-decoration: none; color: var(--tinta); }
+  .grande.vermelho { background: var(--sos); border-color: var(--sos); color: var(--sobre-sos); font-family: var(--display); font-weight: 900; font-size: 20px; letter-spacing: .02em; }
+  .grande.on { border-color: var(--sos); color: var(--sos); }
+  .acoes { display: flex; flex-direction: column; gap: 10px; }
+
+  /* formulário */
+  label { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 15px; min-width: 0; }
+  label small { font-weight: 400; color: var(--suave); }
+  input[type="text"], input[type="tel"] { font: inherit; font-weight: 500; color: var(--tinta); background: var(--fundo); border: 1.5px solid var(--linha); border-radius: 12px; padding: 12px 14px; min-width: 0; width: 100%; box-sizing: border-box; }
+  .contato { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 10px; }
+  .marcar { flex-direction: row; align-items: center; gap: 12px; font-weight: 500; }
+  .marcar input { width: 22px; height: 22px; accent-color: var(--sos); flex: none; }
+  .salvar { background: var(--tinta); color: var(--fundo); border: none; border-radius: 14px; min-height: 54px; font-weight: 700; font-size: 17px; }
+  .aviso-salvo { color: var(--ok); font-weight: 700; min-height: 22px; }
+
+  /* primeiros socorros */
+  .passos { margin: 0; padding: 0; list-style: none; counter-reset: p; display: flex; flex-direction: column; gap: 12px; }
+  .passos li { counter-increment: p; display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; align-items: start; }
+  .passos li::before { content: counter(p); width: 36px; height: 36px; border-radius: 50%; background: var(--sos); color: var(--sobre-sos); display: grid; place-items: center; font-family: var(--display); font-weight: 900; }
+  .passos b { display: block; }
+  .nao { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+  .rodape { font-size: 13px; color: var(--suave); }
+  .chave { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) { .sos::after { animation: none; } .sos, .grande { transition: none; } }
+</style>
+
+<div id="app">
+  <section class="tela" id="tela-inicio">
+    <p class="previa" id="previa" hidden>Esta é uma prévia dentro do Claude. Aqui o SMS, a ligação e a localização podem não funcionar. Para usar de verdade, instale o app SOS Família no Android ou abra o arquivo SOSFamilia.html no Chrome do celular.</p>
+    <header class="topo">
+      <div class="marca"><i></i>SOS Família</div>
+      <button class="link" id="b-contatos" type="button">Contatos</button>
+    </header>
+    <p class="avisa" id="avisa"></p>
+    <div class="cartao alerta-perm" id="perm" hidden>
+      <p><b>Falta uma permissão.</b> Para pegar a localização (e, na versão automática, mandar o SMS e ligar), o app precisa da sua autorização.</p>
+      <div class="linha-btn"><button class="mini forte" id="b-permitir" type="button">Permitir agora</button></div>
+    </div>
+    <div class="palco">
+      <button class="sos" id="sos" type="button" aria-describedby="nota-sos"><span class="sos-txt">SOS</span><span class="sos-sub">Aperte se alguém desmaiar</span></button>
+    </div>
+    <p class="nota" id="nota-sos">Depois de apertar, você tem 5 segundos para cancelar.</p>
+    <div class="numeros">
+      <a class="num" href="tel:192" data-ligar="192"><b>192</b><span>SAMU</span></a>
+      <a class="num" href="tel:193" data-ligar="193"><b>193</b><span>Bombeiros</span></a>
+      <button class="num desmaio" id="b-desmaio" type="button"><b>?</b><span>Desmaio: o que fazer</span></button>
+    </div>
+    <button class="link" id="b-receber" type="button">Como o outro celular é avisado</button>
+  </section>
+
+  <section class="contagem" id="tela-contagem" hidden aria-live="assertive">
+    <p>Pedindo ajuda em</p>
+    <div class="numero" id="cont-num">5</div>
+    <p id="cont-quem"></p>
+    <button class="cancelar" id="b-cancelar" type="button">CANCELAR</button>
+  </section>
+
+  <section class="tela" id="tela-alerta" hidden>
+    <header class="topo"><div class="marca"><i></i>Alerta</div><button class="link" id="al-fim" type="button">Encerrar</button></header>
+    <h1 id="al-titulo">Pedindo ajuda</h1>
+    <p class="status" id="al-local"><span class="bolinha"></span><span>Buscando a localização…</span></p>
+    <div class="cartao"><ul class="lista" id="al-lista"></ul><p class="rodape" id="al-rodape"></p></div>
+    <div class="cartao">
+      <div class="topo"><b>Mensagem</b><button class="mini" id="b-copiar" type="button">Copiar</button></div>
+      <p class="msg" id="al-msg">Preparando a mensagem…</p>
+    </div>
+    <div class="acoes">
+      <a class="grande vermelho" href="tel:192" data-ligar="192">Ligar 192 · SAMU</a>
+      <button class="grande" id="al-sirene" type="button">Tocar sirene aqui</button>
+      <button class="grande" id="al-desmaio" type="button">Desmaio: o que fazer</button>
+    </div>
+  </section>
+
+  <section class="tela" id="tela-contatos" hidden>
+    <header class="topo"><h2>Contatos</h2><button class="link" id="ct-voltar" type="button">Voltar</button></header>
+    <p class="rodape">Até 3 pessoas recebem o alerta. Os números ficam guardados só neste celular.</p>
+    <form class="cartao" id="form" novalidate>
+      <label for="c-nome">Quem pode precisar de ajuda <small>aparece na mensagem</small><input type="text" id="c-nome" autocomplete="off" placeholder="Ex.: Vovó Maria"></label>
+      <label for="c-saude">Informação de saúde <small>opcional, ex.: tem diabetes</small><input type="text" id="c-saude" autocomplete="off" placeholder="Ex.: tem pressão alta"></label>
+      <div class="contato"><label for="c1-nome">Contato 1<input type="text" id="c1-nome" autocomplete="off" placeholder="Nome"></label><label for="c1-tel">Telefone com DDD<input type="tel" id="c1-tel" inputmode="tel" autocomplete="off" placeholder="(11) 98765-4321"></label></div>
+      <div class="contato"><label for="c2-nome">Contato 2<input type="text" id="c2-nome" autocomplete="off" placeholder="Nome"></label><label for="c2-tel">Telefone com DDD<input type="tel" id="c2-tel" inputmode="tel" autocomplete="off" placeholder="(11) 98765-4321"></label></div>
+      <div class="contato"><label for="c3-nome">Contato 3<input type="text" id="c3-nome" autocomplete="off" placeholder="Nome"></label><label for="c3-tel">Telefone com DDD<input type="tel" id="c3-tel" inputmode="tel" autocomplete="off" placeholder="(11) 98765-4321"></label></div>
+      <label class="marcar" for="c-ligar"><input type="checkbox" id="c-ligar">Depois da mensagem, ligar para o contato 1 <small>(no app)</small></label>
+      <p class="aviso-salvo" id="ct-salvo" aria-live="polite"></p>
+      <button class="salvar" type="submit">Salvar contatos</button>
+      <button class="link" id="b-teste" type="button">Enviar um teste</button>
+    </form>
+  </section>
+
+  <section class="tela" id="tela-desmaio" hidden>
+    <header class="topo"><h2>Alguém desmaiou</h2><button class="link" id="ds-voltar" type="button">Voltar</button></header>
+    <a class="grande vermelho" href="tel:192" data-ligar="192">Ligar 192 · SAMU</a>
+    <div class="cartao">
+      <ol class="passos">
+        <li><span><b>Chame e toque no ombro.</b> Fale alto o nome da pessoa. Peça ajuda a um adulto por perto.</span></li>
+        <li><span><b>Veja se respira.</b> Olhe o peito subir e descer por até 10 segundos.</span></li>
+        <li><span><b>Não respira? Ligue 192 agora.</b> O atendente do SAMU explica o que fazer, inclusive massagem no peito.</span></li>
+        <li><span><b>Respira? Deite de costas e levante as pernas</b> uns 30 cm, em cima de uma almofada ou cadeira. Afrouxe roupa apertada e deixe o ar circular.</span></li>
+        <li><span><b>Se vomitar ou continuar desacordada, vire de lado</b>, com a cabeça um pouco para trás, para não engasgar.</span></li>
+        <li><span><b>Ligue 192 se não acordar em 1 minuto</b>, se bateu a cabeça, tremer o corpo, tiver dor no peito, estiver grávida ou tiver diabetes.</span></li>
+      </ol>
+    </div>
+    <div class="cartao">
+      <b>Não faça</b>
+      <ul class="nao"><li>Não dê água nem comida até ela estar bem acordada.</li><li>Não jogue água no rosto nem dê tapas.</li><li>Não deixe levantar depressa; espere uns minutos sentada.</li></ul>
+    </div>
+    <p class="rodape">Estas dicas não substituem o atendimento do SAMU (192).</p>
+  </section>
+
+  <section class="tela" id="tela-receber" hidden>
+    <header class="topo"><h2>No celular de quem recebe</h2><button class="link" id="rc-voltar" type="button">Voltar</button></header>
+    <div class="cartao">
+      <b>Ligação: não precisa instalar nada</b>
+      <p>Depois da mensagem, o SOS Família liga para o contato 1. O celular dele toca e vibra como numa ligação normal.</p>
+      <p class="rodape">Para tocar mesmo no modo Não perturbe: salve o número de quem pede ajuda como favorito. No Samsung, abra Configurações, Notificações, Não perturbe, e libere chamadas e mensagens dos favoritos.</p>
+    </div>
+    <div class="cartao">
+      <b>Alarme que não para: app SOS Alarme</b>
+      <p>Instale o SOS Alarme no celular de quem recebe. Quando chegar o SMS com SOS EMERGÊNCIA, ele toca um alarme alto e vibra sem parar até a pessoa apertar Parar.</p>
+      <p class="rodape">O SOS Alarme precisa ler os SMS que chegam. Por isso o Play Protect pode avisar ou bloquear a instalação dele. O SOS Família funciona sem ele.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const A = window.Android;
+const APP = !!(A && A.enviarSMS);
+const AUTO = APP && (!A.podeAuto || A.podeAuto()); // versão automática manda o SMS sozinho; a simples abre o app de mensagens
+let PREVIA = false; try { PREVIA = !APP && window.top !== window.self; } catch (e) { PREVIA = !APP; }
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+
+// ---------- contatos guardados neste aparelho
+const CHAVE = 'sos-familia';
+let cfg = { nome: '', saude: '', contatos: [{ nome: '', tel: '' }, { nome: '', tel: '' }, { nome: '', tel: '' }], ligar: true };
+try { const s = JSON.parse(localStorage.getItem(CHAVE) || 'null'); if (s && Array.isArray(s.contatos)) cfg = Object.assign(cfg, s); } catch (e) {}
+function guardar() { try { localStorage.setItem(CHAVE, JSON.stringify(cfg)); return true; } catch (e) { return false; } }
+const digitos = t => (t || '').replace(/\D/g, '');
+// número para SMS e ligação: com +55 quando tiver DDD
+function numero(t) { const raw = (t || '').trim(); if (raw.startsWith('+')) return '+' + digitos(raw); let d = digitos(raw).replace(/^0+/, ''); if (d.length === 10 || d.length === 11) return '+55' + d; return d; }
+function bonito(t) { let d = digitos(t); if (d.startsWith('55') && d.length >= 12) d = d.slice(2); if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`; if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`; return t; }
+const validos = () => cfg.contatos.filter(c => digitos(c.tel).length >= 8).map(c => ({ nome: c.nome.trim() || 'Contato', tel: c.tel, num: numero(c.tel) }));
+
+// ---------- telas
+const TELAS = ['tela-inicio', 'tela-alerta', 'tela-contatos', 'tela-desmaio', 'tela-receber'];
+let voltarPara = 'tela-inicio';
+function mostrar(id) { TELAS.forEach(t => { $(t).hidden = t !== id; }); window.scrollTo(0, 0); if (id === 'tela-inicio') atualizarInicio(); }
+function atualizarInicio() {
+  const cs = validos();
+  $('avisa').innerHTML = cs.length ? 'Avisa: ' + cs.map(c => `<b>${esc(c.nome)}</b>`).join(' · ') : '<b>Ninguém cadastrado ainda.</b> Toque em Contatos.';
+  $('previa').hidden = !PREVIA;
+  $('perm').hidden = !(APP && A.temPermissoes && !A.temPermissoes());
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ---------- som e vibração
+let AC = null;
+function audio() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; } } if (AC && AC.state !== 'running') AC.resume(); return AC; }
+function bip(f = 880, dur = 0.18, vol = 0.35) { const ac = audio(); if (!ac) return; const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime; o.type = 'square'; o.frequency.value = f; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + dur + 0.02); }
+function vibrar(p) { try { if (APP && A.vibrar) A.vibrar(Array.isArray(p) ? p.reduce((a, b) => a + b, 0) : p); else if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
+let sirene = null;
+function ligarSirene(on) {
+  if (sirene) { try { sirene.o.stop(); } catch (e) {} clearInterval(sirene.v); sirene = null; }
+  $('al-sirene').classList.toggle('on', on); $('al-sirene').textContent = on ? 'Parar a sirene' : 'Tocar sirene aqui';
+  if (!on) return; const ac = audio(); if (!ac) return;
+  const o = ac.createOscillator(), g = ac.createGain(), lfo = ac.createOscillator(), lg = ac.createGain();
+  o.type = 'sawtooth'; o.frequency.value = 950; lfo.frequency.value = 1.6; lg.gain.value = 320; lfo.connect(lg); lg.connect(o.frequency); g.gain.value = 0.5; o.connect(g); g.connect(ac.destination); o.start(); lfo.start();
+  sirene = { o, v: setInterval(() => vibrar([600, 300]), 900) };
+}
+let trava = null;
+async function telaLigada(on) { try { if (on && navigator.wakeLock) trava = await navigator.wakeLock.request('screen'); else if (!on && trava) { trava.release(); trava = null; } } catch (e) {} }
+
+// ---------- contagem de 5 segundos
+let contagem = null;
+function iniciarContagem() {
+  audio(); const cs = validos(); let n = 5;
+  $('cont-num').textContent = n; $('cont-quem').textContent = cs.length ? 'Vai avisar ' + cs.map(c => c.nome).join(', ') : 'Ninguém cadastrado: vamos mostrar o 192';
+  $('tela-contagem').hidden = false; bip(); vibrar(300);
+  contagem = setInterval(() => { n--; if (n <= 0) { clearInterval(contagem); contagem = null; $('tela-contagem').hidden = true; dispararAlerta(false); return; } $('cont-num').textContent = n; bip(n === 1 ? 1180 : 880); vibrar(300); }, 1000);
+}
+function cancelarContagem() { if (contagem) clearInterval(contagem); contagem = null; $('tela-contagem').hidden = true; vibrar(0); }
+
+// ---------- localização
+function pegarLocal(ms) {
+  return new Promise(res => { let feito = false; const fim = v => { if (!feito) { feito = true; res(v); } }; setTimeout(() => fim(null), ms + 2000);
+    if (APP && A.pegarLocal) { window.__local = (lat, lon, acc) => fim(lat == null ? null : { lat, lon, acc }); try { A.pegarLocal(); } catch (e) { fim(null); } return; }
+    if (!navigator.geolocation) return fim(null);
+    try { navigator.geolocation.getCurrentPosition(p => fim({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }), () => fim(null), { enableHighAccuracy: true, timeout: ms, maximumAge: 60000 }); } catch (e) { fim(null); } });
+}
+function mostrarLocal(loc) {
+  const el = $('al-local'), b = el.querySelector('.bolinha'), t = el.querySelector('span:last-child');
+  if (loc === 'buscando') { b.className = 'bolinha'; t.textContent = 'Buscando a localização…'; return; }
+  if (loc) { b.className = 'bolinha ok'; t.textContent = `Localização encontrada (±${Math.round(loc.acc)} m)`; }
+  else { b.className = 'bolinha falha'; t.textContent = 'Sem localização. A mensagem vai sem o mapa.'; }
+}
+function mensagem(loc, teste) {
+  const hora = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), quem = cfg.nome.trim() || 'Uma pessoa da família';
+  let m = (teste ? '(TESTE, pode ignorar) ' : '') + `SOS EMERGÊNCIA! ${quem} precisa de ajuda agora, pode ter desmaiado.`;
+  m += loc ? ` Local: https://maps.google.com/?q=${loc.lat.toFixed(5)},${loc.lon.toFixed(5)} (±${Math.round(loc.acc)} m).` : ' Localização não disponível.';
+  if (cfg.saude.trim()) m += ` Saúde: ${cfg.saude.trim()}.`;
+  return m + ` Hora: ${hora}. Ligue de volta. SAMU: 192.`;
+}
+
+// ---------- o alerta
+let alerta = null;
+async function dispararAlerta(teste) {
+  mostrar('tela-alerta'); telaLigada(true); vibrar([500, 200, 500]);
+  const cs = validos(), id = Date.now(); alerta = { id, cs, envio: cs.map(() => ({ ok: 0, n: 1, falhou: false })), ligou: false, teste };
+  $('al-titulo').textContent = teste ? 'Teste do alerta' : cs.length ? 'Pedindo ajuda' : 'Ninguém cadastrado';
+  $('al-msg').textContent = 'Preparando a mensagem…'; mostrarLocal('buscando'); desenharLista('preparando');
+  const loc = await pegarLocal(teste ? 6000 : 9000); if (!alerta || alerta.id !== id) return;
+  mostrarLocal(loc); const msg = mensagem(loc, teste); alerta.msg = msg; $('al-msg').textContent = msg;
+  if (!cs.length) { $('al-rodape').textContent = 'Cadastre quem deve receber o alerta em Contatos. Agora, ligue para o 192.'; desenharLista('vazio'); return; }
+  if (APP && !AUTO) {
+    desenharLista('aberto'); alerta.esperaVolta = true;
+    try { A.abrirSMS(JSON.stringify(cs.map(c => c.num)), msg); } catch (e) {}
+    $('al-rodape').textContent = 'No app de mensagens, toque em Enviar. Depois volte aqui' + (!teste && cfg.ligar ? `: o app abre a ligação para ${cs[0].nome}.` : '.');
+  } else if (APP) {
+    desenharLista('enviando');
+    try { A.enviarSMS(JSON.stringify(cs.map(c => c.num)), msg); } catch (e) { alerta.envio.forEach(x => { x.falhou = true; }); desenharLista('enviando'); }
+    $('al-rodape').textContent = !teste && cfg.ligar ? `Depois da mensagem, o app liga para ${cs[0].nome}.` : '';
+    if (!teste && cfg.ligar) setTimeout(() => ligarPrimeiro(id), 9000);
+  } else {
+    desenharLista('web');
+    $('al-rodape').textContent = PREVIA ? 'Na prévia do Claude estes botões podem não abrir. Os números estão escritos para você discar.' : 'Toque em SMS ou WhatsApp e depois em Enviar. Ligar faz o celular da pessoa tocar na hora.';
+  }
+}
+function ligarPrimeiro(id) { if (!alerta || alerta.id !== id || alerta.ligou) return; alerta.ligou = true; const c = alerta.cs[0]; $('al-rodape').textContent = `Ligando para ${c.nome}…`; try { A.ligar(c.num); } catch (e) {} }
+// o app avisa cada parte do SMS que saiu (ou falhou)
+window.__smsEnviado = (i, k, n, ok) => { if (!alerta || !alerta.envio[i]) return; const e = alerta.envio[i]; e.n = n; if (ok) e.ok++; else e.falhou = true; desenharLista('enviando');
+  if (!alerta.teste && cfg.ligar && alerta.envio.every(x => x.falhou || x.ok >= x.n)) setTimeout(() => ligarPrimeiro(alerta.id), 1500); };
+function linkSMS(c) { return `sms:${c.num}${IOS ? '&' : '?'}body=${encodeURIComponent(alerta.msg || '')}`; }
+function desenharLista(modo) {
+  const ul = $('al-lista'); ul.innerHTML = '';
+  if (modo === 'vazio') { ul.innerHTML = '<li class="pessoa"><div class="quem"><b>Ninguém para avisar</b><span>Abra Contatos e cadastre até 3 pessoas</span></div><button class="mini forte" type="button" data-ir="tela-contatos">Contatos</button></li>'; return; }
+  alerta.cs.forEach((c, i) => {
+    const li = document.createElement('li'); li.className = 'pessoa';
+    li.innerHTML = `<div class="quem"><b>${esc(c.nome)}</b><span>${esc(bonito(c.tel))}</span></div>`;
+    const lado = document.createElement('div'); lado.className = 'linha-btn';
+    if (modo === 'preparando') lado.innerHTML = '<span class="pill">Preparando…</span>';
+    else if (modo === 'aberto') lado.innerHTML = `<span class="pill">Toque em Enviar</span><button class="mini" type="button" data-sms="${i}">Mensagens</button><button class="mini" type="button" data-tel="${esc(c.num)}">Ligar</button>`;
+    else if (modo === 'enviando') { const e = alerta.envio[i], pronto = e.ok >= e.n;
+      lado.innerHTML = `<span class="pill ${e.falhou ? 'falha' : pronto ? 'ok' : ''}">${e.falhou ? 'SMS não saiu' : pronto ? 'SMS enviado' : 'Enviando…'}</span><button class="mini" type="button" data-tel="${esc(c.num)}">Ligar</button>`;
+      if (e.falhou) { lado.innerHTML += `<button class="mini forte" type="button" data-sms="${i}">Mensagens</button>`; const wa = digitos(c.num); if (wa.length >= 12) lado.innerHTML += `<a class="mini" href="https://wa.me/${wa}?text=${encodeURIComponent(alerta.msg || '')}" target="_blank" rel="noopener">WhatsApp</a>`; } }
+    else { const wa = digitos(c.num);
+      lado.innerHTML = `<a class="mini forte" href="${esc(linkSMS(c))}">SMS</a>` + (wa.length >= 12 ? `<a class="mini" href="https://wa.me/${wa}?text=${encodeURIComponent(alerta.msg || '')}" target="_blank" rel="noopener">WhatsApp</a>` : '') + `<a class="mini" href="tel:${esc(c.num)}">Ligar</a>`; }
+    li.appendChild(lado); ul.appendChild(li);
+  });
+}
+function encerrar() { alerta = null; ligarSirene(false); telaLigada(false); vibrar(0); mostrar('tela-inicio'); }
+
+// ---------- contatos (formulário)
+function abrirContatos() {
+  $('c-nome').value = cfg.nome; $('c-saude').value = cfg.saude; $('c-ligar').checked = !!cfg.ligar;
+  [1, 2, 3].forEach(k => { const c = cfg.contatos[k - 1] || { nome: '', tel: '' }; $(`c${k}-nome`).value = c.nome; $(`c${k}-tel`).value = c.tel; });
+  $('ct-salvo').textContent = ''; $('b-teste').textContent = AUTO ? 'Enviar um teste por SMS' : APP ? 'Abrir um teste nas mensagens' : 'Ver como fica a mensagem'; mostrar('tela-contatos');
+}
+function lerFormulario() { cfg.nome = $('c-nome').value.trim(); cfg.saude = $('c-saude').value.trim(); cfg.ligar = $('c-ligar').checked;
+  cfg.contatos = [1, 2, 3].map(k => ({ nome: $(`c${k}-nome`).value.trim(), tel: $(`c${k}-tel`).value.trim() })); }
+$('form').addEventListener('submit', e => { e.preventDefault(); lerFormulario();
+  const ruins = cfg.contatos.filter(c => c.tel && digitos(c.tel).length < 8);
+  const ok = guardar(); $('ct-salvo').style.color = ruins.length ? 'var(--falha)' : 'var(--ok)';
+  $('ct-salvo').textContent = ruins.length ? 'Algum telefone está incompleto. Use o DDD, ex.: (11) 98765-4321.' : ok ? `Salvo. ${validos().length} contato(s) vão receber o alerta.` : 'Não deu para guardar neste navegador. Os contatos valem só até fechar a página.'; });
+$('b-teste').addEventListener('click', () => { lerFormulario(); guardar(); dispararAlerta(true); });
+
+// ---------- como o outro celular é avisado
+function abrirReceber() { mostrar('tela-receber'); }
+window.__voltou = () => { if (alerta && alerta.esperaVolta) { alerta.esperaVolta = false; if (!alerta.teste && cfg.ligar && alerta.cs.length) setTimeout(() => ligarPrimeiro(alerta.id), 800); } if (!$('tela-inicio').hidden) atualizarInicio(); };
+window.__permissoes = window.__voltou;
+
+// ---------- botões
+$('sos').addEventListener('click', iniciarContagem);
+$('b-cancelar').addEventListener('click', cancelarContagem);
+$('b-contatos').addEventListener('click', abrirContatos);
+$('b-desmaio').addEventListener('click', () => { voltarPara = 'tela-inicio'; mostrar('tela-desmaio'); });
+$('al-desmaio').addEventListener('click', () => { voltarPara = 'tela-alerta'; mostrar('tela-desmaio'); });
+$('ds-voltar').addEventListener('click', () => mostrar(voltarPara));
+$('ct-voltar').addEventListener('click', () => mostrar('tela-inicio'));
+$('rc-voltar').addEventListener('click', () => mostrar('tela-inicio'));
+$('b-receber').addEventListener('click', abrirReceber);
+$('al-fim').addEventListener('click', encerrar);
+$('al-sirene').addEventListener('click', () => ligarSirene(!sirene));
+$('b-permitir').addEventListener('click', () => { try { A.pedirPermissoes(); } catch (e) {} });
+$('b-copiar').addEventListener('click', () => { const t = $('al-msg').textContent; const pronto = () => { $('b-copiar').textContent = 'Copiado'; setTimeout(() => { $('b-copiar').textContent = 'Copiar'; }, 2000); };
+  try { navigator.clipboard.writeText(t).then(pronto, () => selecionar()); } catch (e) { selecionar(); } });
+function selecionar() { const r = document.createRange(); r.selectNodeContents($('al-msg')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+// no app, ligações saem direto pelo telefone
+document.addEventListener('click', e => { const t = e.target.closest('[data-ligar],[data-tel],[data-ir],[data-sms]'); if (!t) return;
+  if (t.dataset.sms !== undefined) { e.preventDefault(); const c = alerta && alerta.cs[+t.dataset.sms]; if (c) { try { A.abrirSMS(JSON.stringify([c.num]), alerta.msg || ''); } catch (er) {} } return; }
+  if (t.dataset.ir) { e.preventDefault(); if (t.dataset.ir === 'tela-contatos') abrirContatos(); return; }
+  const n = t.dataset.ligar || t.dataset.tel; if (APP) { e.preventDefault(); try { A.ligar(n); } catch (er) {} } else if (t.dataset.tel) { location.href = 'tel:' + n; } });
+addEventListener('keydown', e => { if (e.key === 'Escape' && contagem) cancelarContagem(); });
+mostrar('tela-inicio');
+})();
+</script>
