@@ -34,7 +34,7 @@
   .item.zero { opacity: .45; }
   #mira { position: fixed; left: 50%; top: 50%; width: 8px; height: 8px; margin: -4px; border-radius: 50%; border: 2px solid rgba(228,234,210,.7); z-index: 3; pointer-events: none; }
   #mira.alvo { border-color: var(--ambar); transform: scale(1.5); }
-  #acao { left: 50%; top: calc(50% + 36px); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; font: 600 15px var(--mono); }
+  #acao { left: 50%; top: auto; bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + 112px); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; font: 600 15px var(--mono); }
   #acao kbd { display: grid; place-items: center; min-width: 26px; height: 26px; border-radius: 4px; background: var(--ambar); color: #1d1300; font: 700 15px var(--titulo); padding: 0 6px; }
   body.toque #acao kbd { display: none; }
   #anel { width: 26px; height: 26px; flex: none; }
@@ -204,7 +204,7 @@
   body.toque #botoes { gap: 8px; } body.toque #botoes button { width: 54px; height: 54px; font-size: 10px; } body.toque #botoes #t-acao, body.toque #botoes #t-tiro { width: 70px; height: 70px; font-size: 13px; }
   body.toque #joy { top: auto; bottom: 0; height: 58%; width: 42vw; }
   body.toque #joy .base { width: 96px; height: 96px; margin: -48px; left: calc(max(14px, env(safe-area-inset-left, 0px)) + 62px); top: calc(100% - max(12px, env(safe-area-inset-bottom, 0px)) - 66px); opacity: .4; } body.toque #joy .base i { width: 42px; height: 42px; margin: -21px; }
-  body.toque #acao { font-size: 12px; padding: 4px 8px; }
+  body.toque #acao { font-size: 12px; padding: 4px 8px; bottom: calc(max(8px, env(safe-area-inset-bottom, 0px)) + 70px); }
 </style>
 
 <canvas id="cena" aria-label="O abrigo"></canvas>
@@ -262,7 +262,7 @@
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 1.8 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 1.9 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -1480,14 +1480,17 @@ const tFolha = tex(256, 512, (g, w, h) => { const Rr = semente(63); const gr = g
   for (let x = -40; x < w + 40; x += 36) { g.fillStyle = '#e8b018'; g.beginPath(); g.moveTo(x, h - 60); g.lineTo(x + 18, h - 60); g.lineTo(x + 48, h - 18); g.lineTo(x + 30, h - 18); g.fill(); }
   g.fillStyle = 'rgba(230,230,220,.75)'; g.font = '700 40px Oswald, Arial'; g.textAlign = 'center'; g.fillText('A-7', w / 2, h * 0.7); borrar(g.canvas, 0.5); });
 const mFolha = std({ map: tFolha, roughness: 0.42, metalness: 0.75 });
-const vidroM = std({ map: portaSaida.userData.tFora, emissive: 0xffffff, emissiveMap: portaSaida.userData.tFora, emissiveIntensity: 0.35, roughness: 0.05, metalness: 0.4 });
+// janela de verdade: uma câmera lá fora filma a superfície ao vivo e a imagem aparece no vidro
+const janelaRT = new THREE.WebGLRenderTarget(512, 320, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+const vidroM = new THREE.MeshBasicMaterial({ map: portaSaida.userData.tFora, color: 0x7c8784, toneMapped: false });
+const reflexoM = new THREE.MeshBasicMaterial({ map: tex(128, 128, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, h); gr.addColorStop(0, 'rgba(255,255,255,.16)'); gr.addColorStop(0.35, 'rgba(255,255,255,.02)'); gr.addColorStop(0.55, 'rgba(255,255,255,.09)'); gr.addColorStop(0.62, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(255,255,255,.05)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }), transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending });
 const portaE = add(new THREE.BoxGeometry(1.42, 2.3, 0.2), mFolha, -0.71, 1.15, 0.12, portaSaida), portaD = add(new THREE.BoxGeometry(1.42, 2.3, 0.2), mFolha, 0.71, 1.15, 0.12, portaSaida);
 for (const [pp, s] of [[portaE, 1], [portaD, -1]]) { // janela blindada em cada folha
-  add(new THREE.BoxGeometry(1.06, 0.82, 0.06), M.metalEsc, -s * 0.04, 0.45, 0.1, pp); add(new THREE.PlaneGeometry(0.94, 0.7), vidroM, -s * 0.04, 0.45, 0.135, pp);
-  for (const y of [0.45 - 0.38, 0.45 + 0.38]) add(new THREE.BoxGeometry(1.06, 0.06, 0.08), M.metal, -s * 0.04, y, 0.13, pp);
+  add(new THREE.BoxGeometry(1.24, 1.42, 0.06), M.metalEsc, -s * 0.03, 0.32, 0.1, pp); { const gv = new THREE.PlaneGeometry(1.12, 1.3), uv = gv.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setX(i, s > 0 ? uv.getX(i) * 0.47 : 0.53 + uv.getX(i) * 0.47); add(gv, vidroM, -s * 0.03, 0.32, 0.135, pp); add(new THREE.PlaneGeometry(1.12, 1.3), reflexoM, -s * 0.03, 0.32, 0.14, pp); }
+  for (const y of [0.32 - 0.69, 0.32 + 0.69]) add(new THREE.BoxGeometry(1.24, 0.06, 0.08), M.metal, -s * 0.03, y, 0.13, pp); add(new THREE.BoxGeometry(0.03, 1.3, 0.05), M.metalEsc, -s * 0.03, 0.32, 0.14, pp);
   add(new THREE.BoxGeometry(0.06, 2.2, 0.06), M.metalEsc, s * 0.68, 0, 0.11, pp); }
 // volante vermelho de travamento (gira quando a porta abre)
-const volante = new THREE.Group(); volante.position.set(0.71, -0.3, 0.25); portaE.add(volante);
+const volante = new THREE.Group(); volante.position.set(0.71, -0.72, 0.25); portaE.add(volante);
 { const vm = std({ color: 0xb01e14, roughness: 0.35, metalness: 0.5 }); add(new THREE.TorusGeometry(0.3, 0.045, 10, 32), vm, 0, 0, 0, volante, true); for (let k = 0; k < 3; k++) { const r = add(new THREE.BoxGeometry(0.6, 0.05, 0.05), vm, 0, 0, 0, volante); r.rotation.z = k * Math.PI / 3; } add(new THREE.CylinderGeometry(0.08, 0.08, 0.12, 14).rotateX(Math.PI / 2), M.metal, 0, 0, 0, volante); }
 portaSaida.userData.volante = volante;
 // placa amarela
@@ -2174,6 +2177,18 @@ function animarColosso(c, dt) { const t = performance.now(), bravo = c.alerta > 
     s.s.position.set(wx + s.t * 6, 31 + s.t * 18, wz); s.s.scale.setScalar(3 + s.t * 10); s.s.material.opacity = 0.45 * (1 - s.t); }); }
 
 // ===================== CÂMERA, LUZES E AMBIENTE =====================
+// câmera lá fora que mostra a superfície na janela da porta
+const camJanela = new THREE.PerspectiveCamera(62, 512 / 320, 0.3, 900); camJanela.rotation.order = 'YXZ'; let janelaT = 0, janelaViva = false;
+function filmarJanela() { const perto = !jog.fora && jogando && Math.hypot(jog.x - 0, jog.z + 30.9) < 16;
+  if (!perto) { if (janelaViva) { vidroM.map = portaSaida.userData.tFora; vidroM.needsUpdate = true; janelaViva = false; } return; }
+  if (!janelaViva) { vidroM.map = janelaRT.texture; vidroM.needsUpdate = true; janelaViva = true; }
+  // um pouco de paralaxe: a vista muda conforme você se mexe na frente da janela
+  const px = clamp(jog.x / 3, -1, 1), pz = clamp((jog.z + 30.9) / 8, 0, 1);
+  camJanela.position.set(SX + px * 1.5, 2.4, SZ + 6); camJanela.rotation.set(0.32 - pz * 0.05, Math.PI - px * 0.35, 0); camJanela.fov = 62 + (1 - pz) * 8; camJanela.updateProjectionMatrix();
+  const fc = cena.fog.color.getHex(), fd = cena.fog.density, bg = cena.background.getHex(), ab = abrigo.visible, sv = sup.visible, av = armaVM.visible, nt = noite() ? 1 : 0;
+  const cor = lerpCor(nt); cena.fog.color.setHex(cor); cena.fog.density = nt ? 0.034 : 0.022; cena.background.setHex(cor); abrigo.visible = false; sup.visible = true; armaVM.visible = false;
+  Rd.setRenderTarget(janelaRT); Rd.render(cena, camJanela); Rd.setRenderTarget(null);
+  cena.fog.color.setHex(fc); cena.fog.density = fd; cena.background.setHex(bg); abrigo.visible = ab; sup.visible = sv; armaVM.visible = av; }
 function atualizarVisual(dt, perto) {
   const t = performance.now() / 1000; tremor = Math.max(0, tremor - dt * 1.2); laserVis = Math.max(0, laserVis - dt); flicker = Math.max(0, flicker - dt * 1.5);
   const balanco = Math.sin(jog.fase) * 0.035, tr = tremor * tremor;
@@ -2183,6 +2198,7 @@ function atualizarVisual(dt, perto) {
   lanterna.intensity = jog.lanterna ? (jog.fora ? 4 : 3) : 0; lanterna.position.copy(camera.position); const fw = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); lanterna.target.position.copy(camera.position).addScaledVector(fw, 5);
   portaE.position.x = lerp(portaE.position.x, -0.71 - portaAbre * 1.4, Math.min(1, dt * 4)); portaD.position.x = lerp(portaD.position.x, 0.71 + portaAbre * 1.4, Math.min(1, dt * 4)); { const u = portaSaida.userData; u.volante.rotation.z = lerp(u.volante.rotation.z, portaAbre * Math.PI * 2, Math.min(1, dt * 3)); u.giroflex.rotation.y += dt * (portaAbre > 0.05 ? 8 : 0); u.luzGiro.intensity = portaAbre > 0.05 ? 3 : 0; u.luzPressao.material.color.setHex(portaAbre > 0.05 ? (Math.sin(performance.now() / 120) > 0 ? 0xff3020 : 0x300000) : 0x40ff60); }
   luzSaida.intensity = 0.7 + Math.sin(t * 2.5) * 0.3;
+  janelaT -= dt; if (janelaT <= 0) { janelaT = 1 / 24; filmarJanela(); }
   MARCOS.forEach(m => { const livre = m.lugar === 'torre' ? !E.sinal : E.coletas[m.lugar] !== dia(); m.feixe.visible = livre && Math.hypot(jog.x - m.x, jog.z - m.z) > 22; m.feixe.material.opacity = 0.18 + Math.sin(t * 2 + m.x) * 0.06; });
   torreLuz.material.emissiveIntensity = Math.sin(t * 3) > 0 ? 4 : 0.3;
   const bus = $('bussola'); bus.hidden = !(jog.fora && jogando); if (jog.fora && jogando) { const dx = HATCH.x - jog.x, dz = HATCH.z - jog.z, dist = Math.hypot(dx, dz); let rel = Math.atan2(dx, dz) - (jog.yaw + Math.PI); rel = Math.atan2(Math.sin(rel), Math.cos(rel));
@@ -2309,7 +2325,7 @@ function quadro(agora) { requestAnimationFrame(quadro);
   if (avisoT > 0) { avisoT -= dt; if (avisoT <= 0) $('aviso').hidden = true; }
   if (jogando || $('menu').hidden) { if (composer) composer.render(); else Rd.render(cena, camera); } }
 requestAnimationFrame(quadro);
-window.__abrigo = { camera, MARCOS, mic, E: () => E, jog, salvar, COLOSSOS, usar, rachaduras, ataqueAoAbrigo: () => ataqueAoAbrigo(COLOSSOS[0]), irPara, comecar, OLHOS, NEBLINA, escudo, ceu, cena, raio: () => { raioT = 0; } };
+window.__abrigo = { jan: () => ({ janelaRT, Rd, camJanela }), camera, MARCOS, mic, E: () => E, jog, salvar, COLOSSOS, usar, rachaduras, ataqueAoAbrigo: () => ataqueAoAbrigo(COLOSSOS[0]), irPara, comecar, OLHOS, NEBLINA, escudo, ceu, cena, raio: () => { raioT = 0; } };
 
 
 // ===================== ÍRIS: a inteligência artificial do abrigo =====================
