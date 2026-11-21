@@ -184,6 +184,9 @@
   .regra b { display: block; font: 600 16px var(--titulo); letter-spacing: .04em; text-transform: uppercase; color: var(--tinta); margin-bottom: 3px; }
   .teclas { font: 500 13px/1.8 var(--mono); color: var(--suave); }
   body.toque .teclas { display: none; }
+  #missoes { right: max(12px, env(safe-area-inset-right, 0px)); top: calc(max(10px, env(safe-area-inset-top, 0px)) + 330px); width: 210px; display: grid; gap: 3px; font: 500 11px/1.35 var(--mono); color: var(--suave); }
+  #missoes b { font: 700 12px var(--titulo); letter-spacing: .08em; color: #ffcf70; } #missoes .mis.ok { color: #9dff70; text-decoration: line-through; opacity: .8; }
+  body.toque #missoes { display: none !important; }
   /* ===== CELULAR: interface pequena para sobrar tela e dar para girar a câmera ===== */
   body.toque #hud-corpo { width: 118px; gap: 2px; } body.toque #hud-abrigo { width: 128px; gap: 2px; grid-template-columns: repeat(3, 1fr); }
   body.toque #hud-abrigo > :not(button) { grid-column: 1 / -1; }
@@ -228,6 +231,7 @@
 </div>
 <div class="hud" id="hud-mochila"></div>
 <div class="hud placa" id="h-sala" hidden></div>
+<div class="hud placa" id="missoes"></div>
 <div class="hud placa" id="rastreador"><b>📡 RASTREADOR</b><canvas id="rastro" width="240" height="240"></canvas><span id="r-txt"></span></div>
 <div class="hud placa" id="mic" hidden><span>🎤</span><div class="mb"><i></i></div><b id="mic-txt">silêncio</b></div>
 <div class="hud placa" id="hp-gig" hidden><span>👾 GIGANTE</span><div class="hb"><i></i></div></div>
@@ -262,7 +266,7 @@
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 2.1 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 2.2 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -288,6 +292,8 @@
       <div class="placa regra"><b>Moedas 🪙</b>O abrigo começa ENFERRUJADO, sem campo de força e sem armas! Ganhe moedas abrindo caixas, pegando coisas nos lugares, fazendo gigantes fugirem e sobrevivendo os dias. Use em ⬆ MELHORIAS (ou U) para reformar o abrigo e comprar o campo de força, as armas, o canhão e muito mais!</div>
       <div class="placa regra"><b>Sala de comando 🎛</b>Na sala de controle tem botões para ligar e desligar o CAMPO DE FORÇA e as ARMAS do abrigo.</div>
       <div class="placa regra"><b>Armas</b>Depois de comprar, os mísseis e lasers atiram sozinhos quando um gigante chega perto. Compre o canhão de plasma e pegue no ARSENAL (ala leste) para atirar também!</div>
+      <div class="placa regra"><b>Monstros 🦂🦇</b>RASTEJADORES correm pelo chão e mordem (à noite são mais rápidos). VOADORES mergulham do céu. Atire neles com o canhão para ganhar moedas. Dentro do escudo eles não entram!</div>
+      <div class="placa regra"><b>Missões 📋</b>Todo dia aparecem 3 missões novas. Complete para ganhar moedas, e se fizer as 3 ganha um bônus!</div>
       <div class="placa regra"><b>Lá fora</b>Siga as setas verdes até a porta de SAÍDA. Explore o posto, o mercado, o hospital e a torre de rádio. Cuidado com os gigantes!</div>
     </div>
     <p class="teclas"><kbd>W A S D</kbd> andar · <kbd>MOUSE</kbd> olhar (clique na tela) · <kbd>E</kbd> segurar para usar · <kbd>F</kbd> lanterna · <kbd>G</kbd> silenciador · <kbd>T</kbd> falar com a ÍRIS · <kbd>CLIQUE</kbd>/<kbd>ESPAÇO</kbd> atirar · <kbd>SHIFT</kbd> correr</p>
@@ -301,7 +307,7 @@
 <div class="tela cheia" id="pausa" hidden>
   <div class="bloco" style="width:min(100%,460px)">
     <h2>Pausa</h2>
-    <p class="sub" id="p-info"></p>
+    <p class="sub" id="p-info" style="white-space:pre-line"></p>
     <button class="principal" id="p-voltar" type="button">Continuar</button>
     <button id="p-menu" type="button">Salvar e sair</button>
   </div>
@@ -1085,11 +1091,11 @@ function usar(u) {
     case 'campo': if (!NV('escudo')) { somErro(); aviso('O abrigo ainda não tem CAMPO DE FORÇA. Compre em ⬆ MELHORIAS!', 'ruim', 4); break; } mudarCampo(E.campo === false); break;
     case 'armas': if (!NV('torres')) { somErro(); aviso('O abrigo ainda não tem ARMAS. Compre os lasers e mísseis em ⬆ MELHORIAS!', 'ruim', 4); break; } mudarArmas(E.armas === false); break;
     case 'arma': if (!E.arma && !NV('arma')) { somErro(); aviso('O canhão de plasma está trancado. Compre em ⬆ MELHORIAS (40 🪙)!', 'ruim', 4); break; } if (E.arma) { aviso('Você já está com o canhão de plasma.', 'info'); break; } E.arma = true; canhaoMesa.visible = false; somItem(); tom(400, 1600, 0.4, 'sawtooth', 0.06); aviso('🔫 Você pegou o CANHÃO DE PLASMA! Lá fora, clique (ou aperte ESPAÇO / Atirar) para atirar nos gigantes.', 'bom', 6); break;
-    case 'estufa': if (E.coletas.estufa === dia()) { aviso('A horta já foi colhida hoje. Amanhã tem mais!', 'info'); break; } E.coletas.estufa = dia(); E.inv.racao += 2; E.inv.agua += 1; somItem(); aviso('🌱 Colheu a horta: 🥫 🥫 💧', 'bom'); break;
+    case 'estufa': if (E.coletas.estufa === dia()) { aviso('A horta já foi colhida hoje. Amanhã tem mais!', 'info'); break; } E.coletas.estufa = dia(); progressoMissao('horta'); E.inv.racao += 2; E.inv.agua += 1; somItem(); aviso('🌱 Colheu a horta: 🥫 🥫 💧', 'bom'); break;
     case 'caixa': abrirCaixa(u.caixa); break;
     case 'saque': if (E.coletas[u.lugar] === dia()) { somErro(); aviso('Já pegou tudo aqui hoje. Volte amanhã!', 'info'); }
       else if (mochilaMax() - jog.mochila < u.itens.length) { somErro(); aviso(`A mochila não tem espaço (precisa de ${u.itens.length}). Volte ao abrigo para esvaziar.`, 'ruim'); }
-      else { E.coletas[u.lugar] = dia(); u.itens.forEach(it => { E.inv[it]++; jog.mochila++; }); ganhar(25, 'saque'); somItem(); chiado(0.6, 700, 0.12); aviso('Achou: ' + u.itens.map(it => ITENS.find(i => i[0] === it)[1]).join(' '), 'bom', 4); } break;
+      else { E.coletas[u.lugar] = dia(); progressoMissao('saque'); u.itens.forEach(it => { E.inv[it]++; jog.mochila++; }); ganhar(25, 'saque'); somItem(); chiado(0.6, 700, 0.12); aviso('Achou: ' + u.itens.map(it => ITENS.find(i => i[0] === it)[1]).join(' '), 'bom', 4); } break;
     case 'torre': if (E.sinal) { aviso('O sinal já está ligado. O resgate vem no dia 9!', 'info'); break; }
       E.sinal = true; ganhar(40, 'sinal de socorro'); [0, 0.25, 0.5, 0.75, 1].forEach(t => tom(1400, 1400, 0.18, 'square', 0.08, t)); chiado(2, 2000, 0.15, 'bandpass');
       aviso('SINAL DE SOCORRO LIGADO! O resgate vai chegar um dia antes: dia 9! Mas o barulho chamou os gigantes. CORRA!', 'bom', 6);
@@ -1105,7 +1111,7 @@ function mudarCampo(on) { if (!NV('escudo')) return 'O abrigo ainda não tem cam
 function mudarArmas(on) { if (!NV('torres')) return 'O abrigo ainda não tem armas. Precisa comprar os lasers e mísseis em ⬆ MELHORIAS (40 🪙)!'; E.armas = !!on; if (on) { [0, 0.12].forEach(t => tom(500, 1200, 0.2, 'square', 0.06, t)); aviso('⚔ ARMAS LIGADAS! Os lasers e mísseis vão atirar nos gigantes.', 'bom', 4); }
   else { tom(800, 200, 0.5, 'square', 0.05); laserVis = 0; aviso('🔕 ARMAS DESLIGADAS. Os lasers e mísseis não vão atirar.', 'info', 4); } salvar(); return on ? 'Armas do abrigo ligadas. ⚔' : 'Armas do abrigo desligadas.'; }
 function abrirCaixa(c) { if (jog.mochila >= mochilaMax()) { somErro(); aviso('Mochila cheia! Volte ao abrigo para guardar.', 'ruim'); return; }
-  c.aberta = true; c.sinal.visible = false; const sorte = [['racao', 28], ['agua', 28], ['filtro', 17], ['peca', 20], ['remedio', 7]], achou = [];
+  c.aberta = true; c.sinal.visible = false; progressoMissao('caixa'); const sorte = [['racao', 28], ['agua', 28], ['filtro', 17], ['peca', 20], ['remedio', 7]], achou = [];
   const n = 2 + (Math.random() < 0.45 ? 1 : 0); for (let k = 0; k < n && jog.mochila < mochilaMax(); k++) { let r = Math.random() * 100, it = 'racao'; for (const [id, p] of sorte) { if (r < p) { it = id; break; } r -= p; } E.inv[it]++; jog.mochila++; achou.push(ITENS.find(i => i[0] === it)[1]); }
   somItem(); chiado(0.5, 500, 0.12); aviso(`Achou: ${achou.join(' ')}`, 'bom'); ganhar(8 + ((Math.random() * 8) | 0), 'caixa'); }
 let portaAbre = 0;
@@ -1195,7 +1201,7 @@ let missilT = 0, lancadorI = 0, zapT = 0, avisoDefesaT = 0, tiroT = 0, ultimoFer
 const centroColosso = (c, v) => v.set(c.x, 25, c.z);
 function ferir(c, dano) { if (c.fugindo) return; c.hp -= dano; c.feridoT = 4; ultimoFerido = c; if (c.hp <= 0) fugir(c); }
 function fugir(c) { c.hp = 0; c.fugindo = true; c.ataque = 0; c.alerta = 0; c.perseguir = 0; c.viu = 0; const a = Math.atan2(c.z - SZ, c.x - SX); c.alvo = { x: SX + Math.cos(a) * 175, z: SZ + Math.sin(a) * 175 };
-  rugido(1); estrondo(0.8); ganhar(50, 'gigante fugiu'); aviso('💥 O gigante foi muito atingido e FUGIU! +50 🪙', 'bom', 4); if (typeof irisAvisa === 'function') irisAvisa('Acertamos! O gigante fugiu! 💥'); }
+  rugido(1); estrondo(0.8); ganhar(50, 'gigante fugiu'); progressoMissao('gig'); aviso('💥 O gigante foi muito atingido e FUGIU! +50 🪙', 'bom', 4); if (typeof irisAvisa === 'function') irisAvisa('Acertamos! O gigante fugiu! 💥'); }
 function explodir(p, L) { const ex = EXPLOSOES.find(e => e.t <= 0) || EXPLOSOES[0]; ex.s.position.copy(p); ex.t = 0.7; ex.s.visible = true; const dJ = jog.fora ? camera.position.distanceTo(p) : Math.hypot(p.x - HATCH.x, p.z - HATCH.z) + 40; estrondo(clamp(1 - dJ / 200, 0.05, 1) * L); }
 function defesas(dt) { let alvo = null, md = 62 + nvAcima('escudo') * 10; const fT = 1 + nvAcima('torres') * 0.6;
   for (const c of COLOSSOS) { if (c.fugindo) continue; const d = Math.hypot(c.x - HATCH.x, c.z - HATCH.z); if (d < md) { md = d; alvo = c; } }
@@ -1212,13 +1218,14 @@ function defesas(dt) { let alvo = null, md = 62 + nvAcima('escudo') * 10; const 
     if (dist < 4 || m.m.position.y < 0) { m.ativo = false; m.m.visible = false; explodir(m.m.position, 1); ferir(m.alvo, 22 * fT); } }
   // canhão de plasma do jogador
   tiroT -= dt; if (atirando && E.arma && tiroT <= 0 && !jog.dormindo) { tiroT = 0.22 / (1 + nvAcima('arma') * 0.3); atirar(); }
-  for (const b of BALAS) { if (!b.ativo) continue; b.t += dt; const k = Math.min(1, b.t / b.dur); b.s.position.lerpVectors(b.de, b.para, k); if (k >= 1) { b.ativo = false; b.s.visible = false; if (b.alvo) { const dnb = 8 * (1 + nvAcima('arma') * 0.6); if (NET.modo && !NET.host) NET.dano[COLOSSOS.indexOf(b.alvo)] += dnb; ferir(b.alvo, dnb); if (Math.random() < 0.25) ganhar(1); explodir(b.para, 0.25); b.alvo.feridoT = 4; if (!b.alvo.fugindo && jog.fora && (!temEscudo() || Math.hypot(jog.x - SX, jog.z - (SZ - 5)) > raioEscudo())) b.alvo.perseguir = Math.max(b.alvo.perseguir, 4); } } }
+  for (const b of BALAS) { if (!b.ativo) continue; b.t += dt; const k = Math.min(1, b.t / b.dur); b.s.position.lerpVectors(b.de, b.para, k); if (k >= 1) { b.ativo = false; b.s.visible = false; if (b.mon) { ferirMonstro(b.mon, 10 * (1 + nvAcima('arma') * 0.6)); explodir(b.para, 0.15); b.mon = null; } if (b.alvo) { const dnb = 8 * (1 + nvAcima('arma') * 0.6); if (NET.modo && !NET.host) NET.dano[COLOSSOS.indexOf(b.alvo)] += dnb; ferir(b.alvo, dnb); if (Math.random() < 0.25) ganhar(1); explodir(b.para, 0.25); b.alvo.feridoT = 4; if (!b.alvo.fugindo && jog.fora && (!temEscudo() || Math.hypot(jog.x - SX, jog.z - (SZ - 5)) > raioEscudo())) b.alvo.perseguir = Math.max(b.alvo.perseguir, 4); } } }
   for (const e of EXPLOSOES) { if (e.t <= 0) continue; e.t -= dt; const k = 1 - e.t / 0.7; e.s.scale.setScalar(4 + k * 14); e.s.material.opacity = Math.max(0, 1 - k); if (e.t <= 0) e.s.visible = false; } }
 const raioTiro = new THREE.Raycaster();
 function atirar() { raioTiro.setFromCamera(centro, camera); raioTiro.far = 260; let alvoC = null, ponto = null;
-  if (jog.fora) { const hits = raioTiro.intersectObjects(COLOSSOS.filter(c => !c.fugindo).map(c => c.g), true); if (hits[0]) { ponto = hits[0].point; alvoC = COLOSSOS.find(c => { let o = hits[0].object; while (o) { if (o === c.g) return true; o = o.parent; } return false; }); } }
+  let alvoM = null; if (jog.fora) { const hits = raioTiro.intersectObjects(COLOSSOS.filter(c => !c.fugindo).map(c => c.g), true); if (hits[0]) { ponto = hits[0].point; alvoC = COLOSSOS.find(c => { let o = hits[0].object; while (o) { if (o === c.g) return true; o = o.parent; } return false; }); }
+    const vivos = MONSTROS.filter(m => m.morto <= 0), hm = raioTiro.intersectObjects(vivos.map(m => m.g), true); if (hm[0] && (!hits[0] || hm[0].distance < hits[0].distance)) { ponto = hm[0].point; alvoC = null; alvoM = vivos.find(m => { let o = hm[0].object; while (o) { if (o === m.g) return true; o = o.parent; } return false; }); } }
   if (!ponto) ponto = raioTiro.ray.origin.clone().addScaledVector(raioTiro.ray.direction, jog.fora ? 120 : 12);
-  const b = BALAS.find(x => !x.ativo) || BALAS[0]; b.ativo = true; b.s.visible = true; b.de.copy(camera.position).addScaledVector(raioTiro.ray.direction, 0.6).add(new THREE.Vector3(0, -0.15, 0)); b.para.copy(ponto); b.t = 0; b.dur = Math.max(0.05, b.de.distanceTo(ponto) / 140); b.alvo = alvoC;
+  const b = BALAS.find(x => !x.ativo) || BALAS[0]; b.ativo = true; b.s.visible = true; b.de.copy(camera.position).addScaledVector(raioTiro.ray.direction, 0.6).add(new THREE.Vector3(0, -0.15, 0)); b.para.copy(ponto); b.t = 0; b.dur = Math.max(0.05, b.de.distanceTo(ponto) / 140); b.alvo = alvoC; b.mon = alvoM;
   tom(1200, 300, 0.12, 'square', 0.05); chiado(0.1, 3000, 0.05, 'highpass'); recuo = 1; }
 let recuo = 0;
 function ataqueAoAbrigo(c) { c.ataque = 0; c.alerta = 0; novoAlvo(c); const prot = (1.3 - NV('casco') * 0.25) * (temEscudo() ? 1 : 1.3); E.casco = Math.max(0, E.casco - 7 * prot); E.filtroVida = Math.max(0, E.filtroVida - 6);
@@ -1342,10 +1349,10 @@ let ultimoRadar = 0, salvarT = 0;
 function comecar(novo) { iniciarAudio(); if (novo || !carregar()) { E = novoEstado(); Object.assign(jog, { x: -5, z: -6, yaw: -Math.PI / 2, pitch: 0, fora: false, mochila: 0, dormindo: 0 }); COLOSSOS.forEach(c => { c.alerta = 0; c.ataque = 0; c.perseguir = 0; }); }
   rachaduras.forEach((r, i) => { r.aberta = E.rachas.includes(i); r.g.visible = r.aberta; }); trajeMesh.visible = !E.traje; jog.fora = false; abrigo.visible = true; sup.visible = false; jog.dormindo = 0;
   if (!ehPiso(jog.x, jog.z)) { jog.x = -5; jog.z = -6; }
-  espalharCaixas(); $('menu').hidden = true; $('fim').hidden = true; jogando = true; pausado = false; document.body.classList.add('jogando'); $('mira').hidden = false; textoSil(); atualizarDroneHud(); prender();
+  espalharCaixas(); if (E.missoes && E.missoes.dia === dia()) desenharMissoes(); $('menu').hidden = true; $('fim').hidden = true; jogando = true; pausado = false; document.body.classList.add('jogando'); $('mira').hidden = false; textoSil(); atualizarDroneHud(); prender();
   aviso(dia() === 1 && E.min < 9 * 60 ? 'Dia 1. Aguente até o resgate no dia 10. Ouça o rádio na sala de controle.' : `Dia ${dia()}. Continue resistindo.`, 'info', 5);
   $('dicas').hidden = false; setTimeout(() => { $('dicas').hidden = true; }, 14000); }
-function abrirPausa() { if (!jogando || pausado) return; pausado = true; $('p-info').textContent = `Dia ${dia()} de ${diaResgate()} · saúde ${Math.round(E.saude)} · ${E.rachas.length} rachaduras abertas`; $('pausa').hidden = false; if (document.pointerLockElement) document.exitPointerLock(); }
+function abrirPausa() { if (!jogando || pausado) return; pausado = true; $('p-info').textContent = `Dia ${dia()} de ${diaResgate()} · saúde ${Math.round(E.saude)} · ${E.rachas.length} rachaduras abertas` + (E.missoes ? '\n\n📋 MISSÕES DO DIA:\n' + E.missoes.lista.map(m => `${m.feito ? '✅' : '▫'} ${m.txt} (${m.prog}/${m.meta}) · ${m.premio}🪙`).join('\n') : ''); $('pausa').hidden = false; if (document.pointerLockElement) document.exitPointerLock(); }
 function fecharPausa() { pausado = false; $('pausa').hidden = true; prender(); }
 function fimDeJogo(venceu) { jogando = false; document.body.classList.remove('jogando'); $('mira').hidden = true; $('acao').hidden = true; if (document.pointerLockElement) document.exitPointerLock();
   try { localStorage.removeItem(CHAVE); } catch (e) {}
@@ -1412,7 +1419,7 @@ function quadro(agora) { requestAnimationFrame(quadro);
   } else if (!jogando) { // menu: câmera passeando pela superfície com os colossos
     menuT += dt; abrigo.visible = false; sup.visible = true; perto = simularColossos(dt, false); jog.fora = true;
     const c = COLOSSOS[0]; camera.position.set(c.x + Math.cos(menuT * 0.05) * 70, 6 + Math.sin(menuT * 0.1) * 2, c.z + Math.sin(menuT * 0.05) * 70); camera.lookAt(c.x, 18, c.z); }
-  atualizarRede(dt); if (jogando && !pausado) atualizarRobo(dt);
+  atualizarRede(dt); if (jogando && !pausado) { atualizarRobo(dt); atualizarMonstros(dt); }
   if (jogando || !$('menu').hidden) atualizarVisual(dt, perto);
   if (!jogando && !$('menu').hidden) { camera.rotation.order = 'YXZ'; }
   if (avisoT > 0) { avisoT -= dt; if (avisoT <= 0) $('aviso').hidden = true; }
@@ -1790,7 +1797,7 @@ function atualizarRobo(dt) { const r = ROBO, t = performance.now() / 1000; r.t -
     case 'voltando': alvoX = r.base.x; alvoZ = r.base.z; vel = medo ? 5.5 : 3; if (Math.hypot(alvoX - r.x, alvoZ - r.z) < 1.5) { r.estado = 'consertando'; r.t = 3; } break;
     case 'consertando': if (r.t <= 0) { r.carga.visible = false; const q = 2; E.inv[r.item] += q; let fez = ''; if (E.casco < 100) { E.casco = Math.min(100, E.casco + 12); fez = ' e consertou o casco'; }
         const i = rachaduras.findIndex(rc => rc.aberta); if (i >= 0) { const rc = rachaduras[i]; rc.aberta = false; rc.g.visible = false; E.rachas = E.rachas.filter(k => k !== i); fez = ' e tapou uma rachadura'; }
-        ganhar(5, 'robô'); aviso(`🤖 O TICO voltou com ${q} ${NOMES[r.item][0]}${fez}!`, 'bom', 3.5); tom(700, 1100, 0.15, 'triangle', 0.05); r.estado = 'base'; r.t = 6; r.item = null; salvar(); } break;
+        ganhar(5, 'robô'); progressoMissao('robo'); aviso(`🤖 O TICO voltou com ${q} ${NOMES[r.item][0]}${fez}!`, 'bom', 3.5); tom(700, 1100, 0.15, 'triangle', 0.05); r.estado = 'base'; r.t = 6; r.item = null; salvar(); } break;
     case 'morto': if (r.t <= 0) { r.estado = 'base'; r.t = 5; r.x = r.base.x; r.z = r.base.z; r.casca.color.setHex(0xe8e4da); r.olhoM.color.setHex(0x5ae8ff); r.brilho.visible = true; r.item = null;
         aviso('🤖 Robô reconstruído! O TICO voltou ao trabalho.', 'bom', 4); [0, 0.15, 0.3].forEach(k => tom(400 + k * 1200, 800 + k * 900, 0.2, 'triangle', 0.05, k)); } break; }
   if (vel) { const dx = alvoX - r.x, dz = alvoZ - r.z, d = Math.hypot(dx, dz); const quer = Math.atan2(dx, dz); let dr = ((quer - r.rot + Math.PI * 3) % (Math.PI * 2)) - Math.PI; r.rot += clamp(dr, -4 * dt, 4 * dt); const passo = Math.min(d, vel * dt); r.x += Math.sin(r.rot) * passo; r.z += Math.cos(r.rot) * passo; r.fase += dt * vel * 3; }
@@ -1810,6 +1817,7 @@ function desenharRastreador() { const g = rtx, W = 240, c = 120, esc = 112 / 190
   LUGARES_ROBO.forEach(l => { const [x, y] = P(l.x, l.z); g.fillStyle = r.alvo === l && r.estado !== 'morto' ? '#ffd040' : 'rgba(200,220,210,.5)'; g.fillRect(x - 3, y - 3, 6, 6); if (!l.nome.startsWith('Ferro')) g.fillText(l.nome, x, y - 7); });
   g.fillStyle = '#ffb630'; g.fillRect(c - 5, c - 5, 10, 10);
   COLOSSOS.forEach(k => { const [x, y] = P(k.x, k.z); if (Math.hypot(x - c, y - c) > 116) return; g.fillStyle = k.fugindo ? 'rgba(255,120,90,.4)' : '#ff3a24'; g.beginPath(); g.arc(x, y, 6 + Math.sin(t * 6) * 1.2, 0, 7); g.fill(); });
+  MONSTROS.forEach(m => { if (m.morto > 0) return; const [x, y] = P(m.x, m.z); if (Math.hypot(x - c, y - c) > 116) return; g.fillStyle = m.tipo === 'rast' ? '#c070ff' : '#ffe040'; g.beginPath(); g.arc(x, y, 2.6, 0, 7); g.fill(); });
   if (jog.fora) { const [x, y] = P(jog.x, jog.z); g.fillStyle = '#64c8ff'; g.beginPath(); g.arc(x, y, 4, 0, 7); g.fill(); }
   if (r.estado === 'morto') { const [x, y] = P(r.morteX, r.morteZ); g.strokeStyle = '#ff3a24'; g.lineWidth = 3; g.beginPath(); g.moveTo(x - 6, y - 6); g.lineTo(x + 6, y + 6); g.moveTo(x + 6, y - 6); g.lineTo(x - 6, y + 6); g.stroke(); }
   else { const [x, y] = P(r.x, r.z); const dest = r.estado === 'indo' ? r.alvo : r.estado === 'voltando' ? r.base : null;
@@ -1817,6 +1825,69 @@ function desenharRastreador() { const g = rtx, W = 240, c = 120, esc = 112 / 190
       g.strokeStyle = 'rgba(255,208,64,' + (0.5 + Math.sin(t * 6) * 0.4) + ')'; g.beginPath(); g.arc(tx, ty, 8, 0, 7); g.stroke(); }
     g.save(); g.translate(x, y); g.rotate(-r.rot + Math.PI); g.fillStyle = '#5ae8ff'; g.shadowColor = '#5ae8ff'; g.shadowBlur = 8; g.beginPath(); g.moveTo(0, -8); g.lineTo(6, 6); g.lineTo(-6, 6); g.closePath(); g.fill(); g.restore(); }
   const txt = '🤖 TICO: ' + roboTexto(); if ($('r-txt').textContent !== txt) $('r-txt').textContent = txt; $('rastreador').classList.toggle('morto', r.estado === 'morto'); }
-Object.assign(window.__abrigo, { ROBO, matarRobo, LUGARES_ROBO, NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
+// ===================== MONSTROS MENORES: RASTEJADORES E VOADORES =====================
+const MONSTROS = [];
+const peleMon = std({ map: tPele, bumpMap: tPele, bumpScale: 0.05, color: 0x8a8278, roughness: 0.4, metalness: 0.3, emissive: 0xff3010, emissiveMap: tVeias, emissiveIntensity: 1.2 });
+const olhoMon = new THREE.MeshBasicMaterial({ color: 0xff2a10, toneMapped: false }), barrigaVoa = new THREE.MeshBasicMaterial({ color: 0xff7a20, toneMapped: false });
+const geoPata = new THREE.CylinderGeometry(0.035, 0.06, 0.75, 6).translate(0, -0.37, 0);
+function lugarLonge() { for (let k = 0; k < 60; k++) { const a = Math.random() * 6.28, d = 110 + Math.random() * 70, x = SX + Math.cos(a) * d, z = SZ + Math.sin(a) * d; if (!BLOQ.some(([bx, bz, br]) => Math.hypot(bx - x, bz - z) < br + 1)) return { x, z }; } return { x: SX + 150, z: SZ }; }
+function novoRastejador() { const g = new THREE.Group(); sup.add(g); const Rr = semente((Math.random() * 1e6) | 0);
+  const corpo = add(formaOrganica(0.5, 0.9, 0.55, 1.6, 22, Rr, 0.15), peleMon, 0, 0.55, 0, g, true);
+  const cab = add(formaOrganica(0.3, 1, 0.7, 1.2, 16, Rr, 0.2), peleMon, 0, 0.6, 0.85, g, true);
+  for (const x of [-0.12, 0.12, -0.2, 0.2]) add(new THREE.SphereGeometry(0.045, 8, 6), olhoMon, x, 0.68 + (Math.abs(x) > 0.15 ? 0.05 : 0), 1.15, g);
+  for (const sx of [-1, 1]) { const m = add(new THREE.ConeGeometry(0.06, 0.35, 6).rotateX(Math.PI / 2), M.branco, sx * 0.1, 0.5, 1.25, g); m.rotation.y = -sx * 0.4; }
+  const cauda = add(new THREE.ConeGeometry(0.12, 1.2, 8).rotateX(-Math.PI / 2), peleMon, 0, 0.6, -1.25, g, true);
+  const patas = []; for (let k = 0; k < 6; k++) { const sx = k % 2 ? 1 : -1, z = (Math.floor(k / 2) - 1) * 0.45, p = new THREE.Group(); p.position.set(sx * 0.35, 0.65, z); g.add(p); const m = new THREE.Mesh(geoPata, peleMon); m.rotation.z = sx * 0.9; p.add(m); patas.push({ p, sx, fase: k * 1.7 }); }
+  const L = lugarLonge(); const m = { tipo: 'rast', g, patas, cauda, x: L.x, z: L.z, rot: Math.random() * 6, hp: 30, morto: 0, alvo: lugarLonge(), mordeT: 0, fase: 0, caca: false }; MONSTROS.push(m); return m; }
+function novoVoador() { const g = new THREE.Group(); sup.add(g); const Rr = semente((Math.random() * 1e6) | 0);
+  add(formaOrganica(0.45, 0.7, 0.45, 1.8, 20, Rr, 0.15), peleMon, 0, 0, 0, g, true); add(new THREE.SphereGeometry(0.22, 10, 8), barrigaVoa, 0, -0.25, 0.1, g);
+  for (const x of [-0.12, 0.12]) add(new THREE.SphereGeometry(0.06, 8, 6), olhoMon, x, 0.08, 0.78, g);
+  const asaGeo = new THREE.BufferGeometry(); asaGeo.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0.5, 0, 0, -0.6, 2.6, 0.1, -0.9, 2.2, 0, 0.3, 0, 0, 0.5, 2.6, 0.1, -0.9], 3)); asaGeo.computeVertexNormals();
+  const asaM = new THREE.MeshStandardMaterial({ color: 0x2a2420, roughness: 0.6, side: THREE.DoubleSide, emissive: 0x401008, emissiveIntensity: 0.6 });
+  const asas = [-1, 1].map(s => { const a = new THREE.Group(); a.scale.x = s; g.add(a); a.add(new THREE.Mesh(asaGeo, asaM)); return a; });
+  const L = lugarLonge(); const m = { tipo: 'voa', g, asas, x: L.x, z: L.z, y: 22, rot: 0, hp: 20, morto: 0, cx: L.x, cz: L.z, ang: Math.random() * 6, mergulho: 0, prox: 6 + Math.random() * 8, fase: Math.random() * 6 }; MONSTROS.push(m); return m; }
+for (let i = 0; i < 8; i++) novoRastejador(); for (let i = 0; i < 4; i++) novoVoador();
+function ferirMonstro(m, dano) { if (m.morto > 0) return; m.hp -= dano; m.caca = true; if (m.hp > 0) return;
+  m.morto = m.tipo === 'rast' ? 40 : 50; m.g.visible = false; explodir(new THREE.Vector3(m.x, m.tipo === 'voa' ? m.y : 0.8, m.z), 0.4);
+  if (m.tipo === 'rast') { ganhar(8, 'rastejador'); progressoMissao('rast'); } else { ganhar(12, 'voador'); progressoMissao('voa'); }
+  [0, 0.1].forEach(t => tom(300 - t * 900, 60, 0.3, 'sawtooth', 0.05, t)); }
+function morder(dano, txt) { if (!jogando || jog.dormindo) return; E.saude -= dano * (E.traje ? 0.8 : 1); tremor = Math.max(tremor, 0.6); $('dano').style.opacity = 1; setTimeout(() => { $('dano').style.opacity = 0; }, 350); aviso(txt, 'ruim', 1.5); tom(160, 80, 0.2, 'sawtooth', 0.07); }
+function atualizarMonstros(dt) { const t = performance.now() / 1000, nt = noite(), fora = jog.fora, esc = temEscudo(), rEsc = raioEscudo(), lasers = E.armas !== false && NV('torres') > 0;
+  for (const m of MONSTROS) {
+    if (m.morto > 0) { m.morto -= dt; if (m.morto <= 0) { const L = lugarLonge(); m.x = L.x; m.z = L.z; m.hp = m.tipo === 'rast' ? 30 : 20; m.g.visible = true; m.caca = false; if (m.tipo === 'voa') { m.cx = L.x; m.cz = L.z; m.mergulho = 0; } } continue; }
+    const dJ = Math.hypot(jog.x - m.x, jog.z - m.z), dBase = Math.hypot(m.x - SX, m.z - (SZ - 5));
+    // torres de laser do abrigo também acertam os monstros pequenos
+    if (lasers && dBase < 34 && Math.random() < dt * 2) { ferirMonstro(m, 10); laserVis = 0.1; }
+    if (m.tipo === 'rast') { const ve = (nt ? 52 : 34);
+      if (fora && (dJ < ve || m.caca) && dJ < 80 && !(esc && Math.hypot(jog.x - SX, jog.z - (SZ - 5)) < rEsc)) { m.caca = true; m.tx = jog.x; m.tz = jog.z; } else { m.caca = false; if (Math.hypot(m.alvo.x - m.x, m.alvo.z - m.z) < 3) m.alvo = lugarLonge(); m.tx = m.alvo.x; m.tz = m.alvo.z; }
+      // o robô também é caçado
+      const r = ROBO; if (r.estado !== 'morto' && r.estado !== 'base' && r.estado !== 'consertando') { const dR = Math.hypot(r.x - m.x, r.z - m.z); if (!m.caca && dR < 25) { m.tx = r.x; m.tz = r.z; } if (dR < 1.4) matarRobo('UM RASTEJADOR ATACOU O ROBÔ! O robô morreu.'); }
+      const dx = m.tx - m.x, dz = m.tz - m.z, d = Math.hypot(dx, dz), vel = m.caca ? (nt ? 4 : 3.6) : 1.6;
+      const quer = Math.atan2(dx, dz); let dr = ((quer - m.rot + Math.PI * 3) % (Math.PI * 2)) - Math.PI; m.rot += clamp(dr, -5 * dt, 5 * dt);
+      if (d > 1.3) { m.x += Math.sin(m.rot) * vel * dt; m.z += Math.cos(m.rot) * vel * dt; m.fase += dt * vel * 4; }
+      if (esc) { const ex = m.x - SX, ez = m.z - (SZ - 5), de = Math.hypot(ex, ez); if (de < rEsc + 1) { m.x = SX + ex / de * (rEsc + 1); m.z = SZ - 5 + ez / de * (rEsc + 1); } } // o escudo não deixa entrar
+      m.mordeT -= dt; if (fora && m.caca && dJ < 1.6 && m.mordeT <= 0) { m.mordeT = 0.9; morder(6, '🦂 UM RASTEJADOR TE MORDEU! Atire ou corra!'); }
+      m.g.position.set(m.x, 0, m.z); m.g.rotation.y = m.rot; m.patas.forEach(p => { p.p.rotation.x = Math.sin(m.fase + p.fase) * 0.6; p.p.rotation.z = Math.max(0, Math.cos(m.fase + p.fase)) * 0.3 * p.sx; }); m.cauda.rotation.y = Math.sin(t * 6 + m.fase) * 0.3;
+      if (m.caca && Math.random() < dt * 0.4 && dJ < 40) tom(900 + Math.random() * 400, 300, 0.15, 'sawtooth', 0.025 * clamp(1 - dJ / 40, 0, 1)); }
+    else { m.fase += dt;
+      if (m.mergulho > 0) { const dx = jog.x - m.x, dz = jog.z - m.z, d = Math.hypot(dx, dz); m.rot = Math.atan2(dx, dz); m.x += dx / Math.max(d, 0.1) * 16 * dt; m.z += dz / Math.max(d, 0.1) * 16 * dt; m.y = Math.max(2, m.y - 12 * dt); m.mergulho -= dt;
+        if (Math.hypot(jog.x - m.x, jog.z - m.z) < 2.2 && m.y < 4) { morder(10, '🦇 UM VOADOR TE ATACOU DO CÉU!'); m.mergulho = 0; } if (!fora) m.mergulho = 0; }
+      else { m.ang += dt * 0.35; const R = 14; const tx = m.cx + Math.cos(m.ang) * R, tz = m.cz + Math.sin(m.ang) * R; m.rot = Math.atan2(tx - m.x, tz - m.z); m.x = lerp(m.x, tx, dt * 1.5); m.z = lerp(m.z, tz, dt * 1.5); m.y = lerp(m.y, 20 + Math.sin(m.fase * 0.5) * 4, dt);
+        if (fora) { if (dJ < 70) { m.cx = lerp(m.cx, jog.x, dt * 0.3); m.cz = lerp(m.cz, jog.z, dt * 0.3); m.prox -= dt; if (m.prox <= 0 && !(esc && Math.hypot(jog.x - SX, jog.z - (SZ - 5)) < rEsc)) { m.prox = (nt ? 6 : 9) + Math.random() * 8; m.mergulho = 2.6; tom(1400, 500, 0.5, 'sawtooth', 0.04); } } } }
+      m.g.position.set(m.x, m.y, m.z); m.g.rotation.set(m.mergulho > 0 ? 0.5 : 0, m.rot, Math.sin(m.fase) * 0.2); const bate = Math.sin(m.fase * (m.mergulho > 0 ? 4 : 9)) * 0.6; m.asas.forEach(a => { a.rotation.z = bate; }); } }
+  if (fora) missaoForaT += dt; if (missaoForaT >= 60) { missaoForaT = -1e9; progressoMissao('fora'); }
+  if (!E.missoes || E.missoes.dia !== dia()) novasMissoes(); }
+// ===================== MISSÕES DO DIA =====================
+let missaoForaT = 0;
+const MISSOES = [['caixa', 'Abra 3 caixas de suprimentos', 3, 40], ['rast', 'Derrote 4 rastejadores', 4, 50], ['voa', 'Derrube 2 voadores', 2, 50], ['saque', 'Pegue coisas em 2 lugares (posto, mercado ou hospital)', 2, 40],
+  ['gig', 'Faça um gigante fugir', 1, 80], ['robo', 'O robô TICO precisa voltar 2 vezes com materiais', 2, 30], ['horta', 'Colha a horta da estufa', 1, 20], ['fora', 'Fique 1 minuto lá fora na superfície', 1, 30]];
+function novasMissoes() { const pool = MISSOES.slice().sort(() => Math.random() - 0.5).slice(0, 3); E.missoes = { dia: dia(), lista: pool.map(([id, txt, meta, premio]) => ({ id, txt, meta, prog: 0, premio, feito: false })) }; missaoForaT = 0; desenharMissoes(); if (jogando) aviso('📋 Novas missões do dia! Veja no painel MISSÕES.', 'info', 4); }
+function progressoMissao(id, n = 1) { if (!E || !E.missoes) return; E.missoes.lista.forEach(m => { if (m.id !== id || m.feito) return; m.prog = Math.min(m.meta, m.prog + n);
+    if (m.prog >= m.meta) { m.feito = true; ganhar(m.premio, 'missão'); aviso(`✅ MISSÃO COMPLETA: ${m.txt}! +${m.premio} 🪙`, 'bom', 5); [0, 0.12, 0.24, 0.36].forEach((k, i) => tom(500 + i * 200, 900 + i * 200, 0.18, 'triangle', 0.06, k));
+      if (E.missoes.lista.every(x => x.feito)) setTimeout(() => { ganhar(60, 'bônus'); aviso('🏆 TODAS AS MISSÕES DO DIA! Bônus +60 🪙', 'bom', 5); }, 2500); } });
+  desenharMissoes(); }
+function desenharMissoes() { const el = $('missoes'); if (!el || !E || !E.missoes) return; el.innerHTML = '<b>📋 MISSÕES DO DIA</b>';
+  E.missoes.lista.forEach(m => { const d = document.createElement('div'); d.className = 'mis' + (m.feito ? ' ok' : ''); d.textContent = `${m.feito ? '✅' : '▫'} ${m.txt} ${m.meta > 1 ? `(${m.prog}/${m.meta})` : ''} · ${m.premio}🪙`; el.appendChild(d); }); }
+Object.assign(window.__abrigo, { MONSTROS, ferirMonstro, progressoMissao, novasMissoes, ROBO, matarRobo, LUGARES_ROBO, NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
 })();
 </script>
