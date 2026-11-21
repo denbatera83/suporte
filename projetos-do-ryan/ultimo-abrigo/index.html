@@ -266,7 +266,7 @@
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 2.3 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 2.4 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -301,6 +301,8 @@
   <div class="m-painel" id="pm-config" hidden><div class="m-caixa"><div class="m-cab"><h2>⚙ Configurações</h2><button type="button" class="m-fechar" aria-label="Fechar">✕</button></div>
     <div class="linha"><span class="rot">Gráficos</span><div class="linha" id="qual" role="group" aria-label="Gráficos"><button type="button" data-q="0">Leve</button><button type="button" data-q="1">Normal</button><button type="button" data-q="2">Ultra</button></div></div>
     <div class="linha"><button id="b-tela" type="button">⛶ Tela cheia</button><button id="b-mic" type="button" aria-pressed="false">🎤 Microfone: desligado</button></div>
+    <div class="linha"><button id="b-eco" type="button" aria-pressed="true">🔋 Economia de bateria</button></div>
+    <p class="mic-nota">Economia de bateria: o jogo roda a 30 quadros por segundo com imagem um pouco menor e quase para no menu e na pausa.</p>
     <p class="mic-nota" id="mic-nota">Com o microfone ligado, os colossos ouvem a sua voz de verdade. Fale baixinho!</p>
   </div></div>
 </div>
@@ -309,6 +311,7 @@
     <h2>Pausa</h2>
     <p class="sub" id="p-info" style="white-space:pre-line"></p>
     <button class="principal" id="p-voltar" type="button">Continuar</button>
+    <button id="p-eco" type="button">🔋 Economia de bateria</button>
     <button id="p-menu" type="button">Salvar e sair</button>
   </div>
 </div>
@@ -355,7 +358,9 @@ let qual = toque ? 0 : 1; try { const q = localStorage.getItem('abrigo-q'); if (
 const Q = [{ pr: 1, bloom: false, ruinas: 60, sombra: 0 }, { pr: 1.5, bloom: true, ruinas: 110, sombra: 0 }, { pr: 2, bloom: true, ruinas: 170, sombra: 2048 }][qual];
 const canvas = $('cena');
 const Rd = new THREE.WebGLRenderer({ canvas, antialias: qual > 0, powerPreference: 'high-performance' });
-Rd.setPixelRatio(Math.min(devicePixelRatio || 1, Q.pr)); Rd.outputEncoding = THREE.sRGBEncoding; Rd.toneMapping = THREE.ACESFilmicToneMapping; Rd.toneMappingExposure = 1.1;
+let eco = toque; try { const v = localStorage.getItem('abrigo-eco'); if (v !== null) eco = v === '1'; } catch (e) {}
+const prBase = () => Math.min(devicePixelRatio || 1, Q.pr) * (eco ? 0.7 : 1);
+Rd.setPixelRatio(prBase()); Rd.outputEncoding = THREE.sRGBEncoding; Rd.toneMapping = THREE.ACESFilmicToneMapping; Rd.toneMappingExposure = 1.1;
 Rd.shadowMap.enabled = Q.sombra > 0; Rd.shadowMap.type = THREE.PCFSoftShadowMap;
 const cena = new THREE.Scene(); cena.background = new THREE.Color(0x050605);
 cena.fog = new THREE.FogExp2(0x050605, 0.03);
@@ -1293,9 +1298,14 @@ const CAMS_SEG = (() => { const posto = MARCOS.find(m => m.lugar === 'posto'), m
 let segT = 0;
 function filmarSeguranca(dt) { const dentro = !jog.fora && jogando && jog.x < -3.2 && jog.z < -23.5; segT -= dt;
   SEG.telas.forEach(t => { const m = t.tela.material; if (dentro && m.map !== t.rt.texture) { m.map = t.rt.texture; m.needsUpdate = true; } });
-  if (!dentro || segT > 0) return; segT = 1 / 30; const k = SEG.i++ % 4, cam = CAMS_SEG[k];
+  if (!dentro || segT > 0) return; segT = eco ? 1 / 10 : 1 / 30; const k = SEG.i++ % 4, cam = CAMS_SEG[k];
   if (k === 3) { let alvo = null, md = 1e9; COLOSSOS.forEach(c => { const d = Math.hypot(c.x - SX, c.z - SZ); if (d < md) { md = d; alvo = c; } }); if (alvo) cam.lookAt(alvo.x, 18, alvo.z); }
   filmarSup(cam, SEG.telas[k].rt); }
+// som desligado quando o jogo some da tela (economiza bateria)
+document.addEventListener('visibilitychange', () => { try { if (!AC) return; if (document.hidden) AC.suspend(); else if (jogando && !pausado) AC.resume(); } catch (e) {} });
+function textoEco() { const t = eco ? '🔋 Economia de bateria: LIGADA' : '🔋 Economia de bateria: desligada'; ['b-eco', 'p-eco'].forEach(id => { const b = $(id); if (b) { b.textContent = t; b.setAttribute('aria-pressed', String(eco)); } }); }
+function mudarEco() { eco = !eco; try { localStorage.setItem('abrigo-eco', eco ? '1' : '0'); } catch (e) {} Rd.setPixelRatio(prBase()); tamanho(); textoEco(); }
+['b-eco', 'p-eco'].forEach(id => { const b = $(id); if (b) b.addEventListener('click', mudarEco); }); textoEco();
 canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); if (window.__mostrarErro) __mostrarErro('A placa de vídeo do celular travou (WebGL perdido). Abra de novo e escolha Gráficos: LEVE em Configurações.'); });
 const errosVistos = {}; function seguro(nome, fn) { try { fn(); } catch (e) { if (!errosVistos[nome]) { errosVistos[nome] = 1; if (window.__mostrarErro) __mostrarErro(nome + ': ' + (e && e.message)); } } }
 function atualizarVisual(dt, perto) {
@@ -1307,7 +1317,7 @@ function atualizarVisual(dt, perto) {
   lanterna.intensity = jog.lanterna ? (jog.fora ? 4 : 3) : 0; lanterna.position.copy(camera.position); const fw = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); lanterna.target.position.copy(camera.position).addScaledVector(fw, 5);
   portaE.position.x = lerp(portaE.position.x, -0.71 - portaAbre * 1.4, Math.min(1, dt * 4)); portaD.position.x = lerp(portaD.position.x, 0.71 + portaAbre * 1.4, Math.min(1, dt * 4)); { const u = portaSaida.userData; u.volante.rotation.z = lerp(u.volante.rotation.z, portaAbre * Math.PI * 2, Math.min(1, dt * 3)); u.giroflex.rotation.y += dt * (portaAbre > 0.05 ? 8 : 0); u.luzGiro.intensity = portaAbre > 0.05 ? 3 : 0; u.luzPressao.material.color.setHex(portaAbre > 0.05 ? (Math.sin(performance.now() / 120) > 0 ? 0xff3020 : 0x300000) : 0x40ff60); }
   luzSaida.intensity = 0.7 + Math.sin(t * 2.5) * 0.3;
-  janelaT -= dt; if (janelaT <= 0) { janelaT = 1 / 24; seguro('janela', filmarJanela); }
+  janelaT -= dt; if (janelaT <= 0) { janelaT = eco ? 1 / 10 : 1 / 24; seguro('janela', filmarJanela); }
   seguro('cameras', () => filmarSeguranca(dt));
   MARCOS.forEach(m => { const livre = m.lugar === 'torre' ? !E.sinal : E.coletas[m.lugar] !== dia(); m.feixe.visible = livre && Math.hypot(jog.x - m.x, jog.z - m.z) > 22; m.feixe.material.opacity = 0.18 + Math.sin(t * 2 + m.x) * 0.06; });
   torreLuz.material.emissiveIntensity = Math.sin(t * 3) > 0 ? 4 : 0.3;
@@ -1408,7 +1418,11 @@ function nevoaAssusta(dt, t, nt) { animarInvasao(dt, t);
   // sons de longe
   somT -= dt; if (somT <= 0) { somT = rr(9, 22); const r = Math.random(); if (r < 0.4) uivo(); else if (r < 0.75) rangido(); else sussurro(); }
 }
+let ultimoQuadro = 0;
 function quadro(agora) { requestAnimationFrame(quadro);
+  // economia de bateria: 30 quadros por segundo jogando, quase parado no menu e na pausa
+  const parado = document.hidden || !$('menu').hidden || pausado || !$('fim').hidden; const alvoFps = parado ? 4 : eco ? 30 : 120;
+  if (agora - ultimoQuadro < 1000 / alvoFps - 3) return; ultimoQuadro = agora;
   const dt = Math.min(0.05, (agora - antes) / 1000) * (window.__vel || 1); antes = agora;
   let correndo = 0, perto = 999;
   lerMic(dt);
@@ -1433,7 +1447,7 @@ function quadro(agora) { requestAnimationFrame(quadro);
   if (jogando || !$('menu').hidden) atualizarVisual(dt, perto);
   if (!jogando && !$('menu').hidden) { camera.rotation.order = 'YXZ'; }
   if (avisoT > 0) { avisoT -= dt; if (avisoT <= 0) $('aviso').hidden = true; }
-  if (jogando || $('menu').hidden) { if (composer) composer.render(); else Rd.render(cena, camera); } }
+  if ((jogando && !pausado) || ($('menu').hidden && !jogando && $('fim').hidden)) { if (composer) composer.render(); else Rd.render(cena, camera); } }
 requestAnimationFrame(quadro);
 window.__abrigo = { jan: () => ({ janelaRT, Rd, camJanela }), camera, MARCOS, mic, E: () => E, jog, salvar, COLOSSOS, usar, rachaduras, ataqueAoAbrigo: () => ataqueAoAbrigo(COLOSSOS[0]), irPara, comecar, OLHOS, NEBLINA, escudo, ceu, cena, raio: () => { raioT = 0; } };
 
