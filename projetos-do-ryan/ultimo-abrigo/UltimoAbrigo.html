@@ -262,7 +262,7 @@
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 2.0 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 2.1 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -2541,7 +2541,9 @@ async function cerebroIA(txt) { const turnos = historico.slice(-10).map(h => ({ 
 
 // ---- conversa ----
 function addMsg(txt, quem) { const d = document.createElement('div'); d.className = 'msg ' + quem; d.textContent = txt; const box = $('c-msgs'); box.appendChild(d); while (box.children.length > 60) box.firstChild.remove(); box.scrollTop = box.scrollHeight; return d; }
+window.__irisFalando = v => { falando = !!v; };
 function falar(txt) { if (!vozLigada) return; const limpo = txt.replace(/[\u{1F000}-\u{1FFFF}☀-➿️]/gu, '').replace(/\s+/g, ' ').trim(); if (!limpo) return;
+  if (window.IrisVoz && IrisVoz.pronta()) { try { IrisVoz.falar(limpo.slice(0, 1900)); falando = true; clearTimeout(falar.t); falar.t = setTimeout(() => { falando = false; }, 800 + limpo.length * 75); } catch (e) {} return; }
   if (tts) { const r = tts.speak(limpo.slice(0, 1900), { language: 'pt-BR', voice: 'airy' }); if (r && r.catch) r.catch(() => {}); return; }
   try { if (!window.speechSynthesis) return; speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(limpo); u.lang = 'pt-BR'; u.rate = 1.05; u.pitch = 1.25;
     const v = speechSynthesis.getVoices().find(v => /pt[-_]BR/i.test(v.lang)) || speechSynthesis.getVoices().find(v => /^pt/i.test(v.lang)); if (v) u.voice = v;
@@ -2565,7 +2567,9 @@ $('c-auto').addEventListener('click', () => { const r = mudarAuto(!E.auto); addM
 const bTiro = $('t-tiro'); bTiro.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); iniciarAudio(); atirando = true; bTiro.classList.add('on'); try { bTiro.setPointerCapture(e.pointerId); } catch (er) {} });
 ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => bTiro.addEventListener(ev, () => { atirando = false; bTiro.classList.remove('on'); }));
 $('c-voz').setAttribute('aria-pressed', String(vozLigada));
-$('c-voz').addEventListener('click', () => { vozLigada = !vozLigada; $('c-voz').setAttribute('aria-pressed', String(vozLigada)); $('c-voz').textContent = vozLigada ? '🔊' : '🔇'; try { localStorage.setItem('abrigo-voz', vozLigada ? '1' : '0'); } catch (e) {} if (!vozLigada) { if (tts) tts.stop(); else if (window.speechSynthesis) speechSynthesis.cancel(); } });
+$('c-voz').addEventListener('click', () => { vozLigada = !vozLigada; $('c-voz').setAttribute('aria-pressed', String(vozLigada)); $('c-voz').textContent = vozLigada ? '🔊' : '🔇'; try { localStorage.setItem('abrigo-voz', vozLigada ? '1' : '0'); } catch (e) {} if (!vozLigada) { try { if (window.IrisVoz) IrisVoz.parar(); } catch (e) {} if (tts) tts.stop(); else if (window.speechSynthesis) speechSynthesis.cancel(); } });
+// no celular, o navegador só deixa falar depois do primeiro toque: destrava a voz no primeiro toque
+addEventListener('pointerdown', function destravar() { removeEventListener('pointerdown', destravar); try { if (window.speechSynthesis && !window.IrisVoz) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); speechSynthesis.getVoices(); } } catch (e) {} }, { capture: true });
 if (!vozLigada) $('c-voz').textContent = '🔇';
 ['pointerdown', 'keydown', 'keyup', 'touchstart'].forEach(ev => $('chat').addEventListener(ev, e => { e.stopPropagation(); if (ev === 'keydown' && e.key === 'Escape') fecharChat(); }));
 $('b-iris').addEventListener('pointerdown', e => e.stopPropagation()); $('b-iris').addEventListener('click', e => { e.stopPropagation(); abrirChat(); });

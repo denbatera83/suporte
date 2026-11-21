@@ -16,7 +16,11 @@ import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
+import android.webkit.JavascriptInterface;
 import java.io.InputStream;
+import java.util.Locale;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,6 +29,16 @@ public class MainActivity extends Activity {
     private static final String CASA = "appassets.androidplatform.net";
     private WebView web;
     private PermissionRequest pedido;
+    private TextToSpeech voz;
+    private boolean vozPronta = false;
+
+    /** Voz da ÍRIS: o WebView do Android não tem voz própria, então usamos a voz do sistema. */
+    public class Voz {
+        @JavascriptInterface public boolean pronta() { return vozPronta; }
+        @JavascriptInterface public void falar(String t) { if (voz != null && vozPronta && t != null) voz.speak(t, TextToSpeech.QUEUE_FLUSH, null, "iris"); }
+        @JavascriptInterface public void parar() { if (voz != null) voz.stop(); }
+    }
+    private void avisarJs(final boolean f) { if (web != null) web.post(new Runnable() { public void run() { web.evaluateJavascript("window.__irisFalando && window.__irisFalando(" + f + ")", null); } }); }
 
     private static String tipo(String c) {
         if (c.endsWith(".html")) return "text/html";
@@ -61,6 +75,17 @@ public class MainActivity extends Activity {
                 } });
             }
         });
+        voz = new TextToSpeech(this, new TextToSpeech.OnInitListener() { public void onInit(int st) {
+            if (st != TextToSpeech.SUCCESS) return;
+            int r = voz.setLanguage(new Locale("pt", "BR")); if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) voz.setLanguage(new Locale("pt"));
+            voz.setPitch(1.2f); voz.setSpeechRate(1.05f); vozPronta = true;
+            voz.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                @Override public void onStart(String id) { avisarJs(true); }
+                @Override public void onDone(String id) { avisarJs(false); }
+                @Override public void onError(String id) { avisarJs(false); }
+            });
+        } });
+        web.addJavascriptInterface(new Voz(), "IrisVoz");
         setContentView(web);
         esconderBarras();
         web.loadUrl("https://" + CASA + "/index.html");
@@ -76,5 +101,6 @@ public class MainActivity extends Activity {
         if (res.length > 0 && res[0] == PackageManager.PERMISSION_GRANTED) pedido.grant(pedido.getResources()); else pedido.deny();
         pedido = null;
     }
+    @Override protected void onDestroy() { if (voz != null) voz.shutdown(); super.onDestroy(); }
     @Override public void onBackPressed() { finish(); }
 }
