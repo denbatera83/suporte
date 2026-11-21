@@ -115,7 +115,7 @@
   #dano { position: fixed; inset: 0; z-index: 2; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, transparent 40%, rgba(255,40,20,.5)); transition: opacity .3s; }
   #fade { position: fixed; inset: 0; z-index: 9; background: #000; opacity: 0; pointer-events: none; transition: opacity .6s; }
   #fade.ver { opacity: 1; }
-  #dicas { left: max(12px, env(safe-area-inset-left, 0px)); bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + 96px); max-width: 300px; font: 500 12px/1.7 var(--mono); color: var(--suave); }
+  #dicas { right: max(12px, env(safe-area-inset-right, 0px)); bottom: calc(max(12px, env(safe-area-inset-bottom, 0px)) + 12px); text-align: right; max-width: 300px; font: 500 12px/1.7 var(--mono); color: var(--suave); }
   kbd { font: 600 12px var(--mono); padding: 0 5px; border-radius: 3px; border: 1px solid var(--linha); color: var(--tinta); }
   body.toque #dicas { display: none !important; }
   /* toque */
@@ -262,7 +262,7 @@
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 1.9 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 2.0 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -1370,7 +1370,7 @@ function add(geo, mat, x, y, z, pai = cena, sombra = false) { const m = new THRE
 // coluna c -> x = c - 9.5 ; linha r -> z = -r - 0.5
 const COLS = 32, LINHAS = 32, ALT = 3, PISO = new Uint8Array(COLS * LINHAS);
 const ret = (c0, c1, r0, r1) => { for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) PISO[r * COLS + c] = 1; };
-ret(9, 10, 1, 27); ret(1, 7, 3, 9); ret(12, 18, 3, 9); ret(1, 7, 13, 20); ret(12, 18, 13, 20); ret(7, 12, 24, 30);
+ret(9, 10, 1, 27); ret(1, 7, 3, 9); ret(12, 18, 3, 9); ret(1, 7, 13, 20); ret(12, 18, 13, 20); ret(7, 12, 24, 30); ret(1, 5, 24, 30); ret(6, 6, 28, 29);
 ret(8, 8, 5, 6); ret(11, 11, 5, 6); ret(8, 8, 16, 17); ret(11, 11, 16, 17);
 // ala nova: passagem de cima, corredor leste, estufa, arsenal e núcleo da ÍRIS
 ret(9, 21, 0, 1); ret(20, 21, 0, 27); ret(19, 19, 5, 6); ret(19, 19, 16, 17); ret(23, 30, 3, 9); ret(22, 22, 5, 6); ret(23, 30, 13, 20); ret(22, 22, 16, 17); ret(17, 26, 24, 30);
@@ -1538,7 +1538,7 @@ montarDrone(droneMesh);
 // ===== painel de proteção (sala de controle) =====
 { const t = tex(512, 320, (g, w, h) => { g.fillStyle = '#04141c'; g.fillRect(0, 0, w, h); g.strokeStyle = '#3ccfff'; g.lineWidth = 4; g.strokeRect(6, 6, w - 12, h - 12); g.fillStyle = '#7fe8ff'; g.font = '700 36px Oswald, Arial'; g.fillText('ABRIGO 7 · PROTEÇÃO MÁXIMA', 24, 54);
     g.font = '600 24px Arial'; ['🛡  Escudo de energia: ATIVO', '🧱  Paredes de titânio: 5 metros', '🔫  Torres de laser: 2', '☀  Placas solares: energia ∞', '🛸  Drone de suprimentos: pronto', '🤖  ÍRIS: online'].forEach((l, i) => { g.fillStyle = '#d8f6ff'; g.fillText(l, 30, 100 + i * 36); }); });
-  add(new THREE.PlaneGeometry(2.4, 1.5), std({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.9 }), 8.97, 1.7, -16.5, abrigo).rotation.y = -Math.PI / 2; }
+  add(new THREE.PlaneGeometry(2.4, 1.5), std({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.9 }), 4.4, 1.7, -13.03, abrigo).rotation.y = Math.PI; }
 { const t = tex(512, 96, (g, w, h) => { g.fillStyle = '#04141c'; g.fillRect(0, 0, w, h); g.fillStyle = '#7fe8ff'; g.font = '700 50px Oswald, Arial'; g.textAlign = 'center'; g.fillText('ABRIGO 7 · BEM-VINDO', w / 2, 66); });
   add(new THREE.PlaneGeometry(1.9, 0.36), std({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 1 }), 0, 2.6, -0.02, abrigo).rotation.y = Math.PI; }
 // ===== ALA NOVA =====
@@ -1613,6 +1613,42 @@ const VISUAIS = [ // por nível do casco: textura, brilho do metal, cor do neon,
 function visualAbrigo(n) { if (VIS.nivel === n) return VISUAIS[n]; VIS.nivel = n; const v = VISUAIS[n], fonte = v.ferr ? VIS.ferr : VIS.orig;
   for (const k of ['parede', 'piso', 'teto']) { M[k].map = fonte[k]; M[k].needsUpdate = true; } M.parede.roughness = v.rough; M.parede.metalness = v.metal; M.piso.roughness = v.rough * 0.8; M.piso.metalness = v.metal;
   M.metal.color.setHex(v.ferr ? 0x6a4a35 : 0x6d7268); M.luz.emissive.setHex(v.lamp); LUZES.forEach(L => L.l.color.setHex(v.luz)); return v; }
+
+// ===================== SALA DE SEGURANÇA: 4 telas com câmeras ao vivo lá fora =====================
+const SEG = { telas: [], cams: [], i: 0 };
+{ const mesaS = grupo(-8.35, 0, -27.5, Math.PI / 2);
+  const tampo = std({ color: 0x2c3034, roughness: 0.5, metalness: 0.6 });
+  add(new THREE.BoxGeometry(2.8, 0.06, 0.95), tampo, 0, 0.78, 0, mesaS, true); add(new THREE.BoxGeometry(2.8, 0.04, 0.96), M.neon, 0, 0.75, 0, mesaS);
+  for (const [x, z] of [[-1.3, -0.4], [1.3, -0.4], [-1.3, 0.4], [1.3, 0.4]]) add(new THREE.BoxGeometry(0.06, 0.76, 0.06), M.metalEsc, x, 0.38, z, mesaS);
+  // computador (gabinete), teclado e mouse
+  const pc = add(new THREE.BoxGeometry(0.22, 0.48, 0.5), std({ color: 0x15181b, roughness: 0.4, metalness: 0.7 }), 0.95, 0.25, 0.05, mesaS, true); add(new THREE.BoxGeometry(0.02, 0.36, 0.01), new THREE.MeshBasicMaterial({ color: 0x3ccfff, toneMapped: false }), 0.95, 0.27, 0.31, mesaS);
+  add(new THREE.SphereGeometry(0.015, 8, 6), new THREE.MeshBasicMaterial({ color: 0x40ff60, toneMapped: false }), 0.95, 0.44, 0.31, mesaS);
+  const tTec = tex(256, 96, (g, w, h) => { g.fillStyle = '#16181a'; g.fillRect(0, 0, w, h); g.fillStyle = '#3a3f44'; for (let r = 0; r < 4; r++) for (let c = 0; c < 14; c++) g.fillRect(6 + c * 17.6 + r * 3, 8 + r * 21, 14, 16); g.fillRect(60, 8 + 4 * 21 - 2, 120, 10); });
+  add(new THREE.BoxGeometry(0.5, 0.025, 0.17), std({ map: tTec, roughness: 0.6 }), -0.05, 0.825, 0.18, mesaS);
+  const mouse = add(new THREE.SphereGeometry(0.04, 12, 8), std({ color: 0x1a1d20, roughness: 0.4 }), 0.35, 0.82, 0.2, mesaS); mouse.scale.set(0.75, 0.45, 1.15); add(new THREE.BoxGeometry(0.22, 0.004, 0.18), std({ color: 0x0c2a36 }), 0.35, 0.812, 0.2, mesaS);
+  add(new THREE.CylinderGeometry(0.04, 0.05, 0.12, 12), M.branco, -0.8, 0.86, 0.25, mesaS); // caneca
+  // cadeira
+  const cad = grupo(-7.35, 0, -27.4, -Math.PI / 2); add(new THREE.BoxGeometry(0.5, 0.08, 0.5), std({ color: 0x1a1d20, roughness: 0.8 }), 0, 0.5, 0, cad); add(new THREE.BoxGeometry(0.5, 0.6, 0.07), std({ color: 0x1a1d20, roughness: 0.8 }), 0, 0.85, -0.24, cad); add(new THREE.CylinderGeometry(0.04, 0.04, 0.45, 8), M.metal, 0, 0.25, 0, cad);
+  for (let k = 0; k < 5; k++) { const a = k / 5 * 6.28; add(new THREE.BoxGeometry(0.04, 0.03, 0.3), M.metal, Math.sin(a) * 0.14, 0.04, Math.cos(a) * 0.14, cad).rotation.y = a; }
+  // suporte de parede com as 4 telas
+  add(new THREE.BoxGeometry(2.25, 1.38, 0.08), M.metalEsc, -8.95, 1.78, -27.5, abrigo).rotation.y = Math.PI / 2;
+  const nomes = ['CAM 1 · ENTRADA', 'CAM 2 · POSTO', 'CAM 3 · MERCADO', 'CAM 4 · GIGANTE'];
+  nomes.forEach((nome, k) => { const z = -27.5 + (k % 2 ? -0.55 : 0.55), y = k < 2 ? 2.12 : 1.44;
+    const rt = new THREE.WebGLRenderTarget(320, 200, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+    const g = new THREE.Group(); g.position.set(-8.88, y, z); g.rotation.y = Math.PI / 2; abrigo.add(g);
+    add(new THREE.BoxGeometry(1.06, 0.66, 0.05), std({ color: 0x0c0e10, roughness: 0.4, metalness: 0.5 }), 0, 0, 0, g);
+    const tela = add(new THREE.PlaneGeometry(1.0, 0.6), new THREE.MeshBasicMaterial({ color: 0x9fbaa8, toneMapped: false }), 0, 0, 0.03, g);
+    const tRot = tex(512, 308, (c, w, h) => { c.clearRect(0, 0, w, h); c.font = '600 26px IBM Plex Mono, monospace'; c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(10, 10, c.measureText(nome).width + 20, 38); c.fillStyle = '#e8ffe8'; c.fillText(nome, 20, 38);
+      c.fillStyle = '#ff3a2a'; c.beginPath(); c.arc(w - 74, 30, 9, 0, 7); c.fill(); c.fillStyle = '#ffd0c8'; c.fillText('REC', w - 60, 39); c.strokeStyle = 'rgba(230,255,230,.5)'; c.lineWidth = 3; for (const [x, y, dx, dy] of [[20, 70, 1, 1], [w - 20, 70, -1, 1], [20, h - 20, 1, -1], [w - 20, h - 20, -1, -1]]) { c.beginPath(); c.moveTo(x, y + dy * 30); c.lineTo(x, y); c.lineTo(x + dx * 30, y); c.stroke(); } });
+    add(new THREE.PlaneGeometry(1.0, 0.6), new THREE.MeshBasicMaterial({ map: tRot, transparent: true, toneMapped: false, depthWrite: false }), 0, 0, 0.035, g);
+    SEG.telas.push({ rt, tela, nome }); });
+  usavel(mesaS, { id: 'seguranca', txt: 'Olhar as câmeras de segurança', segurar: 0.5 });
+  OBST2.push([-8.35, -26.6, 0.6], [-8.35, -27.5, 0.6], [-8.35, -28.4, 0.6], [-7.35, -27.4, 0.35]);
+  const luzSeg = new THREE.PointLight(0x9fd8ff, 0.9, 9, 1.6); luzSeg.position.set(-6.5, 2.6, -27.5); abrigo.add(luzSeg); const lampSeg = add(new THREE.BoxGeometry(1.8, 0.05, 0.3), M.luz, -6.5, ALT - 0.06, -27.5, abrigo);
+  LUZES.push({ l: luzSeg, lamp: lampSeg, nome: 'seg', base: 0.9, pisca: 0 });
+  // câmera de vigilância no canto da sala
+  const camC = grupo(-4.3, 2.6, -24.3, -Math.PI * 0.75); add(new THREE.BoxGeometry(0.16, 0.14, 0.32), M.branco, 0, 0, 0.1, camC); add(new THREE.CylinderGeometry(0.05, 0.05, 0.06, 12).rotateX(Math.PI / 2), M.metalEsc, 0, 0, 0.28, camC); add(new THREE.SphereGeometry(0.02, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2010, toneMapped: false }), 0.05, 0.05, 0.2, camC);
+  placaParede('🛡 SEGURANÇA ◀', -2.98, 2.45, -27.3, Math.PI / 2, '#7fe8ff', 1.2); }
 
 // ===================== A SUPERFÍCIE (fica longe do abrigo no mapa) =====================
 const SX = 0, SZ = 500, RAIO_SUP = 190;
@@ -2001,6 +2037,7 @@ function usar(u) {
     case 'diesel': aviso('Não precisa mais de diesel: as placas solares dão energia infinita! ☀', 'bom'); break;
     case 'iris': abrirChat(); break;
     case 'filtro': if (inv.filtro > 0) { inv.filtro--; E.filtroVida = 100; somItem(); aviso('Filtro de ar novo instalado.', 'bom'); } else { somErro(); aviso('Sem filtros. Procure nas caixas lá fora.', 'ruim'); } break;
+    case 'seguranca': { let md = 1e9; COLOSSOS.forEach(c => { md = Math.min(md, Math.hypot(c.x - SX, c.z - SZ)); }); aviso(`📹 Câmeras ligadas: entrada, posto, mercado e o gigante mais perto (${Math.round(md)} m). O robô TICO está ${roboTexto()}.`, md < 60 ? 'ruim' : 'info', 5); break; }
     case 'radar': { const p = COLOSSOS.map(k => Math.hypot(k.x - HATCH.x, k.z - HATCH.z)).sort((a, b) => a - b)[0]; aviso(`O colosso mais perto está a ${Math.round(p)} m da entrada.`, p < 70 ? 'ruim' : 'info', 4); break; }
     case 'radio': radioT = 14; chiado(1.5, 1600, 0.15, 'bandpass'); [0, 0.2, 0.4].forEach(t => tom(900, 900, 0.1, 'square', 0.04, 0.6 + t)); aviso(mensagemRadio(), 'info', 7); break;
     case 'traje': if (E.traje) { E.traje = false; trajeMesh.visible = true; aviso('Traje guardado.', 'info'); } else { E.traje = true; trajeMesh.visible = false; tom(300, 500, 0.4, 'triangle', 0.06); aviso('Traje vestido. Agora dá para subir pela escotilha.', 'bom'); } break;
@@ -2185,10 +2222,28 @@ function filmarJanela() { const perto = !jog.fora && jogando && Math.hypot(jog.x
   // um pouco de paralaxe: a vista muda conforme você se mexe na frente da janela
   const px = clamp(jog.x / 3, -1, 1), pz = clamp((jog.z + 30.9) / 8, 0, 1);
   camJanela.position.set(SX + px * 1.5, 2.4, SZ + 6); camJanela.rotation.set(0.32 - pz * 0.05, Math.PI - px * 0.35, 0); camJanela.fov = 62 + (1 - pz) * 8; camJanela.updateProjectionMatrix();
-  const fc = cena.fog.color.getHex(), fd = cena.fog.density, bg = cena.background.getHex(), ab = abrigo.visible, sv = sup.visible, av = armaVM.visible, nt = noite() ? 1 : 0;
-  const cor = lerpCor(nt); cena.fog.color.setHex(cor); cena.fog.density = nt ? 0.034 : 0.022; cena.background.setHex(cor); abrigo.visible = false; sup.visible = true; armaVM.visible = false;
-  Rd.setRenderTarget(janelaRT); Rd.render(cena, camJanela); Rd.setRenderTarget(null);
+  filmarSup(camJanela, janelaRT); }
+function filmarSup(cam, rt) { const fc = cena.fog.color.getHex(), fd = cena.fog.density, bg = cena.background.getHex(), ab = abrigo.visible, sv = sup.visible, av = armaVM.visible, nt = noite() ? 1 : 0;
+  const cor = lerpCor(nt); cena.fog.color.setHex(cor); cena.fog.density = nt ? 0.03 : 0.022; cena.background.setHex(cor); abrigo.visible = false; sup.visible = true; armaVM.visible = false;
+  Rd.setRenderTarget(rt); Rd.render(cena, cam); Rd.setRenderTarget(null);
   cena.fog.color.setHex(fc); cena.fog.density = fd; cena.background.setHex(bg); abrigo.visible = ab; sup.visible = sv; armaVM.visible = av; }
+// câmeras de segurança: cada tela mostra um lugar lá fora (uma tela é atualizada por vez)
+const CAMS_SEG = (() => { const posto = MARCOS.find(m => m.lugar === 'posto'), merc = MARCOS.find(m => m.lugar === 'mercado');
+  const mk = () => { const c = new THREE.PerspectiveCamera(60, 1.6, 0.3, 700); return c; };
+  const c1 = mk(); c1.position.set(SX + 9, 7, SZ + 16); c1.lookAt(SX, 1.5, SZ);
+  const c2 = mk(); c2.position.set(posto.x + 14, 6, posto.z + 12); c2.lookAt(posto.x, 2, posto.z);
+  const c3 = mk(); c3.position.set(merc.x - 6, 7, merc.z + 18); c3.lookAt(merc.x, 2, merc.z);
+  const c4 = mk(); c4.fov = 55; c4.position.set(SX, 14, SZ);
+  // postes com câmeras lá fora, para elas existirem de verdade
+  [c1, c2, c3].forEach(c => { const g = new THREE.Group(); g.position.set(c.position.x, 0, c.position.z); sup.add(g); add(new THREE.CylinderGeometry(0.08, 0.1, c.position.y, 8).translate(0, c.position.y / 2, 0), M.metalEsc, 0, 0, 0, g, true);
+    const cab = add(new THREE.BoxGeometry(0.3, 0.25, 0.55), M.branco, 0, c.position.y, 0, g, true); cab.quaternion.copy(c.quaternion); add(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2010, toneMapped: false }), 0, c.position.y + 0.18, 0, g); });
+  return [c1, c2, c3, c4]; })();
+let segT = 0;
+function filmarSeguranca(dt) { const dentro = !jog.fora && jogando && jog.x < -3.2 && jog.z < -23.5; segT -= dt;
+  SEG.telas.forEach(t => { const m = t.tela.material; if (dentro && m.map !== t.rt.texture) { m.map = t.rt.texture; m.needsUpdate = true; } });
+  if (!dentro || segT > 0) return; segT = 1 / 30; const k = SEG.i++ % 4, cam = CAMS_SEG[k];
+  if (k === 3) { let alvo = null, md = 1e9; COLOSSOS.forEach(c => { const d = Math.hypot(c.x - SX, c.z - SZ); if (d < md) { md = d; alvo = c; } }); if (alvo) cam.lookAt(alvo.x, 18, alvo.z); }
+  filmarSup(cam, SEG.telas[k].rt); }
 function atualizarVisual(dt, perto) {
   const t = performance.now() / 1000; tremor = Math.max(0, tremor - dt * 1.2); laserVis = Math.max(0, laserVis - dt); flicker = Math.max(0, flicker - dt * 1.5);
   const balanco = Math.sin(jog.fase) * 0.035, tr = tremor * tremor;
@@ -2199,6 +2254,7 @@ function atualizarVisual(dt, perto) {
   portaE.position.x = lerp(portaE.position.x, -0.71 - portaAbre * 1.4, Math.min(1, dt * 4)); portaD.position.x = lerp(portaD.position.x, 0.71 + portaAbre * 1.4, Math.min(1, dt * 4)); { const u = portaSaida.userData; u.volante.rotation.z = lerp(u.volante.rotation.z, portaAbre * Math.PI * 2, Math.min(1, dt * 3)); u.giroflex.rotation.y += dt * (portaAbre > 0.05 ? 8 : 0); u.luzGiro.intensity = portaAbre > 0.05 ? 3 : 0; u.luzPressao.material.color.setHex(portaAbre > 0.05 ? (Math.sin(performance.now() / 120) > 0 ? 0xff3020 : 0x300000) : 0x40ff60); }
   luzSaida.intensity = 0.7 + Math.sin(t * 2.5) * 0.3;
   janelaT -= dt; if (janelaT <= 0) { janelaT = 1 / 24; filmarJanela(); }
+  filmarSeguranca(dt);
   MARCOS.forEach(m => { const livre = m.lugar === 'torre' ? !E.sinal : E.coletas[m.lugar] !== dia(); m.feixe.visible = livre && Math.hypot(jog.x - m.x, jog.z - m.z) > 22; m.feixe.material.opacity = 0.18 + Math.sin(t * 2 + m.x) * 0.06; });
   torreLuz.material.emissiveIntensity = Math.sin(t * 3) > 0 ? 4 : 0.3;
   const bus = $('bussola'); bus.hidden = !(jog.fora && jogando); if (jog.fora && jogando) { const dx = HATCH.x - jog.x, dz = HATCH.z - jog.z, dist = Math.hypot(dx, dz); let rel = Math.atan2(dx, dz) - (jog.yaw + Math.PI); rel = Math.atan2(Math.sin(rel), Math.cos(rel));
@@ -2217,7 +2273,7 @@ function atualizarVisual(dt, perto) {
     latas.forEach((l, i) => { l.visible = i < E.inv.racao * 2; }); garrafas.forEach((g, i) => { g.visible = i < E.inv.agua; });
     const p = poeira.p; for (let i = 0; i < poeira.n; i++) { if (p[i * 3 + 1] < -1) continue; p[i * 3 + 1] -= poeira.v[i] * dt * 2; if (p[i * 3 + 1] < 0) p[i * 3 + 1] = -10; } poeira.pts.geometry.attributes.position.needsUpdate = true;
   } else {
-    const nt = noite() ? 1 : 0, nf = lerpCor(nt); cena.fog.color.setHex(nf); cena.background.setHex(nf); cena.fog.density = (noite() ? 0.04 : 0.028) + Math.sin(t * 0.13) * 0.004; ceu.material.uniforms.uNoite.value = nt; solSup.intensity = noite() ? 0.04 : 0.28; ambSup.intensity = (noite() ? 0.14 : 0.32) + raioFlash * 2.2;
+    const nt = noite() ? 1 : 0, nf = lerpCor(nt); cena.fog.color.setHex(nf); cena.background.setHex(nf); cena.fog.density = (noite() ? 0.056 : 0.042) + Math.sin(t * 0.13) * 0.005; ceu.material.uniforms.uNoite.value = nt; solSup.intensity = noite() ? 0.04 : 0.28; ambSup.intensity = (noite() ? 0.14 : 0.32) + raioFlash * 2.2;
     nevoaAssusta(dt, t, nt);
     farolEnt.intensity = 1 + Math.sin(t * 4) * 0.6; escudoGrade.material.opacity = 0.12 + Math.sin(t * 1.5) * 0.05 + (laserVis > 0 ? 0.2 : 0); escudoGrade.rotation.y = t * 0.02; escudo.visible = temEscudo(); if (escudo.visible) escudo.scale.setScalar(raioEscudo() / 17); { const tOn = NV('torres') > 0; TORRES.forEach(T => T.base.visible = tOn); LANCADORES.forEach(L => L.g.visible = tOn); }
     let alvoT = laserAlvo; if (!alvoT || laserVis <= 0) { let md = 1e9; COLOSSOS.forEach(c => { const d = Math.hypot(c.x - SX, c.z - SZ); if (d < md) { md = d; alvoT = c; } }); }
@@ -2285,7 +2341,7 @@ function sussurro() { chiado(1.6, 2400, 0.05, 'bandpass'); chiado(1.2, 3200, 0.0
 function nevoaAssusta(dt, t, nt) { animarInvasao(dt, t);
   const cn = nt ? 0x060807 : 0x1c211e;
   NEBLINA.forEach(n => { n.a += dt * n.v * 0.02; let x = jog.x + Math.cos(n.a) * n.d, z = jog.z + Math.sin(n.a) * n.d; n.s.position.set(x, n.y + Math.sin(t * 0.3 + n.d) * 0.3, z);
-    n.s.material.color.setHex(cn); n.s.material.rotation += dt * 0.03 * (n.v - 0.7); const perto = n.d < 8 ? n.d / 8 : 1; n.s.material.opacity = n.op * 0.6 * perto * (0.8 + Math.sin(t * 0.4 + n.a * 3) * 0.2) + raioFlash * 0.3; });
+    n.s.material.color.setHex(cn); n.s.material.rotation += dt * 0.03 * (n.v - 0.7); const perto = n.d < 8 ? n.d / 8 : 1; n.s.material.opacity = n.op * 0.9 * perto * (0.8 + Math.sin(t * 0.4 + n.a * 3) * 0.2) + raioFlash * 0.3; });
   // olhos
   OLHOS.forEach(o => { if (o.vida <= 0) { o.g.visible = false; if (Math.random() < dt * (nt ? 0.06 : 0.025)) { const a = jog.yaw + Math.PI + (Math.random() - 0.5) * 1.8, d = rr(24, 38); o.g.position.set(jog.x + Math.sin(a) * d, rr(1.3, 2.2), jog.z + Math.cos(a) * d); o.vida = rr(4, 9); o.t = 0; } return; }
     o.vida -= dt; o.t += dt; const d = Math.hypot(o.g.position.x - jog.x, o.g.position.z - jog.z); if (d < 16) { o.vida = 0; sussurro(); return; }
@@ -2373,7 +2429,7 @@ function mudarSilenciador(ligar) { if (!!E.silenciador !== !!ligar) alternarSile
 function mudarGerador(ligar) { if (E.gerador !== !!ligar) usar({ id: 'gerador' }); return E.gerador ? 'Gerador ligado.' : 'Gerador desligado.'; }
 
 // ---- mapa ----
-const SALAS = [['dormitório', -5.5, -6.5, [-9, -2, -10, -3]], ['cozinha', 5.5, -6.5, [2, 9, -10, -3]], ['sala de máquinas', -5.5, -17, [-9, -2, -21, -13]], ['sala de controle', 5.5, -17, [2, 9, -21, -13]],
+const SALAS = [['sala de segurança', -6.5, -27.5, [-9, -4, -31, -24]], ['dormitório', -5.5, -6.5, [-9, -2, -10, -3]], ['cozinha', 5.5, -6.5, [2, 9, -10, -3]], ['sala de máquinas', -5.5, -17, [-9, -2, -21, -13]], ['sala de controle', 5.5, -17, [2, 9, -21, -13]],
   ['eclusa e porta de saída', 0, -28, [-3, 3, -31, -24]], ['estufa', 17, -6.5, [13, 21, -10, -3]], ['arsenal', 17, -17, [13, 21, -21, -13]], ['núcleo da ÍRIS', 12, -27.5, [7, 17, -31, -24]]];
 function salaDe(x, z) { if (jog.fora) return 'lá fora na superfície'; const s = SALAS.find(([, , , [x0, x1, z0, z1]]) => x >= x0 && x <= x1 && z >= z0 && z <= z1); return s ? s[0] : 'no corredor'; }
 function direcao(dx, dz) { let rel = Math.atan2(dx, dz) - (jog.yaw + Math.PI); rel = Math.atan2(Math.sin(rel), Math.cos(rel)); const d = Math.round(Math.hypot(dx, dz));
