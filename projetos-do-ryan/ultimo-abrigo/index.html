@@ -266,7 +266,7 @@
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 2.2 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 2.3 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -320,6 +320,14 @@
     <button class="principal" id="f-ok" type="button">Jogar de novo</button>
   </div>
 </div>
+<script>
+// caçador de erros: se algo quebrar, mostra uma caixa vermelha para tirar foto e mandar
+(function () { var n = 0; window.__mostrarErro = function (msg) { if (n++ > 3) return; try { var d = document.getElementById('erro-box'); if (!d) { d = document.createElement('div'); d.id = 'erro-box'; d.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#3a0806;color:#ffd8d0;border:2px solid #ff4d3d;border-radius:8px;padding:10px 12px;font:600 13px/1.4 monospace;white-space:pre-wrap;max-height:40vh;overflow:auto';
+    var b = document.createElement('button'); b.textContent = 'fechar'; b.style.cssText = 'float:right;margin-left:8px;padding:4px 10px'; b.onclick = function () { d.remove(); }; d.appendChild(b); d.appendChild(document.createTextNode('⚠ ERRO NO JOGO (tire uma foto desta caixa e mande):')); (document.body || document.documentElement).appendChild(d); }
+    d.appendChild(document.createTextNode('\n• ' + String(msg).slice(0, 300) + ' | ' + navigator.userAgent.replace(/.*(Android [^;)]*).*(Chrome\/[0-9]+).*/, '$1 $2'))); } catch (e) {} };
+  addEventListener('error', function (e) { if (e && e.target && e.target !== window && e.target.src) { window.__mostrarErro('Não carregou: ' + e.target.src); return; } window.__mostrarErro((e.message || 'erro') + ' (linha ' + (e.lineno || '?') + ')'); }, true);
+  addEventListener('unhandledrejection', function (e) { var r = e.reason; if (r && /fullscreen|NotAllowed|AbortError|play\(\)/i.test(String(r && (r.message || r)))) return; window.__mostrarErro('Promessa: ' + (r && (r.message || r))); }); })();
+</script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
@@ -1288,6 +1296,8 @@ function filmarSeguranca(dt) { const dentro = !jog.fora && jogando && jog.x < -3
   if (!dentro || segT > 0) return; segT = 1 / 30; const k = SEG.i++ % 4, cam = CAMS_SEG[k];
   if (k === 3) { let alvo = null, md = 1e9; COLOSSOS.forEach(c => { const d = Math.hypot(c.x - SX, c.z - SZ); if (d < md) { md = d; alvo = c; } }); if (alvo) cam.lookAt(alvo.x, 18, alvo.z); }
   filmarSup(cam, SEG.telas[k].rt); }
+canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); if (window.__mostrarErro) __mostrarErro('A placa de vídeo do celular travou (WebGL perdido). Abra de novo e escolha Gráficos: LEVE em Configurações.'); });
+const errosVistos = {}; function seguro(nome, fn) { try { fn(); } catch (e) { if (!errosVistos[nome]) { errosVistos[nome] = 1; if (window.__mostrarErro) __mostrarErro(nome + ': ' + (e && e.message)); } } }
 function atualizarVisual(dt, perto) {
   const t = performance.now() / 1000; tremor = Math.max(0, tremor - dt * 1.2); laserVis = Math.max(0, laserVis - dt); flicker = Math.max(0, flicker - dt * 1.5);
   const balanco = Math.sin(jog.fase) * 0.035, tr = tremor * tremor;
@@ -1297,8 +1307,8 @@ function atualizarVisual(dt, perto) {
   lanterna.intensity = jog.lanterna ? (jog.fora ? 4 : 3) : 0; lanterna.position.copy(camera.position); const fw = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); lanterna.target.position.copy(camera.position).addScaledVector(fw, 5);
   portaE.position.x = lerp(portaE.position.x, -0.71 - portaAbre * 1.4, Math.min(1, dt * 4)); portaD.position.x = lerp(portaD.position.x, 0.71 + portaAbre * 1.4, Math.min(1, dt * 4)); { const u = portaSaida.userData; u.volante.rotation.z = lerp(u.volante.rotation.z, portaAbre * Math.PI * 2, Math.min(1, dt * 3)); u.giroflex.rotation.y += dt * (portaAbre > 0.05 ? 8 : 0); u.luzGiro.intensity = portaAbre > 0.05 ? 3 : 0; u.luzPressao.material.color.setHex(portaAbre > 0.05 ? (Math.sin(performance.now() / 120) > 0 ? 0xff3020 : 0x300000) : 0x40ff60); }
   luzSaida.intensity = 0.7 + Math.sin(t * 2.5) * 0.3;
-  janelaT -= dt; if (janelaT <= 0) { janelaT = 1 / 24; filmarJanela(); }
-  filmarSeguranca(dt);
+  janelaT -= dt; if (janelaT <= 0) { janelaT = 1 / 24; seguro('janela', filmarJanela); }
+  seguro('cameras', () => filmarSeguranca(dt));
   MARCOS.forEach(m => { const livre = m.lugar === 'torre' ? !E.sinal : E.coletas[m.lugar] !== dia(); m.feixe.visible = livre && Math.hypot(jog.x - m.x, jog.z - m.z) > 22; m.feixe.material.opacity = 0.18 + Math.sin(t * 2 + m.x) * 0.06; });
   torreLuz.material.emissiveIntensity = Math.sin(t * 3) > 0 ? 4 : 0.3;
   const bus = $('bussola'); bus.hidden = !(jog.fora && jogando); if (jog.fora && jogando) { const dx = HATCH.x - jog.x, dz = HATCH.z - jog.z, dist = Math.hypot(dx, dz); let rel = Math.atan2(dx, dz) - (jog.yaw + Math.PI); rel = Math.atan2(Math.sin(rel), Math.cos(rel));
@@ -1419,7 +1429,7 @@ function quadro(agora) { requestAnimationFrame(quadro);
   } else if (!jogando) { // menu: câmera passeando pela superfície com os colossos
     menuT += dt; abrigo.visible = false; sup.visible = true; perto = simularColossos(dt, false); jog.fora = true;
     const c = COLOSSOS[0]; camera.position.set(c.x + Math.cos(menuT * 0.05) * 70, 6 + Math.sin(menuT * 0.1) * 2, c.z + Math.sin(menuT * 0.05) * 70); camera.lookAt(c.x, 18, c.z); }
-  atualizarRede(dt); if (jogando && !pausado) { atualizarRobo(dt); atualizarMonstros(dt); }
+  atualizarRede(dt); if (jogando && !pausado) { seguro('robo', () => atualizarRobo(dt)); seguro('monstros', () => atualizarMonstros(dt)); }
   if (jogando || !$('menu').hidden) atualizarVisual(dt, perto);
   if (!jogando && !$('menu').hidden) { camera.rotation.order = 'YXZ'; }
   if (avisoT > 0) { avisoT -= dt; if (avisoT <= 0) $('aviso').hidden = true; }
