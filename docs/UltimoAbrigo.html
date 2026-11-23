@@ -273,7 +273,7 @@ body.pos #vinheta{display:none}
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 2.7 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 2.8 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -2249,7 +2249,7 @@ function animarColosso(c, dt) { const t = performance.now(), bravo = c.alerta > 
 // ===================== CÂMERA, LUZES E AMBIENTE =====================
 // câmera lá fora que mostra a superfície na janela da porta
 const camJanela = new THREE.PerspectiveCamera(62, 512 / 320, 0.3, 900); camJanela.rotation.order = 'YXZ'; let janelaT = 0, janelaViva = false;
-function filmarJanela() { if (minimo) return; const perto = !jog.fora && jogando && Math.hypot(jog.x - 0, jog.z + 30.9) < 16;
+function filmarJanela() { const perto = !jog.fora && jogando && Math.hypot(jog.x - 0, jog.z + 30.9) < 16;
   if (!perto) { if (janelaViva) { vidroM.map = portaSaida.userData.tFora; vidroM.needsUpdate = true; janelaViva = false; } return; }
   if (!janelaViva) { vidroM.map = janelaRT.texture; vidroM.needsUpdate = true; janelaViva = true; }
   // um pouco de paralaxe: a vista muda conforme você se mexe na frente da janela
@@ -2272,9 +2272,11 @@ const CAMS_SEG = (() => { const posto = MARCOS.find(m => m.lugar === 'posto'), m
     const cab = add(new THREE.BoxGeometry(0.3, 0.25, 0.55), M.branco, 0, c.position.y, 0, g, true); cab.quaternion.copy(c.quaternion); add(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2010, toneMapped: false }), 0, c.position.y + 0.18, 0, g); });
   return [c1, c2, c3, c4]; })();
 let segT = 0;
-function filmarSeguranca(dt) { if (minimo) return; const dentro = !jog.fora && jogando && jog.x < -3.2 && jog.z < -23.5; segT -= dt;
+// celular fraco: telas com imagem menor (gasta pouca memória)
+if (minimo) { janelaRT.setSize(256, 160); SEG.telas.forEach(t => t.rt.setSize(176, 110)); }
+function filmarSeguranca(dt) { const dentro = !jog.fora && jogando && jog.x < -3.2 && jog.z < -23.5; segT -= dt;
   SEG.telas.forEach(t => { const m = t.tela.material; if (dentro && m.map !== t.rt.texture) { m.map = t.rt.texture; m.needsUpdate = true; } });
-  if (!dentro || segT > 0) return; segT = fraco ? 1 / 3 : eco ? 1 / 10 : 1 / 30; const k = SEG.i++ % 4, cam = CAMS_SEG[k];
+  if (!dentro || segT > 0) return; segT = minimo ? 1 / 2 : fraco ? 1 / 3 : eco ? 1 / 10 : 1 / 30; const k = SEG.i++ % 4, cam = CAMS_SEG[k];
   if (k === 3) { let alvo = null, md = 1e9; COLOSSOS.forEach(c => { const d = Math.hypot(c.x - SX, c.z - SZ); if (d < md) { md = d; alvo = c; } }); if (alvo) cam.lookAt(alvo.x, 18, alvo.z); }
   filmarSup(cam, SEG.telas[k].rt); }
 // som desligado quando o jogo some da tela (economiza bateria)
@@ -2293,7 +2295,7 @@ function atualizarVisual(dt, perto) {
   lanterna.intensity = jog.lanterna ? (jog.fora ? 4 : 3) : 0; lanterna.position.copy(camera.position); const fw = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); lanterna.target.position.copy(camera.position).addScaledVector(fw, 5);
   portaE.position.x = lerp(portaE.position.x, -0.71 - portaAbre * 1.4, Math.min(1, dt * 4)); portaD.position.x = lerp(portaD.position.x, 0.71 + portaAbre * 1.4, Math.min(1, dt * 4)); { const u = portaSaida.userData; u.volante.rotation.z = lerp(u.volante.rotation.z, portaAbre * Math.PI * 2, Math.min(1, dt * 3)); u.giroflex.rotation.y += dt * (portaAbre > 0.05 ? 8 : 0); u.luzGiro.intensity = portaAbre > 0.05 ? 3 : 0; u.luzPressao.material.color.setHex(portaAbre > 0.05 ? (Math.sin(performance.now() / 120) > 0 ? 0xff3020 : 0x300000) : 0x40ff60); }
   luzSaida.intensity = 0.7 + Math.sin(t * 2.5) * 0.3;
-  janelaT -= dt; if (janelaT <= 0) { janelaT = fraco ? 1 / 4 : eco ? 1 / 10 : 1 / 24; seguro('janela', filmarJanela); }
+  janelaT -= dt; if (janelaT <= 0) { janelaT = minimo ? 1 / 3 : fraco ? 1 / 4 : eco ? 1 / 10 : 1 / 24; seguro('janela', filmarJanela); }
   seguro('cameras', () => filmarSeguranca(dt));
   MARCOS.forEach(m => { const livre = m.lugar === 'torre' ? !E.sinal : E.coletas[m.lugar] !== dia(); m.feixe.visible = livre && Math.hypot(jog.x - m.x, jog.z - m.z) > 22; m.feixe.material.opacity = 0.18 + Math.sin(t * 2 + m.x) * 0.06; });
   torreLuz.material.emissiveIntensity = Math.sin(t * 3) > 0 ? 4 : 0.3;
