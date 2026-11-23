@@ -271,7 +271,7 @@ body.pos #vinheta{display:none}
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 2.5 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 2.6 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -304,11 +304,12 @@ body.pos #vinheta{display:none}
     <p class="teclas"><kbd>W A S D</kbd> andar · <kbd>MOUSE</kbd> olhar (clique na tela) · <kbd>E</kbd> segurar para usar · <kbd>F</kbd> lanterna · <kbd>G</kbd> silenciador · <kbd>T</kbd> falar com a ÍRIS · <kbd>CLIQUE</kbd>/<kbd>ESPAÇO</kbd> atirar · <kbd>SHIFT</kbd> correr</p>
   </div></div>
   <div class="m-painel" id="pm-config" hidden><div class="m-caixa"><div class="m-cab"><h2>⚙ Configurações</h2><button type="button" class="m-fechar" aria-label="Fechar">✕</button></div>
-    <div class="linha"><span class="rot">Gráficos</span><div class="linha" id="qual" role="group" aria-label="Gráficos"><button type="button" data-q="-1">PC fraco</button><button type="button" data-q="0">Leve</button><button type="button" data-q="1">Normal</button><button type="button" data-q="2">Ultra</button></div></div>
+    <div class="linha"><span class="rot">Gráficos</span><div class="linha" id="qual" role="group" aria-label="Gráficos"><button type="button" data-q="-2">Celular fraco</button><button type="button" data-q="-1">PC fraco</button><button type="button" data-q="0">Leve</button><button type="button" data-q="1">Normal</button><button type="button" data-q="2">Ultra</button></div></div>
     <div class="linha"><button id="b-tela" type="button">⛶ Tela cheia</button><button id="b-mic" type="button" aria-pressed="false">🎤 Microfone: desligado</button></div>
     <div class="linha"><button id="b-eco" type="button" aria-pressed="true">🔋 Economia de bateria</button></div>
     <p class="mic-nota">Economia de bateria: o jogo roda a 30 quadros por segundo com imagem um pouco menor e quase para no menu e na pausa.</p>
-    <p class="mic-nota" id="mic-nota">Com o microfone ligado, os colossos ouvem a sua voz de verdade. Fale baixinho!</p>
+    <p class="mic-nota"><b>Celular fraco</b>: para celulares antigos com pouca memória (texturas menores, imagem mais simples, sem câmeras ao vivo). <b>PC fraco</b>: para computadores fracos.</p>
+<p class="mic-nota" id="mic-nota">Com o microfone ligado, os colossos ouvem a sua voz de verdade. Fale baixinho!</p>
   </div></div>
 </div>
 <div class="tela cheia" id="pausa" hidden>
@@ -359,18 +360,18 @@ function semente(s) { return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Mat
 const R = semente(2097), rr = (a, b) => a + R() * (b - a);
 
 // ===================== QUALIDADE E RENDER =====================
-let qual = toque ? 0 : 1; try { const q = localStorage.getItem('abrigo-q'); if (q !== null) qual = clamp(+q, -1, 2); } catch (e) {}
-const fraco = qual < 0; if (fraco) qual = 0;
-const Q = fraco ? { pr: 0.65, bloom: false, ruinas: 28, sombra: 0 } : [{ pr: 1, bloom: false, ruinas: 60, sombra: 0 }, { pr: 1.5, bloom: true, ruinas: 110, sombra: 0 }, { pr: 2, bloom: true, ruinas: 170, sombra: 2048 }][qual];
+let qual = toque ? 0 : 1; try { const q = localStorage.getItem('abrigo-q'); if (q !== null) qual = clamp(+q, -2, 2); else if (toque && navigator.deviceMemory && navigator.deviceMemory <= 2) qual = -2; } catch (e) {}
+const minimo = qual === -2, fraco = qual < 0; if (fraco) qual = 0;
+const Q = minimo ? { pr: 0.5, bloom: false, ruinas: 12, sombra: 0 } : fraco ? { pr: 0.65, bloom: false, ruinas: 28, sombra: 0 } : [{ pr: 1, bloom: false, ruinas: 60, sombra: 0 }, { pr: 1.5, bloom: true, ruinas: 110, sombra: 0 }, { pr: 2, bloom: true, ruinas: 170, sombra: 2048 }][qual];
 const canvas = $('cena');
-const Rd = new THREE.WebGLRenderer({ canvas, antialias: qual > 0, powerPreference: 'high-performance' });
+const Rd = new THREE.WebGLRenderer({ canvas, antialias: qual > 0, powerPreference: fraco ? 'low-power' : 'high-performance', precision: minimo ? 'mediump' : 'highp' });
 let eco = toque; try { const v = localStorage.getItem('abrigo-eco'); if (v !== null) eco = v === '1'; } catch (e) {}
-const prBase = () => fraco ? 0.65 : Math.min(devicePixelRatio || 1, Q.pr) * (eco ? 0.7 : 1);
+const prBase = () => minimo ? 0.5 : fraco ? 0.65 : Math.min(devicePixelRatio || 1, Q.pr) * (eco ? 0.7 : 1);
 Rd.setPixelRatio(prBase()); Rd.outputEncoding = THREE.sRGBEncoding; Rd.toneMapping = THREE.ACESFilmicToneMapping; Rd.toneMappingExposure = 1.1;
 Rd.shadowMap.enabled = Q.sombra > 0; Rd.shadowMap.type = THREE.PCFSoftShadowMap;
 const cena = new THREE.Scene(); cena.background = new THREE.Color(0x050605);
 cena.fog = new THREE.FogExp2(0x050605, 0.03);
-const camera = new THREE.PerspectiveCamera(70, 1, 0.05, fraco ? 380 : 900); camera.rotation.order = 'YXZ';
+const camera = new THREE.PerspectiveCamera(70, 1, 0.05, minimo ? 260 : fraco ? 380 : 900); camera.rotation.order = 'YXZ';
 let composer = null, bloom = null;
 if (Q.bloom && THREE.EffectComposer && THREE.UnrealBloomPass) {
   composer = new THREE.EffectComposer(Rd); composer.addPass(new THREE.RenderPass(cena, camera));
@@ -393,7 +394,7 @@ addEventListener('resize', tamanho); tamanho();
 
 // ===================== TEXTURAS =====================
 function borrar(c, px) { const k = document.createElement('canvas'); k.width = c.width; k.height = c.height; k.getContext('2d').drawImage(c, 0, 0); const g = c.getContext('2d'); g.filter = `blur(${px}px)`; g.drawImage(k, 0, 0); g.filter = 'none'; }
-function tex(w, h, fn, rep) { const c = document.createElement('canvas'); c.width = w; c.height = h; fn(c.getContext('2d'), w, h); if (rep) borrar(c, 0.6); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = Math.min(8, Rd.capabilities.getMaxAnisotropy()); if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; } return t; }
+function tex(w, h, fn, rep) { const c = document.createElement('canvas'), k = minimo && w * h > 4096 ? 0.5 : 1; c.width = Math.round(w * k); c.height = Math.round(h * k); const g0 = c.getContext('2d'); g0.scale(k, k); fn(g0, w, h); if (rep && !minimo) borrar(c, 0.6); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = minimo ? 1 : Math.min(8, Rd.capabilities.getMaxAnisotropy()); if (minimo) { t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; } if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; } return t; }
 function ruido(g, w, h, cores, n, tam, Rr) { for (let i = 0; i < n; i++) { g.fillStyle = cores[(Rr() * cores.length) | 0]; g.fillRect(Rr() * w, Rr() * h, Rr() * tam + 0.6, Rr() * tam + 0.6); } }
 const tConcreto = tex(512, 512, (g, w, h) => { const Rr = semente(3); g.fillStyle = '#6f6c62'; g.fillRect(0, 0, w, h); ruido(g, w, h, ['rgba(0,0,0,.18)', 'rgba(255,255,255,.07)', 'rgba(90,80,60,.25)'], 26000, 2.2, Rr);
   for (let i = 0; i < 40; i++) { const x = Rr() * w, y = Rr() * h, gr = g.createRadialGradient(x, y, 0, x, y, 30 + Rr() * 70); gr.addColorStop(0, 'rgba(40,36,24,.25)'); gr.addColorStop(1, 'rgba(40,36,24,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }
@@ -1283,7 +1284,7 @@ function animarColosso(c, dt) { const t = performance.now(), bravo = c.alerta > 
 // ===================== CÂMERA, LUZES E AMBIENTE =====================
 // câmera lá fora que mostra a superfície na janela da porta
 const camJanela = new THREE.PerspectiveCamera(62, 512 / 320, 0.3, 900); camJanela.rotation.order = 'YXZ'; let janelaT = 0, janelaViva = false;
-function filmarJanela() { const perto = !jog.fora && jogando && Math.hypot(jog.x - 0, jog.z + 30.9) < 16;
+function filmarJanela() { if (minimo) return; const perto = !jog.fora && jogando && Math.hypot(jog.x - 0, jog.z + 30.9) < 16;
   if (!perto) { if (janelaViva) { vidroM.map = portaSaida.userData.tFora; vidroM.needsUpdate = true; janelaViva = false; } return; }
   if (!janelaViva) { vidroM.map = janelaRT.texture; vidroM.needsUpdate = true; janelaViva = true; }
   // um pouco de paralaxe: a vista muda conforme você se mexe na frente da janela
@@ -1306,7 +1307,7 @@ const CAMS_SEG = (() => { const posto = MARCOS.find(m => m.lugar === 'posto'), m
     const cab = add(new THREE.BoxGeometry(0.3, 0.25, 0.55), M.branco, 0, c.position.y, 0, g, true); cab.quaternion.copy(c.quaternion); add(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2010, toneMapped: false }), 0, c.position.y + 0.18, 0, g); });
   return [c1, c2, c3, c4]; })();
 let segT = 0;
-function filmarSeguranca(dt) { const dentro = !jog.fora && jogando && jog.x < -3.2 && jog.z < -23.5; segT -= dt;
+function filmarSeguranca(dt) { if (minimo) return; const dentro = !jog.fora && jogando && jog.x < -3.2 && jog.z < -23.5; segT -= dt;
   SEG.telas.forEach(t => { const m = t.tela.material; if (dentro && m.map !== t.rt.texture) { m.map = t.rt.texture; m.needsUpdate = true; } });
   if (!dentro || segT > 0) return; segT = fraco ? 1 / 3 : eco ? 1 / 10 : 1 / 30; const k = SEG.i++ % 4, cam = CAMS_SEG[k];
   if (k === 3) { let alvo = null, md = 1e9; COLOSSOS.forEach(c => { const d = Math.hypot(c.x - SX, c.z - SZ); if (d < md) { md = d; alvo = c; } }); if (alvo) cam.lookAt(alvo.x, 18, alvo.z); }
@@ -1401,7 +1402,7 @@ if (temSalvo) { $('b-jogar').textContent = '▶ Continuar'; $('b-novo').hidden =
   document.querySelectorAll('#menu .m-painel').forEach(p => { p.addEventListener('click', e => { if (e.target === p || e.target.closest('.m-fechar')) p.hidden = true; }); });
   addEventListener('keydown', e => { if ($('menu').hidden || jogando) return; const aberto = document.querySelector('#menu .m-painel:not([hidden])');
     if (e.key === 'Escape' && aberto) { aberto.hidden = true; return; } if (e.key === 'Enter' && !aberto && !(e.target && e.target.tagName === 'INPUT') && !(e.target && e.target.tagName === 'BUTTON')) { e.preventDefault(); comecar(false); } }); }
-document.querySelectorAll('#qual button').forEach(b => { b.setAttribute('aria-pressed', String(+b.dataset.q === (fraco ? -1 : qual))); b.addEventListener('click', () => { try { localStorage.setItem('abrigo-q', b.dataset.q); } catch (e) {} location.reload(); }); });
+document.querySelectorAll('#qual button').forEach(b => { b.setAttribute('aria-pressed', String(+b.dataset.q === (minimo ? -2 : fraco ? -1 : qual))); b.addEventListener('click', () => { try { localStorage.setItem('abrigo-q', b.dataset.q); } catch (e) {} location.reload(); }); });
 $('b-tela').addEventListener('click', () => { const el = document.documentElement; try { if (!document.fullscreenElement) { const f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) { const r = f.call(el); if (r && r.catch) r.catch(() => {}); } } else document.exitFullscreen(); } catch (e) {} });
 if (!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)) $('b-tela').hidden = true;
 espalharCaixas();
@@ -1967,7 +1968,7 @@ function atualizarPoeira(dt) { if (!POEIRA || jog.fora) return; const { p, pos, 
   p.geometry.attributes.position.needsUpdate = true; }
 // PC fraco: menos neblina transparente (é o que mais pesa)
 if (fraco) cena.add(new THREE.HemisphereLight(0x9aa8b4, 0x2a2622, 0.55));
-if (fraco) NEBLINA.forEach((n, i) => { if (i % 2) n.s.visible = false; });
-Object.assign(window.__abrigo, { SOMBRA, susto: () => { sustoT = 0; }, fraco, MONSTROS, ferirMonstro, progressoMissao, novasMissoes, ROBO, matarRobo, LUGARES_ROBO, NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
+if (fraco) NEBLINA.forEach((n, i) => { if (minimo ? i % 4 : i % 2) n.s.visible = false; });
+Object.assign(window.__abrigo, { SOMBRA, susto: () => { sustoT = 0; }, fraco, minimo, MONSTROS, ferirMonstro, progressoMissao, novasMissoes, ROBO, matarRobo, LUGARES_ROBO, NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
 })();
 </script>
