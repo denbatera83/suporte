@@ -275,7 +275,7 @@ body.pos #vinheta{display:none}
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 3.4 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 3.5 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -756,13 +756,35 @@ if (Q.sombra) { solSup.castShadow = true; solSup.shadow.mapSize.set(Q.sombra, Q.
 const ambSup = new THREE.HemisphereLight(0x8a9a6a, 0x2a2416, 0.55); sup.add(ambSup);
 add(new THREE.PlaneGeometry(600, 600).rotateX(-Math.PI / 2), M.chao, SX, 0, SZ, sup).receiveShadow = true;
 // céu doente: cúpula com degradê
-const ceu = new THREE.Mesh(new THREE.SphereGeometry(700, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, uniforms: { uNoite: { value: 0 }, uRaio: { value: 0 } },
+const ceu = new THREE.Mesh(new THREE.SphereGeometry(700, 32, 16), new THREE.ShaderMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, defines: { OCT: minimo ? 2 : 4 },
+  uniforms: { uNoite: { value: 0 }, uRaio: { value: 0 }, uSol: { value: new THREE.Vector3(0.5, 0.6, -0.3) }, uT: { value: 0 } },
   vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-  fragmentShader: `uniform float uNoite; uniform float uRaio; varying vec3 vP; void main(){ float h = normalize(vP).y; vec3 a = mix(vec3(0.25, 0.27, 0.26), vec3(0.085, 0.1, 0.09), uNoite) + uRaio * vec3(0.5, 0.55, 0.7); vec3 b = mix(vec3(0.2, 0.22, 0.21), vec3(0.04, 0.05, 0.045), uNoite) + uRaio * vec3(0.3, 0.32, 0.45);
-    vec3 c = mix(a, b, smoothstep(-0.05, 0.6, h)); c += vec3(0.06, 0.03, 0.0) * pow(max(0.0, 1.0 - abs(h - 0.04) * 6.0), 3.0) * (1.0 - uNoite); gl_FragColor = vec4(pow(c, vec3(2.2)), 1.0);
-    #include <tonemapping_fragment>
-    #include <encodings_fragment>
-  }` }));
+  fragmentShader: `uniform float uNoite; uniform float uRaio; uniform vec3 uSol; uniform float uT; varying vec3 vP;
+    float h2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float n2(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f); return mix(mix(h2(i), h2(i + vec2(1.0, 0.0)), f.x), mix(h2(i + vec2(0.0, 1.0)), h2(i + vec2(1.0, 1.0)), f.x), f.y); }
+    float fbm(vec2 p){ float s = 0.0, a = 0.5; for (int i = 0; i < OCT; i++) { s += a * n2(p); p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; } return s / (1.0 - pow(0.5, float(OCT))); }
+    void main(){ vec3 d = normalize(vP); float h = d.y, dia = 1.0 - uNoite;
+      vec3 noiteC = mix(vec3(0.085, 0.1, 0.09), vec3(0.04, 0.05, 0.045), smoothstep(-0.05, 0.6, h));
+      vec3 diaC = mix(vec3(0.66, 0.71, 0.74), vec3(0.22, 0.42, 0.72), smoothstep(-0.02, 0.55, h));
+      float baixo = 1.0 - smoothstep(0.05, 0.4, uSol.y);
+      diaC = mix(diaC, vec3(0.86, 0.5, 0.3), baixo * pow(max(0.0, 1.0 - abs(h - 0.03) * 3.5), 2.0) * 0.85);
+      vec3 c = mix(noiteC, diaC, dia);
+      vec3 sd = normalize(uSol); float s = max(dot(d, sd), 0.0);
+      vec3 solC = vec3(1.0, 0.93, 0.78) * (pow(s, 1200.0) * 7.0 + pow(s, 60.0) * 0.5 + pow(s, 7.0) * 0.14) * dia * smoothstep(-0.08, 0.02, sd.y);
+      vec2 uv = d.xz / max(h + 0.08, 0.1) * 0.85 + vec2(uT * 0.010, uT * 0.004);
+      float n = fbm(uv * 1.25);
+      float nuv = smoothstep(0.40, 0.72, n) * smoothstep(-0.02, 0.15, h);
+      float cinza = smoothstep(0.5, 0.85, fbm(uv * 0.6 + 13.0));
+      vec3 corN = mix(vec3(0.95, 0.95, 0.93), vec3(0.5, 0.5, 0.52), smoothstep(0.5, 0.85, n));
+      corN = mix(corN, vec3(0.17, 0.15, 0.14), cinza * 0.85);
+      corN *= mix(0.1, 1.0, dia); corN += vec3(1.0, 0.75, 0.5) * pow(s, 10.0) * 0.6 * dia;
+      c += solC * (1.0 - nuv * 0.9);
+      c = mix(c, corN, nuv * 0.93);
+      c += uRaio * mix(vec3(0.5, 0.55, 0.7), vec3(0.3, 0.32, 0.45), smoothstep(-0.05, 0.6, h));
+      gl_FragColor = vec4(pow(max(c, 0.0), vec3(2.2)), 1.0);
+      #include <tonemapping_fragment>
+      #include <encodings_fragment>
+    }` }));
 ceu.position.set(SX, 0, SZ); sup.add(ceu);
 // entrada do abrigo na superfície
 const entrada = new THREE.Group(); entrada.position.set(SX, 0, SZ); sup.add(entrada);
@@ -899,18 +921,18 @@ const pernaGeo = (L, r1, r2) => { const geo = new THREE.CylinderGeometry(r2, r1,
 const L1 = 17, L2 = 33; // tamanho da coxa e da canela
 const geoCoxa = pernaGeo(L1, 1.25, 0.8), geoCanela = pernaGeo(L2, 0.85, 0.18), geoGarra = new THREE.ConeGeometry(0.5, 3.2, 7).rotateZ(Math.PI / 2).translate(L2 + 1.2, 0, 0);
 const geoSeg = new THREE.CylinderGeometry(0.22, 0.32, 2.2, 7).translate(0, -1.1, 0), geoEspinho = new THREE.ConeGeometry(0.55, 4.5, 7).translate(0, 2.25, 0);
-function montarColosso(i) { const Rr = semente(300 + i);
+function montarColosso(i, leve) { const Rr = semente(300 + i);
   const g = new THREE.Group(); sup.add(g);
   const pele = std({ map: tPele, bumpMap: tPele, bumpScale: 0.06, roughness: 0.42, metalness: 0.35, color: 0xb8b0a4, emissive: 0xff3810, emissiveMap: tVeias, emissiveIntensity: 0.9 });
   const ossos = std({ map: tPele, bumpMap: tPele, bumpScale: 0.04, color: 0x8a8070, roughness: 0.5, metalness: 0.3 });
-  const olhoM = std({ color: 0x200000, emissive: 0xff1a08, emissiveIntensity: 3, roughness: 0.1 });
+  const olhoM = std({ color: 0x200000, emissive: 0xff1a08, emissiveIntensity: 3, roughness: 0.1, fog: false });
   const corpo = new THREE.Group(); corpo.position.y = 26; g.add(corpo);
   // casco: tórax alongado e abdômen caído para trás
-  add(formaOrganica(7, 1, 0.62, 1.25, 48, Rr, 0.09), pele, 0, 0, 1, corpo, true);
-  const abd = add(formaOrganica(6, 0.95, 0.75, 1.35, 40, Rr, 0.1), pele, 0, -1.5, -11, corpo, true); abd.rotation.x = 0.35;
+  add(formaOrganica(7, 1, 0.62, 1.25, leve ? 30 : 48, Rr, 0.09), pele, 0, 0, 1, corpo, true);
+  const abd = add(formaOrganica(6, 0.95, 0.75, 1.35, leve ? 26 : 40, Rr, 0.1), pele, 0, -1.5, -11, corpo, true); abd.rotation.x = 0.35;
   // espinhos nas costas
-  for (let k = 0; k < 9; k++) { const z = 8 - k * 2.6, e = add(geoEspinho, ossos, 0, 4.1 - Math.abs(z + 2) * 0.12, z, corpo, true); e.rotation.x = -0.55; e.scale.setScalar(1.3 - Math.abs(k - 3) * 0.12); }
-  for (const sx of [-1, 1]) for (let k = 0; k < 4; k++) { const e = add(geoEspinho, ossos, sx * 5.4, 2, 6 - k * 4, corpo, true); e.rotation.z = -sx * 0.9; e.scale.setScalar(0.8); }
+  for (let k = 0; k < (leve ? 4 : 9); k++) { const z = 8 - k * 2.6 * (leve ? 2 : 1), e = add(geoEspinho, ossos, 0, 4.1 - Math.abs(z + 2) * 0.12, z, corpo, true); e.rotation.x = -0.55; e.scale.setScalar(1.3 - Math.abs(k - 3) * 0.12); }
+  for (const sx of [-1, 1]) for (let k = 0; k < (leve ? 2 : 4); k++) { const e = add(geoEspinho, ossos, sx * 5.4, 2, 6 - k * 4, corpo, true); e.rotation.z = -sx * 0.9; e.scale.setScalar(0.8); }
   // cabeça comprida com mandíbulas e muitos olhos
   const cabeca = new THREE.Group(); cabeca.position.set(0, -1.6, 9.5); corpo.add(cabeca);
   add(formaOrganica(3, 0.95, 0.65, 1.6, 32, Rr, 0.12), pele, 0, 0, 2.2, cabeca, true);
@@ -919,15 +941,15 @@ function montarColosso(i) { const Rr = semente(300 + i);
   const mand = []; for (const sx of [-1, 1]) { const m = new THREE.Group(); m.position.set(sx * 1.4, -1.1, 6); cabeca.add(m);
     const pm = add(new THREE.ConeGeometry(0.45, 4.2, 7).rotateX(Math.PI / 2).translate(0, 0, 2), ossos, 0, 0, 0, m, true); pm.rotation.y = -sx * 0.35; pm.rotation.x = 0.35; mand.push(m); }
   // núcleo que brilha embaixo da barriga
-  const nucleoM = new THREE.MeshBasicMaterial({ color: 0xff5a1a, toneMapped: false });
-  add(new THREE.SphereGeometry(2, 20, 14), nucleoM, 0, -4.1, 0, corpo); const nucleoLuz = new THREE.PointLight(0xff4a14, 3, 40, 2); nucleoLuz.position.set(0, -6, 0); if (qual > 0) corpo.add(nucleoLuz);
+  const nucleoM = new THREE.MeshBasicMaterial({ color: 0xff5a1a, toneMapped: false, fog: false });
+  add(new THREE.SphereGeometry(2, 20, 14), nucleoM, 0, -4.1, 0, corpo); const nucleoLuz = new THREE.PointLight(0xff4a14, 3, 40, 2); nucleoLuz.position.set(0, -6, 0); if (qual > 0 && !leve) corpo.add(nucleoLuz);
   // holofote (o "olhar" do invasor) saindo da cabeça
   const holo = new THREE.Group(); holo.position.set(0, 0.35, 7); cabeca.add(holo); holo.rotation.x = 1.05;
   const cone = add(new THREE.ConeGeometry(7, 26, 24, 1, true).translate(0, -13, 0), new THREE.MeshBasicMaterial({ color: 0xff6040, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, fog: false }), 0, 0, 0, holo);
   const mancha = add(new THREE.CircleGeometry(7.5, 28).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tBrilho, color: 0xff5030, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending }), 0, 0.06, 0, sup);
   // tentáculos pendurados
-  const tent = []; for (let k = 0; k < 6; k++) { const a = k / 6 * 6.28, base = new THREE.Group(); base.position.set(Math.cos(a) * 3.2, -3.4, Math.sin(a) * 3.2 - 1); corpo.add(base); const segs = []; let pai = base;
-    for (let s = 0; s < 7; s++) { const sg = new THREE.Group(); if (s) sg.position.y = -2.1; pai.add(sg); const m = new THREE.Mesh(geoSeg, pele); m.scale.setScalar(1 - s * 0.11); m.castShadow = true; sg.add(m); segs.push(sg); pai = sg; }
+  const nT = leve ? 4 : 6, tent = []; for (let k = 0; k < nT; k++) { const a = k / nT * 6.28, base = new THREE.Group(); base.position.set(Math.cos(a) * 3.2, -3.4, Math.sin(a) * 3.2 - 1); corpo.add(base); const segs = []; let pai = base;
+    for (let s = 0; s < (leve ? 3 : 7); s++) { const sg = new THREE.Group(); if (s) sg.position.y = -2.1 * (leve ? 2 : 1); pai.add(sg); const m = new THREE.Mesh(geoSeg, pele); m.scale.setScalar(1 - s * 0.11); if (leve) m.scale.y *= 2; m.castShadow = true; sg.add(m); segs.push(sg); pai = sg; }
     tent.push({ segs, fase: Rr() * 6.28 }); }
   // 4 pernas compridas de inseto (joelho acima do corpo)
   const pernas = []; [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(([sx, sz], k) => { const quadril = new THREE.Group(); quadril.position.set(sx * 5.2, 0.5, sz * 4.5 + (sz < 0 ? -2 : 1)); corpo.add(quadril);
@@ -936,10 +958,12 @@ function montarColosso(i) { const Rr = semente(300 + i);
     const e = add(geoEspinho, ossos, 0, 0.8, 0, joelho, true); e.scale.setScalar(0.7); e.rotation.z = -0.4;
     pernas.push({ quadril, coxa, joelho, fase: [0, Math.PI, Math.PI, 0][k], sx, sz, px: sx * 21, pz: sz * 17 + (sz < 0 ? -4 : 4) }); });
   // esporos/fumaça escura saindo das costas
-  const fumaca = []; for (let k = 0; k < 14; k++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: 0x2a2420, transparent: true, opacity: 0.4, depthWrite: false })); s.scale.setScalar(3); sup.add(s); fumaca.push({ s, t: k / 14 }); }
+  const nF = leve ? 4 : 14, fumaca = []; for (let k = 0; k < nF; k++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: 0x2a2420, transparent: true, opacity: 0.4, depthWrite: false })); s.scale.setScalar(3); sup.add(s); fumaca.push({ s, t: k / nF }); }
   const c = { g, corpo, cabeca, mand, tent, nucleoLuz, nucleoM, pele, olho, holo, cone, mancha, pernas, fumaca, x: SX + Math.cos(i * 2.1) * 90, z: SZ + Math.sin(i * 2.1) * 90, rot: 0, fase: rr(0, 6), alvo: null, hp: 250, hpMax: 250, fugindo: false, feridoT: 0, alerta: 0, viu: 0, perseguir: 0, passoAnt: 0, ataque: 0 };
+  if (leve) { c.extra = true; c.ativo = false; c.x = SX + 3000; c.z = SZ; g.visible = false; mancha.visible = false; fumaca.forEach(f => f.s.visible = false); }
   COLOSSOS.push(c); return c; }
 for (let i = 0; i < 3; i++) montarColosso(i);
+for (let i = 3; i < 10; i++) montarColosso(i, true); // os gigantes da noite (aparecem quando escurece)
 function novoAlvo(c) { const a = R() * 6.28, d = rr(25, 172); c.alvo = { x: SX + Math.cos(a) * d, z: SZ + Math.sin(a) * d }; }
 COLOSSOS.forEach(novoAlvo);
 // ===================== NEBLINA ASSUSTADORA =====================
@@ -1217,7 +1241,7 @@ function simular(dtReal) {
 function simularColossos(dt, correndo) {
   laserT = Math.max(0, laserT - dt);
   const voz = barulhoMic(), barulho = jog.fora ? 0 : (E.gerador && !E.silenciador ? 2 : 0) + (radioT > 0 ? 1.5 : 0) + (reparando ? 2 : 0) + voz; alertaMax = 0; let perto = Infinity;
-  for (const c of COLOSSOS) {
+  for (const c of COLOSSOS) { if (c.ativo === false) continue;
     c.feridoT = Math.max(0, c.feridoT - dt); if (!c.fugindo && c.feridoT <= 0) c.hp = Math.min(c.hpMax, c.hp + 2 * dt);
     // para onde ir
     let tx = c.alvo.x, tz = c.alvo.z, vel = 2.4;
@@ -1292,7 +1316,11 @@ function ataqueAoAbrigo(c) { c.ataque = 0; c.alerta = 0; novoAlvo(c); const prot
   if (jog.dormindo) { jog.dormindo = 0; $('fade').classList.remove('ver'); }
   aviso('O colosso pisou no abrigo! O escudo e as paredes de titânio seguraram quase tudo. Se abrir rachadura, tape com peças.', 'ruim', 5);
   if (E.casco <= 0) { E.saude = 0; } }
-function animarColosso(c, dt) { const t = performance.now(), bravo = c.alerta > 50 || c.perseguir > 0 || c.ataque;
+function animarColosso(c, dt) { const t = performance.now(), bravo = c.alerta > 50 || c.perseguir > 0 || c.ataque, dia = luzDia();
+  // só desenha o gigante se ele estiver perto o bastante para ser visto (economiza muito à noite, com 10 gigantes)
+  { const vx = jog.fora ? camera.position.x : HATCH.x, vz = jog.fora ? camera.position.z : HATCH.z, vis = Math.hypot(c.x - vx, c.z - vz) < 150 + dia * 170;
+    if (c.g.visible !== vis) { c.g.visible = vis; c.mancha.visible = vis; c.fumaca.forEach(f => { f.s.visible = vis; }); } if (!vis) return; }
+  c.pele.color.copy(PELE_NOITE).lerp(PELE_DIA, dia);
   c.g.position.set(c.x, 0, c.z); c.g.rotation.y = c.rot; const cy = 26 + Math.sin(c.fase * 2) * 0.45; c.corpo.position.y = cy; c.corpo.rotation.z = Math.sin(c.fase) * 0.03; c.corpo.rotation.x = Math.sin(c.fase * 2 + 1) * 0.015;
   // pernas com cinemática inversa: o pé fica no chão e o joelho dobra para cima, como uma aranha
   for (const p of c.pernas) { const s = (((c.fase + p.fase) / 6.2832) % 1 + 1) % 1, apoio = s < 0.62; const k = apoio ? s / 0.62 : (s - 0.62) / 0.38;
@@ -1309,7 +1337,7 @@ function animarColosso(c, dt) { const t = performance.now(), bravo = c.alerta > 
   const pulso = Math.sin(t / (bravo ? 160 : 520)) * 0.5 + 0.5; c.pele.emissiveIntensity = (c.feridoT > 3.6 ? 3 : 0.45 + pulso * (bravo ? 1.4 : 0.7)) * (c.fugindo ? 0.3 : 1);
   c.nucleoLuz.intensity = (2 + pulso * 2.5) * (c.fugindo ? 0.3 : 1); c.nucleoM.color.setRGB(1, 0.25 + pulso * 0.2, 0.06);
   c.holo.rotation.x = -0.6 + Math.sin(t / 1400 + c.fase * 0.2) * 0.12; c.holo.rotation.z = Math.sin(t / 2100) * 0.35;
-  const fx = Math.sin(c.rot), fz = Math.cos(c.rot); c.mancha.position.set(c.x + fx * 26, 0.07, c.z + fz * 26); c.mancha.material.opacity = 0.35 + (c.viu / 100) * 0.4; c.cone.material.opacity = 0.08 + (noite() ? 0.08 : 0);
+  const fx = Math.sin(c.rot), fz = Math.cos(c.rot); c.mancha.position.set(c.x + fx * 26, 0.07, c.z + fz * 26); c.mancha.material.opacity = (0.35 + (c.viu / 100) * 0.4) * (1 - dia * 0.45); c.cone.material.opacity = (0.08 + (1 - dia) * 0.08) * (1 - dia * 0.55);
   c.olho.material.emissiveIntensity = 2.5 + Math.sin(t / 120) * (bravo ? 1.5 : 0.3);
   c.fumaca.forEach((s, k) => { s.t += dt * 0.12; if (s.t > 1) s.t -= 1; const lx = k % 2 ? 1.5 : -1.5, lz = -6 - (k % 3) * 3, wx = c.x + lx * Math.cos(c.rot) + lz * Math.sin(c.rot), wz = c.z - lx * Math.sin(c.rot) + lz * Math.cos(c.rot);
     s.s.position.set(wx + s.t * 6, 31 + s.t * 18, wz); s.s.scale.setScalar(3 + s.t * 10); s.s.material.opacity = 0.45 * (1 - s.t); }); }
@@ -1325,7 +1353,7 @@ function filmarJanela() { const perto = !jog.fora && jogando && Math.hypot(jog.x
   camJanela.position.set(SX + px * 1.5, 2.4, SZ + 6); camJanela.rotation.set(0.32 - pz * 0.05, Math.PI - px * 0.35, 0); camJanela.fov = 62 + (1 - pz) * 8; camJanela.updateProjectionMatrix();
   filmarSup(camJanela, janelaRT); }
 function filmarSup(cam, rt) { const fc = cena.fog.color.getHex(), fd = cena.fog.density, bg = cena.background.getHex(), ab = abrigo.visible, sv = sup.visible, av = armaVM.visible, nt = noite() ? 1 : 0;
-  const cor = lerpCor(nt); cena.fog.color.setHex(cor); cena.fog.density = nt ? 0.03 : 0.022; cena.background.setHex(cor); abrigo.visible = false; sup.visible = true; armaVM.visible = false;
+  const dl = luzDia(), cor = lerpCor(1 - dl); cena.fog.color.setHex(cor); cena.fog.density = lerp(0.03, 0.01, dl); cena.background.setHex(cor); abrigo.visible = false; sup.visible = true; armaVM.visible = false;
   Rd.setRenderTarget(rt); Rd.render(cena, cam); Rd.setRenderTarget(null);
   cena.fog.color.setHex(fc); cena.fog.density = fd; cena.background.setHex(bg); abrigo.visible = ab; sup.visible = sv; armaVM.visible = av; }
 // câmeras de segurança: cada tela mostra um lugar lá fora (uma tela é atualizada por vez)
@@ -1383,14 +1411,18 @@ function atualizarVisual(dt, perto) {
     latas.forEach((l, i) => { l.visible = i < E.inv.racao * 2; }); garrafas.forEach((g, i) => { g.visible = i < E.inv.agua; });
     const p = poeira.p; for (let i = 0; i < poeira.n; i++) { if (p[i * 3 + 1] < -1) continue; p[i * 3 + 1] -= poeira.v[i] * dt * 2; if (p[i * 3 + 1] < 0) p[i * 3 + 1] = -10; } poeira.pts.geometry.attributes.position.needsUpdate = true;
   } else {
-    const nt = noite() ? 1 : 0, nf = lerpCor(nt); cena.fog.color.setHex(nf); cena.background.setHex(nf); cena.fog.density = (noite() ? 0.056 : 0.042) + Math.sin(t * 0.13) * 0.005; ceu.material.uniforms.uNoite.value = nt; solSup.intensity = noite() ? 0.04 : 0.28; ambSup.intensity = (noite() ? 0.14 : 0.32) + raioFlash * 2.2;
-    nevoaAssusta(dt, t, nt);
+    const dia = luzDia(), nt = 1 - dia, nf = lerpCor(nt), sd = direcaoSol(); cena.fog.color.setHex(nf); cena.background.setHex(nf); cena.fog.density = lerp(0.046, 0.011, dia) + Math.sin(t * 0.13) * 0.005 * (1 - dia * 0.7);
+    const u = ceu.material.uniforms; u.uNoite.value = nt; u.uT.value = t; u.uSol.value.copy(sd);
+    solSup.intensity = 0.04 + dia * 1.45 * Math.max(0.25, sd.y); solSup.color.copy(SOL_COR.setHex(0xffa860)).lerp(PREDIO_DIA, suave(0.05, 0.45, sd.y)); ambSup.intensity = 0.14 + dia * 0.5 + raioFlash * 2.2; ambSup.color.setHex(dia > 0.5 ? 0x9fb4cc : 0x8a9a6a);
+    M.predio.color.copy(PREDIO_NOITE).lerp(PREDIO_DIA, dia);
+    nevoaAssusta(dt, t, nt > 0.5 ? 1 : 0);
+    if (dia > 0) NEBLINA.forEach(n => { n.s.material.opacity *= 1 - dia * 0.65; n.s.material.color.lerp(NEB_SPR_DIA, dia); });
     farolEnt.intensity = 1 + Math.sin(t * 4) * 0.6; escudoGrade.material.opacity = 0.12 + Math.sin(t * 1.5) * 0.05 + (laserVis > 0 ? 0.2 : 0); escudoGrade.rotation.y = t * 0.02; escudo.visible = temEscudo(); if (escudo.visible) escudo.scale.setScalar(raioEscudo() / 17); { const tOn = NV('torres') > 0; TORRES.forEach(T => T.base.visible = tOn); LANCADORES.forEach(L => L.g.visible = tOn); }
     let alvoT = laserAlvo; if (!alvoT || laserVis <= 0) { let md = 1e9; COLOSSOS.forEach(c => { const d = Math.hypot(c.x - SX, c.z - SZ); if (d < md) { md = d; alvoT = c; } }); }
     TORRES.forEach(T => { const wp = T.base.position, dx = alvoT.x - wp.x, dz = alvoT.z - wp.z, hz = Math.hypot(dx, dz), dy = 24 - wp.y; T.cab.rotation.order = 'YXZ'; T.cab.rotation.y = Math.atan2(dx, dz); T.cab.rotation.x = -Math.atan2(dy, hz);
       T.raio.visible = laserVis > 0; if (laserVis > 0) T.raio.scale.set(1, 1, Math.hypot(hz, dy)); });
     droneSup.visible = !!E.drone; if (E.drone) { const a = t * 0.4; droneSup.position.set(SX + Math.cos(a) * 30, 9 + Math.sin(t * 2) * 0.5, SZ + Math.sin(a) * 30); droneSup.rotation.y = -a; helicesSup.forEach(h => h.rotation.y += dt * 30); } CAIXAS.forEach(c => { if (!c.aberta) c.sinal.material.opacity = 0.4 + Math.sin(t * 3) * 0.25; });
-    solSup.position.set(jog.x + 60, 120, jog.z - 50); solSup.target.position.set(jog.x, 0, jog.z);
+    { const sd = direcaoSol(); solSup.position.set(jog.x + sd.x * 150, Math.max(20, sd.y * 150), jog.z + sd.z * 150); } solSup.target.position.set(jog.x, 0, jog.z);
   }
   armaVM.visible = !!E.arma && jogando; if (armaVM.visible) { recuo = Math.max(0, recuo - dt * 8); armaVM.position.set(0.2, -0.18 + Math.sin(jog.fase) * 0.01, -0.42 + recuo * 0.05); armaVM.rotation.x = recuo * 0.15; }
   $('mira').classList.toggle('arma', !!E.arma && jog.fora); $('t-tiro').hidden = !(E.arma && jog.fora);
@@ -1408,7 +1440,11 @@ function atualizarVisual(dt, perto) {
     if (!jog.fora && alertaMax > 60 && jogando && !pausado) { alarmeT -= dt; if (alarmeT <= 0) { alarmeT = 1; tom(880, 880, 0.25, 'square', 0.05); tom(660, 660, 0.25, 'square', 0.05, 0.3); } } }
   // sismógrafo no HUD
   const mostrar = (!jog.fora && (perto < 60 || alertaMax > 15)) || tremor > 0.3; $('sismo').hidden = !mostrar; if (mostrar) desenharSismo(tremor, alertaMax); }
-const lerpCor = n => n ? 0x020302 : 0x0c0e0d;
+const NEB_NOITE = new THREE.Color(0x020302), NEB_DIA = new THREE.Color(0x5b6e7c), COR_NEB = new THREE.Color(), PELE_NOITE = new THREE.Color(0xb8b0a4), PELE_DIA = new THREE.Color(0xe2dace), PREDIO_NOITE = new THREE.Color(0x6a6a6a), PREDIO_DIA = new THREE.Color(0xffffff), NEB_SPR_DIA = new THREE.Color(0xb8c2c8), SOL_COR = new THREE.Color(), SOL_DIR = new THREE.Vector3();
+const lerpCor = n => COR_NEB.copy(NEB_DIA).lerp(NEB_NOITE, n).getHex();
+// quanto de "dia" tem agora: 0 à noite, 1 de dia, com amanhecer (5h-7h) e anoitecer (18h-20h) suaves
+function luzDia() { const h = horaDec(); return suave(5, 7, h) * (1 - suave(18, 20, h)); }
+function direcaoSol() { const a = (horaDec() - 6) / 12 * Math.PI; return SOL_DIR.set(Math.cos(a) * 0.9, Math.sin(a), -0.35).normalize(); }
 
 // ===================== TELAS E LAÇO =====================
 let ultimoRadar = 0, salvarT = 0;
@@ -1457,7 +1493,7 @@ function nevoaAssusta(dt, t, nt) { animarInvasao(dt, t);
     o.vida -= dt; o.t += dt; const d = Math.hypot(o.g.position.x - jog.x, o.g.position.z - jog.z); if (d < 16) { o.vida = 0; sussurro(); return; }
     o.piscaT -= dt; if (o.piscaT < -0.15) o.piscaT = rr(1.5, 4); o.g.visible = o.piscaT > 0; o.g.children.forEach(c => c.material.opacity = Math.min(1, o.t, o.vida)); });
   // relâmpago
-  raioT -= dt; if (raioT <= 0) { raioT = rr(14, 34); raioFlash = 1; const ang = Math.random() * 6.28; relampago.position.set(jog.x + Math.cos(ang) * 120, 90, jog.z + Math.sin(ang) * 120); setTimeout(() => { if (jog.fora) estrondo(0.35); }, 600 + Math.random() * 1400); }
+  raioT -= dt; if (raioT <= 0) { raioT = luzDia() > 0.5 ? rr(45, 90) : rr(14, 34); raioFlash = 1; const ang = Math.random() * 6.28; relampago.position.set(jog.x + Math.cos(ang) * 120, 90, jog.z + Math.sin(ang) * 120); setTimeout(() => { if (jog.fora) estrondo(0.35); }, 600 + Math.random() * 1400); }
   raioFlash = Math.max(0, raioFlash - dt * 3.2); const pisca = raioFlash > 0 && Math.sin(t * 60) > -0.3 ? raioFlash : 0;
   relampago.intensity = pisca * 6; ceu.material.uniforms.uRaio.value = pisca;
   if (pisca > 0) { const c = COR_TMP.copy(cena.fog.color).lerp(COR_RAIO, pisca * 0.8); cena.fog.color.copy(c); cena.background.copy(c); }
@@ -1730,7 +1766,7 @@ document.addEventListener('pointerlockchange', () => { if ((lojaAberta || chatAb
 // ===================== MULTIJOGADOR: jogar com amigos =====================
 // No link do Claude: sala compartilhada (room). No APK e no arquivo HTML: conexão direta pela internet (PeerJS).
 // Quem cria a sala é o "dono": os gigantes e a hora do dia dele valem para todos. Cada um tem o seu próprio estoque.
-const NET = { modo: null, codigo: 0, eu: null, host: false, peer: null, conns: new Map(), room: null, lobby: null, envT: 0, dano: [0, 0, 0], ultDano: new Map(), hostId: null };
+const NET = { modo: null, codigo: 0, eu: null, host: false, peer: null, conns: new Map(), room: null, lobby: null, envT: 0, dano: COLOSSOS.map(() => 0), ultDano: new Map(), hostId: null };
 const remotos = new Map(); let meuNome = '';
 try { meuNome = localStorage.getItem('abrigo-nome') || ''; } catch (e) {}
 const limparNome = s => String(s || '').replace(/[^\p{L}\p{N} _-]/gu, '').trim().slice(0, 12);
@@ -1759,10 +1795,11 @@ function removerRemoto(id) { const r = remotos.get(id); if (!r) return; cena.rem
 // o dono manda os gigantes e a hora; os amigos copiam
 function aplicarMundo(s) { if (NET.host) return;
   if (Array.isArray(s.g)) s.g.forEach((v, i) => { const c = COLOSSOS[i]; if (!c || !Array.isArray(v)) return; c.netX = v[0]; c.netZ = v[1]; c.netRot = v[2]; c.hp = v[3];
-    if (v[4] && !c.fugindo) fugir(c); else if (!v[4] && c.fugindo) { c.fugindo = false; } });
+    if (v[4] && !c.fugindo) fugir(c); else if (!v[4] && c.fugindo) { c.fugindo = false; }
+    if (c.extra && v.length > 5) { if (v[5] && !c.ativo) ativarGigante(c, v[0], v[1]); else if (!v[5] && c.ativo) desativarGigante(c); } });
   if (typeof s.m === 'number' && Math.abs(s.m - E.min) > 20) E.min = s.m; }
 function estadoLocal() { const s = { n: meuNome || 'Amigo', c: NET.minhaCor || 0, x: +jog.x.toFixed(2), z: +jog.z.toFixed(2), a: +jog.yaw.toFixed(2), v: jog.vel || 0, sl: NET.codigo };
-  if (NET.host) { s.h = 1; s.g = COLOSSOS.map(c => [+c.x.toFixed(1), +c.z.toFixed(1), +c.rot.toFixed(2), Math.round(c.hp), c.fugindo ? 1 : 0]); s.m = Math.round(E.min); } else s.d = NET.dano.map(v => Math.round(v));
+  if (NET.host) { s.h = 1; s.g = COLOSSOS.map(c => [+c.x.toFixed(1), +c.z.toFixed(1), +c.rot.toFixed(2), Math.round(c.hp), c.fugindo ? 1 : 0, c.ativo === false ? 0 : 1]); s.m = Math.round(E.min); } else s.d = NET.dano.map(v => Math.round(v));
   return s; }
 function painelSala() { const el = $('h-sala'); if (!NET.modo) { el.hidden = true; return; } el.hidden = false; el.textContent = `👥 ${remotos.size + 1} na SALA ${NET.codigo}${NET.host ? ' · você é o dono' : ''}`; }
 // ---------- sala do Claude ----------
@@ -2193,7 +2230,18 @@ function atualizarPatas(dt) { const t = performance.now() / 1000;
     P.coxa.rotation.x = -0.15 + Math.sin(t * 2.2 + P.fase) * 0.25; P.jo.rotation.x = 0.5 + Math.sin(t * 3.1 + P.fase) * 0.45 * P.desce; P.coxa.rotation.z = Math.sin(t * 1.7 + P.fase) * 0.2;
     if (P.desce > 0.5 && Math.random() < dt * 0.8) chiado(0.25, 900, 0.05, 'bandpass'); });
   if (patasT <= 0) { PATAS.forEach(P => { P.g.visible = false; P.racha.visible = false; }); OLHAO.visible = false; olhoTeto.visible = false; aviso('...ele soltou a base e foi embora. Por enquanto.', 'info', 4); } }
-function atualizarHorror(dt) { filmarDentro(dt); atualizarPatas(dt); if (patasT <= 0) atualizarOlho(dt); atualizarPancadas(dt); }
-Object.assign(window.__abrigo, { PATAS, patas: () => comecarPatas(), barulho: () => barulhoBase, OLHAO, olho: () => { olhoT = 0; }, portaFora, rtDentro, INVASOR, invadir: () => { invasaoT = 0; }, SOMBRA, susto: () => { sustoT = 0; }, fraco, minimo, MONSTROS, ferirMonstro, progressoMissao, novasMissoes, ROBO, matarRobo, LUGARES_ROBO, NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
+
+// ===================== À NOITE CHEGAM MAIS GIGANTES (10 no total) =====================
+let noiteAnt = null, chegadaT = 0;
+function ativarGigante(c, x, z) { Object.assign(c, { x, z, netX: x, netZ: z, ativo: true, hp: c.hpMax, fugindo: false, alerta: 0, viu: 0, perseguir: 0, ataque: 0, rot: Math.atan2(SX - x, SZ - z) }); novoAlvo(c); c.g.visible = true; c.mancha.visible = true; c.fumaca.forEach(f => { f.s.visible = true; }); }
+function desativarGigante(c) { c.ativo = false; c.x = c.netX = SX + 3000; c.z = c.netZ = SZ; c.g.visible = false; c.mancha.visible = false; c.fumaca.forEach(f => { f.s.visible = false; }); }
+function atualizarNoite(dt) { if (NET.modo && !NET.host) return; const nt = noite(), extras = COLOSSOS.filter(c => c.extra);
+  if (nt !== noiteAnt) { if (nt && noiteAnt === false) { aviso('🌑 A NOITE CHEGOU... MAIS COLOSSOS ESTÃO VINDO!', 'ruim', 6); [0, 1.6, 3.4].forEach(k => setTimeout(() => rugido(0.4), k * 1000)); }
+    if (!nt && noiteAnt) { extras.forEach(c => { if (!c.ativo) return; const a = Math.atan2(c.z - SZ, c.x - SX); c.alvo = { x: SX + Math.cos(a) * 280, z: SZ + Math.sin(a) * 280 }; c.ataque = 0; c.perseguir = 0; c.alerta = 0; }); aviso('☀ Amanheceu. Os colossos da noite estão indo embora...', 'bom', 5); }
+    noiteAnt = nt; chegadaT = 0; }
+  if (nt) { chegadaT -= dt; if (chegadaT <= 0) { chegadaT = 8; const c = extras.find(k => !k.ativo); if (c) { const a = Math.random() * 6.28, d = rr(170, 190); ativarGigante(c, SX + Math.cos(a) * d, SZ + Math.sin(a) * d); } } }
+  else extras.forEach(c => { if (!c.ativo) return; if (Math.hypot(c.x - SX, c.z - SZ) > 225) desativarGigante(c); else if (!c.ataque && !c.fugindo && Math.hypot(c.alvo.x - SX, c.alvo.z - SZ) < 250) { const a = Math.atan2(c.z - SZ, c.x - SX); c.alvo = { x: SX + Math.cos(a) * 280, z: SZ + Math.sin(a) * 280 }; } }); }
+function atualizarHorror(dt) { atualizarNoite(dt); filmarDentro(dt); atualizarPatas(dt); if (patasT <= 0) atualizarOlho(dt); atualizarPancadas(dt); }
+Object.assign(window.__abrigo, { noiteJa: () => { COLOSSOS.filter(c => c.extra && !c.ativo).forEach(c => { const a = Math.random() * 6.28; ativarGigante(c, SX + Math.cos(a) * 180, SZ + Math.sin(a) * 180); }); }, ativos: () => COLOSSOS.filter(c => c.ativo !== false).length, PATAS, patas: () => comecarPatas(), barulho: () => barulhoBase, OLHAO, olho: () => { olhoT = 0; }, portaFora, rtDentro, INVASOR, invadir: () => { invasaoT = 0; }, SOMBRA, susto: () => { sustoT = 0; }, fraco, minimo, MONSTROS, ferirMonstro, progressoMissao, novasMissoes, ROBO, matarRobo, LUGARES_ROBO, NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
 })();
 </script>
