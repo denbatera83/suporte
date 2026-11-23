@@ -275,7 +275,7 @@ body.pos #vinheta{display:none}
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 3.3 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 3.4 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -1283,7 +1283,7 @@ function atirar() { raioTiro.setFromCamera(centro, camera); raioTiro.far = 260; 
   if (!jog.fora) { const hi = acertarInvasor(raioTiro); if (hi) { ponto = hi.point; alvoM = INVASOR; } }
   if (!ponto) ponto = raioTiro.ray.origin.clone().addScaledVector(raioTiro.ray.direction, jog.fora ? 120 : 12);
   const b = BALAS.find(x => !x.ativo) || BALAS[0]; b.ativo = true; b.s.visible = true; b.de.copy(camera.position).addScaledVector(raioTiro.ray.direction, 0.6).add(new THREE.Vector3(0, -0.15, 0)); b.para.copy(ponto); b.t = 0; b.dur = Math.max(0.05, b.de.distanceTo(ponto) / 140); b.alvo = alvoC; b.mon = alvoM;
-  tom(1200, 300, 0.12, 'square', 0.05); chiado(0.1, 3000, 0.05, 'highpass'); recuo = 1; }
+  tom(1200, 300, 0.12, 'square', 0.05); chiado(0.1, 3000, 0.05, 'highpass'); recuo = 1; if (!jog.fora) somarBarulho(INVASOR.ativo ? 4 : 9); }
 let recuo = 0;
 function ataqueAoAbrigo(c) { c.ataque = 0; c.alerta = 0; novoAlvo(c); const prot = (1.3 - NV('casco') * 0.25) * (temEscudo() ? 1 : 1.3); E.casco = Math.max(0, E.casco - 7 * prot); E.filtroVida = Math.max(0, E.filtroVida - 6);
   [0, 0.7, 1.4].forEach(t => setTimeout(() => { estrondo(1); tremor = 1.6; flicker = 1; if (!jog.fora) soltarPoeira(80, jog.x, jog.z); }, t * 1000));
@@ -2157,7 +2157,43 @@ let pancadaT = 8;
 function atualizarPancadas(dt) { if (jog.fora || jog.dormindo) return; let m = 1e9; COLOSSOS.forEach(c => { m = Math.min(m, Math.hypot(c.x - HATCH.x, c.z - HATCH.z)); }); if (m > 38) return;
   pancadaT -= dt; if (pancadaT > 0) return; pancadaT = rr(5, 11); [0, 0.45, 0.8].forEach((t, i) => setTimeout(() => { estrondo(0.8 - i * 0.15); tremor = Math.max(tremor, 1.1); flicker = Math.max(flicker, 0.6); soltarPoeira(40, jog.x, jog.z); }, t * 1000));
   aviso('💥 ALGO GIGANTE ESTÁ BATENDO NA PORTA DO ABRIGO...', 'ruim', 3); }
-function atualizarHorror(dt) { filmarDentro(dt); atualizarOlho(dt); atualizarPancadas(dt); }
-Object.assign(window.__abrigo, { OLHAO, olho: () => { olhoT = 0; }, portaFora, rtDentro, INVASOR, invadir: () => { invasaoT = 0; }, SOMBRA, susto: () => { sustoT = 0; }, fraco, minimo, MONSTROS, ferirMonstro, progressoMissao, novasMissoes, ROBO, matarRobo, LUGARES_ROBO, NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
+
+// ===================== ATAQUE DAS PATAS: barulho demais dentro da base =====================
+let barulhoBase = 0, patasT = 0, patasEspera = 0;
+function somarBarulho(v) { if (jog.fora || patasT > 0) return; barulhoBase = Math.min(160, barulhoBase + v); if (barulhoBase > 70 && barulhoBase - v <= 70) aviso('🔊 MUITO BARULHO! Pare de atirar dentro da base... algo está ouvindo.', 'ruim', 3); }
+const geoCoxaP = new THREE.CylinderGeometry(0.2, 0.13, 1.4, 8).translate(0, -0.7, 0), geoCanelaP = new THREE.CylinderGeometry(0.13, 0.05, 1.2, 8).translate(0, -0.6, 0), geoGarraP = new THREE.ConeGeometry(0.07, 0.5, 6).translate(0, -0.25, 0);
+const garraM = std({ color: 0xd8ccb0, roughness: 0.4, metalness: 0.1 });
+const racharTetoM = new THREE.MeshBasicMaterial({ map: tRacha, transparent: true, depthWrite: false });
+const PATAS = Array.from({ length: minimo ? 5 : 8 }, () => { const g = new THREE.Group(); g.visible = false; abrigo.add(g);
+  const coxa = new THREE.Group(); g.add(coxa); coxa.add(new THREE.Mesh(geoCoxaP, peleMon)); const jo = new THREE.Group(); jo.position.y = -1.4; coxa.add(jo); jo.add(new THREE.Mesh(geoCanelaP, peleMon));
+  const garra = new THREE.Mesh(geoGarraP, garraM); garra.position.y = -1.2; garra.rotation.x = 0.4; jo.add(garra);
+  const racha = add(new THREE.PlaneGeometry(1.4, 1.4), racharTetoM, 0, 0, 0, abrigo); racha.rotation.x = Math.PI / 2; racha.visible = false;
+  return { g, coxa, jo, racha, fase: Math.random() * 6, desce: 0, atraso: 0 }; });
+const olhoTeto = new THREE.Group(); olhoTeto.visible = false; abrigo.add(olhoTeto);
+{ const m = add(new THREE.PlaneGeometry(1.7, 0.85), new THREE.MeshBasicMaterial({ map: tOlho, transparent: true, toneMapped: false, depthWrite: false }), 0, 0, 0, olhoTeto); m.rotation.x = Math.PI / 2;
+  const r = add(new THREE.PlaneGeometry(2.6, 2.6), racharTetoM, 0, 0.005, 0, olhoTeto); r.rotation.x = Math.PI / 2; r.renderOrder = 2; }
+function comecarPatas() { patasT = 9; barulhoBase = 0; let k = 0;
+  for (let tent = 0; tent < 80 && k < PATAS.length; tent++) { const a = Math.random() * 6.28, d = 1.4 + Math.random() * 2.4, x = jog.x + Math.cos(a) * d, z = jog.z + Math.sin(a) * d; if (!ehPiso(x, z)) continue;
+    const P = PATAS[k++]; P.g.position.set(x, ALT + 2.2, z); P.g.rotation.y = Math.atan2(jog.x - x, jog.z - z); P.g.visible = true; P.desce = 0; P.atraso = k * 0.25 + Math.random() * 0.3; P.x = x; P.z = z; P.racha.position.set(x, ALT - 0.02, z); P.racha.visible = false; }
+  OLHAO.visible = true; OLHAO.rotation.y = Math.PI; olhoVivo = 0; { const fx = -Math.sin(jog.yaw), fz = -Math.cos(jog.yaw); let ox = jog.x + fx * 1.8, oz = jog.z + fz * 1.8; if (!ehPiso(ox, oz)) { ox = jog.x; oz = jog.z; } olhoTeto.position.set(ox, ALT - 0.03, oz); olhoTeto.rotation.y = jog.yaw; olhoTeto.visible = true; } rugido(1); batidaCoracao(1); flicker = 1;
+  aviso('👁 ALGO GIGANTE AGARROU O ABRIGO! FIQUE EM SILÊNCIO!', 'ruim', 5); }
+function atualizarPatas(dt) { const t = performance.now() / 1000;
+  if (patasT <= 0) { barulhoBase = Math.max(0, barulhoBase - dt * 12); const voz = barulhoMic(); if (voz > 0.6 && !jog.fora) somarBarulho(voz * 22 * dt);
+    patasEspera -= dt; if (barulhoBase >= 100 && patasEspera <= 0 && !jog.fora && !jog.dormindo) { patasEspera = 50; comecarPatas(); } return; }
+  patasT -= dt; const fim = patasT < 2; if (jog.fora) patasT = 0;
+  // o olho fica espiando pela janela o tempo todo
+  OLHAO.position.set(camJanela.position.x, camJanela.position.y + 0.95, camJanela.position.z + 3.0); palpebra.position.y = 1.35; palpebra2.position.y = -1.35; olhoMesh.position.x = Math.sin(t * 2.3) * 0.3; filmarJanela(); olhoTeto.children[0].position.x = Math.sin(t * 2.3) * 0.12;
+  // a base balança e você vai perdendo vida
+  tremor = Math.max(tremor, fim ? 0.5 : 1.3); if (Math.random() < dt * 3) flicker = Math.max(flicker, 0.7); if (Math.random() < dt * 2) soltarPoeira(30, jog.x, jog.z);
+  if (!fim) { E.saude -= dt * 2.6 * (E.traje ? 0.8 : 1); E.casco = Math.max(0, E.casco - dt * 1.2); if (Math.random() < dt * 1.5) { $('dano').style.opacity = 0.8; setTimeout(() => { $('dano').style.opacity = 0; }, 250); } }
+  if (Math.random() < dt * 0.7) rugido(0.7); if (Math.random() < dt * 2) tom(80 + Math.random() * 60, 40, 0.5, 'sawtooth', 0.08);
+  PATAS.forEach(P => { if (!P.g.visible) return; P.atraso -= dt; if (P.atraso > 0) return;
+    if (!fim) { if (P.desce === 0) { estrondo(0.6); P.racha.visible = true; soltarPoeira(25, P.x, P.z); } P.desce = Math.min(1, P.desce + dt * 1.6); } else P.desce = Math.max(0, P.desce - dt * 1.2);
+    P.g.position.y = ALT + 2.2 - P.desce * 2.0 + Math.sin(t * 9 + P.fase) * 0.05 * P.desce;
+    P.coxa.rotation.x = -0.15 + Math.sin(t * 2.2 + P.fase) * 0.25; P.jo.rotation.x = 0.5 + Math.sin(t * 3.1 + P.fase) * 0.45 * P.desce; P.coxa.rotation.z = Math.sin(t * 1.7 + P.fase) * 0.2;
+    if (P.desce > 0.5 && Math.random() < dt * 0.8) chiado(0.25, 900, 0.05, 'bandpass'); });
+  if (patasT <= 0) { PATAS.forEach(P => { P.g.visible = false; P.racha.visible = false; }); OLHAO.visible = false; olhoTeto.visible = false; aviso('...ele soltou a base e foi embora. Por enquanto.', 'info', 4); } }
+function atualizarHorror(dt) { filmarDentro(dt); atualizarPatas(dt); if (patasT <= 0) atualizarOlho(dt); atualizarPancadas(dt); }
+Object.assign(window.__abrigo, { PATAS, patas: () => comecarPatas(), barulho: () => barulhoBase, OLHAO, olho: () => { olhoT = 0; }, portaFora, rtDentro, INVASOR, invadir: () => { invasaoT = 0; }, SOMBRA, susto: () => { sustoT = 0; }, fraco, minimo, MONSTROS, ferirMonstro, progressoMissao, novasMissoes, ROBO, matarRobo, LUGARES_ROBO, NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
 })();
 </script>
