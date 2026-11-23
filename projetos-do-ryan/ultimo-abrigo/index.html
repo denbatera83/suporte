@@ -208,9 +208,14 @@
   body.toque #joy { top: auto; bottom: 0; height: 58%; width: 42vw; }
   body.toque #joy .base { width: 96px; height: 96px; margin: -48px; left: calc(max(14px, env(safe-area-inset-left, 0px)) + 62px); top: calc(100% - max(12px, env(safe-area-inset-bottom, 0px)) - 66px); opacity: .4; } body.toque #joy .base i { width: 42px; height: 42px; margin: -21px; }
   body.toque #acao { font-size: 12px; padding: 4px 8px; bottom: calc(max(8px, env(safe-area-inset-bottom, 0px)) + 70px); }
+#vinheta,#medo{position:fixed;inset:0;pointer-events:none;z-index:0}
+#vinheta{background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.55) 100%)}
+#medo{opacity:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(110,0,0,.75) 100%);transition:opacity .12s}
+body.pos #vinheta{display:none}
 </style>
 
 <canvas id="cena" aria-label="O abrigo"></canvas>
+<div id="vinheta" aria-hidden="true"></div><div id="medo" aria-hidden="true"></div>
 <div id="vinheta"></div><div id="dano"></div>
 <div class="hud" id="hud-corpo">
   <div class="placa barra" id="b-saude">Saúde<div class="b"><i></i></div><b class="num">100</b></div>
@@ -266,7 +271,7 @@
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 2.4 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 2.5 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -299,7 +304,7 @@
     <p class="teclas"><kbd>W A S D</kbd> andar · <kbd>MOUSE</kbd> olhar (clique na tela) · <kbd>E</kbd> segurar para usar · <kbd>F</kbd> lanterna · <kbd>G</kbd> silenciador · <kbd>T</kbd> falar com a ÍRIS · <kbd>CLIQUE</kbd>/<kbd>ESPAÇO</kbd> atirar · <kbd>SHIFT</kbd> correr</p>
   </div></div>
   <div class="m-painel" id="pm-config" hidden><div class="m-caixa"><div class="m-cab"><h2>⚙ Configurações</h2><button type="button" class="m-fechar" aria-label="Fechar">✕</button></div>
-    <div class="linha"><span class="rot">Gráficos</span><div class="linha" id="qual" role="group" aria-label="Gráficos"><button type="button" data-q="0">Leve</button><button type="button" data-q="1">Normal</button><button type="button" data-q="2">Ultra</button></div></div>
+    <div class="linha"><span class="rot">Gráficos</span><div class="linha" id="qual" role="group" aria-label="Gráficos"><button type="button" data-q="-1">PC fraco</button><button type="button" data-q="0">Leve</button><button type="button" data-q="1">Normal</button><button type="button" data-q="2">Ultra</button></div></div>
     <div class="linha"><button id="b-tela" type="button">⛶ Tela cheia</button><button id="b-mic" type="button" aria-pressed="false">🎤 Microfone: desligado</button></div>
     <div class="linha"><button id="b-eco" type="button" aria-pressed="true">🔋 Economia de bateria</button></div>
     <p class="mic-nota">Economia de bateria: o jogo roda a 30 quadros por segundo com imagem um pouco menor e quase para no menu e na pausa.</p>
@@ -354,17 +359,18 @@ function semente(s) { return () => { s |= 0; s = s + 0x6D2B79F5 | 0; let t = Mat
 const R = semente(2097), rr = (a, b) => a + R() * (b - a);
 
 // ===================== QUALIDADE E RENDER =====================
-let qual = toque ? 0 : 1; try { const q = localStorage.getItem('abrigo-q'); if (q !== null) qual = clamp(+q, 0, 2); } catch (e) {}
-const Q = [{ pr: 1, bloom: false, ruinas: 60, sombra: 0 }, { pr: 1.5, bloom: true, ruinas: 110, sombra: 0 }, { pr: 2, bloom: true, ruinas: 170, sombra: 2048 }][qual];
+let qual = toque ? 0 : 1; try { const q = localStorage.getItem('abrigo-q'); if (q !== null) qual = clamp(+q, -1, 2); } catch (e) {}
+const fraco = qual < 0; if (fraco) qual = 0;
+const Q = fraco ? { pr: 0.65, bloom: false, ruinas: 28, sombra: 0 } : [{ pr: 1, bloom: false, ruinas: 60, sombra: 0 }, { pr: 1.5, bloom: true, ruinas: 110, sombra: 0 }, { pr: 2, bloom: true, ruinas: 170, sombra: 2048 }][qual];
 const canvas = $('cena');
 const Rd = new THREE.WebGLRenderer({ canvas, antialias: qual > 0, powerPreference: 'high-performance' });
 let eco = toque; try { const v = localStorage.getItem('abrigo-eco'); if (v !== null) eco = v === '1'; } catch (e) {}
-const prBase = () => Math.min(devicePixelRatio || 1, Q.pr) * (eco ? 0.7 : 1);
+const prBase = () => fraco ? 0.65 : Math.min(devicePixelRatio || 1, Q.pr) * (eco ? 0.7 : 1);
 Rd.setPixelRatio(prBase()); Rd.outputEncoding = THREE.sRGBEncoding; Rd.toneMapping = THREE.ACESFilmicToneMapping; Rd.toneMappingExposure = 1.1;
 Rd.shadowMap.enabled = Q.sombra > 0; Rd.shadowMap.type = THREE.PCFSoftShadowMap;
 const cena = new THREE.Scene(); cena.background = new THREE.Color(0x050605);
 cena.fog = new THREE.FogExp2(0x050605, 0.03);
-const camera = new THREE.PerspectiveCamera(70, 1, 0.05, 900); camera.rotation.order = 'YXZ';
+const camera = new THREE.PerspectiveCamera(70, 1, 0.05, fraco ? 380 : 900); camera.rotation.order = 'YXZ';
 let composer = null, bloom = null;
 if (Q.bloom && THREE.EffectComposer && THREE.UnrealBloomPass) {
   composer = new THREE.EffectComposer(Rd); composer.addPass(new THREE.RenderPass(cena, camera));
@@ -375,7 +381,8 @@ if (Q.bloom && THREE.EffectComposer && THREE.UnrealBloomPass) {
       float hh(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
       void main(){ vec2 d = vUv - 0.5; vec2 off = d * (0.003 + uTreme * 0.012);
         vec4 c = texture2D(tDiffuse, vUv); c.r = texture2D(tDiffuse, vUv + off).r; c.b = texture2D(tDiffuse, vUv - off).b;
-        c.rgb *= mix(0.55, 1.0, smoothstep(0.85, 0.25, length(d * vec2(1.2, 1.0))));
+        c.rgb *= mix(0.42, 1.0, smoothstep(0.9, 0.22, length(d * vec2(1.2, 1.0))));
+        float lu = dot(c.rgb, vec3(0.299, 0.587, 0.114)); c.rgb = mix(vec3(lu), c.rgb, 0.86); c.rgb += vec3(-0.006, 0.002, 0.009) * (1.0 - smoothstep(0.0, 0.25, lu)); c.rgb = max(c.rgb, 0.0); c.rgb = pow(c.rgb, vec3(1.1)) * 1.06;
         c.rgb = mix(c.rgb, c.rgb * vec3(0.85, 1.12, 0.7), uVerde);
         c.rgb *= 1.0 + (hh(vUv * 900.0 + uT) - 0.5) * (0.05 + uTreme * 0.08);
         gl_FragColor = c; }` }));
@@ -412,7 +419,7 @@ const tChao = tex(512, 512, (g, w, h) => { const Rr = semente(11); g.fillStyle =
   g.strokeStyle = 'rgba(15,14,8,.6)'; for (let i = 0; i < 30; i++) { g.lineWidth = 1 + Rr() * 2; g.beginPath(); let x = Rr() * w, y = Rr() * h; g.moveTo(x, y); for (let k = 0; k < 8; k++) { x += (Rr() - 0.5) * 50; y += (Rr() - 0.5) * 50; g.lineTo(x, y); } g.stroke(); } }, true);
 const tJanelas = tex(256, 512, (g, w, h) => { const Rr = semente(13); g.fillStyle = '#3c3a33'; g.fillRect(0, 0, w, h); ruido(g, w, h, ['rgba(0,0,0,.25)', 'rgba(255,255,255,.04)'], 8000, 3, Rr);
   for (let y = 16; y < h - 20; y += 40) for (let x = 14; x < w - 20; x += 40) { g.fillStyle = Rr() < 0.08 ? '#5a6a3a' : '#0c0d0b'; g.fillRect(x, y, 24, 26); } }, true);
-const std = o => new THREE.MeshStandardMaterial(o);
+const std = o => { if (!fraco) return new THREE.MeshStandardMaterial(o); const p = Object.assign({}, o); delete p.roughness; delete p.metalness; delete p.envMapIntensity; return new THREE.MeshLambertMaterial(p); };
 const M = { concreto: std({ map: tConcreto, roughness: 0.95 }), parede: std({ map: tPainel, roughness: 0.38, metalness: 0.55 }), piso: std({ map: tPiso, roughness: 0.28, metalness: 0.6 }), teto: std({ map: tTeto, roughness: 0.6, metalness: 0.3 }),
   metal: std({ color: 0x6d7268, roughness: 0.45, metalness: 0.8 }), metalEsc: std({ color: 0x2a2d28, roughness: 0.6, metalness: 0.7 }), ferrugem: std({ color: 0x6a3f22, roughness: 0.9, metalness: 0.3 }),
   verdeMil: std({ color: 0x4a5a33, roughness: 0.75, metalness: 0.2 }), madeira: std({ color: 0x5a4028, roughness: 0.9 }), tecido: std({ color: 0x5a5f4a, roughness: 1 }),
@@ -448,10 +455,13 @@ const abrigo = new THREE.Group(); cena.add(abrigo);
 for (const x of [-0.75, 0.75]) add(new THREE.CylinderGeometry(0.07, 0.07, 27, 8).rotateX(Math.PI / 2), M.metal, x, ALT - 0.15, -14, abrigo);
 add(new THREE.BoxGeometry(6, 0.02, 0.3), M.faixa, 0, 0.011, -23.7, abrigo);
 // luzes de cada cômodo (sempre existem; o gerador muda a força)
+const tCone = tex(8, 128, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(255,255,255,0)'); gr.addColorStop(0.55, 'rgba(255,255,255,.35)'); gr.addColorStop(1, 'rgba(255,255,255,1)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); });
+const coneM = new THREE.MeshBasicMaterial({ map: tCone, color: 0x0d1416, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
 const LUZES = [[-5, -6.5, 'dorm'], [5, -6.5, 'coz'], [-5, -17, 'maq'], [5, -17, 'ctl'], [0, -3, 'cor'], [0, -11, 'cor'], [0, -20, 'cor'], [0, -27, 'ecl'], [11, -4, 'cor'], [11, -14, 'cor'], [17, -6.5, 'est'], [17, -17, 'ars'], [12, -27.5, 'nuc']].map(([x, z, nome]) => {
   const l = new THREE.PointLight(0xd8f2ff, 1, 11, 1.6); l.position.set(x, ALT - 0.35, z); abrigo.add(l);
   const lamp = add(new THREE.BoxGeometry(1.8, 0.05, 0.3), M.luz, x, ALT - 0.06, z, abrigo); const grade = add(new THREE.BoxGeometry(1, 0.12, 0.32), M.metalEsc, x, ALT - 0.03, z, abrigo); grade.scale.set(1, 0.4, 1);
-  return { l, lamp, nome, base: nome === 'cor' ? 0.8 : 1.15, pisca: 0 }; });
+  let cone = null; if (!fraco) { cone = add(new THREE.CylinderGeometry(0.5, 1.25, ALT - 0.1, 18, 1, true), coneM, x, (ALT - 0.1) / 2, z, abrigo); cone.scale.z = 0.5; cone.receiveShadow = false; cone.renderOrder = 2; }
+  return { l, lamp, cone, nome, base: nome === 'cor' ? 0.8 : 1.15, pisca: 0 }; });
 const emerg = [[-1, -9], [1, -15], [-1, -22], [2.4, -29]].map(([x, z]) => { const m = add(new THREE.SphereGeometry(0.08, 10, 8), M.luzVerm, x * 0.99, 2.4, z, abrigo); const l = new THREE.PointLight(0xff2a10, 0, 6, 2); l.position.set(x * 0.85, 2.3, z); abrigo.add(l); return l; });
 // ===== coisas para usar (cada uma tem uma ação) =====
 const usaveis = [];
@@ -651,7 +661,7 @@ const rachaduras = LUGARES_RACHA.map(([x, y, z, ry], i) => { const g = grupo(x, 
   g.visible = false; usavel(g, { id: 'racha', txt: 'Tapar a rachadura (1 peça)', segurar: 3, i }); return { g, gas, aberta: false }; });
 // poeira caindo do teto quando treme
 const poeira = (() => { const n = 400, p = new Float32Array(n * 3), v = new Float32Array(n); for (let i = 0; i < n; i++) { p[i * 3 + 1] = -10; } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3));
-  const pts = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xb0a890, size: 0.035, transparent: true, opacity: 0.8 })); pts.frustumCulled = false; abrigo.add(pts); return { pts, p, v, n, i: 0 }; })();
+  const pts = new THREE.Points(g, new THREE.PointsMaterial({ map: tBrilho, color: 0xb0a890, size: 0.05, transparent: true, opacity: 0.8, depthWrite: false })); pts.frustumCulled = false; abrigo.add(pts); return { pts, p, v, n, i: 0 }; })();
 function soltarPoeira(qtd, x, z) { for (let k = 0; k < qtd; k++) { const i = poeira.i++ % poeira.n; poeira.p[i * 3] = x + rr(-4, 4); poeira.p[i * 3 + 1] = ALT - 0.05; poeira.p[i * 3 + 2] = z + rr(-4, 4); poeira.v[i] = rr(0.2, 0.8); } }
 // ===================== VISUAL DO ABRIGO POR NÍVEL (0 enferrujado → 3 titânio brilhante) =====================
 function enferrujar(t, semente0) { const src = t.image, c = document.createElement('canvas'); c.width = src.width; c.height = src.height; const g = c.getContext('2d'), Rr = semente(semente0), W = c.width, H = c.height;
@@ -1149,7 +1159,7 @@ function mover(dt) { let f = 0, s = 0; if (teclas.has('w') || teclas.has('arrowu
 
 // ===================== SIMULAÇÃO =====================
 const armaVM = new THREE.Group(); camera.add(armaVM); if (!camera.parent) cena.add(camera); montarCanhao(armaVM); armaVM.scale.setScalar(0.6); armaVM.rotation.y = 0; armaVM.visible = false;
-let tremor = 0, flicker = 0, alertaMax = 0, geigerT = 0, alarmeT = 0;
+let apagaoT = 0, tremor = 0, flicker = 0, alertaMax = 0, geigerT = 0, alarmeT = 0;
 function simular(dtReal) {
   const mult = jog.dormindo > 0 ? 20 : 1, dmin = dtReal * MIN_POR_SEG * mult, h = dmin / 60, diaAntes = dia(); E.min += dmin;
   if (jog.dormindo > 0) { jog.dormindo -= dmin; if (jog.dormindo <= 0) { jog.dormindo = 0; $('fade').classList.remove('ver'); aviso('Você acordou.', 'info'); } }
@@ -1298,7 +1308,7 @@ const CAMS_SEG = (() => { const posto = MARCOS.find(m => m.lugar === 'posto'), m
 let segT = 0;
 function filmarSeguranca(dt) { const dentro = !jog.fora && jogando && jog.x < -3.2 && jog.z < -23.5; segT -= dt;
   SEG.telas.forEach(t => { const m = t.tela.material; if (dentro && m.map !== t.rt.texture) { m.map = t.rt.texture; m.needsUpdate = true; } });
-  if (!dentro || segT > 0) return; segT = eco ? 1 / 10 : 1 / 30; const k = SEG.i++ % 4, cam = CAMS_SEG[k];
+  if (!dentro || segT > 0) return; segT = fraco ? 1 / 3 : eco ? 1 / 10 : 1 / 30; const k = SEG.i++ % 4, cam = CAMS_SEG[k];
   if (k === 3) { let alvo = null, md = 1e9; COLOSSOS.forEach(c => { const d = Math.hypot(c.x - SX, c.z - SZ); if (d < md) { md = d; alvo = c; } }); if (alvo) cam.lookAt(alvo.x, 18, alvo.z); }
   filmarSup(cam, SEG.telas[k].rt); }
 // som desligado quando o jogo some da tela (economiza bateria)
@@ -1317,7 +1327,7 @@ function atualizarVisual(dt, perto) {
   lanterna.intensity = jog.lanterna ? (jog.fora ? 4 : 3) : 0; lanterna.position.copy(camera.position); const fw = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); lanterna.target.position.copy(camera.position).addScaledVector(fw, 5);
   portaE.position.x = lerp(portaE.position.x, -0.71 - portaAbre * 1.4, Math.min(1, dt * 4)); portaD.position.x = lerp(portaD.position.x, 0.71 + portaAbre * 1.4, Math.min(1, dt * 4)); { const u = portaSaida.userData; u.volante.rotation.z = lerp(u.volante.rotation.z, portaAbre * Math.PI * 2, Math.min(1, dt * 3)); u.giroflex.rotation.y += dt * (portaAbre > 0.05 ? 8 : 0); u.luzGiro.intensity = portaAbre > 0.05 ? 3 : 0; u.luzPressao.material.color.setHex(portaAbre > 0.05 ? (Math.sin(performance.now() / 120) > 0 ? 0xff3020 : 0x300000) : 0x40ff60); }
   luzSaida.intensity = 0.7 + Math.sin(t * 2.5) * 0.3;
-  janelaT -= dt; if (janelaT <= 0) { janelaT = eco ? 1 / 10 : 1 / 24; seguro('janela', filmarJanela); }
+  janelaT -= dt; if (janelaT <= 0) { janelaT = fraco ? 1 / 4 : eco ? 1 / 10 : 1 / 24; seguro('janela', filmarJanela); }
   seguro('cameras', () => filmarSeguranca(dt));
   MARCOS.forEach(m => { const livre = m.lugar === 'torre' ? !E.sinal : E.coletas[m.lugar] !== dia(); m.feixe.visible = livre && Math.hypot(jog.x - m.x, jog.z - m.z) > 22; m.feixe.material.opacity = 0.18 + Math.sin(t * 2 + m.x) * 0.06; });
   torreLuz.material.emissiveIntensity = Math.sin(t * 3) > 0 ? 4 : 0.3;
@@ -1328,7 +1338,7 @@ function atualizarVisual(dt, perto) {
     const vis = visualAbrigo(NV('casco')); M.neon.color.setHex(E.gerador ? vis.neon : 0x5a0a08); irisOrbe.position.y = 1.35 + Math.sin(t * 1.6) * 0.06; irisAneis[0].rotation.set(t * 0.9, t * 0.6, 0); irisAneis[1].rotation.set(-t * 0.5, 0, t * 0.8); irisBrilho.material.opacity = 0.6 + Math.sin(t * (falando ? 14 : 2)) * 0.25;
     droneMesh.visible = !E.drone; { const cOn = E.campo !== false, aOn = E.armas !== false; if (telaCampo.material.map !== (cOn ? tCampoOn : tCampoOff)) { telaCampo.material.map = cOn ? tCampoOn : tCampoOff; telaCampo.material.needsUpdate = true; } if (telaArmas.material.map !== (aOn ? tArmasOn : tArmasOff)) { telaArmas.material.map = aOn ? tArmasOn : tArmasOff; telaArmas.material.needsUpdate = true; }
       botaoCampo.material.emissive.setHex(cOn ? 0x3ccfff : 0x501010); botaoArmas.material.emissive.setHex(aOn ? 0xffb630 : 0x501010); botaoCampo.position.y = cOn ? 1.1 : 1.07; botaoArmas.position.y = aOn ? 1.1 : 1.07; }
-    const ligado = E.gerador; botaoSil.material.emissive.setHex(E.silenciador ? 0x33ff33 : 0xff2010); botaoSil.position.z = E.silenciador ? 0.08 : 0.12; LUZES.forEach((L, i) => { const pisc = flicker > 0 && Math.sin(t * 40 + i * 7) > 0.2 - flicker ? 0.15 : 1; L.l.intensity = ligado ? L.base * pisc * vis.mult * (vis.ferr && Math.sin(t * 23 + i * 5) > 0.97 ? 0.3 : 1) : 0; L.lamp.material = ligado && pisc > 0.5 ? M.luz : M.metalEsc; });
+    const ligado = E.gerador && apagaoT <= 0; botaoSil.material.emissive.setHex(E.silenciador ? 0x33ff33 : 0xff2010); botaoSil.position.z = E.silenciador ? 0.08 : 0.12; LUZES.forEach((L, i) => { const pisc = flicker > 0 && Math.sin(t * 40 + i * 7) > 0.2 - flicker ? 0.15 : 1; L.l.intensity = ligado ? L.base * pisc * vis.mult * (vis.ferr && Math.sin(t * 23 + i * 5) > 0.97 ? 0.3 : 1) : 0; if (L.cone) L.cone.visible = L.l.intensity > 0.35; L.lamp.material = ligado && pisc > 0.5 ? M.luz : M.metalEsc; });
     emerg.forEach((l, i) => { l.intensity = ligado ? 0 : 0.9 + Math.sin(t * 3 + i) * 0.3; });
     M.luzVerm.emissiveIntensity = ligado ? 0.4 : 1.5 + Math.sin(t * 3) * 0.5;
     pistoes.forEach((p, i) => { p.position.y = 1.75 + (ligado ? Math.sin(t * 18 + i * 2.1) * 0.08 : 0); }); ledGer.material.emissive.setHex(ligado ? 0x33ff33 : 0xff2010);
@@ -1391,7 +1401,7 @@ if (temSalvo) { $('b-jogar').textContent = '▶ Continuar'; $('b-novo').hidden =
   document.querySelectorAll('#menu .m-painel').forEach(p => { p.addEventListener('click', e => { if (e.target === p || e.target.closest('.m-fechar')) p.hidden = true; }); });
   addEventListener('keydown', e => { if ($('menu').hidden || jogando) return; const aberto = document.querySelector('#menu .m-painel:not([hidden])');
     if (e.key === 'Escape' && aberto) { aberto.hidden = true; return; } if (e.key === 'Enter' && !aberto && !(e.target && e.target.tagName === 'INPUT') && !(e.target && e.target.tagName === 'BUTTON')) { e.preventDefault(); comecar(false); } }); }
-document.querySelectorAll('#qual button').forEach(b => { b.setAttribute('aria-pressed', String(+b.dataset.q === qual)); b.addEventListener('click', () => { try { localStorage.setItem('abrigo-q', b.dataset.q); } catch (e) {} location.reload(); }); });
+document.querySelectorAll('#qual button').forEach(b => { b.setAttribute('aria-pressed', String(+b.dataset.q === (fraco ? -1 : qual))); b.addEventListener('click', () => { try { localStorage.setItem('abrigo-q', b.dataset.q); } catch (e) {} location.reload(); }); });
 $('b-tela').addEventListener('click', () => { const el = document.documentElement; try { if (!document.fullscreenElement) { const f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) { const r = f.call(el); if (r && r.catch) r.catch(() => {}); } } else document.exitFullscreen(); } catch (e) {} });
 if (!(document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen)) $('b-tela').hidden = true;
 espalharCaixas();
@@ -1421,7 +1431,7 @@ function nevoaAssusta(dt, t, nt) { animarInvasao(dt, t);
 let ultimoQuadro = 0;
 function quadro(agora) { requestAnimationFrame(quadro);
   // economia de bateria: 30 quadros por segundo jogando, quase parado no menu e na pausa
-  const parado = document.hidden || !$('menu').hidden || pausado || !$('fim').hidden; const alvoFps = parado ? 4 : eco ? 30 : 120;
+  const parado = document.hidden || !$('menu').hidden || pausado || !$('fim').hidden; const alvoFps = parado ? 4 : (eco || fraco) ? 30 : 120;
   if (agora - ultimoQuadro < 1000 / alvoFps - 3) return; ultimoQuadro = agora;
   const dt = Math.min(0.05, (agora - antes) / 1000) * (window.__vel || 1); antes = agora;
   let correndo = 0, perto = 999;
@@ -1443,7 +1453,7 @@ function quadro(agora) { requestAnimationFrame(quadro);
   } else if (!jogando) { // menu: câmera passeando pela superfície com os colossos
     menuT += dt; abrigo.visible = false; sup.visible = true; perto = simularColossos(dt, false); jog.fora = true;
     const c = COLOSSOS[0]; camera.position.set(c.x + Math.cos(menuT * 0.05) * 70, 6 + Math.sin(menuT * 0.1) * 2, c.z + Math.sin(menuT * 0.05) * 70); camera.lookAt(c.x, 18, c.z); }
-  atualizarRede(dt); if (jogando && !pausado) { seguro('robo', () => atualizarRobo(dt)); seguro('monstros', () => atualizarMonstros(dt)); }
+  atualizarRede(dt); if (jogando && !pausado) { seguro('robo', () => atualizarRobo(dt)); seguro('monstros', () => atualizarMonstros(dt)); seguro('sustos', () => atualizarSustos(dt)); seguro('poeira', () => atualizarPoeira(dt)); } else { $('medo').style.opacity = 0; }
   if (jogando || !$('menu').hidden) atualizarVisual(dt, perto);
   if (!jogando && !$('menu').hidden) { camera.rotation.order = 'YXZ'; }
   if (avisoT > 0) { avisoT -= dt; if (avisoT <= 0) $('aviso').hidden = true; }
@@ -1912,6 +1922,52 @@ function progressoMissao(id, n = 1) { if (!E || !E.missoes) return; E.missoes.li
   desenharMissoes(); }
 function desenharMissoes() { const el = $('missoes'); if (!el || !E || !E.missoes) return; el.innerHTML = '<b>📋 MISSÕES DO DIA</b>';
   E.missoes.lista.forEach(m => { const d = document.createElement('div'); d.className = 'mis' + (m.feito ? ' ok' : ''); d.textContent = `${m.feito ? '✅' : '▫'} ${m.txt} ${m.meta > 1 ? `(${m.prog}/${m.meta})` : ''} · ${m.premio}🪙`; el.appendChild(d); }); }
-Object.assign(window.__abrigo, { MONSTROS, ferirMonstro, progressoMissao, novasMissoes, ROBO, matarRobo, LUGARES_ROBO, NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
+
+// ===================== SUSTOS: APAGÃO, A SOMBRA E O CORAÇÃO =====================
+if (composer) document.body.classList.add('pos');
+const sombraM = new THREE.MeshBasicMaterial({ color: 0x010101 });
+const SOMBRA = new THREE.Group(); SOMBRA.visible = false; abrigo.add(SOMBRA);
+{ add(new THREE.CylinderGeometry(0.17, 0.07, 1.45, 7).translate(0, 1.3, 0), sombraM, 0, 0, 0, SOMBRA);
+  add(new THREE.SphereGeometry(0.17, 9, 7).scale(0.85, 1.35, 1).translate(0, 2.25, 0), sombraM, 0, 0, 0, SOMBRA);
+  [-1, 1].forEach(s => { const b = add(new THREE.CylinderGeometry(0.035, 0.02, 1.5, 5).translate(0, -0.75, 0), sombraM, s * 0.21, 1.98, 0, SOMBRA); b.rotation.z = s * 0.12;
+    add(new THREE.CylinderGeometry(0.045, 0.03, 0.62, 5).translate(0, 0.31, 0), sombraM, s * 0.08, 0, 0, SOMBRA);
+    const o = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: 0xff1a08, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); o.scale.setScalar(0.26); o.position.set(s * 0.065, 2.27, 0.15); SOMBRA.add(o); }); }
+let sustoT = 80, coracaoT = 0;
+function batidaCoracao(f) { tom(62, 38, 0.14, 'sine', 0.32 * f); tom(56, 34, 0.14, 'sine', 0.22 * f, 0.2); }
+function gritoSombra() { chiado(0.7, 2600, 0.12, 'bandpass'); tom(900, 180, 0.7, 'sawtooth', 0.06); tom(1200, 300, 0.6, 'square', 0.03, 0.05); }
+function lugarDaSombra() { const fx = -Math.sin(jog.yaw), fz = -Math.cos(jog.yaw);
+  for (let d = 8; d >= 3.5; d -= 0.5) { let ok = true; for (let k = 1; k <= d; k += 0.5) if (!ehPiso(jog.x + fx * k, jog.z + fz * k)) { ok = false; break; } if (ok) return [jog.x + fx * d, jog.z + fz * d]; }
+  return null; }
+function atualizarSustos(dt) {
+  // coração: bate mais rápido quando um colosso ou um monstro está perto
+  const px = jog.fora ? jog.x : SX, pz = jog.fora ? jog.z : SZ; let m = 999; COLOSSOS.forEach(c => { m = Math.min(m, Math.hypot(c.x - px, c.z - pz) - 12); }); if (jog.fora) MONSTROS.forEach(o => { if (!(o.morto > 0)) m = Math.min(m, Math.hypot(o.x - px, o.z - pz) * 2.5); });
+  let medo = clamp(1 - (m - 6) / 45, 0, 1); if (apagaoT > 0) medo = Math.max(medo, 0.85);
+  coracaoT -= dt; let pulso = 0; if (medo > 0.15) { if (coracaoT <= 0) { coracaoT = lerp(1.15, 0.42, medo); batidaCoracao(medo); } pulso = Math.max(0, 1 - (lerp(1.15, 0.42, medo) - coracaoT) * 4); }
+  $('medo').style.opacity = (medo * 0.45 + pulso * medo * 0.35).toFixed(2);
+  // apagão com a sombra (só dentro do abrigo)
+  if (jog.fora || jog.dormindo || !E.gerador) { if (apagaoT > 0) { apagaoT = 0; SOMBRA.visible = false; } sustoT = Math.max(sustoT, 30); return; }
+  if (apagaoT > 0) { apagaoT -= dt;
+    if (SOMBRA.visible) { const dx = jog.x - SOMBRA.position.x, dz = jog.z - SOMBRA.position.z, d = Math.hypot(dx, dz); SOMBRA.rotation.y = Math.atan2(dx, dz);
+      SOMBRA.position.x += dx / d * dt * 0.9; SOMBRA.position.z += dz / d * dt * 0.9; SOMBRA.position.y = Math.sin(performance.now() / 90) * 0.02;
+      if (d < 2.2) { SOMBRA.visible = false; gritoSombra(); tremor = Math.max(tremor, 0.7); apagaoT = Math.min(apagaoT, 0.25); } }
+    if (apagaoT <= 0) { SOMBRA.visible = false; tom(180, 120, 0.08, 'square', 0.08); tom(60, 60, 0.6, 'sawtooth', 0.04, 0.05); flicker = 0.8; }
+    return; }
+  sustoT -= dt; if (sustoT > 0) return; sustoT = rr(60, 130);
+  apagaoT = rr(3, 4.5); tom(90, 30, 0.5, 'square', 0.22); chiado(0.5, 260, 0.35); tom(120, 40, 1.8, 'sawtooth', 0.03, 0.1);
+  if (Math.random() < 0.7) { const p = lugarDaSombra(); if (p) { SOMBRA.position.set(p[0], 0, p[1]); SOMBRA.visible = true; setTimeout(sussurro, 500); } }
+}
+// poeira flutuando no ar do abrigo (bonito e assustador com a lanterna)
+const POEIRA = (() => { if (fraco) return null; const n = toque ? 220 : 420, pos = new Float32Array(n * 3), vel = [];
+  for (let i = 0; i < n; i++) { pos[i * 3] = rr(-7, 7); pos[i * 3 + 1] = rr(0.1, ALT - 0.1); pos[i * 3 + 2] = rr(-7, 7); vel.push(rr(-0.04, 0.04), rr(-0.03, 0.02), rr(-0.04, 0.04)); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  const p = new THREE.Points(g, new THREE.PointsMaterial({ map: tBrilho, color: 0x9fb8c0, size: 0.028, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending })); p.frustumCulled = false; abrigo.add(p); return { p, pos, vel, n }; })();
+function atualizarPoeira(dt) { if (!POEIRA || jog.fora) return; const { p, pos, vel, n } = POEIRA; p.position.set(Math.round(jog.x), 0, Math.round(jog.z));
+  for (let i = 0; i < n; i++) { const k = i * 3; pos[k] += vel[i * 3] * dt; pos[k + 1] += vel[i * 3 + 1] * dt + Math.sin(performance.now() / 1500 + i) * 0.002; pos[k + 2] += vel[i * 3 + 2] * dt;
+    if (pos[k] > 7) pos[k] -= 14; else if (pos[k] < -7) pos[k] += 14; if (pos[k + 2] > 7) pos[k + 2] -= 14; else if (pos[k + 2] < -7) pos[k + 2] += 14; if (pos[k + 1] < 0.05) pos[k + 1] = ALT - 0.1; else if (pos[k + 1] > ALT - 0.05) pos[k + 1] = 0.1; }
+  p.geometry.attributes.position.needsUpdate = true; }
+// PC fraco: menos neblina transparente (é o que mais pesa)
+if (fraco) cena.add(new THREE.HemisphereLight(0x9aa8b4, 0x2a2622, 0.55));
+if (fraco) NEBLINA.forEach((n, i) => { if (i % 2) n.s.visible = false; });
+Object.assign(window.__abrigo, { SOMBRA, susto: () => { sustoT = 0; }, fraco, MONSTROS, ferirMonstro, progressoMissao, novasMissoes, ROBO, matarRobo, LUGARES_ROBO, NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
 })();
 </script>
