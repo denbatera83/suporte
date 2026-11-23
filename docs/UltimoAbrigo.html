@@ -273,7 +273,7 @@ body.pos #vinheta{display:none}
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 2.9 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 3.0 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -299,7 +299,7 @@ body.pos #vinheta{display:none}
       <div class="placa regra"><b>Moedas 🪙</b>O abrigo começa ENFERRUJADO, sem campo de força e sem armas! Ganhe moedas abrindo caixas, pegando coisas nos lugares, fazendo gigantes fugirem e sobrevivendo os dias. Use em ⬆ MELHORIAS (ou U) para reformar o abrigo e comprar o campo de força, as armas, o canhão e muito mais!</div>
       <div class="placa regra"><b>Sala de comando 🎛</b>Na sala de controle tem botões para ligar e desligar o CAMPO DE FORÇA e as ARMAS do abrigo.</div>
       <div class="placa regra"><b>Armas</b>Depois de comprar, os mísseis e lasers atiram sozinhos quando um gigante chega perto. Compre o canhão de plasma e pegue no ARSENAL (ala leste) para atirar também!</div>
-      <div class="placa regra"><b>Monstros 🦂🦇</b>RASTEJADORES correm pelo chão e mordem (à noite são mais rápidos). VOADORES mergulham do céu. Atire neles com o canhão para ganhar moedas. Dentro do escudo eles não entram!</div>
+      <div class="placa regra"><b>Monstros 🦂🦇👾</b>RASTEJADORES correm pelo chão e mordem (à noite são mais rápidos). VOADORES mergulham do céu. ESPREITADORES são caçadores escuros de cauda comprida: chegam devagar e de repente correm e atacam. À noite um deles pode entrar no abrigo pela ventilação! Atire neles com o canhão para ganhar moedas. Dentro do escudo eles não entram!</div>
       <div class="placa regra"><b>Missões 📋</b>Todo dia aparecem 3 missões novas. Complete para ganhar moedas, e se fizer as 3 ganha um bônus!</div>
       <div class="placa regra"><b>Lá fora</b>Siga as setas verdes até a porta de SAÍDA. Explore o posto, o mercado, o hospital e a torre de rádio. Cuidado com os gigantes!</div>
     </div>
@@ -2213,6 +2213,7 @@ const raioTiro = new THREE.Raycaster();
 function atirar() { raioTiro.setFromCamera(centro, camera); raioTiro.far = 260; let alvoC = null, ponto = null;
   let alvoM = null; if (jog.fora) { const hits = raioTiro.intersectObjects(COLOSSOS.filter(c => !c.fugindo).map(c => c.g), true); if (hits[0]) { ponto = hits[0].point; alvoC = COLOSSOS.find(c => { let o = hits[0].object; while (o) { if (o === c.g) return true; o = o.parent; } return false; }); }
     const vivos = MONSTROS.filter(m => m.morto <= 0), hm = raioTiro.intersectObjects(vivos.map(m => m.g), true); if (hm[0] && (!hits[0] || hm[0].distance < hits[0].distance)) { ponto = hm[0].point; alvoC = null; alvoM = vivos.find(m => { let o = hm[0].object; while (o) { if (o === m.g) return true; o = o.parent; } return false; }); } }
+  if (!jog.fora) { const hi = acertarInvasor(raioTiro); if (hi) { ponto = hi.point; alvoM = INVASOR; } }
   if (!ponto) ponto = raioTiro.ray.origin.clone().addScaledVector(raioTiro.ray.direction, jog.fora ? 120 : 12);
   const b = BALAS.find(x => !x.ativo) || BALAS[0]; b.ativo = true; b.s.visible = true; b.de.copy(camera.position).addScaledVector(raioTiro.ray.direction, 0.6).add(new THREE.Vector3(0, -0.15, 0)); b.para.copy(ponto); b.t = 0; b.dur = Math.max(0.05, b.de.distanceTo(ponto) / 140); b.alvo = alvoC; b.mon = alvoM;
   tom(1200, 300, 0.12, 'square', 0.05); chiado(0.1, 3000, 0.05, 'highpass'); recuo = 1; }
@@ -2421,7 +2422,7 @@ function quadro(agora) { requestAnimationFrame(quadro);
   } else if (!jogando) { // menu: câmera passeando pela superfície com os colossos
     menuT += dt; abrigo.visible = false; sup.visible = true; perto = simularColossos(dt, false); jog.fora = true;
     const c = COLOSSOS[0]; camera.position.set(c.x + Math.cos(menuT * 0.05) * 70, 6 + Math.sin(menuT * 0.1) * 2, c.z + Math.sin(menuT * 0.05) * 70); camera.lookAt(c.x, 18, c.z); }
-  atualizarRede(dt); if (jogando && !pausado) { seguro('robo', () => atualizarRobo(dt)); seguro('monstros', () => atualizarMonstros(dt)); seguro('sustos', () => atualizarSustos(dt)); seguro('poeira', () => atualizarPoeira(dt)); } else { $('medo').style.opacity = 0; }
+  atualizarRede(dt); if (jogando && !pausado) { seguro('robo', () => atualizarRobo(dt)); seguro('monstros', () => atualizarMonstros(dt)); seguro('sustos', () => atualizarSustos(dt)); seguro('invasor', () => atualizarInvasor(dt)); seguro('poeira', () => atualizarPoeira(dt)); } else { $('medo').style.opacity = 0; }
   if (jogando || !$('menu').hidden) atualizarVisual(dt, perto);
   if (!jogando && !$('menu').hidden) { camera.rotation.order = 'YXZ'; }
   if (avisoT > 0) { avisoT -= dt; if (avisoT <= 0) $('aviso').hidden = true; }
@@ -2819,7 +2820,7 @@ function desenharRastreador() { const g = rtx, W = 240, c = 120, esc = 112 / 190
   LUGARES_ROBO.forEach(l => { const [x, y] = P(l.x, l.z); g.fillStyle = r.alvo === l && r.estado !== 'morto' ? '#ffd040' : 'rgba(200,220,210,.5)'; g.fillRect(x - 3, y - 3, 6, 6); if (!l.nome.startsWith('Ferro')) g.fillText(l.nome, x, y - 7); });
   g.fillStyle = '#ffb630'; g.fillRect(c - 5, c - 5, 10, 10);
   COLOSSOS.forEach(k => { const [x, y] = P(k.x, k.z); if (Math.hypot(x - c, y - c) > 116) return; g.fillStyle = k.fugindo ? 'rgba(255,120,90,.4)' : '#ff3a24'; g.beginPath(); g.arc(x, y, 6 + Math.sin(t * 6) * 1.2, 0, 7); g.fill(); });
-  MONSTROS.forEach(m => { if (m.morto > 0) return; const [x, y] = P(m.x, m.z); if (Math.hypot(x - c, y - c) > 116) return; g.fillStyle = m.tipo === 'rast' ? '#c070ff' : '#ffe040'; g.beginPath(); g.arc(x, y, 2.6, 0, 7); g.fill(); });
+  MONSTROS.forEach(m => { if (m.morto > 0) return; const [x, y] = P(m.x, m.z); if (Math.hypot(x - c, y - c) > 116) return; g.fillStyle = m.tipo === 'rast' ? '#c070ff' : m.tipo === 'esp' ? '#40ffc8' : '#ffe040'; g.beginPath(); g.arc(x, y, 2.6, 0, 7); g.fill(); });
   if (jog.fora) { const [x, y] = P(jog.x, jog.z); g.fillStyle = '#64c8ff'; g.beginPath(); g.arc(x, y, 4, 0, 7); g.fill(); }
   if (r.estado === 'morto') { const [x, y] = P(r.morteX, r.morteZ); g.strokeStyle = '#ff3a24'; g.lineWidth = 3; g.beginPath(); g.moveTo(x - 6, y - 6); g.lineTo(x + 6, y + 6); g.moveTo(x + 6, y - 6); g.lineTo(x - 6, y + 6); g.stroke(); }
   else { const [x, y] = P(r.x, r.z); const dest = r.estado === 'indo' ? r.alvo : r.estado === 'voltando' ? r.base : null;
@@ -2849,14 +2850,86 @@ function novoVoador() { const g = new THREE.Group(); sup.add(g); const Rr = seme
   const asas = [-1, 1].map(s => { const a = new THREE.Group(); a.scale.x = s; g.add(a); a.add(new THREE.Mesh(asaGeo, asaM)); return a; });
   const L = lugarLonge(); const m = { tipo: 'voa', g, asas, x: L.x, z: L.z, y: 22, rot: 0, hp: 20, morto: 0, cx: L.x, cz: L.z, ang: Math.random() * 6, mergulho: 0, prox: 6 + Math.random() * 8, fase: Math.random() * 6 }; MONSTROS.push(m); return m; }
 for (let i = 0; i < 8; i++) novoRastejador(); for (let i = 0; i < 4; i++) novoVoador();
-function ferirMonstro(m, dano) { if (m.morto > 0) return; m.hp -= dano; m.caca = true; if (m.hp > 0) return;
-  m.morto = m.tipo === 'rast' ? 40 : 50; m.g.visible = false; explodir(new THREE.Vector3(m.x, m.tipo === 'voa' ? m.y : 0.8, m.z), 0.4);
-  if (m.tipo === 'rast') { ganhar(8, 'rastejador'); progressoMissao('rast'); } else { ganhar(12, 'voador'); progressoMissao('voa'); }
+// ===================== ESPREITADORES: CAÇADORES DE CAUDA COMPRIDA =====================
+const peleEsp = std({ map: tPele, color: 0x30353b, roughness: 0.22, metalness: 0.55 });
+const brilhoEsp = new THREE.MeshBasicMaterial({ color: 0x40ffc8, toneMapped: false });
+const geoCoxaE = new THREE.CylinderGeometry(0.065, 0.045, 0.7, 6).translate(0, -0.35, 0), geoCanelaE = new THREE.CylinderGeometry(0.045, 0.02, 0.8, 6).translate(0, -0.4, 0);
+function montarEspreitador(pai) { const g = new THREE.Group(); pai.add(g); const Rr = semente((Math.random() * 1e6) | 0);
+  const corpo = new THREE.Group(); corpo.position.y = 1.12; g.add(corpo);
+  add(formaOrganica(0.32, 0.8, 0.7, 2.0, 16, Rr, 0.18), peleEsp, 0, 0, 0, corpo, true);
+  add(formaOrganica(0.24, 0.8, 0.8, 1.5, 12, Rr, 0.15), peleEsp, 0, -0.05, -0.55, corpo, true);
+  for (let k = 0; k < 4; k++) { const p = add(new THREE.ConeGeometry(0.05, 0.3, 4), brilhoEsp, 0, 0.25, 0.4 - k * 0.28, corpo); p.rotation.x = -0.5; }
+  const cab = new THREE.Group(); cab.position.set(0, 0.18, 0.72); corpo.add(cab);
+  add(formaOrganica(0.2, 1.1, 0.75, 1.35, 12, Rr, 0.2), peleEsp, 0, 0, 0.1, cab, true);
+  const petalas = []; for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + Math.PI / 4, pg = new THREE.Group(); pg.rotation.order = 'ZYX'; pg.position.set(Math.cos(a) * 0.09, Math.sin(a) * 0.07, 0.3); pg.rotation.z = a; cab.add(pg);
+    add(new THREE.ConeGeometry(0.07, 0.36, 5).rotateX(Math.PI / 2).translate(0, 0, 0.16), peleEsp, 0, 0, 0, pg); petalas.push(pg); }
+  add(new THREE.SphereGeometry(0.07, 8, 6), brilhoEsp, 0, 0, 0.32, cab);
+  for (const sx of [-1, 1]) for (let k = 0; k < 2; k++) add(new THREE.SphereGeometry(0.026, 6, 4), brilhoEsp, sx * (0.09 + k * 0.045), 0.09 - k * 0.02, 0.26 - k * 0.06, cab);
+  const pernas = []; [[0.24, 0.42], [0.24, -0.5]].forEach(([x, z], par) => [-1, 1].forEach(s => { const q = new THREE.Group(); q.position.set(s * x, 0, z); q.rotation.z = s * 0.3; corpo.add(q);
+    const coxa = new THREE.Group(); coxa.rotation.x = -0.75; q.add(coxa); coxa.add(new THREE.Mesh(geoCoxaE, peleEsp)); const jo = new THREE.Group(); jo.position.y = -0.7; jo.rotation.x = 1.35; coxa.add(jo); jo.add(new THREE.Mesh(geoCanelaE, peleEsp));
+    pernas.push({ q, fase: (s > 0 ? 0 : Math.PI) + par * Math.PI }); }));
+  const bracos = [-1, 1].map(s => { const b = new THREE.Group(); b.position.set(s * 0.2, -0.05, 0.58); b.rotation.x = -1.1; corpo.add(b); b.add(new THREE.Mesh(geoCanelaE, peleEsp));
+    const garra = add(new THREE.ConeGeometry(0.035, 0.32, 4).translate(0, -0.16, 0), brilhoEsp, 0, -0.8, 0, b); garra.rotation.x = 0.9; return b; });
+  const cauda = []; let p2 = corpo; for (let k = 0; k < 7; k++) { const sg = new THREE.Group(); sg.position.set(0, 0, k ? -0.32 : -1.05); p2.add(sg);
+    add(new THREE.CylinderGeometry(0.075 * (1 - k / 8), 0.075 * (1 - (k + 1) / 8), 0.34, 6).rotateX(Math.PI / 2).translate(0, 0, -0.16), peleEsp, 0, 0, 0, sg); cauda.push(sg); p2 = sg; }
+  const ponta = add(new THREE.ConeGeometry(0.05, 0.32, 4).rotateX(-Math.PI / 2).translate(0, 0, -0.45), brilhoEsp, 0, 0, 0, p2); ponta.rotation.x = 0.6;
+  return { g, corpo, cab, petalas, pernas, bracos, cauda, fase: 0 }; }
+function animarEsp(m, dt, t, vel, bote) { m.fase += dt * (1.2 + vel * 2.4); const passo = clamp(vel / 3, 0.12, 1);
+  m.pernas.forEach(p => { p.q.rotation.x = Math.sin(m.fase + p.fase) * 0.55 * passo; });
+  m.corpo.position.y = 1.12 + Math.abs(Math.sin(m.fase)) * 0.05 * passo - (vel > 0 && vel < 3 ? 0.18 : 0); m.corpo.rotation.x = vel > 4 ? 0.18 : 0.04;
+  m.cab.rotation.x = Math.sin(t * 1.3) * 0.12 - (bote ? 0.25 : 0); m.cab.rotation.y = Math.sin(t * 0.7 + m.fase * 0.1) * 0.35;
+  const abre = bote ? 0.75 + Math.sin(t * 18) * 0.12 : 0.12 + Math.sin(t * 2.5) * 0.06; m.petalas.forEach(pg => { pg.rotation.y = abre; });
+  m.bracos.forEach((b, i) => { b.rotation.x = -1.1 + (bote ? Math.sin(t * 12 + i * 3) * 0.5 : 0); });
+  m.cauda.forEach((s, k) => { s.rotation.y = Math.sin(t * 2.4 - k * 0.6) * (0.18 + vel * 0.02); s.rotation.x = k ? 0.13 : -0.15; }); }
+function gritoEsp(v = 1) { tom(1700, 380, 0.65, 'sawtooth', 0.05 * v); tom(2300, 900, 0.4, 'square', 0.02 * v, 0.05); chiado(0.6, 3200, 0.06 * v, 'bandpass'); }
+function novoEspreitador() { const e = montarEspreitador(sup); const L = lugarLonge(); const m = Object.assign(e, { tipo: 'esp', x: L.x, z: L.z, rot: Math.random() * 6, hp: 50, morto: 0, alvo: lugarLonge(), mordeT: 0, recuo: 0, caca: false, correndo: false }); MONSTROS.push(m); return m; }
+function atualizarEsp(m, dt, t, dJ, nt, fora, esc, rEsc) { m.mordeT -= dt; m.recuo = Math.max(0, m.recuo - dt);
+  const noEscudo = esc && Math.hypot(jog.x - SX, jog.z - (SZ - 5)) < rEsc; let vel = 1.4;
+  if (fora && !noEscudo && (dJ < (nt ? 48 : 30) || m.caca) && dJ < 90) { m.caca = true;
+    if (m.recuo > 0) { m.tx = m.x + (m.x - jog.x); m.tz = m.z + (m.z - jog.z); vel = 6; }
+    else { m.tx = jog.x; m.tz = jog.z; if (dJ > 15) vel = 2.2; else { vel = nt ? 8.2 : 7.2; if (!m.correndo) gritoEsp(clamp(1 - dJ / 30, 0.3, 1)); } } }
+  else { m.caca = false; if (Math.hypot(m.alvo.x - m.x, m.alvo.z - m.z) < 3) m.alvo = lugarLonge(); m.tx = m.alvo.x; m.tz = m.alvo.z; }
+  m.correndo = vel > 5 && m.recuo <= 0;
+  const r = ROBO; if (r.estado !== 'morto' && r.estado !== 'base' && r.estado !== 'consertando') { const dR = Math.hypot(r.x - m.x, r.z - m.z); if (!m.caca && dR < 25) { m.tx = r.x; m.tz = r.z; vel = 5; } if (dR < 1.6) matarRobo('UM ESPREITADOR PEGOU O ROBÔ! O robô morreu.'); }
+  const dx = m.tx - m.x, dz = m.tz - m.z, d = Math.hypot(dx, dz), quer = Math.atan2(dx, dz); let dr = ((quer - m.rot + Math.PI * 3) % (Math.PI * 2)) - Math.PI; m.rot += clamp(dr, -6 * dt, 6 * dt);
+  const anda = d > 1.2; if (anda) { m.x += Math.sin(m.rot) * vel * dt; m.z += Math.cos(m.rot) * vel * dt; }
+  if (esc) { const ex = m.x - SX, ez = m.z - (SZ - 5), de = Math.hypot(ex, ez); if (de < rEsc + 1) { m.x = SX + ex / de * (rEsc + 1); m.z = SZ - 5 + ez / de * (rEsc + 1); } }
+  if (fora && m.caca && dJ < 1.9 && m.mordeT <= 0 && m.recuo <= 0) { m.mordeT = 1.2; m.recuo = 2.4; morder(12, '👾 UM ESPREITADOR TE ATACOU! Atire nele!'); gritoEsp(1); }
+  m.g.position.set(m.x, 0, m.z); m.g.rotation.y = m.rot; animarEsp(m, dt, t, anda ? vel : 0, m.caca && dJ < 7); }
+for (let i = 0; i < (minimo ? 1 : fraco ? 2 : 3); i++) novoEspreitador();
+// um espreitador pode entrar no abrigo pela ventilação à noite
+const INVASOR = Object.assign(montarEspreitador(abrigo), { tipo: 'inv', x: 0, z: 0, rot: 0, hp: 0, ativo: false, mordeT: 0, recuo: 0, caminhoT: 0 }); INVASOR.g.visible = false; INVASOR.g.scale.setScalar(0.85);
+let invasaoT = 150; const DIST = new Int16Array(COLS * LINHAS);
+function caminhoAteJogador() { DIST.fill(-1); const c0 = Math.floor(jog.x + 10), r0 = Math.floor(-jog.z); if (c0 < 0 || c0 >= COLS || r0 < 0 || r0 >= LINHAS) return; const fila = [r0 * COLS + c0]; DIST[fila[0]] = 0;
+  for (let i = 0; i < fila.length; i++) { const k = fila[i], c = k % COLS, r = (k / COLS) | 0; for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nc = c + dc, nr = r + dr; if (nc < 0 || nc >= COLS || nr < 0 || nr >= LINHAS) continue; const n = nr * COLS + nc; if (PISO[n] && DIST[n] < 0) { DIST[n] = DIST[k] + 1; fila.push(n); } } } }
+function atualizarInvasor(dt) { const I = INVASOR, t = performance.now() / 1000;
+  if (!I.ativo) { if (jog.fora || jog.dormindo || !noite() || apagaoT > 0) return; invasaoT -= dt; if (invasaoT > 0) return; invasaoT = rr(160, 280);
+    const opc = LUZES.map(L => [L.l.position.x, L.l.position.z]).filter(([x, z]) => ehPiso(x, z) && Math.hypot(x - jog.x, z - jog.z) > 11); if (!opc.length) return;
+    const [x, z] = opc[(Math.random() * opc.length) | 0]; Object.assign(I, { x, z, hp: 50, ativo: true, mordeT: 0, recuo: 0 }); I.g.visible = true;
+    aviso('⚠ ALGO ENTROU PELA VENTILAÇÃO! Um espreitador está no abrigo. Atire nele!', 'ruim', 5); chiado(1.2, 500, 0.3); tom(200, 60, 1.2, 'sawtooth', 0.05); setTimeout(() => gritoEsp(0.6), 900); return; }
+  if (jog.fora) { I.ativo = false; I.g.visible = false; return; }
+  I.caminhoT -= dt; if (I.caminhoT <= 0) { I.caminhoT = 0.4; caminhoAteJogador(); }
+  const dJ = Math.hypot(jog.x - I.x, jog.z - I.z); I.mordeT -= dt; I.recuo = Math.max(0, I.recuo - dt);
+  let tx = jog.x, tz = jog.z; const c = Math.floor(I.x + 10), r = Math.floor(-I.z), k = r * COLS + c;
+  if (dJ > 1.5 && c >= 0 && c < COLS && r >= 0 && r < LINHAS && DIST[k] > 0) { let best = k; for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = (r + dr) * COLS + c + dc; if (c + dc >= 0 && c + dc < COLS && r + dr >= 0 && r + dr < LINHAS && PISO[n] && DIST[n] >= 0 && DIST[n] < DIST[best]) best = n; }
+    if (best !== k && DIST[k] > 2) { tx = (best % COLS) - 9.5; tz = -((best / COLS) | 0) - 0.5; } }
+  let vel = dJ < 9 ? 5.2 : 2.8; if (I.recuo > 0) { vel = 0; }
+  const dx = tx - I.x, dz = tz - I.z, d = Math.hypot(dx, dz), quer = Math.atan2(dx, dz); let dr = ((quer - I.rot + Math.PI * 3) % (Math.PI * 2)) - Math.PI; I.rot += clamp(dr, -7 * dt, 7 * dt);
+  const anda = d > 0.15 && dJ > 1.4 && vel > 0; if (anda) { const nx = I.x + Math.sin(I.rot) * vel * dt, nz = I.z + Math.cos(I.rot) * vel * dt; if (ehPiso(nx, nz)) { I.x = nx; I.z = nz; } else { I.x += dx / d * vel * dt; I.z += dz / d * vel * dt; } }
+  if (dJ < 1.8 && I.mordeT <= 0 && I.recuo <= 0) { I.mordeT = 1.4; I.recuo = 1.1; morder(12, '👾 O ESPREITADOR TE ATACOU DENTRO DO ABRIGO!'); gritoEsp(1); }
+  if (Math.random() < dt * 0.25) tom(500 + Math.random() * 300, 200, 0.3, 'sawtooth', 0.02);
+  I.g.position.set(I.x, 0, I.z); I.g.rotation.y = I.rot; animarEsp(I, dt, t, anda ? vel : 0, dJ < 4); }
+function acertarInvasor(ray) { if (!INVASOR.ativo) return null; const h = ray.intersectObject(INVASOR.g, true); return h[0] && h[0].distance < 30 ? h[0] : null; }
+
+function ferirMonstro(m, dano) { if (m.tipo === 'inv') { if (!m.ativo) return; m.hp -= dano; gritoEsp(0.4); if (m.hp > 0) return; m.ativo = false; m.g.visible = false; ganhar(20, 'espreitador'); progressoMissao('esp'); aviso('👾 Você derrotou o espreitador do abrigo! +20 🪙', 'bom', 4); return; }
+  if (m.morto > 0) return; m.hp -= dano; m.caca = true; if (m.tipo === 'esp') gritoEsp(0.3); if (m.hp > 0) return;
+  m.morto = m.tipo === 'rast' ? 40 : m.tipo === 'esp' ? 70 : 50; m.g.visible = false; explodir(new THREE.Vector3(m.x, m.tipo === 'voa' ? m.y : 0.8, m.z), 0.4);
+  if (m.tipo === 'rast') { ganhar(8, 'rastejador'); progressoMissao('rast'); } else if (m.tipo === 'esp') { ganhar(20, 'espreitador'); progressoMissao('esp'); } else { ganhar(12, 'voador'); progressoMissao('voa'); }
   [0, 0.1].forEach(t => tom(300 - t * 900, 60, 0.3, 'sawtooth', 0.05, t)); }
 function morder(dano, txt) { if (!jogando || jog.dormindo) return; E.saude -= dano * (E.traje ? 0.8 : 1); tremor = Math.max(tremor, 0.6); $('dano').style.opacity = 1; setTimeout(() => { $('dano').style.opacity = 0; }, 350); aviso(txt, 'ruim', 1.5); tom(160, 80, 0.2, 'sawtooth', 0.07); }
 function atualizarMonstros(dt) { const t = performance.now() / 1000, nt = noite(), fora = jog.fora, esc = temEscudo(), rEsc = raioEscudo(), lasers = E.armas !== false && NV('torres') > 0;
   for (const m of MONSTROS) {
-    if (m.morto > 0) { m.morto -= dt; if (m.morto <= 0) { const L = lugarLonge(); m.x = L.x; m.z = L.z; m.hp = m.tipo === 'rast' ? 30 : 20; m.g.visible = true; m.caca = false; if (m.tipo === 'voa') { m.cx = L.x; m.cz = L.z; m.mergulho = 0; } } continue; }
+    if (m.morto > 0) { m.morto -= dt; if (m.morto <= 0) { const L = lugarLonge(); m.x = L.x; m.z = L.z; m.hp = m.tipo === 'rast' ? 30 : m.tipo === 'esp' ? 50 : 20; m.g.visible = true; m.caca = false; if (m.tipo === 'voa') { m.cx = L.x; m.cz = L.z; m.mergulho = 0; } } continue; }
     const dJ = Math.hypot(jog.x - m.x, jog.z - m.z), dBase = Math.hypot(m.x - SX, m.z - (SZ - 5));
     // torres de laser do abrigo também acertam os monstros pequenos
     if (lasers && dBase < 34 && Math.random() < dt * 2) { ferirMonstro(m, 10); laserVis = 0.1; }
@@ -2871,6 +2944,7 @@ function atualizarMonstros(dt) { const t = performance.now() / 1000, nt = noite(
       m.mordeT -= dt; if (fora && m.caca && dJ < 1.6 && m.mordeT <= 0) { m.mordeT = 0.9; morder(6, '🦂 UM RASTEJADOR TE MORDEU! Atire ou corra!'); }
       m.g.position.set(m.x, 0, m.z); m.g.rotation.y = m.rot; m.patas.forEach(p => { p.p.rotation.x = Math.sin(m.fase + p.fase) * 0.6; p.p.rotation.z = Math.max(0, Math.cos(m.fase + p.fase)) * 0.3 * p.sx; }); m.cauda.rotation.y = Math.sin(t * 6 + m.fase) * 0.3;
       if (m.caca && Math.random() < dt * 0.4 && dJ < 40) tom(900 + Math.random() * 400, 300, 0.15, 'sawtooth', 0.025 * clamp(1 - dJ / 40, 0, 1)); }
+    else if (m.tipo === 'esp') atualizarEsp(m, dt, t, dJ, nt, fora, esc, rEsc);
     else { m.fase += dt;
       if (m.mergulho > 0) { const dx = jog.x - m.x, dz = jog.z - m.z, d = Math.hypot(dx, dz); m.rot = Math.atan2(dx, dz); m.x += dx / Math.max(d, 0.1) * 16 * dt; m.z += dz / Math.max(d, 0.1) * 16 * dt; m.y = Math.max(2, m.y - 12 * dt); m.mergulho -= dt;
         if (Math.hypot(jog.x - m.x, jog.z - m.z) < 2.2 && m.y < 4) { morder(10, '🦇 UM VOADOR TE ATACOU DO CÉU!'); m.mergulho = 0; } if (!fora) m.mergulho = 0; }
@@ -2882,7 +2956,7 @@ function atualizarMonstros(dt) { const t = performance.now() / 1000, nt = noite(
 // ===================== MISSÕES DO DIA =====================
 let missaoForaT = 0;
 const MISSOES = [['caixa', 'Abra 3 caixas de suprimentos', 3, 40], ['rast', 'Derrote 4 rastejadores', 4, 50], ['voa', 'Derrube 2 voadores', 2, 50], ['saque', 'Pegue coisas em 2 lugares (posto, mercado ou hospital)', 2, 40],
-  ['gig', 'Faça um gigante fugir', 1, 80], ['robo', 'O robô TICO precisa voltar 2 vezes com materiais', 2, 30], ['horta', 'Colha a horta da estufa', 1, 20], ['fora', 'Fique 1 minuto lá fora na superfície', 1, 30]];
+  ['gig', 'Faça um gigante fugir', 1, 80], ['esp', 'Derrote 1 espreitador', 1, 60], ['robo', 'O robô TICO precisa voltar 2 vezes com materiais', 2, 30], ['horta', 'Colha a horta da estufa', 1, 20], ['fora', 'Fique 1 minuto lá fora na superfície', 1, 30]];
 function novasMissoes() { const pool = MISSOES.slice().sort(() => Math.random() - 0.5).slice(0, 3); E.missoes = { dia: dia(), lista: pool.map(([id, txt, meta, premio]) => ({ id, txt, meta, prog: 0, premio, feito: false })) }; missaoForaT = 0; desenharMissoes(); if (jogando) aviso('📋 Novas missões do dia! Veja no painel MISSÕES.', 'info', 4); }
 function progressoMissao(id, n = 1) { if (!E || !E.missoes) return; E.missoes.lista.forEach(m => { if (m.id !== id || m.feito) return; m.prog = Math.min(m.meta, m.prog + n);
     if (m.prog >= m.meta) { m.feito = true; ganhar(m.premio, 'missão'); aviso(`✅ MISSÃO COMPLETA: ${m.txt}! +${m.premio} 🪙`, 'bom', 5); [0, 0.12, 0.24, 0.36].forEach((k, i) => tom(500 + i * 200, 900 + i * 200, 0.18, 'triangle', 0.06, k));
@@ -2908,7 +2982,7 @@ function lugarDaSombra() { const fx = -Math.sin(jog.yaw), fz = -Math.cos(jog.yaw
   return null; }
 function atualizarSustos(dt) { document.body.classList.toggle('fora-ar', !!jog.fora);
   // coração: bate mais rápido quando um colosso ou um monstro está perto
-  const px = jog.fora ? jog.x : SX, pz = jog.fora ? jog.z : SZ; let m = 999; COLOSSOS.forEach(c => { m = Math.min(m, Math.hypot(c.x - px, c.z - pz) - 12); }); if (jog.fora) MONSTROS.forEach(o => { if (!(o.morto > 0)) m = Math.min(m, Math.hypot(o.x - px, o.z - pz) * 2.5); });
+  const px = jog.fora ? jog.x : SX, pz = jog.fora ? jog.z : SZ; let m = 999; COLOSSOS.forEach(c => { m = Math.min(m, Math.hypot(c.x - px, c.z - pz) - 12); }); if (jog.fora) MONSTROS.forEach(o => { if (!(o.morto > 0)) m = Math.min(m, Math.hypot(o.x - px, o.z - pz) * 2.5); }); if (!jog.fora && INVASOR.ativo) m = Math.min(m, Math.hypot(INVASOR.x - jog.x, INVASOR.z - jog.z) * 2);
   let medo = clamp(1 - (m - 6) / 45, 0, 1); if (apagaoT > 0) medo = Math.max(medo, 0.85);
   coracaoT -= dt; let pulso = 0; if (medo > 0.15) { if (coracaoT <= 0) { coracaoT = lerp(1.15, 0.42, medo); batidaCoracao(medo); } pulso = Math.max(0, 1 - (lerp(1.15, 0.42, medo) - coracaoT) * 4); }
   $('medo').style.opacity = (medo * 0.45 + pulso * medo * 0.35).toFixed(2);
@@ -2936,6 +3010,6 @@ function atualizarPoeira(dt) { if (!POEIRA || jog.fora) return; const { p, pos, 
 // PC fraco: menos neblina transparente (é o que mais pesa)
 if (fraco) abrigo.add(new THREE.HemisphereLight(0x9aa8b4, 0x2a2622, 0.4));
 if (fraco) NEBLINA.forEach((n, i) => { if (minimo ? i % 3 : i % 2) n.s.visible = false; });
-Object.assign(window.__abrigo, { SOMBRA, susto: () => { sustoT = 0; }, fraco, minimo, MONSTROS, ferirMonstro, progressoMissao, novasMissoes, ROBO, matarRobo, LUGARES_ROBO, NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
+Object.assign(window.__abrigo, { INVASOR, invadir: () => { invasaoT = 0; }, SOMBRA, susto: () => { sustoT = 0; }, fraco, minimo, MONSTROS, ferirMonstro, progressoMissao, novasMissoes, ROBO, matarRobo, LUGARES_ROBO, NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
 })();
 </script>
