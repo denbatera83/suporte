@@ -208,6 +208,8 @@
   body.toque #joy { top: auto; bottom: 0; height: 58%; width: 42vw; }
   body.toque #joy .base { width: 96px; height: 96px; margin: -48px; left: calc(max(14px, env(safe-area-inset-left, 0px)) + 62px); top: calc(100% - max(12px, env(safe-area-inset-bottom, 0px)) - 66px); opacity: .4; } body.toque #joy .base i { width: 42px; height: 42px; margin: -21px; }
   body.toque #acao { font-size: 12px; padding: 4px 8px; bottom: calc(max(8px, env(safe-area-inset-bottom, 0px)) + 70px); }
+#tom{position:fixed;inset:0;pointer-events:none;z-index:0;background:linear-gradient(rgba(70,110,85,.16),rgba(30,50,35,.22));display:none}
+body.fora-ar:not(.pos) #tom{display:block}
 #vinheta,#medo{position:fixed;inset:0;pointer-events:none;z-index:0}
 #vinheta{background:radial-gradient(ellipse at center,transparent 45%,rgba(0,0,0,.55) 100%)}
 #medo{opacity:0;background:radial-gradient(ellipse at center,transparent 40%,rgba(110,0,0,.75) 100%);transition:opacity .12s}
@@ -215,7 +217,7 @@ body.pos #vinheta{display:none}
 </style>
 
 <canvas id="cena" aria-label="O abrigo"></canvas>
-<div id="vinheta" aria-hidden="true"></div><div id="medo" aria-hidden="true"></div>
+<div id="vinheta" aria-hidden="true"></div><div id="tom" aria-hidden="true"></div><div id="medo" aria-hidden="true"></div>
 <div id="vinheta"></div><div id="dano"></div>
 <div class="hud" id="hud-corpo">
   <div class="placa barra" id="b-saude">Saúde<div class="b"><i></i></div><b class="num">100</b></div>
@@ -271,7 +273,7 @@ body.pos #vinheta{display:none}
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 2.6 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 2.7 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -362,11 +364,11 @@ const R = semente(2097), rr = (a, b) => a + R() * (b - a);
 // ===================== QUALIDADE E RENDER =====================
 let qual = toque ? 0 : 1; try { const q = localStorage.getItem('abrigo-q'); if (q !== null) qual = clamp(+q, -2, 2); else if (toque && navigator.deviceMemory && navigator.deviceMemory <= 2) qual = -2; } catch (e) {}
 const minimo = qual === -2, fraco = qual < 0; if (fraco) qual = 0;
-const Q = minimo ? { pr: 0.5, bloom: false, ruinas: 12, sombra: 0 } : fraco ? { pr: 0.65, bloom: false, ruinas: 28, sombra: 0 } : [{ pr: 1, bloom: false, ruinas: 60, sombra: 0 }, { pr: 1.5, bloom: true, ruinas: 110, sombra: 0 }, { pr: 2, bloom: true, ruinas: 170, sombra: 2048 }][qual];
+const Q = minimo ? { pr: 0.75, bloom: false, ruinas: 34, sombra: 0 } : fraco ? { pr: 0.65, bloom: false, ruinas: 28, sombra: 0 } : [{ pr: 1, bloom: false, ruinas: 60, sombra: 0 }, { pr: 1.5, bloom: true, ruinas: 110, sombra: 0 }, { pr: 2, bloom: true, ruinas: 170, sombra: 2048 }][qual];
 const canvas = $('cena');
-const Rd = new THREE.WebGLRenderer({ canvas, antialias: qual > 0, powerPreference: fraco ? 'low-power' : 'high-performance', precision: minimo ? 'mediump' : 'highp' });
+const Rd = new THREE.WebGLRenderer({ canvas, antialias: qual > 0 || fraco, powerPreference: fraco ? 'low-power' : 'high-performance', precision: minimo ? 'mediump' : 'highp' });
 let eco = toque; try { const v = localStorage.getItem('abrigo-eco'); if (v !== null) eco = v === '1'; } catch (e) {}
-const prBase = () => minimo ? 0.5 : fraco ? 0.65 : Math.min(devicePixelRatio || 1, Q.pr) * (eco ? 0.7 : 1);
+const prBase = () => minimo ? Math.min(devicePixelRatio || 1, 0.75) : fraco ? 0.65 : Math.min(devicePixelRatio || 1, Q.pr) * (eco ? 0.7 : 1);
 Rd.setPixelRatio(prBase()); Rd.outputEncoding = THREE.sRGBEncoding; Rd.toneMapping = THREE.ACESFilmicToneMapping; Rd.toneMappingExposure = 1.1;
 Rd.shadowMap.enabled = Q.sombra > 0; Rd.shadowMap.type = THREE.PCFSoftShadowMap;
 const cena = new THREE.Scene(); cena.background = new THREE.Color(0x050605);
@@ -394,7 +396,7 @@ addEventListener('resize', tamanho); tamanho();
 
 // ===================== TEXTURAS =====================
 function borrar(c, px) { const k = document.createElement('canvas'); k.width = c.width; k.height = c.height; k.getContext('2d').drawImage(c, 0, 0); const g = c.getContext('2d'); g.filter = `blur(${px}px)`; g.drawImage(k, 0, 0); g.filter = 'none'; }
-function tex(w, h, fn, rep) { const c = document.createElement('canvas'), k = minimo && w * h > 4096 ? 0.5 : 1; c.width = Math.round(w * k); c.height = Math.round(h * k); const g0 = c.getContext('2d'); g0.scale(k, k); fn(g0, w, h); if (rep && !minimo) borrar(c, 0.6); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = minimo ? 1 : Math.min(8, Rd.capabilities.getMaxAnisotropy()); if (minimo) { t.generateMipmaps = false; t.minFilter = THREE.LinearFilter; } if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; } return t; }
+function tex(w, h, fn, rep) { const c = document.createElement('canvas'), k = minimo && w * h > 4096 ? 0.5 : 1; c.width = Math.round(w * k); c.height = Math.round(h * k); const g0 = c.getContext('2d'); g0.scale(k, k); fn(g0, w, h); if (rep && !minimo) borrar(c, 0.6); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = minimo ? 1 : Math.min(8, Rd.capabilities.getMaxAnisotropy());  if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; } return t; }
 function ruido(g, w, h, cores, n, tam, Rr) { for (let i = 0; i < n; i++) { g.fillStyle = cores[(Rr() * cores.length) | 0]; g.fillRect(Rr() * w, Rr() * h, Rr() * tam + 0.6, Rr() * tam + 0.6); } }
 const tConcreto = tex(512, 512, (g, w, h) => { const Rr = semente(3); g.fillStyle = '#6f6c62'; g.fillRect(0, 0, w, h); ruido(g, w, h, ['rgba(0,0,0,.18)', 'rgba(255,255,255,.07)', 'rgba(90,80,60,.25)'], 26000, 2.2, Rr);
   for (let i = 0; i < 40; i++) { const x = Rr() * w, y = Rr() * h, gr = g.createRadialGradient(x, y, 0, x, y, 30 + Rr() * 70); gr.addColorStop(0, 'rgba(40,36,24,.25)'); gr.addColorStop(1, 'rgba(40,36,24,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }
@@ -420,7 +422,7 @@ const tChao = tex(512, 512, (g, w, h) => { const Rr = semente(11); g.fillStyle =
   g.strokeStyle = 'rgba(15,14,8,.6)'; for (let i = 0; i < 30; i++) { g.lineWidth = 1 + Rr() * 2; g.beginPath(); let x = Rr() * w, y = Rr() * h; g.moveTo(x, y); for (let k = 0; k < 8; k++) { x += (Rr() - 0.5) * 50; y += (Rr() - 0.5) * 50; g.lineTo(x, y); } g.stroke(); } }, true);
 const tJanelas = tex(256, 512, (g, w, h) => { const Rr = semente(13); g.fillStyle = '#3c3a33'; g.fillRect(0, 0, w, h); ruido(g, w, h, ['rgba(0,0,0,.25)', 'rgba(255,255,255,.04)'], 8000, 3, Rr);
   for (let y = 16; y < h - 20; y += 40) for (let x = 14; x < w - 20; x += 40) { g.fillStyle = Rr() < 0.08 ? '#5a6a3a' : '#0c0d0b'; g.fillRect(x, y, 24, 26); } }, true);
-const std = o => { if (!fraco) return new THREE.MeshStandardMaterial(o); const p = Object.assign({}, o); delete p.roughness; delete p.metalness; delete p.envMapIntensity; return new THREE.MeshLambertMaterial(p); };
+const std = o => { if (!fraco) return new THREE.MeshStandardMaterial(o); const p = Object.assign({}, o); const mt = p.metalness || 0; delete p.roughness; delete p.metalness; delete p.envMapIntensity; const m = new THREE.MeshLambertMaterial(p); if (mt > 0) m.color.multiplyScalar(1 - mt * 0.55); return m; };
 const M = { concreto: std({ map: tConcreto, roughness: 0.95 }), parede: std({ map: tPainel, roughness: 0.38, metalness: 0.55 }), piso: std({ map: tPiso, roughness: 0.28, metalness: 0.6 }), teto: std({ map: tTeto, roughness: 0.6, metalness: 0.3 }),
   metal: std({ color: 0x6d7268, roughness: 0.45, metalness: 0.8 }), metalEsc: std({ color: 0x2a2d28, roughness: 0.6, metalness: 0.7 }), ferrugem: std({ color: 0x6a3f22, roughness: 0.9, metalness: 0.3 }),
   verdeMil: std({ color: 0x4a5a33, roughness: 0.75, metalness: 0.2 }), madeira: std({ color: 0x5a4028, roughness: 0.9 }), tecido: std({ color: 0x5a5f4a, roughness: 1 }),
@@ -1939,7 +1941,7 @@ function gritoSombra() { chiado(0.7, 2600, 0.12, 'bandpass'); tom(900, 180, 0.7,
 function lugarDaSombra() { const fx = -Math.sin(jog.yaw), fz = -Math.cos(jog.yaw);
   for (let d = 8; d >= 3.5; d -= 0.5) { let ok = true; for (let k = 1; k <= d; k += 0.5) if (!ehPiso(jog.x + fx * k, jog.z + fz * k)) { ok = false; break; } if (ok) return [jog.x + fx * d, jog.z + fz * d]; }
   return null; }
-function atualizarSustos(dt) {
+function atualizarSustos(dt) { document.body.classList.toggle('fora-ar', !!jog.fora);
   // coração: bate mais rápido quando um colosso ou um monstro está perto
   const px = jog.fora ? jog.x : SX, pz = jog.fora ? jog.z : SZ; let m = 999; COLOSSOS.forEach(c => { m = Math.min(m, Math.hypot(c.x - px, c.z - pz) - 12); }); if (jog.fora) MONSTROS.forEach(o => { if (!(o.morto > 0)) m = Math.min(m, Math.hypot(o.x - px, o.z - pz) * 2.5); });
   let medo = clamp(1 - (m - 6) / 45, 0, 1); if (apagaoT > 0) medo = Math.max(medo, 0.85);
@@ -1958,7 +1960,7 @@ function atualizarSustos(dt) {
   if (Math.random() < 0.7) { const p = lugarDaSombra(); if (p) { SOMBRA.position.set(p[0], 0, p[1]); SOMBRA.visible = true; setTimeout(sussurro, 500); } }
 }
 // poeira flutuando no ar do abrigo (bonito e assustador com a lanterna)
-const POEIRA = (() => { if (fraco) return null; const n = toque ? 220 : 420, pos = new Float32Array(n * 3), vel = [];
+const POEIRA = (() => { const n = minimo ? 90 : fraco ? 150 : toque ? 220 : 420, pos = new Float32Array(n * 3), vel = [];
   for (let i = 0; i < n; i++) { pos[i * 3] = rr(-7, 7); pos[i * 3 + 1] = rr(0.1, ALT - 0.1); pos[i * 3 + 2] = rr(-7, 7); vel.push(rr(-0.04, 0.04), rr(-0.03, 0.02), rr(-0.04, 0.04)); }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   const p = new THREE.Points(g, new THREE.PointsMaterial({ map: tBrilho, color: 0x9fb8c0, size: 0.028, transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending })); p.frustumCulled = false; abrigo.add(p); return { p, pos, vel, n }; })();
@@ -1967,8 +1969,8 @@ function atualizarPoeira(dt) { if (!POEIRA || jog.fora) return; const { p, pos, 
     if (pos[k] > 7) pos[k] -= 14; else if (pos[k] < -7) pos[k] += 14; if (pos[k + 2] > 7) pos[k + 2] -= 14; else if (pos[k + 2] < -7) pos[k + 2] += 14; if (pos[k + 1] < 0.05) pos[k + 1] = ALT - 0.1; else if (pos[k + 1] > ALT - 0.05) pos[k + 1] = 0.1; }
   p.geometry.attributes.position.needsUpdate = true; }
 // PC fraco: menos neblina transparente (é o que mais pesa)
-if (fraco) cena.add(new THREE.HemisphereLight(0x9aa8b4, 0x2a2622, 0.55));
-if (fraco) NEBLINA.forEach((n, i) => { if (minimo ? i % 4 : i % 2) n.s.visible = false; });
+if (fraco) abrigo.add(new THREE.HemisphereLight(0x9aa8b4, 0x2a2622, 0.4));
+if (fraco) NEBLINA.forEach((n, i) => { if (minimo ? i % 3 : i % 2) n.s.visible = false; });
 Object.assign(window.__abrigo, { SOMBRA, susto: () => { sustoT = 0; }, fraco, minimo, MONSTROS, ferirMonstro, progressoMissao, novasMissoes, ROBO, matarRobo, LUGARES_ROBO, NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
 })();
 </script>
