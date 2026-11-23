@@ -273,7 +273,7 @@ body.pos #vinheta{display:none}
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 3.0 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 3.1 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -368,7 +368,8 @@ const Q = minimo ? { pr: 0.75, bloom: false, ruinas: 34, sombra: 0 } : fraco ? {
 const canvas = $('cena');
 const Rd = new THREE.WebGLRenderer({ canvas, antialias: qual > 0 || fraco, powerPreference: fraco ? 'low-power' : 'high-performance' });
 let eco = toque; try { const v = localStorage.getItem('abrigo-eco'); if (v !== null) eco = v === '1'; } catch (e) {}
-const prBase = () => minimo ? Math.min(devicePixelRatio || 1, 0.75) : fraco ? 0.65 : Math.min(devicePixelRatio || 1, Q.pr) * (eco ? 0.7 : 1);
+let escalaRes = 1; try { const v = +localStorage.getItem('abrigo-res'); if (v >= 0.5 && v <= 1) escalaRes = v; } catch (e) {}
+const prBase = () => escalaRes * (minimo ? Math.min(devicePixelRatio || 1, 0.75) : fraco ? 0.65 : Math.min(devicePixelRatio || 1, Q.pr) * (eco ? 0.7 : 1));
 Rd.setPixelRatio(prBase()); Rd.outputEncoding = THREE.sRGBEncoding; Rd.toneMapping = THREE.ACESFilmicToneMapping; Rd.toneMappingExposure = 1.1;
 Rd.shadowMap.enabled = Q.sombra > 0; Rd.shadowMap.type = THREE.PCFSoftShadowMap;
 const cena = new THREE.Scene(); cena.background = new THREE.Color(0x050605);
@@ -1028,10 +1029,10 @@ function desenharMochila() { const box = $('hud-mochila'), k = ITENS.map(([id]) 
   { const d = document.createElement('div'); d.className = 'placa item moedas'; d.title = 'Moedas'; d.textContent = `🪙 ${E.moedas || 0}`; box.appendChild(d); }
   if (jog.fora) { const d = document.createElement('div'); d.className = 'placa item'; d.textContent = `🎒 ${jog.mochila}/${mochilaMax()}`; box.appendChild(d); } }
 function hud() { barra('b-saude', E.saude, E.saude < 30); barra('b-rad', E.rad, E.rad > 60); barra('b-fome', E.comida, E.comida < 20); barra('b-sede', E.agua, E.agua < 20);
-  barra('b-ar', E.ar, E.ar < 40); barra('b-energia', 100, !E.gerador); $('b-energia').querySelector('b').textContent = '∞'; barra('b-casco', E.casco, E.casco < 40);
+  barra('b-ar', E.ar, E.ar < 40); barra('b-energia', 100, !E.gerador); if (hudAnt.inf !== 1) { hudAnt.inf = 1; $('b-energia').querySelector('b').textContent = '∞'; } barra('b-casco', E.casco, E.casco < 40);
   $('b-traje').hidden = !E.traje; if (E.traje) barra('b-traje', E.trajeAr, E.trajeAr < 25);
   const h = Math.floor(horaDec()), m = Math.floor(E.min % 60); const t = `Dia ${dia()}`; if (hudAnt.dia !== t) { hudAnt.dia = t; $('h-dia').textContent = t; }
-  $('h-hora').textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}${!E.gerador ? ' · SILÊNCIO' : E.silenciador ? ' · 🔇' : ''}`; desenharMochila(); }
+  { const th = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}${!E.gerador ? ' · SILÊNCIO' : E.silenciador ? ' · 🔇' : ''}`; if (hudAnt.hora !== th) { hudAnt.hora = th; $('h-hora').textContent = th; } } desenharMochila(); }
 // sismógrafo
 const sctx = $('sismografo').getContext('2d'), sismoHist = new Array(70).fill(0);
 function desenharSismo(v, alerta) { sismoHist.push(v); sismoHist.shift(); sctx.clearRect(0, 0, 280, 56); sctx.strokeStyle = alerta > 60 ? '#ff4d3d' : '#ffb630'; sctx.lineWidth = 2; sctx.beginPath();
@@ -1238,7 +1239,7 @@ function defesas(dt) { let alvo = null, md = 62 + nvAcima('escudo') * 10; const 
     zapT -= dt; if (zapT <= 0) { zapT = 0.35; const L = jog.fora ? clamp(1 - Math.hypot(jog.x - HATCH.x, jog.z - HATCH.z) / 120, 0.1, 1) : 0.15; tom(1600, 400, 0.15, 'sawtooth', 0.05 * L); }
     missilT -= dt; if (missilT <= 0 && !alvo.fugindo) { missilT = 1.6 / (1 + nvAcima('torres') * 0.3); const L = LANCADORES[lancadorI++ % LANCADORES.length], m = MISSEIS.find(x => !x.ativo);
       if (m) { m.ativo = true; m.alvo = alvo; m.m.visible = true; m.m.position.set(L.g.position.x, 2.2, L.g.position.z); m.v.set(0, 18, 0); chiado(0.8, 900, jog.fora ? 0.15 : 0.03, 'bandpass'); } } }
-  const tmp = new THREE.Vector3(), dir = new THREE.Vector3();
+  const tmp = TMP_A, dir = TMP_B;
   for (const m of MISSEIS) { if (!m.ativo) continue; centroColosso(m.alvo, tmp); dir.subVectors(tmp, m.m.position); const dist = dir.length(); dir.normalize();
     m.v.lerp(dir.multiplyScalar(48), Math.min(1, dt * 3)); m.m.position.addScaledVector(m.v, dt); m.m.lookAt(m.m.position.clone().sub(m.v));
     if (dist < 4 || m.m.position.y < 0) { m.ativo = false; m.m.visible = false; explodir(m.m.position, 1); ferir(m.alvo, 22 * fT); } }
@@ -1330,7 +1331,7 @@ function atualizarVisual(dt, perto) {
   camera.position.set(jog.x + (Math.random() - 0.5) * tr * 0.12, 1.65 + balanco + (Math.random() - 0.5) * tr * 0.12, jog.z + (Math.random() - 0.5) * tr * 0.12);
   camera.rotation.set(jog.pitch + (Math.random() - 0.5) * tr * 0.03, jog.yaw, (Math.random() - 0.5) * tr * 0.04);
   // lanterna presa na câmera
-  lanterna.intensity = jog.lanterna ? (jog.fora ? 4 : 3) : 0; lanterna.position.copy(camera.position); const fw = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion); lanterna.target.position.copy(camera.position).addScaledVector(fw, 5);
+  lanterna.intensity = jog.lanterna ? (jog.fora ? 4 : 3) : 0; lanterna.position.copy(camera.position); const fw = TMP_C.set(0, 0, -1).applyQuaternion(camera.quaternion); lanterna.target.position.copy(camera.position).addScaledVector(fw, 5);
   portaE.position.x = lerp(portaE.position.x, -0.71 - portaAbre * 1.4, Math.min(1, dt * 4)); portaD.position.x = lerp(portaD.position.x, 0.71 + portaAbre * 1.4, Math.min(1, dt * 4)); { const u = portaSaida.userData; u.volante.rotation.z = lerp(u.volante.rotation.z, portaAbre * Math.PI * 2, Math.min(1, dt * 3)); u.giroflex.rotation.y += dt * (portaAbre > 0.05 ? 8 : 0); u.luzGiro.intensity = portaAbre > 0.05 ? 3 : 0; u.luzPressao.material.color.setHex(portaAbre > 0.05 ? (Math.sin(performance.now() / 120) > 0 ? 0xff3020 : 0x300000) : 0x40ff60); }
   luzSaida.intensity = 0.7 + Math.sin(t * 2.5) * 0.3;
   janelaT -= dt; if (janelaT <= 0) { janelaT = minimo ? 1 / 3 : fraco ? 1 / 4 : eco ? 1 / 10 : 1 / 24; seguro('janela', filmarJanela); }
@@ -1430,15 +1431,25 @@ function nevoaAssusta(dt, t, nt) { animarInvasao(dt, t);
   raioT -= dt; if (raioT <= 0) { raioT = rr(14, 34); raioFlash = 1; const ang = Math.random() * 6.28; relampago.position.set(jog.x + Math.cos(ang) * 120, 90, jog.z + Math.sin(ang) * 120); setTimeout(() => { if (jog.fora) estrondo(0.35); }, 600 + Math.random() * 1400); }
   raioFlash = Math.max(0, raioFlash - dt * 3.2); const pisca = raioFlash > 0 && Math.sin(t * 60) > -0.3 ? raioFlash : 0;
   relampago.intensity = pisca * 6; ceu.material.uniforms.uRaio.value = pisca;
-  if (pisca > 0) { const c = new THREE.Color(cena.fog.color).lerp(new THREE.Color(0x3a4258), pisca * 0.8); cena.fog.color.copy(c); cena.background.copy(c); }
+  if (pisca > 0) { const c = COR_TMP.copy(cena.fog.color).lerp(COR_RAIO, pisca * 0.8); cena.fog.color.copy(c); cena.background.copy(c); }
   // sons de longe
   somT -= dt; if (somT <= 0) { somT = rr(9, 22); const r = Math.random(); if (r < 0.4) uivo(); else if (r < 0.75) rangido(); else sussurro(); }
 }
-let ultimoQuadro = 0;
+let ultimoQuadro = 0; const TMP_A = new THREE.Vector3(), TMP_B = new THREE.Vector3(), TMP_C = new THREE.Vector3(), COR_TMP = new THREE.Color(), COR_RAIO = new THREE.Color(0x3a4258);
+// ===== jogo lisinho: resolução automática =====
+// mede quanto tempo cada quadro leva; se estiver travando, diminui um pouco a resolução; se sobrar folga, aumenta de novo
+let resMedia = 0, resN = 0, resT = 0, resUlt = 0;
+function ajustarResolucao(agora, alvoFps) { if (!resUlt) { resUlt = agora; return; } const ms = agora - resUlt; resUlt = agora; if (ms > 250) return; resMedia += ms; resN++; resT += ms;
+  if (resT < 2500) return; const media = resMedia / resN, alvo = 1000 / Math.min(alvoFps, 60); resMedia = resN = resT = 0; let nova = escalaRes;
+  if (media > alvo * 1.25) nova = Math.max(0.5, escalaRes * 0.85); else if (media < alvo * 1.08 && escalaRes < 1) nova = Math.min(1, escalaRes * 1.07);
+  if (Math.abs(nova - escalaRes) > 0.01) { escalaRes = nova; Rd.setPixelRatio(prBase()); tamanho(); try { localStorage.setItem('abrigo-res', escalaRes.toFixed(2)); } catch (e) {} } }
+// prepara todos os efeitos antes de jogar (evita aquela travada ao sair do abrigo ou quando um monstro aparece)
+function prepararShaders() { try { const ab = abrigo.visible, sv = sup.visible; abrigo.visible = true; sup.visible = false; Rd.compile(cena, camera); abrigo.visible = false; sup.visible = true; Rd.compile(cena, camera); abrigo.visible = ab; sup.visible = sv; } catch (e) {} }
+setTimeout(prepararShaders, 600);
 function quadro(agora) { requestAnimationFrame(quadro);
   // economia de bateria: 30 quadros por segundo jogando, quase parado no menu e na pausa
   const parado = document.hidden || !$('menu').hidden || pausado || !$('fim').hidden; const alvoFps = parado ? 4 : (eco || fraco) ? 30 : 120;
-  if (agora - ultimoQuadro < 1000 / alvoFps - 3) return; ultimoQuadro = agora;
+  if (agora - ultimoQuadro < 1000 / alvoFps - 3) return; ultimoQuadro = agora; if (jogando && !parado) ajustarResolucao(agora, alvoFps); else resUlt = 0;
   const dt = Math.min(0.05, (agora - antes) / 1000) * (window.__vel || 1); antes = agora;
   let correndo = 0, perto = 999;
   lerMic(dt);
@@ -1459,7 +1470,7 @@ function quadro(agora) { requestAnimationFrame(quadro);
   } else if (!jogando) { // menu: câmera passeando pela superfície com os colossos
     menuT += dt; abrigo.visible = false; sup.visible = true; perto = simularColossos(dt, false); jog.fora = true;
     const c = COLOSSOS[0]; camera.position.set(c.x + Math.cos(menuT * 0.05) * 70, 6 + Math.sin(menuT * 0.1) * 2, c.z + Math.sin(menuT * 0.05) * 70); camera.lookAt(c.x, 18, c.z); }
-  atualizarRede(dt); if (jogando && !pausado) { seguro('robo', () => atualizarRobo(dt)); seguro('monstros', () => atualizarMonstros(dt)); seguro('sustos', () => atualizarSustos(dt)); seguro('invasor', () => atualizarInvasor(dt)); seguro('poeira', () => atualizarPoeira(dt)); } else { $('medo').style.opacity = 0; }
+  atualizarRede(dt); if (jogando && !pausado) { seguro('robo', () => atualizarRobo(dt)); seguro('monstros', () => atualizarMonstros(dt)); seguro('sustos', () => atualizarSustos(dt)); seguro('invasor', () => atualizarInvasor(dt)); seguro('poeira', () => atualizarPoeira(dt)); } else if (medoAnt !== '0') { medoAnt = '0'; $('medo').style.opacity = 0; }
   if (jogando || !$('menu').hidden) atualizarVisual(dt, perto);
   if (!jogando && !$('menu').hidden) { camera.rotation.order = 'YXZ'; }
   if (avisoT > 0) { avisoT -= dt; if (avisoT <= 0) $('aviso').hidden = true; }
@@ -2011,7 +2022,7 @@ const SOMBRA = new THREE.Group(); SOMBRA.visible = false; abrigo.add(SOMBRA);
   [-1, 1].forEach(s => { const b = add(new THREE.CylinderGeometry(0.035, 0.02, 1.5, 5).translate(0, -0.75, 0), sombraM, s * 0.21, 1.98, 0, SOMBRA); b.rotation.z = s * 0.12;
     add(new THREE.CylinderGeometry(0.045, 0.03, 0.62, 5).translate(0, 0.31, 0), sombraM, s * 0.08, 0, 0, SOMBRA);
     const o = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: 0xff1a08, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); o.scale.setScalar(0.26); o.position.set(s * 0.065, 2.27, 0.15); SOMBRA.add(o); }); }
-let sustoT = 80, coracaoT = 0;
+let sustoT = 80, coracaoT = 0, medoAnt = '';
 function batidaCoracao(f) { tom(62, 38, 0.14, 'sine', 0.32 * f); tom(56, 34, 0.14, 'sine', 0.22 * f, 0.2); }
 function gritoSombra() { chiado(0.7, 2600, 0.12, 'bandpass'); tom(900, 180, 0.7, 'sawtooth', 0.06); tom(1200, 300, 0.6, 'square', 0.03, 0.05); }
 function lugarDaSombra() { const fx = -Math.sin(jog.yaw), fz = -Math.cos(jog.yaw);
@@ -2022,7 +2033,7 @@ function atualizarSustos(dt) { document.body.classList.toggle('fora-ar', !!jog.f
   const px = jog.fora ? jog.x : SX, pz = jog.fora ? jog.z : SZ; let m = 999; COLOSSOS.forEach(c => { m = Math.min(m, Math.hypot(c.x - px, c.z - pz) - 12); }); if (jog.fora) MONSTROS.forEach(o => { if (!(o.morto > 0)) m = Math.min(m, Math.hypot(o.x - px, o.z - pz) * 2.5); }); if (!jog.fora && INVASOR.ativo) m = Math.min(m, Math.hypot(INVASOR.x - jog.x, INVASOR.z - jog.z) * 2);
   let medo = clamp(1 - (m - 6) / 45, 0, 1); if (apagaoT > 0) medo = Math.max(medo, 0.85);
   coracaoT -= dt; let pulso = 0; if (medo > 0.15) { if (coracaoT <= 0) { coracaoT = lerp(1.15, 0.42, medo); batidaCoracao(medo); } pulso = Math.max(0, 1 - (lerp(1.15, 0.42, medo) - coracaoT) * 4); }
-  $('medo').style.opacity = (medo * 0.45 + pulso * medo * 0.35).toFixed(2);
+  { const op = (medo * 0.45 + pulso * medo * 0.35).toFixed(2); if (op !== medoAnt) { medoAnt = op; $('medo').style.opacity = op; } }
   // apagão com a sombra (só dentro do abrigo)
   if (jog.fora || jog.dormindo || !E.gerador) { if (apagaoT > 0) { apagaoT = 0; SOMBRA.visible = false; } sustoT = Math.max(sustoT, 30); return; }
   if (apagaoT > 0) { apagaoT -= dt;
