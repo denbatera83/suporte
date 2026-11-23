@@ -275,7 +275,7 @@ body.pos #vinheta{display:none}
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 3.7 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 3.8 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -1425,26 +1425,33 @@ function add(geo, mat, x, y, z, pai = cena, sombra = false) { const m = new THRE
 
 // ===================== O ABRIGO (mapa em quadradinhos de 1 m) =====================
 // coluna c -> x = c - 9.5 ; linha r -> z = -r - 0.5
-const COLS = 32, LINHAS = 32, ALT = 3, PISO = new Uint8Array(COLS * LINHAS);
+const COLS = 46, LINHAS = 32, ALT = 3, PISO = new Uint8Array(COLS * LINHAS);
 const ret = (c0, c1, r0, r1) => { for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) PISO[r * COLS + c] = 1; };
 ret(9, 10, 1, 27); ret(1, 7, 3, 9); ret(12, 18, 3, 9); ret(1, 7, 13, 20); ret(12, 18, 13, 20); ret(7, 12, 24, 30); ret(1, 5, 24, 30); ret(6, 6, 28, 29);
 ret(8, 8, 5, 6); ret(11, 11, 5, 6); ret(8, 8, 16, 17); ret(11, 11, 16, 17);
 // ala nova: passagem de cima, corredor leste, estufa, arsenal e núcleo da ÍRIS
 ret(9, 21, 0, 1); ret(20, 21, 0, 27); ret(19, 19, 5, 6); ret(19, 19, 16, 17); ret(23, 30, 3, 9); ret(22, 22, 5, 6); ret(23, 30, 13, 20); ret(22, 22, 16, 17); ret(17, 26, 24, 30);
+// salas novas (v3.8): SALA DO REATOR (pé-direito de 7 m) e SALA DE ESTAR com jardim (4 m)
+ret(33, 44, 11, 22); ret(31, 32, 16, 17); ret(33, 44, 1, 9); ret(31, 32, 5, 6);
+const altCel = (c, r) => c >= 33 ? (r >= 11 && r <= 22 ? 7 : r >= 1 && r <= 9 ? 4 : ALT) : ALT;
+const alturaEm = (x, z) => altCel(Math.floor(x + 10), Math.floor(-z));
 const ehPiso = (x, z) => { const c = Math.floor(x + 10), r = Math.floor(-z); return c >= 0 && c < COLS && r >= 0 && r < LINHAS && PISO[r * COLS + c] === 1; };
 const abrigo = new THREE.Group(); cena.add(abrigo);
 { // paredes: uma face para cada lado de piso que encosta em parede
-  const pos = [], uv = [], idx = []; let n = 0; const sp = [], si = []; let sn = 0;
-  const quad = (ax, az, bx, bz) => { const L = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / L * 0.012, nz = (bx - ax) / L * 0.012;
-    for (const [y0, y1] of [[0.1, 0.14], [ALT - 0.16, ALT - 0.12], [1.3, 1.32]]) { sp.push(ax + nx, y0, az + nz, bx + nx, y0, bz + nz, bx + nx, y1, bz + nz, ax + nx, y1, az + nz); si.push(sn, sn + 1, sn + 2, sn, sn + 2, sn + 3); sn += 4; } pos.push(ax, 0, az, bx, 0, bz, bx, ALT, bz, ax, ALT, az); uv.push(0, 0, L / 2, 0, L / 2, ALT / 2.2, 0, ALT / 2.2); idx.push(n, n + 1, n + 2, n, n + 2, n + 3); n += 4; };
+  const pos = [], uv = [], idx = []; let n = 0; const sp = [], si = []; let sn = 0; const tp = [], tu = [], ti = []; let tn = 0;
+  const quad = (ax, az, bx, bz, H = ALT, y0b = 0) => { const L = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / L * 0.012, nz = (bx - ax) / L * 0.012;
+    for (const [y0, y1] of (y0b ? [] : [[0.1, 0.14], [H - 0.16, H - 0.12], [1.3, 1.32]])) { sp.push(ax + nx, y0, az + nz, bx + nx, y0, bz + nz, bx + nx, y1, bz + nz, ax + nx, y1, az + nz); si.push(sn, sn + 1, sn + 2, sn, sn + 2, sn + 3); sn += 4; } pos.push(ax, y0b, az, bx, y0b, bz, bx, H, bz, ax, H, az); uv.push(0, y0b / 2.2, L / 2, y0b / 2.2, L / 2, H / 2.2, 0, H / 2.2); idx.push(n, n + 1, n + 2, n, n + 2, n + 3); n += 4; };
   for (let r = 0; r < LINHAS; r++) for (let c = 0; c < COLS; c++) { if (!PISO[r * COLS + c]) continue; const x0 = c - 10, x1 = c - 9, z0 = -r, z1 = -r - 1;
-    if (r === 0 || !PISO[(r - 1) * COLS + c]) quad(x1, z0, x0, z0); if (r === LINHAS - 1 || !PISO[(r + 1) * COLS + c]) quad(x0, z1, x1, z1);
-    if (c === 0 || !PISO[r * COLS + c - 1]) quad(x0, z0, x0, z1); if (c === COLS - 1 || !PISO[r * COLS + c + 1]) quad(x1, z1, x1, z0); }
+    const H = altCel(c, r), viz = (cc, rr2) => cc >= 0 && cc < COLS && rr2 >= 0 && rr2 < LINHAS && PISO[rr2 * COLS + cc] ? altCel(cc, rr2) : 0;
+    const lado = (hv, ax, az, bx, bz) => { if (!hv) quad(ax, az, bx, bz, H); else if (hv < H) quad(ax, az, bx, bz, H, hv); };
+    lado(viz(c, r - 1), x1, z0, x0, z0); lado(viz(c, r + 1), x0, z1, x1, z1); lado(viz(c - 1, r), x0, z0, x0, z1); lado(viz(c + 1, r), x1, z1, x1, z0);
+    tp.push(x0, H, z0, x1, H, z0, x1, H, z1, x0, H, z1); tu.push(x0 / 2, z0 / 2, x1 / 2, z0 / 2, x1 / 2, z1 / 2, x0 / 2, z1 / 2); ti.push(tn, tn + 2, tn + 1, tn, tn + 3, tn + 2); tn += 4; }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
   const paredes = new THREE.Mesh(g, M.parede); paredes.receiveShadow = true; abrigo.add(paredes);
   const gs = new THREE.BufferGeometry(); gs.setAttribute('position', new THREE.Float32BufferAttribute(sp, 3)); gs.setIndex(si); abrigo.add(new THREE.Mesh(gs, M.neon));
   const pisoG = new THREE.PlaneGeometry(COLS, LINHAS).rotateX(-Math.PI / 2); const puv = pisoG.attributes.uv; for (let i = 0; i < puv.count; i++) puv.setXY(i, puv.getX(i) * COLS / 2, puv.getY(i) * LINHAS / 2);
-  add(pisoG, M.piso, COLS / 2 - 10, 0, -LINHAS / 2, abrigo); const teto = add(pisoG.clone().rotateX(Math.PI), M.teto, COLS / 2 - 10, ALT, -LINHAS / 2, abrigo); }
+  add(pisoG, M.piso, COLS / 2 - 10, 0, -LINHAS / 2, abrigo);
+  const gt = new THREE.BufferGeometry(); gt.setAttribute('position', new THREE.Float32BufferAttribute(tp, 3)); gt.setAttribute('uv', new THREE.Float32BufferAttribute(tu, 2)); gt.setIndex(ti); gt.computeVertexNormals(); const teto = new THREE.Mesh(gt, M.teto); teto.receiveShadow = true; abrigo.add(teto); }
 // canos no teto do corredor e faixas de perigo
 for (const x of [-0.75, 0.75]) add(new THREE.CylinderGeometry(0.07, 0.07, 27, 8).rotateX(Math.PI / 2), M.metal, x, ALT - 0.15, -14, abrigo);
 add(new THREE.BoxGeometry(6, 0.02, 0.3), M.faixa, 0, 0.011, -23.7, abrigo);
@@ -1731,6 +1738,179 @@ const SEG = { telas: [], cams: [], i: 0 };
   // câmera de vigilância no canto da sala
   const camC = grupo(-4.3, 2.6, -24.3, -Math.PI * 0.75); add(new THREE.BoxGeometry(0.16, 0.14, 0.32), M.branco, 0, 0, 0.1, camC); add(new THREE.CylinderGeometry(0.05, 0.05, 0.06, 12).rotateX(Math.PI / 2), M.metalEsc, 0, 0, 0.28, camC); add(new THREE.SphereGeometry(0.02, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2010, toneMapped: false }), 0.05, 0.05, 0.2, camC);
   placaParede('🛡 SEGURANÇA ◀', -2.98, 2.45, -27.3, Math.PI / 2, '#7fe8ff', 1.2); }
+// =====================================================================
+// v3.8 · SALA DO REATOR (x 23..35, z -11..-23, 7 m de altura)
+// =====================================================================
+const paredeP = (x, z, ry, w, h, y0, mat, ur = w / 2, vr = h / 2) => { const g = new THREE.PlaneGeometry(w, h), uv = g.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * ur, uv.getY(i) * vr); const m = add(g, mat, x, y0 + h / 2, z, abrigo); m.rotation.y = ry; return m; };
+const tubo = (pts, r, mat, seg = 24) => { const c = new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p)), false, 'catmullrom', 0.2); return add(new THREE.TubeGeometry(c, seg, r, minimo ? 6 : 10, false), mat, 0, 0, 0, abrigo); };
+const etiqueta = (txt, fundo = '#e8b018', tinta = '#111') => tex(128, 512, (g, w, h) => { g.fillStyle = fundo; g.fillRect(0, 0, w, h); g.fillStyle = tinta; g.fillRect(0, 6, w, 6); g.fillRect(0, h - 12, w, 6); g.save(); g.translate(w / 2, h / 2); g.rotate(-Math.PI / 2); g.font = '700 46px Oswald, Arial'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, 0, 0); g.restore(); });
+const REA = { x: 29.8, z: -16.2 };
+// paredes de concreto manchado por cima do metal (como na foto)
+const concR = std({ map: tConcreto, roughness: 0.95, color: 0x9a9890 });
+paredeP(29, -11.02, Math.PI, 12, 7, 0, concR); paredeP(29, -22.98, 0, 12, 7, 0, concR); paredeP(34.98, -17, -Math.PI / 2, 12, 7, 0, concR);
+paredeP(23.02, -13.5, Math.PI / 2, 5, 7, 0, concR); paredeP(23.02, -20.5, Math.PI / 2, 5, 7, 0, concR); paredeP(23.02, -17, Math.PI / 2, 2, 4, 3, concR, 1, 2);
+// o REATOR (gerador nuclear): tanque enferrujado com janela azul brilhante
+const tFerr = comFoto(tex(256, 256, (g, w, h) => { const Rr = semente(381); g.fillStyle = '#4a4a44'; g.fillRect(0, 0, w, h); ruido(g, w, h, ['rgba(0,0,0,.25)', 'rgba(120,70,30,.35)', 'rgba(255,255,255,.05)', 'rgba(70,90,90,.2)'], 6000, 4, Rr); for (let k = 0; k < 14; k++) { g.fillStyle = 'rgba(90,45,15,.35)'; g.fillRect(Rr() * w, Rr() * h, 3 + Rr() * 4, 20 + Rr() * 60); } }, true), 'ferrugem', 'overlay', 0.6);
+const ferrR = std({ map: tFerr, roughness: 0.75, metalness: 0.55, color: 0xa8a8a0 });
+const reator = grupo(REA.x, 0, REA.z, -Math.PI / 2);
+add(new THREE.CylinderGeometry(2.1, 2.25, 0.6, 32), M.metalEsc, 0, 0.3, 0, reator, true);
+add(new THREE.CylinderGeometry(1.75, 1.75, 3.6, 32, 1, true), ferrR, 0, 2.4, 0, reator, true);
+add(new THREE.SphereGeometry(1.75, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), ferrR, 0, 4.2, 0, reator, true).scale.y = 0.55;
+for (const y of [0.75, 2.4, 4.05]) add(new THREE.TorusGeometry(1.78, 0.07, 6, 40).rotateX(Math.PI / 2), M.metalEsc, 0, y, 0, reator);
+for (let k = 0; k < 16; k++) { const a = k / 16 * Math.PI * 2; add(new THREE.BoxGeometry(0.14, 3.6, 0.06), M.metalEsc, Math.sin(a) * 1.77, 2.4, Math.cos(a) * 1.77, reator).rotation.y = a; }
+add(new THREE.BoxGeometry(0.9, 0.5, 0.7), M.metal, 0, 5.15, 0.2, reator); add(new THREE.PlaneGeometry(0.5, 0.28), M.tela, 0, 5.15, 0.56, reator);
+// caixa da janela (moldura grossa com parafusos)
+add(new THREE.BoxGeometry(2.3, 2.7, 0.7), ferrR, 0, 2.3, 1.55, reator, true);
+const tNucleo = tex(256, 320, (g, w, h) => { const gr = g.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, w * 0.7); gr.addColorStop(0, '#e8ffff'); gr.addColorStop(0.35, '#38e8ff'); gr.addColorStop(1, '#023848'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.fillStyle = 'rgba(0,40,60,.55)'; for (let k = 0; k < 7; k++) g.fillRect(28 + k * 30, 40, 10, h - 80); g.fillStyle = 'rgba(220,255,255,.8)'; for (let k = 0; k < 7; k++) g.fillRect(31 + k * 30, 50, 4, h - 100);
+  g.strokeStyle = 'rgba(0,30,40,.8)'; g.lineWidth = 8; g.strokeRect(14, 14, w - 28, h - 28); g.strokeRect(50, 30, w - 100, h - 60); });
+const nucleoReaM = new THREE.MeshBasicMaterial({ map: tNucleo, toneMapped: false });
+const janelaRea = add(new THREE.PlaneGeometry(1.5, 1.9), nucleoReaM, 0, 2.3, 1.91, reator);
+add(new THREE.BoxGeometry(1.75, 0.18, 0.12), M.metalEsc, 0, 3.3, 1.92, reator); add(new THREE.BoxGeometry(1.75, 0.18, 0.12), M.metalEsc, 0, 1.3, 1.92, reator); for (const sx of [-0.84, 0.84]) add(new THREE.BoxGeometry(0.18, 2.15, 0.12), M.metalEsc, sx, 2.3, 1.92, reator);
+for (let k = 0; k < 12; k++) { const lado = k % 4, f = Math.floor(k / 4) / 2; const x = lado < 2 ? (lado ? 1 : -1) * 1.02 : -0.9 + f * 1.8, y = lado < 2 ? 1.25 + f * 2.1 : (lado === 2 ? 1.07 : 3.53); add(new THREE.SphereGeometry(0.05, 8, 6), M.metal, x, y, 1.92, reator); }
+const brilhoReaM = new THREE.MeshBasicMaterial({ map: tBrilho, color: 0x30d8ff, transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+const brilhoRea = add(new THREE.PlaneGeometry(4.4, 4.4), brilhoReaM, 0, 2.3, 2.0, reator); brilhoRea.renderOrder = 3;
+const luzReator = new THREE.PointLight(0x30d8ff, 2.2, 11, 1.4); luzReator.position.set(REA.x - 2.6, 2.3, REA.z); abrigo.add(luzReator);
+usavel(reator, { id: 'gerador', txt: 'Ligar/desligar o REATOR (gerador)', segurar: 0.6 }); OBST2.push([REA.x, REA.z, 2.35], [REA.x - 2.0, REA.z, 1.0]);
+// canos grossos (como na foto) com etiquetas amarelas e volantes vermelhos
+const canoM = std({ map: tFerr, roughness: 0.6, metalness: 0.6, color: 0xb8bcb4 });
+tubo([[27.3, 0, -18.2], [27.3, 4.9, -18.2], [27.5, 5.8, -18.0], [28.3, 6.15, -17.4], [29.2, 5.8, -16.8], [29.6, 5.15, -16.5]], 0.3, canoM, 40);
+tubo([[32.4, 0, -14.6], [32.4, 4.6, -14.6], [32.1, 5.4, -15.0], [31.1, 5.5, -15.6], [30.5, 5.0, -16.0]], 0.25, canoM, 32);
+tubo([[23.05, 0.45, -21.0], [28.0, 0.45, -21.0], [29.2, 0.5, -20.6], [29.8, 0.55, -19.0], [29.8, 0.6, -18.3]], 0.32, canoM, 40);
+tubo([[31.0, 0.55, -17.9], [32.0, 0.45, -19.6], [33.0, 0.45, -20.3], [34.95, 0.45, -20.3]], 0.27, canoM, 30);
+tubo([[23.05, 0.4, -12.2], [27.0, 0.4, -12.2], [28.6, 0.45, -13.0], [29.3, 0.5, -14.3]], 0.26, canoM, 30);
+{ const eA = std({ map: etiqueta('PERIGO · ZONA DE RADIAÇÃO'), roughness: 0.6 }), eB = std({ map: etiqueta('CIRCUITO DE RESFRIAMENTO'), roughness: 0.6 }), eC = std({ map: etiqueta('☢ PERIGO ☢'), roughness: 0.6 });
+  add(new THREE.CylinderGeometry(0.335, 0.335, 1.6, 20, 1, true).rotateZ(Math.PI / 2), eA, 25.4, 0.45, -21.0, abrigo);
+  add(new THREE.CylinderGeometry(0.275, 0.275, 1.3, 20, 1, true).rotateZ(Math.PI / 2), eB, 25.0, 0.4, -12.2, abrigo);
+  add(new THREE.CylinderGeometry(0.315, 0.315, 1.1, 20, 1, true), eC, 27.3, 2.6, -18.2, abrigo);
+  add(new THREE.CylinderGeometry(0.265, 0.265, 1.1, 20, 1, true), eA, 32.4, 2.2, -14.6, abrigo);
+  add(new THREE.CylinderGeometry(0.285, 0.285, 1.0, 20, 1, true).rotateZ(Math.PI / 2), eB, 34.0, 0.45, -20.3, abrigo); }
+const volanteR = (x, y, z, ry) => { const v = grupo(x, y, z, ry); add(new THREE.TorusGeometry(0.22, 0.035, 6, 18), M.vermelho, 0, 0, 0, v); for (let k = 0; k < 3; k++) add(new THREE.BoxGeometry(0.42, 0.03, 0.03), M.vermelho, 0, 0, 0, v).rotation.z = k * Math.PI / 3; add(new THREE.CylinderGeometry(0.04, 0.04, 0.3, 8).rotateX(Math.PI / 2), M.metal, 0, 0, -0.15, v); };
+volanteR(27.3, 1.4, -17.75, 0); volanteR(32.4, 1.3, -14.15, 0); volanteR(26.6, 1.05, -21.0, 0); volanteR(33.2, 1.0, -20.3, 0);
+// relógios de pressão em cima dos canos do chão
+const tRelogio = tex(128, 128, (g, w, h) => { g.fillStyle = '#e8e2d0'; g.beginPath(); g.arc(64, 64, 60, 0, 7); g.fill(); g.strokeStyle = '#222'; g.lineWidth = 3; for (let k = 0; k <= 10; k++) { const a = Math.PI * 0.75 + k / 10 * Math.PI * 1.5; g.beginPath(); g.moveTo(64 + Math.cos(a) * 44, 64 + Math.sin(a) * 44); g.lineTo(64 + Math.cos(a) * 54, 64 + Math.sin(a) * 54); g.stroke(); }
+  g.strokeStyle = '#c01010'; g.lineWidth = 6; g.beginPath(); g.arc(64, 64, 50, Math.PI * 1.9, Math.PI * 2.25); g.stroke(); g.strokeStyle = '#111'; g.lineWidth = 4; g.beginPath(); g.moveTo(64, 64); g.lineTo(100, 40); g.stroke(); });
+const relogioM = std({ map: tRelogio, roughness: 0.3 });
+const relogio = (x, y, z, ry, rx = 0, r = 0.22) => { const gq = grupo(x, y, z, ry); add(new THREE.CylinderGeometry(r + 0.04, r + 0.04, 0.1, 20).rotateX(Math.PI / 2), M.metal, 0, 0, 0, gq).rotation.x = 0; add(new THREE.CircleGeometry(r, 20), relogioM, 0, 0, 0.051, gq); gq.rotation.x = rx; return gq; };
+relogio(24.4, 1.0, -20.62, 0, -0.5); relogio(25.4, 1.0, -20.62, 0, -0.5, 0.18); relogio(28.0, 0.9, -12.55, Math.PI, 0.4);
+// painéis de controle na parede oeste com relógios e luzinhas piscando
+const ledVerdeM = std({ color: 0x0a1a0a, emissive: 0x30ff40, emissiveIntensity: 2 }), ledVermM = std({ color: 0x1a0505, emissive: 0xff3010, emissiveIntensity: 2 }), ledAmbM = std({ color: 0x1a1005, emissive: 0xffa020, emissiveIntensity: 2 });
+const LEDS_REA = [ledVerdeM, ledVermM, ledAmbM];
+const painelRea = (z, larg) => { const p = grupo(23.15, 0, z, Math.PI / 2); add(new THREE.BoxGeometry(larg, 1.7, 0.3), std({ color: 0x5c6a6c, roughness: 0.55, metalness: 0.6 }), 0, 1.25, 0, p, true);
+  for (let k = 0; k < Math.floor(larg / 0.55); k++) { const r = relogio(0, 0, 0, 0, 0, 0.19); r.position.set(-larg / 2 + 0.35 + k * 0.55, 1.75, 0.16); p.add(r); }
+  for (let k = 0; k < Math.floor(larg / 0.18); k++) for (let l = 0; l < 2; l++) add(new THREE.SphereGeometry(0.035, 8, 6), LEDS_REA[(k * 7 + l * 3) % 3], -larg / 2 + 0.15 + k * 0.18, 1.15 + l * 0.18, 0.16, p);
+  for (let k = 0; k < Math.floor(larg / 0.6); k++) add(new THREE.CylinderGeometry(0.06, 0.06, 0.08, 10).rotateX(Math.PI / 2), std({ color: 0x8a1a12, roughness: 0.4 }), -larg / 2 + 0.3 + k * 0.6, 0.7, 0.18, p); return p; };
+painelRea(-13.0, 2.6); painelRea(-21.0, 2.4);
+// placas de perigo
+const placaPerigo = (l1, l2, cor, x, y, z, ry, simbolo) => { const t = tex(256, 300, (g, w, h) => { g.fillStyle = '#f2f0e4'; g.fillRect(0, 0, w, h); g.fillStyle = cor; g.fillRect(8, 8, w - 16, 78); g.fillStyle = '#111'; g.font = '700 54px Oswald, Arial'; g.textAlign = 'center'; g.fillText(l1, w / 2, 66);
+    g.fillStyle = '#e8b018'; g.fillRect(8, 92, w - 16, h - 100); g.fillStyle = '#111'; g.font = '700 70px Arial'; if (simbolo) g.fillText(simbolo, w / 2, 172); g.font = '700 30px Oswald, Arial'; l2.split('\n').forEach((s, i) => g.fillText(s, w / 2, (simbolo ? 222 : 160) + i * 36)); });
+  add(new THREE.PlaneGeometry(0.75, 0.88), std({ map: t, roughness: 0.7 }), x, y, z, abrigo).rotation.y = ry; };
+placaPerigo('PERIGO', 'ÁREA DE\nRADIAÇÃO', '#d81e10', 23.04, 2.6, -14.9, Math.PI / 2, '☢'); placaPerigo('CUIDADO', 'ALTA\nVOLTAGEM', '#e8b018', 23.04, 2.6, -19.1, Math.PI / 2, '⚡');
+placaPerigo('PERIGO', 'NÚCLEO\nRADIOATIVO', '#d81e10', 34.96, 2.7, -21.5, -Math.PI / 2, '☢');
+// passarela lá em cima, com corrimão, colunas e escada de metal
+const tGrade = tex(128, 128, (g, w, h) => { g.fillStyle = '#2c302c'; g.fillRect(0, 0, w, h); g.fillStyle = '#0c0e0c'; for (let y = 4; y < h; y += 16) for (let x = 4; x < w; x += 16) g.fillRect(x, y, 10, 10); }, true);
+const gradeM = std({ map: tGrade, roughness: 0.6, metalness: 0.7 }); tGrade.repeat.set(12, 2);
+add(new THREE.BoxGeometry(12, 0.1, 1.7), gradeM, 29, 3.6, -11.85, abrigo, true);
+for (let x = 23.6; x <= 34.5; x += 1.2) add(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 6), M.metal, x, 4.1, -12.66, abrigo);
+for (const y of [4.6, 4.1]) add(new THREE.CylinderGeometry(0.035, 0.035, 11.2, 8).rotateZ(Math.PI / 2), M.metal, 28.9, y, -12.66, abrigo);
+for (const x of [24.5, 28.5, 32.5]) { add(new THREE.CylinderGeometry(0.1, 0.1, 3.6, 10), M.metalEsc, x, 1.8, -12.6, abrigo, true); OBST2.push([x, -12.6, 0.3]); }
+add(new THREE.BoxGeometry(1.6, 1.8, 0.8), std({ color: 0x3a4446, roughness: 0.5, metalness: 0.6 }), 26.2, 4.55, -11.5, abrigo); add(new THREE.BoxGeometry(1.2, 1.4, 0.8), std({ color: 0x2e3436, roughness: 0.5, metalness: 0.6 }), 31.0, 4.35, -11.5, abrigo);
+for (let k = 0; k < 4; k++) add(new THREE.SphereGeometry(0.04, 8, 6), LEDS_REA[k % 3], 25.7 + k * 0.3, 4.9, -11.08, abrigo);
+{ const n = 16, topo = 3.6, z0 = -12.75, run = 5.6; for (let i = 0; i < n; i++) add(new THREE.BoxGeometry(1.05, 0.05, run / n + 0.02), gradeM, 34.2, topo - (i + 1) * topo / n, z0 - (i + 0.5) * run / n, abrigo);
+  const ang = Math.atan2(topo, run), L = Math.hypot(topo, run); for (const x of [33.65, 34.75]) { const s = add(new THREE.BoxGeometry(0.05, 0.22, L), M.metalEsc, x, topo / 2, z0 - run / 2, abrigo); s.rotation.x = -ang; const c = add(new THREE.CylinderGeometry(0.03, 0.03, L, 6).rotateX(Math.PI / 2), M.metal, x === 33.65 ? 33.62 : 34.8, topo / 2 + 0.95, z0 - run / 2, abrigo); c.rotation.x = -ang; }
+  obstLinha(34.2, -14.4, 34.2, -18.3, 0.62); }
+// lâmpadas penduradas e cabos caindo do teto
+const pendente = (x, z) => { add(new THREE.CylinderGeometry(0.012, 0.012, 1.8, 4), M.metalEsc, x, 6.1, z, abrigo); add(new THREE.ConeGeometry(0.42, 0.3, 18, 1, true), std({ color: 0x5a6058, roughness: 0.5, metalness: 0.7, side: THREE.DoubleSide }), x, 5.1, z, abrigo); return add(new THREE.SphereGeometry(0.13, 12, 8), M.luz, x, 4.95, z, abrigo); };
+const bulboA = pendente(26.0, -14.6), bulboB = pendente(32.0, -20.0);
+if (!minimo) for (let k = 0; k < 5; k++) { const x0 = 23.5 + k * 2.3, z0 = -13 - (k % 3) * 3.2; tubo([[x0, 6.95, z0], [x0 + 0.8, 5.9 - (k % 2) * 0.5, z0 - 0.9], [x0 + 1.9, 6.95, z0 - 1.6]], 0.03, M.metalEsc, 14); }
+for (const z of [-13, -17, -21]) add(new THREE.BoxGeometry(12, 0.3, 0.25), M.metalEsc, 29, 6.85, z, abrigo);
+// console do operador com 3 telas
+const telaRea = (cor, titulo, desenho) => tex(256, 160, (g, w, h) => { g.fillStyle = '#050a08'; g.fillRect(0, 0, w, h); g.strokeStyle = cor; g.fillStyle = cor; g.lineWidth = 2; g.font = '600 18px IBM Plex Mono, monospace'; g.fillText(titulo, 10, 24); desenho(g, w, h); for (let y = 0; y < h; y += 3) { g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(0, y, w, 1); } });
+const telasReaM = [telaRea('#40ff80', 'SAÍDA DO REATOR', (g, w, h) => { g.beginPath(); for (let x = 0; x < w; x += 4) g.lineTo(x, 95 + Math.sin(x / 14) * 26 + Math.sin(x / 5) * 6); g.stroke(); g.fillRect(10, 136, 190, 12); }),
+  telaRea('#ffa030', 'TEMPERATURA NÚCLEO', (g, w, h) => { for (let k = 0; k < 9; k++) g.fillRect(14 + k * 26, 140 - (30 + (k * 37) % 80), 18, 30 + (k * 37) % 80); }),
+  telaRea('#40ff80', 'PRESSÃO · 98%', (g, w, h) => { g.beginPath(); g.arc(128, 100, 44, Math.PI, Math.PI * 1.9); g.lineWidth = 10; g.stroke(); g.font = '700 30px IBM Plex Mono'; g.fillText('OK', 106, 150); })].map(t => std({ color: 0x000000, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 1.2, map: t }));
+const consoleRea = grupo(26.0, 0, -19.9, Math.atan2(REA.x - 26.0, REA.z + 19.9));
+{ const cm = std({ color: 0x59696c, roughness: 0.5, metalness: 0.6 }); add(new THREE.BoxGeometry(1.9, 0.95, 0.75), cm, 0, 0.48, 0, consoleRea, true); const tampo = add(new THREE.BoxGeometry(1.9, 0.08, 0.6), cm, 0, 1.0, 0.1, consoleRea); tampo.rotation.x = 0.35;
+  add(new THREE.BoxGeometry(1.9, 0.62, 0.3), cm, 0, 1.35, -0.28, consoleRea, true);
+  telasReaM.forEach((m, i) => { const t = add(new THREE.PlaneGeometry(0.52, 0.34), m, -0.62 + i * 0.62, 1.4, -0.12, consoleRea); t.rotation.x = -0.12; });
+  for (let k = 0; k < 10; k++) add(new THREE.SphereGeometry(0.03, 8, 6), LEDS_REA[k % 3], -0.8 + k * 0.17, 1.03, 0.08 + (k % 2) * 0.12, consoleRea).position.y += (k % 2) * 0.04;
+  const cad = grupo(0, 0, 0.9); consoleRea.add(cad); const ccm = std({ color: 0x1a1d20, roughness: 0.8 }); add(new THREE.BoxGeometry(0.5, 0.08, 0.5), ccm, 0, 0.5, 0, cad); add(new THREE.BoxGeometry(0.5, 0.6, 0.07), ccm, 0, 0.85, 0.24, cad); add(new THREE.CylinderGeometry(0.04, 0.04, 0.45, 8), M.metal, 0, 0.25, 0, cad); }
+usavel(consoleRea, { id: 'gerador', txt: 'Ligar/desligar o REATOR (gerador)', segurar: 0.6 }); OBST2.push([26.0, -19.9, 0.95]);
+obstLinha(23.05, -21.0, 29.2, -20.8, 0.4); obstLinha(31.0, -17.9, 34.95, -20.3, 0.36); obstLinha(23.05, -12.2, 28.6, -13.0, 0.34); OBST2.push([27.3, -18.2, 0.42], [32.4, -14.6, 0.38]);
+// luz da sala (entra na lista de luzes: apaga quando o gerador desliga)
+const luzRea = new THREE.PointLight(0xd8ecff, 1, 15, 1.3); luzRea.position.set(28.5, 4.8, -17); abrigo.add(luzRea); LUZES.push({ l: luzRea, lamp: bulboA, nome: 'rea', base: 1.05, pisca: 0 });
+placaParede('⚛ REATOR ▶', 20.98, 2.45, -19.3, -Math.PI / 2, '#5ff0ff', 1.3);
+
+// =====================================================================
+// v3.8 · SALA DE ESTAR COM JARDIM (x 23..35, z -1..-10, teto em arco)
+// =====================================================================
+const ARCO = { y0: 2.6, alto: 1.4, r: 4.5, zc: -5.5 }; const alturaArco = z => ARCO.y0 + ARCO.alto * Math.sqrt(Math.max(0, 1 - ((z - ARCO.zc) / ARCO.r) ** 2));
+const paredeClaraM = std({ color: 0xe6dbe4, roughness: 0.85 });
+paredeP(29, -1.02, Math.PI, 12, 2.7, 0, std({ color: 0xc8a2e6, emissive: 0x3a1258, roughness: 0.9 })); paredeP(29, -9.98, 0, 12, 2.7, 0, paredeClaraM); paredeP(34.98, -5.5, -Math.PI / 2, 9, 4, 0, paredeClaraM);
+paredeP(23.02, -3.0, Math.PI / 2, 4, 4, 0, paredeClaraM); paredeP(23.02, -8.5, Math.PI / 2, 3, 4, 0, paredeClaraM); paredeP(23.02, -6, Math.PI / 2, 2, 1, 3, paredeClaraM);
+{ const tPedra = tex(256, 256, (g, w, h) => { const Rr = semente(521); g.fillStyle = '#d8cbb8'; g.fillRect(0, 0, w, h); ruido(g, w, h, ['rgba(255,255,255,.08)', 'rgba(120,90,60,.06)'], 3000, 6, Rr); g.strokeStyle = 'rgba(120,100,80,.25)'; g.lineWidth = 2; g.strokeRect(1, 1, 254, 254); }, true);
+  const piso = paredeP(29, -5.5, 0, 12, 9, 0, std({ map: tPedra, roughness: 0.3, metalness: 0.05 }), 4, 3); piso.rotation.set(-Math.PI / 2, 0, 0); piso.position.y = 0.006; }
+// teto em arco com placas brancas
+const tPlacas = tex(256, 256, (g, w, h) => { g.fillStyle = '#ecebe6'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(90,90,90,.45)'; g.lineWidth = 2; g.strokeRect(1, 1, w - 2, h - 2); g.beginPath(); g.moveTo(0, h / 2); g.lineTo(w, h / 2); g.stroke(); }, true); tPlacas.repeat.set(7, 6);
+{ const arco = add(new THREE.CylinderGeometry(ARCO.r, ARCO.r, 12, minimo ? 16 : 28, 1, true, 0, Math.PI).rotateZ(Math.PI / 2), std({ map: tPlacas, roughness: 0.7, side: THREE.DoubleSide }), 29, ARCO.y0, ARCO.zc, abrigo); arco.scale.y = ARCO.alto / ARCO.r; }
+add(new THREE.CylinderGeometry(0.3, 0.3, 12, 16).rotateZ(Math.PI / 2), std({ color: 0xdedcd6, roughness: 0.6 }), 29, 3.5, -7.7, abrigo); for (let k = 0; k < 6; k++) add(new THREE.BoxGeometry(0.5, 0.06, 0.12), M.metalEsc, 24.5 + k * 1.9, 3.3, -7.62, abrigo).rotation.x = -0.5;
+const luzBrancaM = std({ color: 0xffffff, emissive: 0xfff0ff, emissiveIntensity: 2.2 }), luzLilasM = std({ color: 0x2a0a3a, emissive: 0xd070ff, emissiveIntensity: 2.4 });
+for (let x = 24; x <= 34; x += 2) for (const z of [-6.2, -8.6]) { const d = add(new THREE.CircleGeometry(0.09, 12), luzBrancaM, x, alturaArco(z) - 0.03, z, abrigo); d.rotation.x = Math.PI / 2; }
+// JARDIM atrás do vidro (lado norte): plantas tropicais com luz roxa
+const vidroJardimM = new THREE.MeshStandardMaterial({ color: 0xe8f4ff, roughness: 0.05, metalness: 0.2, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide });
+paredeP(30, -4.5, 0, 10, 3.2, 0, vidroJardimM); const vidroLado = paredeP(25, -2.75, Math.PI / 2, 3.5, 2.5, 0, vidroJardimM);
+add(new THREE.BoxGeometry(10, alturaArco(-4.5) - 3.2, 0.2), paredeClaraM, 30, (3.2 + alturaArco(-4.5)) / 2, -4.5, abrigo);
+{ const sh = new THREE.Shape(); sh.moveTo(1.0, 2.5); for (let k = 0; k <= 10; k++) { const z = -1 - k * 0.35; sh.lineTo(-z, alturaArco(z) + 0.02); } sh.lineTo(4.5, 2.5); sh.lineTo(1.0, 2.5); const m = add(new THREE.ShapeGeometry(sh), paredeClaraM, 25, 0, 0, abrigo); m.rotation.y = Math.PI / 2; }
+for (let k = 0; k <= 8; k++) add(new THREE.BoxGeometry(0.05, 3.2, 0.08), std({ color: 0xc8ccd0, roughness: 0.3, metalness: 0.8 }), 25 + k * 1.25, 1.6, -4.5, abrigo);
+add(new THREE.BoxGeometry(10, 0.05, 0.08), luzLilasM, 30, 3.15, -4.42, abrigo); for (const z of [-2.2, -3.6]) add(new THREE.BoxGeometry(9.6, 0.04, 0.1), luzLilasM, 30.2, alturaArco(z) - 0.05, z, abrigo);
+obstLinha(25, -4.5, 35, -4.5, 0.3); obstLinha(25, -1, 25, -4.5, 0.3);
+add(new THREE.BoxGeometry(9.9, 0.18, 3.4), std({ color: 0x2c1c10, roughness: 1 }), 30.05, 0.09, -2.75, abrigo);
+const tFolhaJ = tex(64, 128, (g, w, h) => { g.clearRect(0, 0, w, h); const gr = g.createLinearGradient(0, h, 0, 0); gr.addColorStop(0, '#1f5a1c'); gr.addColorStop(1, '#5ac84a'); g.fillStyle = gr; g.beginPath(); g.moveTo(w / 2, h); g.bezierCurveTo(-4, h * 0.6, 6, h * 0.15, w / 2, 0); g.bezierCurveTo(w - 6, h * 0.15, w + 4, h * 0.6, w / 2, h); g.fill(); g.strokeStyle = 'rgba(220,255,200,.5)'; g.lineWidth = 2; g.beginPath(); g.moveTo(w / 2, h); g.lineTo(w / 2, 4); g.stroke(); });
+const folhaM = std({ map: tFolhaJ, emissive: 0x0c2a0c, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.7 }), folhaVermM = std({ map: tFolhaJ, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.7, color: 0xff5070 }), troncoM = std({ color: 0x5a4430, roughness: 1 });
+const planta = (x, z, tipo, Rr, y = 0.18) => { const p = grupo(x, y, z, Rr() * 6.28); let n, L, W, tilt, y0 = 0;
+  if (tipo === 'palmeira') { const h = 1.6 + Rr() * 0.8; add(new THREE.CylinderGeometry(0.06, 0.09, h, 7), troncoM, 0, h / 2, 0, p); y0 = h; n = 8; L = 1.4; W = 0.42; tilt = 1.15; }
+  else if (tipo === 'brom') { n = 9; L = 0.6; W = 0.18; tilt = 0.9; } else { n = 7; L = 1.0; W = 0.55; tilt = 0.7; }
+  const geo = new THREE.PlaneGeometry(W, L).translate(0, L / 2, 0); const mat = tipo === 'brom' ? folhaVermM : folhaM;
+  for (let k = 0; k < n; k++) { const f = new THREE.Mesh(geo, mat); f.rotation.order = 'YXZ'; f.rotation.y = k / n * 6.28 + Rr() * 0.4; f.rotation.x = tilt + (Rr() - 0.5) * 0.4; f.position.y = y0; p.add(f); }
+  if (tipo === 'brom') add(new THREE.ConeGeometry(0.08, 0.35, 6), std({ color: 0xff2040, emissive: 0x400010, roughness: 0.5 }), 0, 0.3, 0, p); };
+{ const Rr = semente(777), N = minimo ? 7 : fraco ? 11 : 16; for (let k = 0; k < N; k++) { const tipo = k % 4 === 0 ? 'palmeira' : k % 3 === 0 ? 'brom' : 'folha'; planta(25.6 + (k + Rr() * 0.6) * (9 / N), -1.5 - Rr() * 2.6, tipo, Rr); } }
+// totem oval com relógio (mostra a hora do jogo)
+const cvTotem = document.createElement('canvas'); cvTotem.width = 256; cvTotem.height = 200; const tTotem = new THREE.CanvasTexture(cvTotem); tTotem.encoding = THREE.sRGBEncoding;
+{ const tt = grupo(27.6, 0, -5.15, Math.PI); add(new THREE.CylinderGeometry(0.7, 0.7, 0.16, 32).rotateX(Math.PI / 2), std({ color: 0xe9e4dc, roughness: 0.6 }), 0, 1.35, 0, tt, true).scale.y = 1.55;
+  add(new THREE.PlaneGeometry(0.72, 0.56), new THREE.MeshBasicMaterial({ map: tTotem, toneMapped: false }), 0, 1.45, 0.085, tt); add(new THREE.BoxGeometry(0.5, 0.06, 0.3), M.metalEsc, 0, 0.03, 0, tt); OBST2.push([27.6, -5.15, 0.55]); }
+let totemMin = -1; function desenharTotem(min, h) { if (min === totemMin) return; totemMin = min; const g = cvTotem.getContext('2d'); g.fillStyle = '#0b0c10'; g.fillRect(0, 0, 256, 200); g.fillStyle = '#f2f2f2'; g.textAlign = 'center';
+  g.font = '300 76px Oswald, Arial'; g.fillText(String(Math.floor(h)).padStart(2, '0') + ':' + String(Math.floor(min % 60)).padStart(2, '0'), 128, 102); g.font = '400 20px Arial'; g.textAlign = 'left'; g.fillText('☔ Chuva ácida', 20, 30); g.fillText('Dia ' + (Math.floor(min / 1440) + 1), 170, 30);
+  g.fillStyle = '#9aa0aa'; g.font = '400 18px Arial'; g.fillText('Lá fora: -4°C · ☢ alta', 20, 140); for (let k = 0; k < 3; k++) { g.strokeStyle = '#d8d8d8'; g.lineWidth = 2; g.beginPath(); g.arc(78 + k * 50, 172, 13, 0, 7); g.stroke(); } tTotem.needsUpdate = true; }
+// sofá em L, tapetes redondos, mesinhas
+{ const sofaM = std({ color: 0x8c8682, roughness: 1 }); const sofa = grupo(30.2, 0, -8.7);
+  add(new THREE.BoxGeometry(3.2, 0.42, 1.0), sofaM, 0, 0.21, 0, sofa, true); add(new THREE.BoxGeometry(3.2, 0.55, 0.25), sofaM, 0, 0.65, -0.45, sofa, true); add(new THREE.BoxGeometry(1.0, 0.42, 1.4), sofaM, 1.1, 0.21, 1.15, sofa, true);
+  for (const x of [-1.72, 1.72]) add(new THREE.BoxGeometry(0.25, 0.62, 1.0), sofaM, x, 0.31, 0, sofa, true); for (let k = 0; k < 3; k++) add(new THREE.BoxGeometry(0.95, 0.14, 0.85), std({ color: 0x9a948f, roughness: 1 }), -1 + k * 1.0, 0.49, 0.05, sofa);
+  add(new THREE.BoxGeometry(0.7, 0.05, 0.5), std({ color: 0x3a3634, roughness: 1 }), -0.9, 0.58, 0.1, sofa).rotation.y = 0.2; usavel(sofa, { id: 'sofa', txt: 'Relaxar no sofá', segurar: 1.5 }); obstLinha(28.6, -8.8, 31.6, -8.8, 0.6); OBST2.push([31.3, -7.6, 0.6]); }
+for (const [x, z, r] of [[29.6, -6.8, 1.35], [26.4, -8.2, 1.0]]) { const t = add(new THREE.CircleGeometry(r, 32), std({ color: 0xf0ece4, roughness: 1 }), x, 0.012, z, abrigo); t.rotation.x = -Math.PI / 2; }
+for (const [x, z] of [[29.4, -6.9], [26.4, -8.2]]) { add(new THREE.CylinderGeometry(0.35, 0.35, 0.06, 20), std({ color: 0xe8e4dc, roughness: 0.4 }), x, 0.4, z, abrigo); add(new THREE.CylinderGeometry(0.05, 0.05, 0.4, 8), M.metal, x, 0.2, z, abrigo); OBST2.push([x, z, 0.4]); }
+add(new THREE.CylinderGeometry(0.12, 0.08, 0.25, 12), std({ color: 0x6a5a4a, roughness: 0.8 }), 29.4, 0.55, -6.9, abrigo); planta(29.4, -6.9, 'brom', semente(3), 0.62);
+// bar no nicho em arco (fundo leste)
+{ const madeiraBar = std({ color: 0x6a4630, roughness: 0.6 }); const nicho = new THREE.Shape(); nicho.moveTo(-1.6, 0); nicho.lineTo(-1.6, 2.2); nicho.absarc(0, 2.2, 1.6, Math.PI, 0, true); nicho.lineTo(1.6, 0); nicho.lineTo(-1.6, 0);
+  const n = add(new THREE.ShapeGeometry(nicho, 16), madeiraBar, 34.95, 0, -8.0, abrigo); n.rotation.y = -Math.PI / 2;
+  add(new THREE.BoxGeometry(0.6, 1.05, 2.8), std({ color: 0xd8d0c4, roughness: 0.5 }), 33.6, 0.52, -8.0, abrigo, true); add(new THREE.BoxGeometry(0.75, 0.06, 2.9), std({ color: 0xf2eee8, roughness: 0.2 }), 33.6, 1.07, -8.0, abrigo);
+  for (let k = 0; k < 3; k++) { const z = -7.0 - k * 1.0; add(new THREE.CylinderGeometry(0.2, 0.2, 0.06, 16), M.metalEsc, 32.9, 0.75, z, abrigo); add(new THREE.CylinderGeometry(0.03, 0.03, 0.75, 6), M.metal, 32.9, 0.37, z, abrigo); }
+  for (let k = 0; k < 5; k++) add(new THREE.CylinderGeometry(0.04, 0.05, 0.26, 10), std({ color: [0x3a7a4a, 0x8a3a2a, 0xd8c070][k % 3], roughness: 0.15, transparent: true, opacity: 0.85 }), 34.75, 1.25 + (k % 2) * 0.4, -7.2 - k * 0.4, abrigo);
+  for (const y of [1.15, 1.55]) add(new THREE.BoxGeometry(0.25, 0.04, 2.2), madeiraBar, 34.85, y, -8.0, abrigo);
+  obstLinha(33.6, -6.6, 33.6, -9.4, 0.45); }
+// luzes da sala (branca suave + lilás do jardim)
+const luzSal = new THREE.PointLight(0xe8c8ff, 1, 14, 1.2); luzSal.position.set(29, 3.3, -7.2); abrigo.add(luzSal);
+const lampSal = add(new THREE.BoxGeometry(10.5, 0.04, 0.08), M.luz, 29, 3.16, -7.38, abrigo); LUZES.push({ l: luzSal, lamp: lampSal, nome: 'sal', base: 1.25, pisca: 0 });
+const luzJar = new THREE.PointLight(0xb860ff, 1, 11, 1.3); luzJar.position.set(30, 2.9, -2.8); abrigo.add(luzJar);
+const lampJar = add(new THREE.BoxGeometry(9, 0.03, 0.06), M.luz, 30.2, alturaArco(-2.9) - 0.06, -2.9, abrigo); LUZES.push({ l: luzJar, lamp: lampJar, nome: 'jar', base: 2.1, pisca: 0 });
+placaParede('🛋 SALA DE ESTAR ▶', 20.98, 2.45, -8.5, -Math.PI / 2, '#e0a8ff', 1.2);
+// animação das salas novas (chamada todo quadro em atualizarVisual)
+function atualizarSalas(t, ligado, hora, minTot) {
+  const pulso = 0.85 + Math.sin(t * 1.6) * 0.15;
+  if (ligado) { nucleoReaM.color.setRGB(pulso, pulso, pulso); brilhoReaM.color.setHex(0x30d8ff); brilhoReaM.opacity = 0.45 + Math.sin(t * 1.6) * 0.12; luzReator.color.setHex(0x30d8ff); luzReator.intensity = 2.0 * pulso; }
+  else { const p = Math.sin(t * 7) > 0.6 ? 0.55 : 0.25; nucleoReaM.color.setRGB(p, 0.04, 0.03); brilhoReaM.color.setHex(0xff2010); brilhoReaM.opacity = p * 0.5; luzReator.color.setHex(0xff2010); luzReator.intensity = p * 1.4; }
+  bulboB.material = bulboA.material; for (let k = 0; k < 3; k++) LEDS_REA[k].emissiveIntensity = Math.sin(t * (2 + k * 1.3) + k) > -0.2 ? 2.2 : 0.2;
+  for (const m of telasReaM) m.emissiveIntensity = ligado ? 1.2 : 0.06;
+  desenharTotem(Math.floor(minTot), hora); }
 
 // ===================== A SUPERFÍCIE (fica longe do abrigo no mapa) =====================
 const SX = 0, SZ = 500, RAIO_SUP = 190;
@@ -2129,7 +2309,7 @@ function textoAcao(u) { if (u.id === 'gerador') return E.gerador ? 'Desligar o g
   if (u.id === 'diesel') return 'Tanque de energia (solar ∞)'; if (u.id === 'filtro') return `Trocar o filtro de ar (${E.inv.filtro}) · filtro em ${Math.round(E.filtroVida)}%`;
   if (u.id === 'racha') return `Tapar a rachadura (${E.inv.peca} peças)`;
   if (u.id === 'saque') return E.coletas[u.lugar] === dia() ? 'Já pegou tudo aqui hoje (volte amanhã)' : u.txt; if (u.id === 'torre') return E.sinal ? 'O sinal de socorro já está ligado' : u.txt;
-  if (u.id === 'arma') return E.arma ? 'O canhão já está com você' : NV('arma') ? u.txt : '🔒 Canhão trancado: compre em ⬆ MELHORIAS'; if (u.id === 'estufa') return E.coletas.estufa === dia() ? 'Horta já colhida hoje' : u.txt;
+  if (u.id === 'arma') return E.arma ? 'O canhão já está com você' : NV('arma') ? u.txt : '🔒 Canhão trancado: compre em ⬆ MELHORIAS'; if (u.id === 'sofa') return E.coletas.sofa === dia() ? 'Você já descansou no sofá hoje' : u.txt; if (u.id === 'estufa') return E.coletas.estufa === dia() ? 'Horta já colhida hoje' : u.txt;
   if (u.id === 'silenciador') return E.silenciador ? 'Desligar o silenciador' : 'Ligar o silenciador (gerador sem barulho)';
   if (u.id === 'subir') return E.traje ? 'Abrir a porta e sair' : 'Vestir o traje e sair pela porta'; return u.txt; }
 function usar(u) {
@@ -2155,6 +2335,7 @@ function usar(u) {
     case 'campo': if (!NV('escudo')) { somErro(); aviso('O abrigo ainda não tem CAMPO DE FORÇA. Compre em ⬆ MELHORIAS!', 'ruim', 4); break; } mudarCampo(E.campo === false); break;
     case 'armas': if (!NV('torres')) { somErro(); aviso('O abrigo ainda não tem ARMAS. Compre os lasers e mísseis em ⬆ MELHORIAS!', 'ruim', 4); break; } mudarArmas(E.armas === false); break;
     case 'arma': if (!E.arma && !NV('arma')) { somErro(); aviso('O canhão de plasma está trancado. Compre em ⬆ MELHORIAS (40 🪙)!', 'ruim', 4); break; } if (E.arma) { aviso('Você já está com o canhão de plasma.', 'info'); break; } E.arma = true; canhaoMesa.visible = false; somItem(); tom(400, 1600, 0.4, 'sawtooth', 0.06); aviso('🔫 Você pegou o CANHÃO DE PLASMA! Lá fora, clique (ou aperte ESPAÇO / Atirar) para atirar nos gigantes.', 'bom', 6); break;
+    case 'sofa': if (E.coletas.sofa === dia()) { aviso('Você já descansou no sofá hoje. Volte amanhã!', 'info'); break; } E.coletas.sofa = dia(); E.saude = Math.min(100, E.saude + 15); somItem(); aviso('😌 Você relaxou no sofá da sala de estar. +15 ❤', 'bom'); break;
     case 'estufa': if (E.coletas.estufa === dia()) { aviso('A horta já foi colhida hoje. Amanhã tem mais!', 'info'); break; } E.coletas.estufa = dia(); progressoMissao('horta'); E.inv.racao += 2; E.inv.agua += 1; somItem(); aviso('🌱 Colheu a horta: 🥫 🥫 💧', 'bom'); break;
     case 'caixa': abrirCaixa(u.caixa); break;
     case 'saque': if (E.coletas[u.lugar] === dia()) { somErro(); aviso('Já pegou tudo aqui hoje. Volte amanhã!', 'info'); }
@@ -2389,7 +2570,7 @@ function atualizarVisual(dt, perto) {
     const ligado = E.gerador && apagaoT <= 0; botaoSil.material.emissive.setHex(E.silenciador ? 0x33ff33 : 0xff2010); botaoSil.position.z = E.silenciador ? 0.08 : 0.12; LUZES.forEach((L, i) => { const pisc = flicker > 0 && Math.sin(t * 40 + i * 7) > 0.2 - flicker ? 0.15 : 1; L.l.intensity = ligado ? L.base * pisc * vis.mult * (vis.ferr && Math.sin(t * 23 + i * 5) > 0.97 ? 0.3 : 1) : 0; if (L.cone) L.cone.visible = L.l.intensity > 0.35; L.lamp.material = ligado && pisc > 0.5 ? M.luz : M.metalEsc; });
     emerg.forEach((l, i) => { l.intensity = ligado ? 0 : 0.9 + Math.sin(t * 3 + i) * 0.3; });
     M.luzVerm.emissiveIntensity = ligado ? 0.4 : 1.5 + Math.sin(t * 3) * 0.5;
-    pistoes.forEach((p, i) => { p.position.y = 1.75 + (ligado ? Math.sin(t * 18 + i * 2.1) * 0.08 : 0); }); ledGer.material.emissive.setHex(ligado ? 0x33ff33 : 0xff2010);
+    pistoes.forEach((p, i) => { p.position.y = 1.75 + (ligado ? Math.sin(t * 18 + i * 2.1) * 0.08 : 0); }); ledGer.material.emissive.setHex(ligado ? 0x33ff33 : 0xff2010); atualizarSalas(t, ligado, horaDec(), E.min);
     helice.rotation.z += dt * (ligado && E.filtroVida > 0 ? 14 : 0); telaFiltro.material.emissive.setHex(E.filtroVida > 20 ? 0x4aff60 : 0xff3020); ledRadio.material.emissiveIntensity = radioT > 0 ? 3 : 0.3;
     rachaduras.forEach((r, i) => { if (r.aberta) { r.gas.material.opacity = 0.25 + Math.sin(t * 2 + i) * 0.12; r.gas.position.y = Math.sin(t + i) * 0.2; } });
     latas.forEach((l, i) => { l.visible = i < E.inv.racao * 2; }); garrafas.forEach((g, i) => { g.visible = i < E.inv.agua; });
@@ -2574,7 +2755,7 @@ function mudarGerador(ligar) { if (E.gerador !== !!ligar) usar({ id: 'gerador' }
 
 // ---- mapa ----
 const SALAS = [['sala de segurança', -6.5, -27.5, [-9, -4, -31, -24]], ['dormitório', -5.5, -6.5, [-9, -2, -10, -3]], ['cozinha', 5.5, -6.5, [2, 9, -10, -3]], ['sala de máquinas', -5.5, -17, [-9, -2, -21, -13]], ['sala de controle', 5.5, -17, [2, 9, -21, -13]],
-  ['eclusa e porta de saída', 0, -28, [-3, 3, -31, -24]], ['estufa', 17, -6.5, [13, 21, -10, -3]], ['arsenal', 17, -17, [13, 21, -21, -13]], ['núcleo da ÍRIS', 12, -27.5, [7, 17, -31, -24]]];
+  ['eclusa e porta de saída', 0, -28, [-3, 3, -31, -24]], ['estufa', 17, -6.5, [13, 21, -10, -3]], ['arsenal', 17, -17, [13, 21, -21, -13]], ['núcleo da ÍRIS', 12, -27.5, [7, 17, -31, -24]], ['sala do reator', 29, -17, [21, 35, -23, -11]], ['sala de estar', 29, -6, [21, 35, -10, -1]]];
 function salaDe(x, z) { if (jog.fora) return 'lá fora na superfície'; const s = SALAS.find(([, , , [x0, x1, z0, z1]]) => x >= x0 && x <= x1 && z >= z0 && z <= z1); return s ? s[0] : 'no corredor'; }
 function direcao(dx, dz) { let rel = Math.atan2(dx, dz) - (jog.yaw + Math.PI); rel = Math.atan2(Math.sin(rel), Math.cos(rel)); const d = Math.round(Math.hypot(dx, dz));
   return (Math.abs(rel) < 0.6 ? 'em frente' : rel < -0.6 && rel > -2.4 ? 'à sua direita' : rel > 0.6 && rel < 2.4 ? 'à sua esquerda' : 'atrás de você') + `, a ${d} metros`; }
@@ -2614,7 +2795,7 @@ const PALAVRAS = [['racao', ['comida', 'racao', 'racoes', 'fome', 'comer', 'lanc
 function cerebroLocal(txt) { const s = ' ' + semAcento(txt).replace(/[^a-z0-9 ]/g, ' ') + ' ', tem = (...w) => w.some(x => s.includes(x));
   const num = (s.match(/ ([1-4]) /) || [])[1] || (tem(' um ', ' uma ') ? 1 : tem(' dois ', ' duas ') ? 2 : tem(' tres ') ? 3 : tem(' quatro ', ' muito', ' bastante') ? 4 : 3);
   const itens = PALAVRAS.filter(([, ws]) => ws.some(w => s.includes(w))).map(([k]) => k), pergunta = tem('como esta', 'quanto', 'quantos', 'quantas', 'tem ');
-  const CHAVES = [[0, ['dormitorio', 'quarto', 'cama']], [1, ['cozinha', 'despensa']], [2, ['maquina', 'gerador', 'filtro']], [3, ['controle', 'comando', 'radar', 'radio']], [4, ['saida', 'eclusa', 'porta', 'traje']], [5, ['estufa', 'horta']], [6, ['arsenal', 'canhao', 'arma']], [7, ['nucleo']]];
+  const CHAVES = [[0, ['seguranca', 'camera']], [1, ['dormitorio', 'quarto', 'cama']], [2, ['cozinha', 'despensa']], [3, ['maquina', 'gerador', 'filtro']], [4, ['controle', 'comando', 'radar', 'radio']], [5, ['saida', 'eclusa', 'porta', 'traje']], [6, ['estufa', 'horta']], [7, ['arsenal', 'canhao', 'arma']], [8, ['nucleo']], [9, ['reator']], [10, ['sala de estar', 'sofa', 'jardim']]];
   const fora = { posto: 'posto', mercado: 'mercado', hospital: 'hospital', torre: 'torre' }; let lugar = null;
   for (const m of MARCOS) if (s.includes(fora[m.lugar] || '#')) lugar = [m.nome, m.x, m.z, true]; if (!lugar) for (const [i, ws] of CHAVES) if (ws.some(w => s.includes(w))) { lugar = [SALAS[i][0], SALAS[i][1], SALAS[i][2], false]; break; }
   { const liga = tem(' liga', 'ativa', 'acende', 'ligue'), desl = tem('desliga', 'desativa', 'apaga', 'desligue', 'para de');
@@ -2656,7 +2837,7 @@ function cerebroLocal(txt) { const s = ' ' + semAcento(txt).replace(/[^a-z0-9 ]/
 
 // ---- cérebro de verdade (IA do Claude, no link) ----
 const INSTRUCOES = 'Você é a ÍRIS, a inteligência artificial do Abrigo 7, um bunker futurista e superprotegido num jogo de sobrevivência. Você conversa com uma criança que está jogando. Você é muito esperta, prestativa e toma iniciativa: resolva o problema da criança usando as ferramentas, sem pedir confirmação, e depois diga o que fez e qual é o próximo passo. ' +
-  'O abrigo tem: dormitório, cozinha, sala de máquinas (gerador e filtro), sala de controle (radar e rádio), eclusa com a porta de SAÍDA, e na ala leste: estufa (horta que dá comida), arsenal (canhão de plasma para atirar nos gigantes) e o núcleo da ÍRIS. Lá fora: posto, mercado, hospital, torre de rádio, escudo de energia, placas solares (energia infinita), 2 lasers e 4 lançadores de mísseis automáticos. Para direções use ver_mapa. Para fome, sede, radiação, filtro ou rachaduras use usar_recurso. ' +
+  'O abrigo tem: dormitório, cozinha, sala de máquinas (gerador e filtro), sala de controle (radar e rádio), eclusa com a porta de SAÍDA, e na ala leste: estufa (horta que dá comida), arsenal (canhão de plasma para atirar nos gigantes), núcleo da ÍRIS, a SALA DO REATOR (o reator nuclear que é o gerador principal, depois do arsenal) e a SALA DE ESTAR com jardim de plantas atrás do vidro e um sofá para relaxar (+15 de vida por dia, depois da estufa). Lá fora: posto, mercado, hospital, torre de rádio, escudo de energia, placas solares (energia infinita), 2 lasers e 4 lançadores de mísseis automáticos. Para direções use ver_mapa. Para fome, sede, radiação, filtro ou rachaduras use usar_recurso. ' +
   'Responda sempre em português do Brasil, com no máximo 3 frases curtas e simples, de um jeito carinhoso e animado, como uma amiga robô. Pode usar 1 ou 2 emojis. ' +
   'Quando a criança pedir um recurso (comida, água, remédio, filtro de ar, peças ou um pouco de tudo), use a ferramenta enviar_drone. Para saber como está o abrigo, use ver_abrigo; para os gigantes, use ver_gigantes. Nunca invente números. ' +
   'Na SALA DE COMANDO (dentro da sala de controle) tem botões para ligar e desligar o campo de força e as armas; você também pode fazer isso com campo_de_forca e armas_do_abrigo. ' +
@@ -3198,8 +3379,8 @@ const olhoTeto = new THREE.Group(); olhoTeto.visible = false; abrigo.add(olhoTet
   const r = add(new THREE.PlaneGeometry(2.6, 2.6), racharTetoM, 0, 0.005, 0, olhoTeto); r.rotation.x = Math.PI / 2; r.renderOrder = 2; }
 function comecarPatas() { patasT = 9; barulhoBase = 0; let k = 0;
   for (let tent = 0; tent < 80 && k < PATAS.length; tent++) { const a = Math.random() * 6.28, d = 1.4 + Math.random() * 2.4, x = jog.x + Math.cos(a) * d, z = jog.z + Math.sin(a) * d; if (!ehPiso(x, z)) continue;
-    const P = PATAS[k++]; P.g.position.set(x, ALT + 2.2, z); P.g.rotation.y = Math.atan2(jog.x - x, jog.z - z); P.g.visible = true; P.desce = 0; P.atraso = k * 0.25 + Math.random() * 0.3; P.x = x; P.z = z; P.racha.position.set(x, ALT - 0.02, z); P.racha.visible = false; }
-  OLHAO.visible = true; OLHAO.rotation.y = Math.PI; olhoVivo = 0; { const fx = -Math.sin(jog.yaw), fz = -Math.cos(jog.yaw); let ox = jog.x + fx * 1.8, oz = jog.z + fz * 1.8; if (!ehPiso(ox, oz)) { ox = jog.x; oz = jog.z; } olhoTeto.position.set(ox, ALT - 0.03, oz); olhoTeto.rotation.y = jog.yaw; olhoTeto.visible = true; } rugido(1); batidaCoracao(1); flicker = 1;
+    const P = PATAS[k++]; P.h = alturaEm(x, z); P.g.position.set(x, P.h + 2.2, z); P.g.rotation.y = Math.atan2(jog.x - x, jog.z - z); P.g.visible = true; P.desce = 0; P.atraso = k * 0.25 + Math.random() * 0.3; P.x = x; P.z = z; P.racha.position.set(x, P.h - 0.02, z); P.racha.visible = false; }
+  OLHAO.visible = true; OLHAO.rotation.y = Math.PI; olhoVivo = 0; { const fx = -Math.sin(jog.yaw), fz = -Math.cos(jog.yaw); let ox = jog.x + fx * 1.8, oz = jog.z + fz * 1.8; if (!ehPiso(ox, oz)) { ox = jog.x; oz = jog.z; } olhoTeto.position.set(ox, alturaEm(ox, oz) - 0.03, oz); olhoTeto.rotation.y = jog.yaw; olhoTeto.visible = true; } rugido(1); batidaCoracao(1); flicker = 1;
   aviso('👁 ALGO GIGANTE AGARROU O ABRIGO! FIQUE EM SILÊNCIO!', 'ruim', 5); }
 function atualizarPatas(dt) { const t = performance.now() / 1000;
   if (patasT <= 0) { barulhoBase = Math.max(0, barulhoBase - dt * 12); const voz = barulhoMic(); if (voz > 0.6 && !jog.fora) somarBarulho(voz * 22 * dt);
@@ -3213,7 +3394,7 @@ function atualizarPatas(dt) { const t = performance.now() / 1000;
   if (Math.random() < dt * 0.7) rugido(0.7); if (Math.random() < dt * 2) tom(80 + Math.random() * 60, 40, 0.5, 'sawtooth', 0.08);
   PATAS.forEach(P => { if (!P.g.visible) return; P.atraso -= dt; if (P.atraso > 0) return;
     if (!fim) { if (P.desce === 0) { estrondo(0.6); P.racha.visible = true; soltarPoeira(25, P.x, P.z); } P.desce = Math.min(1, P.desce + dt * 1.6); } else P.desce = Math.max(0, P.desce - dt * 1.2);
-    P.g.position.y = ALT + 2.2 - P.desce * 2.0 + Math.sin(t * 9 + P.fase) * 0.05 * P.desce;
+    P.g.position.y = (P.h || ALT) + 2.2 - P.desce * 2.0 + Math.sin(t * 9 + P.fase) * 0.05 * P.desce;
     P.coxa.rotation.x = -0.15 + Math.sin(t * 2.2 + P.fase) * 0.25; P.jo.rotation.x = 0.5 + Math.sin(t * 3.1 + P.fase) * 0.45 * P.desce; P.coxa.rotation.z = Math.sin(t * 1.7 + P.fase) * 0.2;
     if (P.desce > 0.5 && Math.random() < dt * 0.8) chiado(0.25, 900, 0.05, 'bandpass'); });
   if (patasT <= 0) { PATAS.forEach(P => { P.g.visible = false; P.racha.visible = false; }); OLHAO.visible = false; olhoTeto.visible = false; aviso('...ele soltou a base e foi embora. Por enquanto.', 'info', 4); } }
