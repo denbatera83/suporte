@@ -275,7 +275,7 @@ body.pos #vinheta{display:none}
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 3.2 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 3.3 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -408,6 +408,20 @@ function tex(w, h, fn, rep) { const c = document.createElement('canvas'), k = mi
 function comFoto(t, nome, modo, alfa, depois) { const src = window.__FOTOS && window.__FOTOS[nome]; if (!src) return t; const img = new Image();
   img.onload = () => { try { const c = t.image, g = c.getContext('2d'); g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = alfa; g.globalCompositeOperation = modo; g.drawImage(img, 0, 0, c.width, c.height); g.restore();
     if (depois) { g.save(); g.setTransform(1, 0, 0, 1, 0, 0); depois(g, c.width, c.height); g.restore(); } t.needsUpdate = true; } catch (e) {} }; img.src = src; return t; }
+// arranhões de garra (marcas paralelas com o metal brilhando por baixo)
+function arranhar(g, w, h, Rr, n) { g.save(); g.lineCap = 'round';
+  for (let k = 0; k < n; k++) { const x0 = Rr() * w * 0.8 + w * 0.1, y0 = Rr() * h * 0.7 + h * 0.05, a = Math.PI / 2 + (Rr() - 0.5) * 1.1, L = 70 + Rr() * 120, curva = (Rr() - 0.5) * 0.5;
+    for (let f = 0; f < 4; f++) { const ox = Math.cos(a + Math.PI / 2) * (f - 1.5) * 9, oy = Math.sin(a + Math.PI / 2) * (f - 1.5) * 9, l = L * (0.75 + Rr() * 0.3);
+      const traco = (larg, cor, d) => { g.strokeStyle = cor; g.lineWidth = larg; g.beginPath(); g.moveTo(x0 + ox + d, y0 + oy + d); g.quadraticCurveTo(x0 + ox + Math.cos(a + curva) * l * 0.5 + d, y0 + oy + Math.sin(a + curva) * l * 0.5 + d, x0 + ox + Math.cos(a) * l + d, y0 + oy + Math.sin(a) * l + d); g.stroke(); };
+      traco(4.5, 'rgba(8,6,5,.75)', 1.2); traco(1.6, 'rgba(225,228,232,.8)', 0); } }
+  g.restore(); }
+// sangue: respingos, escorridos e marcas de mão
+function sangrar(g, w, h, Rr, n, forte = 1) { g.save();
+  for (let k = 0; k < n; k++) { const x = Rr() * w, y = Rr() * h * 0.8, r = (10 + Rr() * 26) * forte;
+    g.fillStyle = `rgba(${125 + Rr() * 50 | 0},${2 + Rr() * 8 | 0},${2 + Rr() * 8 | 0},.93)`; g.beginPath(); g.ellipse(x, y, r, r * (0.6 + Rr() * 0.5), Rr() * 3, 0, 7); g.fill();
+    for (let s = 0; s < 14; s++) { const a = Rr() * 6.28, d = r * (1 + Rr() * 2.2), rr2 = 1 + Rr() * 4 * forte; g.beginPath(); g.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, rr2, 0, 7); g.fill(); }
+    for (let s = 0; s < 4; s++) { const dx = x + (Rr() - 0.5) * r * 1.4, comp = 30 + Rr() * 140 * forte, lw = 2 + Rr() * 5 * forte; g.fillRect(dx - lw / 2, y, lw, comp); g.beginPath(); g.arc(dx, y + comp, lw * 0.8, 0, 7); g.fill(); } }
+  g.restore(); }
 function ruido(g, w, h, cores, n, tam, Rr) { for (let i = 0; i < n; i++) { g.fillStyle = cores[(Rr() * cores.length) | 0]; g.fillRect(Rr() * w, Rr() * h, Rr() * tam + 0.6, Rr() * tam + 0.6); } }
 const tConcreto = tex(512, 512, (g, w, h) => { const Rr = semente(3); g.fillStyle = '#6f6c62'; g.fillRect(0, 0, w, h); ruido(g, w, h, ['rgba(0,0,0,.18)', 'rgba(255,255,255,.07)', 'rgba(90,80,60,.25)'], 26000, 2.2, Rr);
   for (let i = 0; i < 40; i++) { const x = Rr() * w, y = Rr() * h, gr = g.createRadialGradient(x, y, 0, x, y, 30 + Rr() * 70); gr.addColorStop(0, 'rgba(40,36,24,.25)'); gr.addColorStop(1, 'rgba(40,36,24,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); }
@@ -561,7 +575,7 @@ const tFolha = tex(256, 512, (g, w, h) => { const Rr = semente(63); const gr = g
   g.strokeStyle = 'rgba(15,18,20,.8)'; g.lineWidth = 6; g.strokeRect(10, 10, w - 20, h - 20); for (const y of [h * 0.56, h * 0.78]) { g.fillStyle = 'rgba(20,24,28,.55)'; g.fillRect(14, y, w - 28, 10); g.fillStyle = 'rgba(255,255,255,.08)'; g.fillRect(14, y, w - 28, 2); }
   g.fillStyle = '#202428'; for (let y = 28; y < h; y += 46) for (const x of [26, w - 26]) { g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill(); }
   for (let x = -40; x < w + 40; x += 36) { g.fillStyle = '#e8b018'; g.beginPath(); g.moveTo(x, h - 60); g.lineTo(x + 18, h - 60); g.lineTo(x + 48, h - 18); g.lineTo(x + 30, h - 18); g.fill(); }
-  g.fillStyle = 'rgba(230,230,220,.75)'; g.font = '700 40px Oswald, Arial'; g.textAlign = 'center'; g.fillText('A-7', w / 2, h * 0.7); borrar(g.canvas, 0.5); });
+  g.fillStyle = 'rgba(230,230,220,.75)'; g.font = '700 40px Oswald, Arial'; g.textAlign = 'center'; g.fillText('A-7', w / 2, h * 0.7); borrar(g.canvas, 0.5); arranhar(g, w, h, Rr, 6); sangrar(g, w, h, Rr, 3); });
 const mFolha = std({ map: tFolha, roughness: 0.42, metalness: 0.75 });
 // janela de verdade: uma câmera lá fora filma a superfície ao vivo e a imagem aparece no vidro
 const janelaRT = new THREE.WebGLRenderTarget(512, 320, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
@@ -1007,7 +1021,8 @@ function iniciarAudio() { if (AC) { if (AC.state !== 'running') AC.resume(); ret
 function tom(f0, f1, dur, tipo = 'sine', vol = 0.1, at = 0) { if (!AC) return; const t = AC.currentTime + at, o = AC.createOscillator(), g = AC.createGain(); o.type = tipo; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(15, f1), t + dur); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(mestre); o.start(t); o.stop(t + dur + 0.05); }
 function chiado(dur, freq, vol, tipo = 'lowpass', at = 0) { if (!AC) return; const t = AC.currentTime + at, s = AC.createBufferSource(); s.buffer = ruidoBuf; s.playbackRate.value = 0.7 + Math.random() * 0.6; const f = AC.createBiquadFilter(); f.type = tipo; f.frequency.value = freq; const g = AC.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); s.connect(f); f.connect(g); g.connect(mestre); s.start(t, Math.random()); s.stop(t + dur + 0.05); }
 function estrondo(L) { if (L < 0.02) return; tom(48, 22, 1.4, 'sine', 0.9 * L); chiado(1.1, 170, 0.75 * L); tom(95, 60, 0.25, 'square', 0.18 * L); chiado(0.35, 900, 0.12 * L, 'bandpass', 0.05); }
-function rugido(L) { if (L < 0.05) return; tom(340, 110, 1.8, 'sawtooth', 0.12 * L); tom(352, 118, 1.8, 'sawtooth', 0.08 * L, 0.05); chiado(1.6, 1300, 0.08 * L, 'bandpass'); }
+function rugido(L) { if (L < 0.05) return; tom(96, 36, 2.7, 'sawtooth', 0.3 * L); tom(192, 66, 2.4, 'square', 0.09 * L, 0.04); tom(340, 105, 1.9, 'sawtooth', 0.1 * L, 0.02); tom(46, 28, 2.9, 'sine', 0.5 * L); chiado(2.5, 380, 0.45 * L); chiado(1.9, 1500, 0.12 * L, 'bandpass', 0.1);
+  if (L > 0.45) { tremor = Math.max(tremor, L * 1.1); if (!jog.fora) flicker = Math.max(flicker, 0.7); } }
 const geiger = () => chiado(0.012, 3500, 0.35, 'highpass');
 const somItem = () => [660, 880, 1100].forEach((f, i) => tom(f, f, 0.15, 'triangle', 0.08, i * 0.06));
 const somErro = () => tom(200, 140, 0.2, 'square', 0.05);
@@ -1484,7 +1499,7 @@ function quadro(agora) { requestAnimationFrame(quadro);
   } else if (!jogando) { // menu: câmera passeando pela superfície com os colossos
     menuT += dt; abrigo.visible = false; sup.visible = true; perto = simularColossos(dt, false); jog.fora = true;
     const c = COLOSSOS[0]; camera.position.set(c.x + Math.cos(menuT * 0.05) * 70, 6 + Math.sin(menuT * 0.1) * 2, c.z + Math.sin(menuT * 0.05) * 70); camera.lookAt(c.x, 18, c.z); }
-  atualizarRede(dt); if (jogando && !pausado) { seguro('robo', () => atualizarRobo(dt)); seguro('monstros', () => atualizarMonstros(dt)); seguro('sustos', () => atualizarSustos(dt)); seguro('invasor', () => atualizarInvasor(dt)); seguro('poeira', () => atualizarPoeira(dt)); } else if (medoAnt !== '0') { medoAnt = '0'; $('medo').style.opacity = 0; }
+  atualizarRede(dt); if (jogando && !pausado) { seguro('robo', () => atualizarRobo(dt)); seguro('monstros', () => atualizarMonstros(dt)); seguro('sustos', () => atualizarSustos(dt)); seguro('invasor', () => atualizarInvasor(dt)); seguro('horror', () => atualizarHorror(dt)); seguro('poeira', () => atualizarPoeira(dt)); } else if (medoAnt !== '0') { medoAnt = '0'; $('medo').style.opacity = 0; }
   if (jogando || !$('menu').hidden) atualizarVisual(dt, perto);
   if (!jogando && !$('menu').hidden) { camera.rotation.order = 'YXZ'; }
   if (avisoT > 0) { avisoT -= dt; if (avisoT <= 0) $('aviso').hidden = true; }
@@ -2072,6 +2087,77 @@ function atualizarPoeira(dt) { if (!POEIRA || jog.fora) return; const { p, pos, 
 // PC fraco: menos neblina transparente (é o que mais pesa)
 if (fraco) abrigo.add(new THREE.HemisphereLight(0x9aa8b4, 0x2a2622, 0.4));
 if (fraco) NEBLINA.forEach((n, i) => { if (minimo ? i % 3 : i % 2) n.s.visible = false; });
-Object.assign(window.__abrigo, { INVASOR, invadir: () => { invasaoT = 0; }, SOMBRA, susto: () => { sustoT = 0; }, fraco, minimo, MONSTROS, ferirMonstro, progressoMissao, novasMissoes, ROBO, matarRobo, LUGARES_ROBO, NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
+
+// ===================== TERROR MÁXIMO: SANGUE, PORTA DE FORA, OLHO NA JANELA =====================
+// --- sangue nas paredes e no chão ---
+const tSangues = [0, 1, 2, 3].map(v => tex(256, 256, (g, w, h) => { const Rr = semente(500 + v); g.clearRect(0, 0, w, h);
+  if (v === 3) { // marcas de mão arrastadas
+    for (let m = 0; m < 2; m++) { const x = 70 + m * 100 + Rr() * 20, y = 50 + Rr() * 30; g.fillStyle = 'rgba(150,6,6,.9)';
+      g.beginPath(); g.ellipse(x, y + 30, 24, 28, 0, 0, 7); g.fill(); for (let f = 0; f < 5; f++) { const a = -2.4 + f * 0.42 + (f === 0 ? -0.35 : 0), L = f === 0 ? 26 : 38; g.save(); g.translate(x + Math.cos(a) * 20, y + 26 + Math.sin(a) * 22); g.rotate(a + Math.PI / 2); g.fillRect(-5, -L, 10, L); g.beginPath(); g.arc(0, -L, 5, 0, 7); g.fill(); g.restore(); }
+      g.fillStyle = 'rgba(130,4,4,.6)'; for (let s = 0; s < 4; s++) g.fillRect(x - 18 + s * 11, y + 50, 6, 60 + Rr() * 90); } }
+  else sangrar(g, w, h, Rr, v === 2 ? 2 : 3, v === 0 ? 1.4 : 1); }));
+const tEscrita = (txt, sd) => tex(512, 200, (g, w, h) => { const Rr = semente(sd); g.clearRect(0, 0, w, h); g.fillStyle = 'rgba(165,6,6,.96)'; g.font = '700 66px Oswald, Impact, Arial'; g.textAlign = 'center'; g.save(); g.translate(w / 2, 90); g.rotate(-0.04); g.fillText(txt, 0, 0); g.restore();
+  for (let k = 0; k < 26; k++) { const x = 40 + Rr() * (w - 80), y = 70 + Rr() * 25, L = 20 + Rr() * 90, lw = 2 + Rr() * 4; g.fillRect(x, y, lw, L); g.beginPath(); g.arc(x + lw / 2, y + L, lw * 0.9, 0, 7); g.fill(); } });
+const sangueM = tSangues.map(t => std({ map: t, emissive: 0x2a0000, transparent: true, depthWrite: false, roughness: 0.3, metalness: 0.1, polygonOffset: true, polygonOffsetFactor: -2 }));
+{ const Rr = semente(777), paredes = [];
+  for (let r = 0; r < LINHAS; r++) for (let c = 0; c < COLS; c++) { if (!PISO[r * COLS + c]) continue; const x0 = c - 10, z0 = -r;
+    if (r === 0 || !PISO[(r - 1) * COLS + c]) paredes.push([x0 + 0.5, z0, 0, -1]); if (r === LINHAS - 1 || !PISO[(r + 1) * COLS + c]) paredes.push([x0 + 0.5, z0 - 1, 0, 1]);
+    if (c === 0 || !PISO[r * COLS + c - 1]) paredes.push([x0, z0 - 0.5, 1, 0]); if (c === COLS - 1 || !PISO[r * COLS + c + 1]) paredes.push([x0 + 1, z0 - 0.5, -1, 0]); }
+  const colar = (p, mat, s, y) => { const m = add(new THREE.PlaneGeometry(s, s * (mat.map.image.height / mat.map.image.width)), mat, p[0] + p[2] * 0.02, y, p[1] + p[3] * 0.02, abrigo); m.rotation.y = Math.atan2(p[2], p[3]); m.receiveShadow = false; m.renderOrder = 1; return m; };
+  const usadas = new Set(); const n = minimo ? 14 : 26;
+  for (let k = 0; k < n && paredes.length; k++) { const i = (Rr() * paredes.length) | 0; if (usadas.has(i)) continue; usadas.add(i); colar(paredes[i], sangueM[(Rr() * 4) | 0], 0.9 + Rr() * 0.8, 0.7 + Rr() * 1.3); }
+  const perto = (x, z) => paredes.reduce((b, p) => Math.hypot(p[0] - x, p[1] - z) < Math.hypot(b[0] - x, b[1] - z) ? p : b, paredes[0]);
+  const escritaM = (txt, sd) => std({ map: tEscrita(txt, sd), emissive: 0x3a0000, transparent: true, depthWrite: false, roughness: 0.3, polygonOffset: true, polygonOffsetFactor: -2 });
+  colar(perto(-1, -14), escritaM('ELES OUVEM VOCÊ', 31), 2.0, 1.75); colar(perto(1, -25), escritaM('NÃO ABRA A PORTA', 32), 2.0, 1.6); colar(perto(-5, -5), escritaM('SILÊNCIO', 33), 1.6, 1.9);
+  for (let k = 0; k < (minimo ? 3 : 6); k++) { const r = (Rr() * LINHAS) | 0, c = (Rr() * COLS) | 0; if (!PISO[r * COLS + c]) { k--; continue; } const m = add(new THREE.PlaneGeometry(1.4, 1.4), sangueM[(Rr() * 3) | 0], c - 9.5, 0.012 + k * 0.001, -r - 0.5, abrigo); m.rotation.set(-Math.PI / 2, 0, Rr() * 6); m.renderOrder = 1; } }
+// --- a porta de fora agora é igual à de dentro (e pela janela dá para ver o abrigo ao vivo) ---
+const tDentroFix = tex(256, 160, (g, w, h) => { g.fillStyle = '#07090a'; g.fillRect(0, 0, w, h); const gr = g.createRadialGradient(w / 2, h * 0.45, 2, w / 2, h * 0.45, 70); gr.addColorStop(0, 'rgba(190,220,230,.55)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(60,200,255,.35)'; g.beginPath(); g.moveTo(0, h); g.lineTo(w * 0.42, h * 0.55); g.moveTo(w, h); g.lineTo(w * 0.58, h * 0.55); g.stroke(); });
+const rtDentro = new THREE.WebGLRenderTarget(minimo ? 256 : 512, minimo ? 160 : 320, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
+const vidroDentroM = new THREE.MeshBasicMaterial({ map: tDentroFix, color: 0x8a9490, toneMapped: false });
+const tEntrada = tex(1024, 256, (g, w, h) => { g.fillStyle = '#e8c21a'; g.fillRect(0, 0, w, h); g.strokeStyle = '#1a1a14'; g.lineWidth = 14; g.strokeRect(10, 10, w - 20, h - 20); g.fillStyle = '#16140c'; g.textAlign = 'center'; g.font = '700 118px Oswald, Arial'; g.fillText('ABRIGO 7', w / 2, 135); g.font = '600 46px Oswald, Arial'; g.fillText('☢  ENTRADA BLINDADA · FECHE A PORTA  ☢', w / 2, 210);
+  arranhar(g, w, h, semente(88), 3); sangrar(g, w, h, semente(89), 2, 0.8); });
+const portaFora = portaSaida.clone(true); { const tirar = [];
+  portaFora.traverse(o => { if (o.isLight) tirar.push(o); if (!o.material) return; if (o.material === vidroM) o.material = vidroDentroM; else if (o.material.map === tSaida) o.material = std({ map: tEntrada, emissive: 0xffffff, emissiveMap: tEntrada, emissiveIntensity: 0.2, roughness: 0.5 }); else if (o.material.map === tVerde) tirar.push(o); });
+  tirar.forEach(o => o.parent && o.parent.remove(o)); portaFora.position.set(0, 0, 2.55); entrada.add(portaFora);
+  portaSup.material = new THREE.MeshBasicMaterial({ visible: false }); }
+const camDentro = new THREE.PerspectiveCamera(64, 1.6, 0.05, 80); camDentro.rotation.order = 'YXZ'; let dentroT = 0, dentroVivo = false, sombraJanT = 0;
+function filmarDentro(dt) { const d = Math.hypot(jog.x - SX, jog.z - (SZ + 2.6)), perto = jog.fora && jogando && d < 18;
+  if (!perto) { if (dentroVivo) { vidroDentroM.map = tDentroFix; vidroDentroM.needsUpdate = true; dentroVivo = false; } if (sombraJanT > 0 && !jog.fora) { sombraJanT = 0; } return; }
+  if (!dentroVivo) { vidroDentroM.map = rtDentro.texture; vidroDentroM.needsUpdate = true; dentroVivo = true; }
+  // às vezes a Sombra aparece lá dentro, parada atrás do vidro...
+  if (sombraJanT > 0) { sombraJanT -= dt; SOMBRA.visible = sombraJanT > 0; } else if (d < 9 && Math.random() < dt * 0.025) { sombraJanT = 3.2; SOMBRA.position.set(0.2, 0, -27.6); SOMBRA.rotation.y = Math.PI; SOMBRA.visible = true; setTimeout(sussurro, 400); }
+  dentroT -= dt; if (dentroT > 0) return; dentroT = minimo ? 1 / 3 : (eco || fraco) ? 1 / 8 : 1 / 20;
+  const px = clamp((jog.x - SX) / 3, -1, 1); camDentro.position.set(px * 0.7, 1.62, -30.45); camDentro.rotation.set(-0.02, Math.PI + px * 0.3, 0);
+  const fc = cena.fog.color.getHex(), fd = cena.fog.density, bg = cena.background.getHex(), ab = abrigo.visible, sv = sup.visible, av = armaVM.visible;
+  cena.fog.color.setHex(0x050605); cena.fog.density = 0.035; cena.background.setHex(0x050605); abrigo.visible = true; sup.visible = false; armaVM.visible = false;
+  Rd.setRenderTarget(rtDentro); Rd.render(cena, camDentro); Rd.setRenderTarget(null);
+  cena.fog.color.setHex(fc); cena.fog.density = fd; cena.background.setHex(bg); abrigo.visible = ab; sup.visible = sv; armaVM.visible = av; }
+// --- o OLHO: um gigante espia pela janela da porta ---
+const tOlho = tex(512, 256, (g, w, h) => { const Rr = semente(66); g.clearRect(0, 0, w, h); g.save(); g.beginPath(); g.moveTo(10, h / 2); g.quadraticCurveTo(w / 2, -60, w - 10, h / 2); g.quadraticCurveTo(w / 2, h + 60, 10, h / 2); g.closePath(); g.clip();
+  const sc = g.createRadialGradient(w / 2, h / 2, 20, w / 2, h / 2, 260); sc.addColorStop(0, '#e6d27a'); sc.addColorStop(0.6, '#a8803a'); sc.addColorStop(1, '#3a1a08'); g.fillStyle = sc; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(170,10,10,.8)'; for (let k = 0; k < 40; k++) { let x = Rr() < 0.5 ? 20 + Rr() * 120 : w - 20 - Rr() * 120, y = Rr() * h; g.lineWidth = 0.8 + Rr() * 2; g.beginPath(); g.moveTo(x, y); for (let s = 0; s < 6; s++) { x += (w / 2 - x) * 0.15 + (Rr() - 0.5) * 20; y += (h / 2 - y) * 0.15 + (Rr() - 0.5) * 20; g.lineTo(x, y); } g.stroke(); }
+  const ir = g.createRadialGradient(w / 2, h / 2, 4, w / 2, h / 2, 100); ir.addColorStop(0, '#ffe060'); ir.addColorStop(0.35, '#ff5a10'); ir.addColorStop(0.85, '#8a0800'); ir.addColorStop(1, '#2a0000'); g.fillStyle = ir; g.beginPath(); g.arc(w / 2, h / 2, 100, 0, 7); g.fill();
+  g.strokeStyle = 'rgba(40,0,0,.5)'; for (let k = 0; k < 60; k++) { const a = Rr() * 6.28; g.lineWidth = 1; g.beginPath(); g.moveTo(w / 2 + Math.cos(a) * 20, h / 2 + Math.sin(a) * 20); g.lineTo(w / 2 + Math.cos(a) * 98, h / 2 + Math.sin(a) * 98); g.stroke(); }
+  g.fillStyle = '#000'; g.beginPath(); g.ellipse(w / 2, h / 2, 13, 92, 0, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.75)'; g.beginPath(); g.ellipse(w / 2 - 34, h / 2 - 38, 14, 9, -0.5, 0, 7); g.fill(); g.restore(); });
+const OLHAO = new THREE.Group(); OLHAO.visible = false; sup.add(OLHAO);
+const olhoMesh = add(new THREE.PlaneGeometry(3.2, 1.6), new THREE.MeshBasicMaterial({ map: tOlho, transparent: true, toneMapped: false }), 0, 0, 0.05, OLHAO);
+add(formaOrganica(2.6, 1.6, 1.0, 0.7, 18, semente(67), 0.25), peleMon, 0, 0, -1.95, OLHAO);
+const palpebra = add(new THREE.PlaneGeometry(3.6, 1.0), peleMon, 0, 0.6, 0.12, OLHAO); const palpebra2 = add(new THREE.PlaneGeometry(3.6, 1.0), peleMon, 0, -0.6, 0.12, OLHAO);
+let olhoT = 70, olhoVivo = 0;
+function atualizarOlho(dt) { const dPorta = Math.hypot(jog.x, jog.z + 30.9), olhando = -Math.sin(jog.yaw) * (0 - jog.x) / Math.max(dPorta, 0.1) + -Math.cos(jog.yaw) * (-30.9 - jog.z) / Math.max(dPorta, 0.1);
+  if (olhoVivo > 0) { olhoVivo -= dt; const k = 3.2 - olhoVivo, abre = clamp(k * 3, 0, 1) * (olhoVivo < 0.4 ? olhoVivo / 0.4 : 1);
+    palpebra.position.y = 0.6 + abre * 0.75; palpebra2.position.y = -0.6 - abre * 0.75; olhoMesh.scale.set(1 + Math.sin(k * 7) * 0.02, 1, 1); olhoMesh.position.x = Math.sin(k * 1.7) * 0.25;
+    OLHAO.position.set(camJanela.position.x, camJanela.position.y + 0.95, camJanela.position.z + 3.0); filmarJanela();
+    if (olhoVivo <= 0 || jog.fora) { OLHAO.visible = false; olhoVivo = 0; } return; }
+  if (jog.fora || jog.dormindo || dPorta > 7 || olhando < 0.8) return; olhoT -= dt; if (olhoT > 0) return; olhoT = rr(60, 120);
+  olhoVivo = 3.2; OLHAO.visible = true; OLHAO.rotation.y = Math.PI; batidaCoracao(1); setTimeout(() => { rugido(1); flicker = 1; }, 700); setTimeout(() => estrondo(0.9), 1200); }
+// --- pancadas na porta quando um gigante está perto do abrigo ---
+let pancadaT = 8;
+function atualizarPancadas(dt) { if (jog.fora || jog.dormindo) return; let m = 1e9; COLOSSOS.forEach(c => { m = Math.min(m, Math.hypot(c.x - HATCH.x, c.z - HATCH.z)); }); if (m > 38) return;
+  pancadaT -= dt; if (pancadaT > 0) return; pancadaT = rr(5, 11); [0, 0.45, 0.8].forEach((t, i) => setTimeout(() => { estrondo(0.8 - i * 0.15); tremor = Math.max(tremor, 1.1); flicker = Math.max(flicker, 0.6); soltarPoeira(40, jog.x, jog.z); }, t * 1000));
+  aviso('💥 ALGO GIGANTE ESTÁ BATENDO NA PORTA DO ABRIGO...', 'ruim', 3); }
+function atualizarHorror(dt) { filmarDentro(dt); atualizarOlho(dt); atualizarPancadas(dt); }
+Object.assign(window.__abrigo, { OLHAO, olho: () => { olhoT = 0; }, portaFora, rtDentro, INVASOR, invadir: () => { invasaoT = 0; }, SOMBRA, susto: () => { sustoT = 0; }, fraco, minimo, MONSTROS, ferirMonstro, progressoMissao, novasMissoes, ROBO, matarRobo, LUGARES_ROBO, NET, remotos, atualizarRemoto, sairSala, jogarJunto, mudarCampo, mudarArmas, comprar, abrirLoja, fecharLoja, ganhar, mapa, cuidarDeTudo, usarRecurso, pilotoAuto, abrirChat, fecharChat, enviarMsg, enviarDrone, cerebroLocal, estado });
 })();
 </script>
