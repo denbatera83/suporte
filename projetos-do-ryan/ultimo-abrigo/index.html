@@ -273,7 +273,7 @@ body.pos #vinheta{display:none}
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 2.8 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 2.9 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -366,7 +366,7 @@ let qual = toque ? 0 : 1; try { const q = localStorage.getItem('abrigo-q'); if (
 const minimo = qual === -2, fraco = qual < 0; if (fraco) qual = 0;
 const Q = minimo ? { pr: 0.75, bloom: false, ruinas: 34, sombra: 0 } : fraco ? { pr: 0.65, bloom: false, ruinas: 28, sombra: 0 } : [{ pr: 1, bloom: false, ruinas: 60, sombra: 0 }, { pr: 1.5, bloom: true, ruinas: 110, sombra: 0 }, { pr: 2, bloom: true, ruinas: 170, sombra: 2048 }][qual];
 const canvas = $('cena');
-const Rd = new THREE.WebGLRenderer({ canvas, antialias: qual > 0 || fraco, powerPreference: fraco ? 'low-power' : 'high-performance', precision: minimo ? 'mediump' : 'highp' });
+const Rd = new THREE.WebGLRenderer({ canvas, antialias: qual > 0 || fraco, powerPreference: fraco ? 'low-power' : 'high-performance' });
 let eco = toque; try { const v = localStorage.getItem('abrigo-eco'); if (v !== null) eco = v === '1'; } catch (e) {}
 const prBase = () => minimo ? Math.min(devicePixelRatio || 1, 0.75) : fraco ? 0.65 : Math.min(devicePixelRatio || 1, Q.pr) * (eco ? 0.7 : 1);
 Rd.setPixelRatio(prBase()); Rd.outputEncoding = THREE.sRGBEncoding; Rd.toneMapping = THREE.ACESFilmicToneMapping; Rd.toneMappingExposure = 1.1;
