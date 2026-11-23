@@ -275,7 +275,7 @@ body.pos #vinheta{display:none}
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 3.6 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 3.7 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -1677,36 +1677,57 @@ function visualAbrigo(n) { if (VIS.nivel === n) return VISUAIS[n]; VIS.nivel = n
 
 // ===================== SALA DE SEGURANÇA: 4 telas com câmeras ao vivo lá fora =====================
 const SEG = { telas: [], cams: [], i: 0 };
-{ const mesaS = grupo(-8.35, 0, -27.5, Math.PI / 2);
-  const tampo = std({ color: 0x2c3034, roughness: 0.5, metalness: 0.6 });
-  add(new THREE.BoxGeometry(2.8, 0.06, 0.95), tampo, 0, 0.78, 0, mesaS, true); add(new THREE.BoxGeometry(2.8, 0.04, 0.96), M.neon, 0, 0.75, 0, mesaS);
-  for (const [x, z] of [[-1.3, -0.4], [1.3, -0.4], [-1.3, 0.4], [1.3, 0.4]]) add(new THREE.BoxGeometry(0.06, 0.76, 0.06), M.metalEsc, x, 0.38, z, mesaS);
-  // computador (gabinete), teclado e mouse
-  const pc = add(new THREE.BoxGeometry(0.22, 0.48, 0.5), std({ color: 0x15181b, roughness: 0.4, metalness: 0.7 }), 0.95, 0.25, 0.05, mesaS, true); add(new THREE.BoxGeometry(0.02, 0.36, 0.01), new THREE.MeshBasicMaterial({ color: 0x3ccfff, toneMapped: false }), 0.95, 0.27, 0.31, mesaS);
-  add(new THREE.SphereGeometry(0.015, 8, 6), new THREE.MeshBasicMaterial({ color: 0x40ff60, toneMapped: false }), 0.95, 0.44, 0.31, mesaS);
-  const tTec = tex(256, 96, (g, w, h) => { g.fillStyle = '#16181a'; g.fillRect(0, 0, w, h); g.fillStyle = '#3a3f44'; for (let r = 0; r < 4; r++) for (let c = 0; c < 14; c++) g.fillRect(6 + c * 17.6 + r * 3, 8 + r * 21, 14, 16); g.fillRect(60, 8 + 4 * 21 - 2, 120, 10); });
-  add(new THREE.BoxGeometry(0.5, 0.025, 0.17), std({ map: tTec, roughness: 0.6 }), -0.05, 0.825, 0.18, mesaS);
-  const mouse = add(new THREE.SphereGeometry(0.04, 12, 8), std({ color: 0x1a1d20, roughness: 0.4 }), 0.35, 0.82, 0.2, mesaS); mouse.scale.set(0.75, 0.45, 1.15); add(new THREE.BoxGeometry(0.22, 0.004, 0.18), std({ color: 0x0c2a36 }), 0.35, 0.812, 0.2, mesaS);
-  add(new THREE.CylinderGeometry(0.04, 0.05, 0.12, 12), M.branco, -0.8, 0.86, 0.25, mesaS); // caneca
-  // cadeira
-  const cad = grupo(-7.35, 0, -27.4, -Math.PI / 2); add(new THREE.BoxGeometry(0.5, 0.08, 0.5), std({ color: 0x1a1d20, roughness: 0.8 }), 0, 0.5, 0, cad); add(new THREE.BoxGeometry(0.5, 0.6, 0.07), std({ color: 0x1a1d20, roughness: 0.8 }), 0, 0.85, -0.24, cad); add(new THREE.CylinderGeometry(0.04, 0.04, 0.45, 8), M.metal, 0, 0.25, 0, cad);
-  for (let k = 0; k < 5; k++) { const a = k / 5 * 6.28; add(new THREE.BoxGeometry(0.04, 0.03, 0.3), M.metal, Math.sin(a) * 0.14, 0.04, Math.cos(a) * 0.14, cad).rotation.y = a; }
-  // suporte de parede com as 4 telas
-  add(new THREE.BoxGeometry(2.25, 1.38, 0.08), M.metalEsc, -8.95, 1.78, -27.5, abrigo).rotation.y = Math.PI / 2;
+// CENTRAL DE MONITORAMENTO: paredes cheias de telas, mesas em L com vários monitores (como numa central de segurança de verdade)
+{ const madeira = std({ color: 0xb79c78, roughness: 0.55, metalness: 0.05 }), armarioM = std({ color: 0x24282c, roughness: 0.5, metalness: 0.4 }), molduraM = std({ color: 0x07080a, roughness: 0.35, metalness: 0.5 });
+  const rtTam = minimo ? [176, 110] : [320, 200];
   const nomes = ['CAM 1 · ENTRADA', 'CAM 2 · POSTO', 'CAM 3 · MERCADO', 'CAM 4 · GIGANTE'];
-  nomes.forEach((nome, k) => { const z = -27.5 + (k % 2 ? -0.55 : 0.55), y = k < 2 ? 2.12 : 1.44;
-    const rt = new THREE.WebGLRenderTarget(320, 200, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter });
-    const g = new THREE.Group(); g.position.set(-8.88, y, z); g.rotation.y = Math.PI / 2; abrigo.add(g);
-    add(new THREE.BoxGeometry(1.06, 0.66, 0.05), std({ color: 0x0c0e10, roughness: 0.4, metalness: 0.5 }), 0, 0, 0, g);
-    const tela = add(new THREE.PlaneGeometry(1.0, 0.6), new THREE.MeshBasicMaterial({ color: 0x9fbaa8, toneMapped: false }), 0, 0, 0.03, g);
-    const tRot = tex(512, 308, (c, w, h) => { c.clearRect(0, 0, w, h); c.font = '600 26px IBM Plex Mono, monospace'; c.fillStyle = 'rgba(0,0,0,.55)'; c.fillRect(10, 10, c.measureText(nome).width + 20, 38); c.fillStyle = '#e8ffe8'; c.fillText(nome, 20, 38);
-      c.fillStyle = '#ff3a2a'; c.beginPath(); c.arc(w - 74, 30, 9, 0, 7); c.fill(); c.fillStyle = '#ffd0c8'; c.fillText('REC', w - 60, 39); c.strokeStyle = 'rgba(230,255,230,.5)'; c.lineWidth = 3; for (const [x, y, dx, dy] of [[20, 70, 1, 1], [w - 20, 70, -1, 1], [20, h - 20, 1, -1], [w - 20, h - 20, -1, -1]]) { c.beginPath(); c.moveTo(x, y + dy * 30); c.lineTo(x, y); c.lineTo(x + dx * 30, y); c.stroke(); } });
-    add(new THREE.PlaneGeometry(1.0, 0.6), new THREE.MeshBasicMaterial({ map: tRot, transparent: true, toneMapped: false, depthWrite: false }), 0, 0, 0.035, g);
-    SEG.telas.push({ rt, tela, nome }); });
-  usavel(mesaS, { id: 'seguranca', txt: 'Olhar as câmeras de segurança', segurar: 0.5 });
-  OBST2.push([-8.35, -26.6, 0.6], [-8.35, -27.5, 0.6], [-8.35, -28.4, 0.6], [-7.35, -27.4, 0.35]);
-  const luzSeg = new THREE.PointLight(0x9fd8ff, 0.9, 9, 1.6); luzSeg.position.set(-6.5, 2.6, -27.5); abrigo.add(luzSeg); const lampSeg = add(new THREE.BoxGeometry(1.8, 0.05, 0.3), M.luz, -6.5, ALT - 0.06, -27.5, abrigo);
-  LUZES.push({ l: luzSeg, lamp: lampSeg, nome: 'seg', base: 0.9, pisca: 0 });
+  nomes.forEach(nome => SEG.telas.push({ rt: new THREE.WebGLRenderTarget(rtTam[0], rtTam[1], { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }), tela: null, nome }));
+  const feedM = SEG.telas.map(t => new THREE.MeshBasicMaterial({ map: t.rt.texture, color: 0xb4ccff, toneMapped: false }));
+  // telas de dados (mapas, gráficos e listas) em azul
+  const dados = [0, 1, 2, 3].map(v => tex(256, 160, (g, w, h) => { const Rr = semente(900 + v); g.fillStyle = '#04122a'; g.fillRect(0, 0, w, h); g.strokeStyle = 'rgba(80,170,255,.35)'; g.lineWidth = 1;
+    if (v === 0) { for (let x = 0; x < w; x += 16) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); } for (let y = 0; y < h; y += 16) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); } g.strokeStyle = '#6fd0ff'; g.lineWidth = 2; g.beginPath(); g.arc(w / 2, h / 2, 50, 0, 7); g.stroke(); for (let k = 0; k < 9; k++) { g.fillStyle = k < 3 ? '#ff4030' : '#7fe8ff'; g.beginPath(); g.arc(Rr() * w, Rr() * h, 3, 0, 7); g.fill(); } }
+    else if (v === 1) { g.strokeStyle = '#4fc3ff'; g.lineWidth = 2; for (let l = 0; l < 3; l++) { g.beginPath(); for (let x = 0; x < w; x += 8) { const y = h * (0.3 + l * 0.22) + Math.sin(x * 0.07 + l) * 12 + (Rr() - 0.5) * 10; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); } }
+    else if (v === 2) { g.font = '11px IBM Plex Mono, monospace'; for (let y = 14; y < h; y += 14) { g.fillStyle = Rr() < 0.15 ? '#ff6050' : '#8fd8ff'; g.fillText(['> SETOR ' + ((Rr() * 90) | 0) + ' OK', '> MOVIMENTO DETECTADO', '> COLOSSO A ' + ((Rr() * 200) | 0) + ' m', '> ESCUDO ' + ((Rr() * 100) | 0) + '%', '> SINAL FRACO'][(Rr() * 5) | 0], 8, y); } }
+    else { g.fillStyle = '#0d2f5a'; for (let k = 0; k < 12; k++) { const bh = 20 + Rr() * 110; g.fillRect(12 + k * 20, h - 10 - bh, 14, bh); } g.fillStyle = '#7fe8ff'; g.font = '700 16px IBM Plex Mono, monospace'; g.fillText('ABRIGO 7 · STATUS', 10, 20); } }));
+  const dadosM = dados.map(t => new THREE.MeshBasicMaterial({ map: t, toneMapped: false }));
+  // uma tela: moldura preta + imagem (câmera ao vivo com um "zoom" diferente, ou dados)
+  const Rr = semente(4242);
+  const tela = (pai, x, y, z, ry, w, h, k) => { const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; pai.add(g); add(new THREE.BoxGeometry(w + 0.05, h + 0.05, 0.05), molduraM, 0, 0, 0, g);
+    const geo = new THREE.PlaneGeometry(w, h); let mat;
+    if (k < 4 || Rr() < 0.72) { const f = k < 4 ? k : (Rr() * 4) | 0, z = k < 4 ? 1 : 0.55 + Rr() * 0.45, ox = Rr() * (1 - z), oy = Rr() * (1 - z), uv = geo.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, ox + uv.getX(i) * z, oy + uv.getY(i) * z); mat = feedM[f]; }
+    else mat = dadosM[(Rr() * 4) | 0];
+    const m = add(geo, mat, 0, 0, 0.03, g); return m; };
+  // PAREDE OESTE: 3 fileiras × 6 telas (as 4 do meio da fileira de baixo são as câmeras principais com nome)
+  const W = 1.04, H = 0.56;
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 6; c++) { const z = -24.85 - c * 1.1 - W / 2 + 0.52, y = 1.5 + r * 0.6, k = r === 0 && c >= 1 && c <= 4 ? c - 1 : 9;
+    const m = tela(abrigo, -8.95, y, z, Math.PI / 2, W, H, k); if (k < 4) { SEG.telas[k].tela = m;
+      const nome = nomes[k], tRot = tex(512, 276, (g, w, h) => { g.clearRect(0, 0, w, h); g.font = '600 26px IBM Plex Mono, monospace'; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(10, 10, g.measureText(nome).width + 20, 38); g.fillStyle = '#e8f4ff'; g.fillText(nome, 20, 38); g.fillStyle = '#ff3a2a'; g.beginPath(); g.arc(w - 74, 30, 9, 0, 7); g.fill(); g.fillStyle = '#ffd0c8'; g.fillText('REC', w - 60, 39); });
+      add(new THREE.PlaneGeometry(W, H), new THREE.MeshBasicMaterial({ map: tRot, transparent: true, toneMapped: false, depthWrite: false }), 0, 0, 0.035, m.parent); } }
+  // PAREDE NORTE: 3 × 4 telas · PAREDE SUL: 2 × 4 telas (em cima)
+  for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) tela(abrigo, -8.1 + c * 1.1, 1.5 + r * 0.6, -30.95, 0, W, H, 9);
+  for (let r = 1; r < 3; r++) for (let c = 0; c < 4; c++) tela(abrigo, -8.1 + c * 1.1, 1.5 + r * 0.6, -24.05, Math.PI, W, H, 9);
+  // MESAS EM L (madeira clara com armários escuros) e monitores em cima
+  const mesa = (x, z, comp, prof, ry) => { const g = grupo(x, 0, z, ry); add(new THREE.BoxGeometry(comp, 0.05, prof), madeira, 0, 0.78, 0, g, true); add(new THREE.BoxGeometry(comp - 0.04, 0.74, prof - 0.1), armarioM, 0, 0.38, -0.03, g, true);
+    for (let k = 0; k < Math.floor(comp / 0.9); k++) add(new THREE.BoxGeometry(0.012, 0.6, 0.012), M.metal, -comp / 2 + 0.45 + k * 0.9, 0.4, prof / 2 - 0.07, g); return g; };
+  const mesaO = mesa(-8.45, -27.2, 5.4, 0.85, Math.PI / 2), mesaN = mesa(-6.55, -30.45, 2.9, 0.85, 0);
+  const tTec = tex(256, 96, (g, w, h) => { g.fillStyle = '#16181a'; g.fillRect(0, 0, w, h); g.fillStyle = '#3a3f44'; for (let r = 0; r < 4; r++) for (let c = 0; c < 14; c++) g.fillRect(6 + c * 17.6 + r * 3, 8 + r * 21, 14, 16); g.fillRect(60, 8 + 4 * 21 - 2, 120, 10); });
+  const tecM = std({ map: tTec, roughness: 0.6 }), foneM = std({ color: 0x111316, roughness: 0.5 });
+  const posto = (pai, x) => { const st = add(new THREE.BoxGeometry(0.05, 0.25, 0.05), M.metalEsc, x, 0.92, -0.25, pai); const m = tela(pai, x, 1.17, -0.27, 0, 0.62, 0.36, 9); m.parent.rotation.x = -0.08;
+    add(new THREE.BoxGeometry(0.46, 0.022, 0.15), tecM, x, 0.815, 0.12, pai); const mo = add(new THREE.SphereGeometry(0.035, 10, 8), foneM, x + 0.33, 0.815, 0.14, pai); mo.scale.set(0.75, 0.45, 1.15);
+    if (Math.abs(x * 7) % 2 < 1) { add(new THREE.BoxGeometry(0.16, 0.05, 0.2), foneM, x - 0.38, 0.83, 0.05, pai); add(new THREE.BoxGeometry(0.05, 0.05, 0.2), foneM, x - 0.43, 0.87, 0.05, pai); } };
+  // os monitores da mesa olham para o centro da sala (a mesa oeste está girada, então -z local vira -x do mundo)
+  [-2.1, -1.2, -0.3, 0.6, 1.5, 2.3].forEach(x => posto(mesaO, x)); [-0.9, 0.0, 0.9].forEach(x => posto(mesaN, x));
+  // PC, caneca e cadeiras
+  add(new THREE.BoxGeometry(0.22, 0.48, 0.5), std({ color: 0x15181b, roughness: 0.4, metalness: 0.7 }), 2.4, 1.05, 0.05, mesaO, true); add(new THREE.CylinderGeometry(0.04, 0.05, 0.12, 12), M.branco, 1.9, 0.86, 0.25, mesaO);
+  const cadeira = (x, z, ry) => { const cad = grupo(x, 0, z, ry); const cm = std({ color: 0x1a1d20, roughness: 0.8 }); add(new THREE.BoxGeometry(0.5, 0.08, 0.5), cm, 0, 0.5, 0, cad); add(new THREE.BoxGeometry(0.5, 0.65, 0.07), cm, 0, 0.88, -0.24, cad); add(new THREE.CylinderGeometry(0.04, 0.04, 0.45, 8), M.metal, 0, 0.25, 0, cad);
+    for (let k = 0; k < 5; k++) { const a = k / 5 * 6.28; add(new THREE.BoxGeometry(0.04, 0.03, 0.3), M.metal, Math.sin(a) * 0.14, 0.04, Math.cos(a) * 0.14, cad).rotation.y = a; } };
+  cadeira(-7.45, -26.4, -Math.PI / 2 - 0.3); cadeira(-7.6, -28.6, -Math.PI / 2 + 0.25); cadeira(-6.2, -29.55, Math.PI + 0.2);
+  usavel(mesaO, { id: 'seguranca', txt: 'Olhar as câmeras de segurança', segurar: 0.5 });
+  obstLinha(-8.45, -24.6, -8.45, -29.9, 0.55); obstLinha(-7.9, -30.45, -5.2, -30.45, 0.5); OBST2.push([-7.45, -26.4, 0.3], [-7.6, -28.6, 0.3], [-6.2, -29.55, 0.3]);
+  // luz: painel no teto + brilho azul das telas
+  const luzSeg = new THREE.PointLight(0xcfe6ff, 0.8, 9, 1.6); luzSeg.position.set(-6.5, 2.6, -27.5); abrigo.add(luzSeg); const lampSeg = add(new THREE.BoxGeometry(1.2, 0.05, 0.6), M.luz, -6.5, ALT - 0.06, -27.5, abrigo);
+  LUZES.push({ l: luzSeg, lamp: lampSeg, nome: 'seg', base: 0.8, pisca: 0 });
+  const luzTelas = new THREE.PointLight(0x3a8cff, 1.1, 7, 1.5); luzTelas.position.set(-7.6, 1.8, -28.6); abrigo.add(luzTelas);
   // câmera de vigilância no canto da sala
   const camC = grupo(-4.3, 2.6, -24.3, -Math.PI * 0.75); add(new THREE.BoxGeometry(0.16, 0.14, 0.32), M.branco, 0, 0, 0.1, camC); add(new THREE.CylinderGeometry(0.05, 0.05, 0.06, 12).rotateX(Math.PI / 2), M.metalEsc, 0, 0, 0.28, camC); add(new THREE.SphereGeometry(0.02, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2010, toneMapped: false }), 0.05, 0.05, 0.2, camC);
   placaParede('🛡 SEGURANÇA ◀', -2.98, 2.45, -27.3, Math.PI / 2, '#7fe8ff', 1.2); }
