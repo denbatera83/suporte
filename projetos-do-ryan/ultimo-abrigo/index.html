@@ -275,7 +275,7 @@ body.pos #vinheta{display:none}
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 3.9 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 4.0 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -991,15 +991,51 @@ const ceu = new THREE.Mesh(new THREE.SphereGeometry(700, 32, 16), new THREE.Shad
 ceu.position.set(SX, 0, SZ); sup.add(ceu);
 // entrada do abrigo na superfície
 const entrada = new THREE.Group(); entrada.position.set(SX, 0, SZ); sup.add(entrada);
-add(new THREE.BoxGeometry(6, 3.4, 5), M.concreto, 0, 1.7, 0, entrada, true); add(new THREE.BoxGeometry(6.4, 0.4, 5.4), M.metalEsc, 0, 3.6, 0, entrada, true);
-const portaSup = add(new THREE.BoxGeometry(2.2, 2.6, 0.2), M.metal, 0, 1.3, 2.55, entrada); add(new THREE.BoxGeometry(2.4, 0.25, 0.22), M.faixa, 0, 2.75, 2.56, entrada);
-const farolEnt = new THREE.PointLight(0xff5020, 1.4, 14, 2); farolEnt.position.set(0, 3.1, 3.2); entrada.add(farolEnt); add(new THREE.SphereGeometry(0.12, 10, 8), M.luzVerm, 0, 3.1, 2.7, entrada);
+// v4.0: entrada de bunker no morro (fachada de concreto, muretas inclinadas, portas enferrujadas abertas)
+{ const concE = std({ map: tConcreto, roughness: 0.95, color: 0xb4b2aa });
+  add(new THREE.BoxGeometry(2.6, 3.7, 0.8), concE, -3.2, 1.85, 2.7, entrada, true); add(new THREE.BoxGeometry(2.6, 3.7, 0.8), concE, 3.2, 1.85, 2.7, entrada, true);
+  add(new THREE.BoxGeometry(3.8, 0.65, 0.8), concE, 0, 3.375, 2.7, entrada, true); add(new THREE.BoxGeometry(9.3, 0.3, 1.0), concE, 0, 3.85, 2.75, entrada, true);
+  add(new THREE.BoxGeometry(3.9, 3.1, 0.1), new THREE.MeshBasicMaterial({ color: 0x050505 }), 0, 1.55, 2.27, entrada);
+  // muretas inclinadas dos lados
+  const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.lineTo(0, 3.7); sh.lineTo(4.6, 0.6); sh.lineTo(4.6, 0); sh.lineTo(0, 0);
+  const geoM = new THREE.ExtrudeGeometry(sh, { depth: 0.5, bevelEnabled: false }); const uvM = geoM.attributes.uv; for (let i = 0; i < uvM.count; i++) uvM.setXY(i, uvM.getX(i) * 0.5, uvM.getY(i) * 0.5);
+  for (const lado of [-1, 1]) { const m = add(geoM, concE, lado < 0 ? -2.6 : 3.1, 0, 3.05, entrada, true); m.rotation.y = -Math.PI / 2 + lado * 0.15; }
+  add(new THREE.BoxGeometry(5.6, 0.06, 6.2), std({ map: tConcreto, roughness: 1, color: 0x8e8c86 }), 0, 0.02, 6.1, entrada);
+  // portas de metal enferrujadas, abertas para fora
+  const portaFerr = std({ map: tFerr, roughness: 0.75, metalness: 0.55, color: 0xc08a60 });
+  for (const lado of [-1, 1]) { const dob = new THREE.Group(); dob.position.set(lado * 1.92, 0, 3.12); dob.rotation.y = lado * 1.68; entrada.add(dob);
+    add(new THREE.BoxGeometry(1.75, 2.95, 0.07).translate(-lado * 0.875, 1.5, 0), portaFerr, 0, 0, 0, dob, true);
+    for (const y of [0.5, 1.5, 2.5]) add(new THREE.BoxGeometry(1.7, 0.08, 0.1), portaFerr, -lado * 0.875, y, 0.04, dob);
+    for (const y of [0.4, 2.6]) add(new THREE.CylinderGeometry(0.05, 0.05, 0.25, 8), M.metalEsc, 0, y, 0, dob);
+    add(new THREE.BoxGeometry(0.06, 0.3, 0.08), M.metalEsc, -lado * 1.55, 1.3, 0.08, dob); add(new THREE.BoxGeometry(0.3, 0.4, 0.02), std({ color: 0x8a8a80, roughness: 0.6 }), -lado * 1.4, 1.75, 0.05, dob); }
+  // o MORRO de terra com folhas secas
+  const tTerra = comFoto(tex(512, 512, (g, w, h) => { const Rr = semente(404); g.fillStyle = '#5a4630'; g.fillRect(0, 0, w, h); ruido(g, w, h, ['rgba(0,0,0,.25)', 'rgba(120,90,50,.3)', 'rgba(60,40,20,.35)'], 9000, 3, Rr);
+    for (let i = 0; i < 1600; i++) { g.save(); g.translate(Rr() * w, Rr() * h); g.rotate(Rr() * 6.28); g.fillStyle = ['#8a5a2a', '#a8742e', '#6a4220', '#c08a40', '#4e3a22'][(Rr() * 5) | 0]; g.beginPath(); g.ellipse(0, 0, 3 + Rr() * 5, 1.5 + Rr() * 2.5, 0, 0, 7); g.fill(); g.restore(); }
+    g.strokeStyle = 'rgba(30,20,10,.7)'; for (let i = 0; i < 60; i++) { g.lineWidth = 1 + Rr() * 1.5; g.beginPath(); const x = Rr() * w, y = Rr() * h; g.moveTo(x, y); g.lineTo(x + (Rr() - 0.5) * 40, y + (Rr() - 0.5) * 40); g.stroke(); } }, true), 'chao', 'multiply', 0.5);
+  tTerra.repeat.set(5, 4);
+  const Rh = semente(405), bumps = Array.from({ length: 9 }, () => [Rh() * 20 - 10, Rh() * 14 - 8, 1 + Rh() * 2, Rh() * 0.5]);
+  window.__alturaMorro = (x, z) => { if (Math.abs(x) < 2.6 && z > 2.4) return -0.3; const e = (x / 10) ** 2 + ((z + 1.5) / 7.5) ** 2; let f = e < 1 ? 4.2 * Math.pow(1 - e, 0.7) : 0;
+    for (const [bx, bz, br, bh] of bumps) f += bh * Math.max(0, 1 - Math.hypot(x - bx, z - bz) / br) * (f > 0.2 ? 1 : 0);
+    if (Math.abs(x) < 4.6 && z < 3.0 && z > -3) f = Math.max(f, 3.7); return Math.min(f, 3.85) - (e >= 1 ? 0.15 : 0); };
+  const geoT = new THREE.PlaneGeometry(26, 20, minimo ? 30 : 52, minimo ? 24 : 40).rotateX(-Math.PI / 2); const pT = geoT.attributes.position;
+  for (let i = 0; i < pT.count; i++) { const x = pT.getX(i), z = pT.getZ(i) - 0.5; pT.setY(i, __alturaMorro(x, z)); pT.setZ(i, z); } geoT.computeVertexNormals();
+  const morro = add(geoT, std({ map: tTerra, roughness: 1 }), 0, 0, 0, entrada); morro.castShadow = false;
+  // árvores mortas e secas em cima do morro
+  const troncoMorto = std({ color: 0x4a4038, roughness: 1 }); const Ra = semente(406); const nArv = minimo ? 3 : fraco ? 5 : 9;
+  for (let k = 0, t = 0; k < nArv && t < 200; t++) { const x = Ra() * 22 - 11, z = Ra() * 14 - 9, y = __alturaMorro(x, z); if (y < 1 || (Math.abs(x) < 5.2 && z > -0.5) || (Math.abs(Math.abs(x) - 2.4) < 1.2 && Math.abs(z + 1) < 1.2)) continue; k++;
+    const h = 4 + Ra() * 4, arv = new THREE.Group(); arv.position.set(x, y - 0.2, z); arv.rotation.set((Ra() - 0.5) * 0.12, Ra() * 6.28, (Ra() - 0.5) * 0.12); entrada.add(arv);
+    add(new THREE.CylinderGeometry(0.05, 0.13, h, 6).translate(0, h / 2, 0), troncoMorto, 0, 0, 0, arv, true);
+    for (let b = 0; b < 3; b++) { const L = 0.8 + Ra() * 1.4, gal = add(new THREE.CylinderGeometry(0.02, 0.05, L, 5).translate(0, L / 2, 0), troncoMorto, 0, h * (0.45 + b * 0.17), 0, arv); gal.rotation.set(0.6 + Ra() * 0.5, Ra() * 6.28, 0, 'YXZ'); } } }
+const portaSup = add(new THREE.BoxGeometry(2.2, 2.6, 0.2), M.metal, 0, 1.3, 2.55, entrada);
+const farolEnt = new THREE.PointLight(0xff5020, 1.4, 14, 2); farolEnt.position.set(0, 3.3, 3.6); entrada.add(farolEnt); add(new THREE.SphereGeometry(0.12, 10, 8), M.luzVerm, 0, 3.3, 3.15, entrada);
 usavel(portaSup, { id: 'descer', txt: 'Descer para o abrigo', segurar: 1.2 });
 // ruínas: prédios quebrados, carros, árvores mortas, poças radioativas
-const BLOQ = [[SX, SZ, 4]]; // [x, z, raio] para colisão na superfície
+const BLOQ = [[SX, SZ - 3, 5.5], [SX - 6.5, SZ - 1, 4.2], [SX + 6.5, SZ - 1, 4.2]]; // [x, z, raio] para colisão na superfície (o morro da entrada)
 // ===== LUGARES PARA EXPLORAR: posto, mercado, hospital e torre de rádio =====
 BLOQ.push([SX, SZ - 5, 20, 1]); // espaço reservado para o escudo e as placas solares
 const MARCOS = [];
+{ const pb = (x1, z1, x2, z2) => { const n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, z2 - z1) / 0.7)); for (let k = 0; k <= n; k++) BLOQ.push([SX + lerp(x1, x2, k / n), SZ + lerp(z1, z2, k / n), 0.5]); };
+  pb(-4.6, 3.4, 4.6, 3.4); for (const l of [-1, 1]) pb(l * 2.85, 3.3, l * (2.85 + 4.6 * Math.sin(0.15)), 3.3 + 4.6 * Math.cos(0.15)); }
 function paredeBloq(x1, z1, x2, z2) { const n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, z2 - z1) / 0.7)); for (let k = 0; k <= n; k++) BLOQ.push([lerp(x1, x2, k / n), lerp(z1, z2, k / n), 0.5]); }
 function placaTxt(txt, fundo, cor, w = 512, h = 160) { return tex(w, h, (g, W, H) => { g.fillStyle = fundo; g.fillRect(0, 0, W, H); g.fillStyle = cor; g.font = `700 ${Math.round(H * 0.55)}px Oswald, Arial`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(txt, W / 2, H / 2 + 4); }); }
 function marco(nome, lugar, ang, dist, cor) { const x = SX + Math.cos(ang) * dist, z = SZ + Math.sin(ang) * dist, g = new THREE.Group(); g.position.set(x, 0, z); sup.add(g);
