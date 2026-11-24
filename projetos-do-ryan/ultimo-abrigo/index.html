@@ -275,7 +275,7 @@ body.pos #vinheta{display:none}
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 4.0 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 4.1 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -470,7 +470,9 @@ ret(8, 8, 5, 6); ret(11, 11, 5, 6); ret(8, 8, 16, 17); ret(11, 11, 16, 17);
 ret(9, 21, 0, 1); ret(20, 21, 0, 27); ret(19, 19, 5, 6); ret(19, 19, 16, 17); ret(23, 30, 3, 9); ret(22, 22, 5, 6); ret(23, 30, 13, 20); ret(22, 22, 16, 17); ret(17, 26, 24, 30);
 // salas novas (v3.8): SALA DO REATOR (pé-direito de 7 m) e SALA DE ESTAR com jardim (4 m)
 ret(33, 44, 11, 22); ret(31, 32, 16, 17); ret(33, 44, 1, 9); ret(31, 32, 5, 6);
-const altCel = (c, r) => c >= 33 ? (r >= 11 && r <= 22 ? 7 : r >= 1 && r <= 9 ? 4 : ALT) : ALT;
+// v4.1: túnel vermelho saindo do núcleo e a OFICINA AZUL (pé-direito de 4.5 m)
+ret(27, 32, 26, 27); ret(33, 44, 24, 31);
+const altCel = (c, r) => c >= 33 ? (r >= 11 && r <= 22 ? 7 : r >= 1 && r <= 9 ? 4 : r >= 24 ? 4.5 : ALT) : ALT;
 const alturaEm = (x, z) => altCel(Math.floor(x + 10), Math.floor(-z));
 const ehPiso = (x, z) => { const c = Math.floor(x + 10), r = Math.floor(-z); return c >= 0 && c < COLS && r >= 0 && r < LINHAS && PISO[r * COLS + c] === 1; };
 const abrigo = new THREE.Group(); cena.add(abrigo);
@@ -949,7 +951,86 @@ function atualizarSalas(t, ligado, hora, minTot) {
   else { const p = Math.sin(t * 7) > 0.6 ? 0.55 : 0.25; nucleoReaM.color.setRGB(p, 0.04, 0.03); brilhoReaM.color.setHex(0xff2010); brilhoReaM.opacity = p * 0.5; luzReator.color.setHex(0xff2010); luzReator.intensity = p * 1.4; }
   bulboB.material = bulboA.material; for (let k = 0; k < 3; k++) LEDS_REA[k].emissiveIntensity = Math.sin(t * (2 + k * 1.3) + k) > -0.2 ? 2.2 : 0.2;
   for (const m of telasReaM) m.emissiveIntensity = ligado ? 1.2 : 0.06;
-  desenharTotem(Math.floor(minTot), hora); }
+  desenharTotem(Math.floor(minTot), hora);
+  if (window.__vaporAz) for (const v of __vaporAz) { const f = (t * 0.35 + v.f) % 1; v.s.position.set(32.2 + Math.sin(f * 6 + v.f * 9) * 0.25, 0.4 + f * 3.2, -28.9 - f * 0.4); v.s.scale.setScalar(0.4 + f * 1.6); v.s.material.opacity = Math.sin(f * Math.PI) * 0.22; } }
+
+// =====================================================================
+// v4.1 · CORREDORES VERMELHOS (molduras de metal e tubos de luz laranja)
+// =====================================================================
+{ const tLava = tex(64, 256, (g, w, h) => { const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, '#ff7a20'); gr.addColorStop(0.5, '#fff0a0'); gr.addColorStop(1, '#ff6a18'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    const Rr = semente(611); for (let i = 0; i < 40; i++) { g.strokeStyle = `rgba(${200 + Rr() * 55 | 0},${40 + Rr() * 60 | 0},20,.45)`; g.lineWidth = 2 + Rr() * 5; g.beginPath(); let x = Rr() * w, y = Rr() * h; g.moveTo(x, y); for (let k = 0; k < 4; k++) { x += (Rr() - 0.5) * 30; y += Rr() * 40; g.lineTo(x, y); } g.stroke(); } }, true);
+  const tuboLuzM = new THREE.MeshBasicMaterial({ map: tLava, color: 0xffc890, toneMapped: false });
+  const molduraM = std({ map: tFerr, color: 0x9a4a2c, roughness: 0.5, metalness: 0.6, emissive: 0x3a0c04 }), caixaM = std({ color: 0x2a1610, roughness: 0.6, metalness: 0.6 });
+  // moldura octogonal (como na foto): um "U" com cantos chanfrados
+  const sh = new THREE.Shape(); [[-1, 0], [-1, 3], [1, 3], [1, 0], [0.8, 0], [0.8, 2.15], [0.42, 2.7], [-0.42, 2.7], [-0.8, 2.15], [-0.8, 0]].forEach(([x, y], i) => i ? sh.lineTo(x, y) : sh.moveTo(x, y));
+  const geoMold = new THREE.ExtrudeGeometry(sh, { depth: 0.24, bevelEnabled: false }).translate(0, 0, -0.12);
+  const geoTubo = new THREE.CylinderGeometry(0.07, 0.07, 1, minimo ? 6 : 10).rotateX(Math.PI / 2), geoCaixa = new THREE.BoxGeometry(0.2, 0.22, 1).translate(0, 0, 0);
+  // [eixo, posição fixa, de, até, portas no lado - , portas no lado + ]
+  const PORTAS = [[-5, -7], [-16, -18]];
+  const CORR = [['z', 0, -2, -24, PORTAS, PORTAS], ['z', 11, -2, -24, PORTAS, PORTAS], ['x', -1, 1, 10, [], []], ['x', -27, 17, 23, [], []]];
+  const molds = [], tubos = [], caixas = [];
+  const livreDePorta = (v, portas) => !portas.some(([a, b]) => v < Math.max(a, b) + 0.4 && v > Math.min(a, b) - 0.4);
+  for (const [eixo, fixo, de, ate, pA, pB] of CORR) { const L = Math.abs(ate - de), sg = Math.sign(ate - de), n = Math.max(1, Math.round(L / 2.6));
+    const pos = []; for (let k = 0; k <= n; k++) { const v = de + sg * (0.5 + (L - 1) * k / n); if (livreDePorta(v, pA) && livreDePorta(v, pB)) pos.push(v); }
+    pos.forEach(v => molds.push(eixo === 'z' ? [fixo, v, 0] : [v, fixo, Math.PI / 2]));
+    // tubos de luz: em baixo e em cima, dos dois lados, entre as molduras (pulando as portas)
+    const lim = [de, ...pos, ate].sort((a, b) => a - b);
+    for (let i = 0; i < lim.length - 1; i++) { const a = lim[i] + 0.2, b = lim[i + 1] - 0.2; if (b - a < 0.6) continue; const meio = (a + b) / 2, comp = b - a;
+      for (const lado of [-1, 1]) { const portas = lado < 0 ? pA : pB; for (const [y, off] of [[0.32, 0.9], [2.5, 0.9]]) { if (y < 1 && !livreDePorta(meio, portas) ) continue; if (y < 1 && portas.some(([p, q]) => a < Math.max(p, q) && b > Math.min(p, q))) continue;
+        const px = eixo === 'z' ? fixo + lado * off : meio, pz = eixo === 'z' ? meio : fixo + lado * off, ry = eixo === 'z' ? 0 : Math.PI / 2;
+        tubos.push([px, y, pz, ry, comp]); caixas.push([eixo === 'z' ? fixo + lado * 0.98 : meio, y, eixo === 'z' ? meio : fixo + lado * 0.98, ry, comp]); } } } }
+  const mat4 = new THREE.Matrix4(), q = new THREE.Quaternion(), eu = new THREE.Euler(), vs = new THREE.Vector3(), vp = new THREE.Vector3();
+  const IM = (geo, mat, lista, fn) => { const im = new THREE.InstancedMesh(geo, mat, lista.length); lista.forEach((it, i) => { fn(it); mat4.compose(vp, q, vs); im.setMatrixAt(i, mat4); }); im.receiveShadow = true; abrigo.add(im); return im; };
+  IM(geoMold, molduraM, molds, ([x, z, ry]) => { vp.set(x, 0, z); q.setFromEuler(eu.set(0, ry, 0)); vs.set(1, 1, 1); });
+  IM(geoTubo, tuboLuzM, tubos, ([x, y, z, ry, c]) => { vp.set(x, y, z); q.setFromEuler(eu.set(0, ry, 0)); vs.set(1, 1, c); });
+  IM(geoCaixa, caixaM, caixas, ([x, y, z, ry, c]) => { vp.set(x, y, z); q.setFromEuler(eu.set(0, ry, 0)); vs.set(1, 1, c + 0.1); });
+  // luz vermelha/laranja nos corredores (como na foto)
+  LUZES.forEach(L => { if (L.nome === 'cor') { L.l.color.setHex(0xff4a1c); L.base = 2.6; L.l.distance = 14; L.l.decay = 1.1; } });
+  const luzTunel = new THREE.PointLight(0xff5a28, 1, 9, 1.4); luzTunel.position.set(20, 2.4, -27); abrigo.add(luzTunel);
+  LUZES.push({ l: luzTunel, lamp: add(new THREE.BoxGeometry(1.4, 0.05, 0.25), M.luz, 20, 2.97, -27, abrigo), nome: 'cor', base: 2.6, pisca: 0 }); }
+placaParede('🔧 OFICINA AZUL ▶', 16.98, 2.45, -29.4, -Math.PI / 2, '#8fd0ff', 1.2);
+
+// =====================================================================
+// v4.1 · OFICINA AZUL (x 23..35, z -24..-32, 4.5 m de altura)
+// =====================================================================
+{ const H = 4.5;
+  const tPainelAz = tex(256, 256, (g, w, h) => { const Rr = semente(701); g.fillStyle = '#b8bec4'; g.fillRect(0, 0, w, h); ruido(g, w, h, ['rgba(0,0,0,.06)', 'rgba(255,255,255,.08)', 'rgba(60,70,80,.08)'], 3000, 4, Rr);
+    g.strokeStyle = 'rgba(40,46,54,.55)'; g.lineWidth = 3; g.strokeRect(2, 2, w - 4, h - 4); g.beginPath(); g.moveTo(0, h * 0.62); g.lineTo(w, h * 0.62); g.stroke(); g.fillStyle = 'rgba(70,80,92,.35)'; g.fillRect(0, h * 0.62, w, 10);
+    g.fillStyle = '#5a6068'; for (const [x, y] of [[12, 12], [w - 12, 12], [12, h - 12], [w - 12, h - 12]]) { g.beginPath(); g.arc(x, y, 4, 0, 7); g.fill(); }
+    for (let i = 0; i < 6; i++) { g.fillStyle = 'rgba(30,30,30,.08)'; g.fillRect(Rr() * w, Rr() * h * 0.6, 6 + Rr() * 20, 30 + Rr() * 80); } }, true);
+  const parAz = std({ map: tPainelAz, color: 0xa8c4e8, roughness: 0.45, metalness: 0.35 });
+  paredeP(29, -24.02, Math.PI, 12, H, 0, parAz, 6, 2); paredeP(29, -31.98, 0, 12, H, 0, parAz, 6, 2); paredeP(34.98, -28, -Math.PI / 2, 8, H, 0, parAz, 4, 2);
+  paredeP(23.02, -25, Math.PI / 2, 2, H, 0, parAz, 1, 2); paredeP(23.02, -30, Math.PI / 2, 4, H, 0, parAz, 2, 2); paredeP(23.02, -27, Math.PI / 2, 2, 1.5, 3, parAz, 1, 0.7);
+  { const pisoAz = paredeP(29, -28, 0, 12, 8, 0, std({ map: tConcreto, color: 0x8c949a, roughness: 0.55, metalness: 0.2 }), 4, 3); pisoAz.rotation.set(-Math.PI / 2, 0, 0); pisoAz.position.y = 0.008;
+    const teto = paredeP(29, -28, 0, 12, 8, 0, std({ map: tPainelAz, color: 0x8a96a2, roughness: 0.6 }), 6, 4); teto.rotation.set(Math.PI / 2, 0, 0); teto.position.y = H - 0.01; }
+  // passarela de grade no chão
+  const gradeAzM = std({ map: tGrade, color: 0xa8b0b8, roughness: 0.5, metalness: 0.7 }); add(new THREE.BoxGeometry(12, 0.05, 1.8), gradeAzM, 29, 0.03, -27, abrigo); add(new THREE.BoxGeometry(1.8, 0.05, 4.5), gradeAzM, 27.5, 0.031, -29.4, abrigo);
+  // colunas angulosas nas paredes (estrutura)
+  const colM = std({ map: tPainelAz, color: 0xc8d2dc, roughness: 0.4, metalness: 0.5 });
+  for (const x of [24.6, 27.9, 31.2, 34.4]) for (const [z, s] of [[-24.3, 1], [-31.7, -1]]) { add(new THREE.BoxGeometry(0.55, H, 0.6), colM, x, H / 2, z, abrigo, true); const d = add(new THREE.BoxGeometry(0.4, 1.4, 0.4), colM, x, H - 0.8, z - s * 0.55, abrigo); d.rotation.x = s * 0.7; OBST2.push([x, z, 0.4]); }
+  // canos avermelhados no teto e faixas de luz azul-branca em zigue-zague
+  const canoAz = std({ color: 0x9a5248, roughness: 0.4, metalness: 0.5 });
+  for (const [z, rr0, y] of [[-24.9, 0.24, 3.95], [-25.6, 0.18, 4.15], [-31.1, 0.24, 3.95], [-30.4, 0.16, 4.2]]) { add(new THREE.CylinderGeometry(rr0, rr0, 12, 14).rotateZ(Math.PI / 2), canoAz, 29, y, z, abrigo); for (let x = 24; x < 35; x += 2.2) add(new THREE.BoxGeometry(0.08, H - y, 0.08), M.metalEsc, x, (H + y) / 2, z, abrigo); }
+  const faixaAzM = std({ color: 0xcfe8ff, emissive: 0x7cc4ff, emissiveIntensity: 2.6 });
+  for (const z of [-26.6, -29.4]) for (let k = 0; k < 5; k++) { const f = add(new THREE.BoxGeometry(2.3, 0.05, 0.16), faixaAzM, 24.4 + k * 2.3, H - 0.25, z + (k % 2 ? 0.35 : -0.35), abrigo); f.rotation.y = (k % 2 ? 0.3 : -0.3); }
+  // máquinas nos nichos da parede norte e a plataforma do lado leste
+  const maqM = std({ color: 0x8e98a2, roughness: 0.45, metalness: 0.6 });
+  for (const x of [26.25, 32.8]) { const m = grupo(x, 0, -24.55); add(new THREE.BoxGeometry(2.2, 1.9, 0.7), maqM, 0, 0.95, 0, m, true); add(new THREE.BoxGeometry(1.6, 0.4, 0.05), M.tela, 0, 1.45, 0.36, m); for (let k = 0; k < 4; k++) add(new THREE.CylinderGeometry(0.06, 0.06, 0.05, 10).rotateX(Math.PI / 2), M.vermelho, -0.6 + k * 0.4, 0.9, 0.37, m); obstLinha(x - 1, -24.55, x + 1, -24.55, 0.45); }
+  { const t = tex(256, 96, (g, w, h) => { g.fillStyle = '#c9cdd0'; g.fillRect(0, 0, w, h); g.fillStyle = '#d8a018'; g.fillRect(0, 0, 18, h); g.fillRect(w - 18, 0, 18, h); g.fillStyle = '#2a2a2a'; g.font = '700 50px Oswald, Arial'; g.textAlign = 'center'; g.fillText('PERIGO', w / 2, 66); });
+    add(new THREE.PlaneGeometry(1.4, 0.52), std({ map: t, roughness: 0.6 }), 32.8, 2.6, -24.03, abrigo).rotation.y = Math.PI; }
+  add(new THREE.BoxGeometry(3.8, 0.35, 3.6), maqM, 33.0, 0.175, -30.1, abrigo, true); add(new THREE.BoxGeometry(3.8, 0.04, 3.6), gradeAzM, 33.0, 0.37, -30.1, abrigo);
+  for (const x of [31.15]) for (let z = -28.4; z >= -31.8; z -= 0.85) add(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 6), M.metal, x, 0.85, z, abrigo); add(new THREE.CylinderGeometry(0.035, 0.035, 3.6, 6).rotateX(Math.PI / 2), M.metal, 31.15, 1.35, -30.1, abrigo);
+  obstLinha(31.1, -28.3, 31.1, -31.9, 0.4); obstLinha(31.1, -28.3, 34.9, -28.3, 0.4);
+  // mangueira caída no chão e vapor saindo da plataforma
+  tubo([[31.0, 0.06, -28.6], [29.8, 0.06, -29.6], [27.0, 0.06, -30.6], [24.6, 0.06, -29.0], [24.2, 0.06, -27.6]], 0.05, std({ color: 0x5a2a22, roughness: 0.8 }), 30);
+  window.__vaporAz = Array.from({ length: minimo ? 2 : 5 }, (_, i) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tBrilho, color: 0xdce8f2, transparent: true, opacity: 0, depthWrite: false })); s.position.set(32.2, 0.5, -28.9); abrigo.add(s); return { s, f: i / 5 }; });
+  // bancada da oficina (dá para consertar o casco)
+  const banc = grupo(29.6, 0, -24.75); add(new THREE.BoxGeometry(2.4, 0.08, 0.9), std({ color: 0x6a7076, roughness: 0.5, metalness: 0.6 }), 0, 0.95, 0, banc, true); add(new THREE.BoxGeometry(2.3, 0.9, 0.8), maqM, 0, 0.45, 0, banc, true);
+  add(new THREE.BoxGeometry(0.25, 0.2, 0.2), M.azul, -0.8, 1.09, 0, banc); add(new THREE.CylinderGeometry(0.03, 0.03, 0.35, 8).rotateZ(Math.PI / 2), M.vermelho, 0.2, 1.01, 0.1, banc); add(new THREE.BoxGeometry(0.4, 0.15, 0.25), M.amarelo, 0.8, 1.07, -0.1, banc);
+  usavel(banc, { id: 'oficina', txt: 'Consertar o casco na oficina (+15)', segurar: 2 }); obstLinha(28.5, -24.75, 30.7, -24.75, 0.5);
+  // luz azul
+  const luzAz = new THREE.PointLight(0x6fb0ff, 1, 16, 1.1); luzAz.position.set(29, 4.0, -28); abrigo.add(luzAz); LUZES.push({ l: luzAz, lamp: add(new THREE.BoxGeometry(2.0, 0.04, 0.3), M.luz, 29, H - 0.04, -28, abrigo), nome: 'azul', base: 1.5, pisca: 0 });
+  const luzAz2 = new THREE.PointLight(0x2a6cff, 1.8, 12, 1.3); luzAz2.position.set(25, 2.2, -30.5); abrigo.add(luzAz2); }
 
 // ===================== A SUPERFÍCIE (fica longe do abrigo no mapa) =====================
 const SX = 0, SZ = 500, RAIO_SUP = 190;
@@ -1384,7 +1465,7 @@ function textoAcao(u) { if (u.id === 'gerador') return E.gerador ? 'Desligar o g
   if (u.id === 'diesel') return 'Tanque de energia (solar ∞)'; if (u.id === 'filtro') return `Trocar o filtro de ar (${E.inv.filtro}) · filtro em ${Math.round(E.filtroVida)}%`;
   if (u.id === 'racha') return `Tapar a rachadura (${E.inv.peca} peças)`;
   if (u.id === 'saque') return E.coletas[u.lugar] === dia() ? 'Já pegou tudo aqui hoje (volte amanhã)' : u.txt; if (u.id === 'torre') return E.sinal ? 'O sinal de socorro já está ligado' : u.txt;
-  if (u.id === 'arma') return E.arma ? 'O canhão já está com você' : NV('arma') ? u.txt : '🔒 Canhão trancado: compre em ⬆ MELHORIAS'; if (u.id === 'sofa') return E.coletas.sofa === dia() ? 'Você já descansou no sofá hoje' : u.txt; if (u.id === 'estufa') return E.coletas.estufa === dia() ? 'Horta já colhida hoje' : u.txt;
+  if (u.id === 'arma') return E.arma ? 'O canhão já está com você' : NV('arma') ? u.txt : '🔒 Canhão trancado: compre em ⬆ MELHORIAS'; if (u.id === 'oficina') return E.coletas.oficina === dia() ? 'Casco já consertado hoje' : u.txt; if (u.id === 'sofa') return E.coletas.sofa === dia() ? 'Você já descansou no sofá hoje' : u.txt; if (u.id === 'estufa') return E.coletas.estufa === dia() ? 'Horta já colhida hoje' : u.txt;
   if (u.id === 'silenciador') return E.silenciador ? 'Desligar o silenciador' : 'Ligar o silenciador (gerador sem barulho)';
   if (u.id === 'subir') return E.traje ? 'Abrir a porta e sair' : 'Vestir o traje e sair pela porta'; return u.txt; }
 function usar(u) {
@@ -1410,6 +1491,7 @@ function usar(u) {
     case 'campo': if (!NV('escudo')) { somErro(); aviso('O abrigo ainda não tem CAMPO DE FORÇA. Compre em ⬆ MELHORIAS!', 'ruim', 4); break; } mudarCampo(E.campo === false); break;
     case 'armas': if (!NV('torres')) { somErro(); aviso('O abrigo ainda não tem ARMAS. Compre os lasers e mísseis em ⬆ MELHORIAS!', 'ruim', 4); break; } mudarArmas(E.armas === false); break;
     case 'arma': if (!E.arma && !NV('arma')) { somErro(); aviso('O canhão de plasma está trancado. Compre em ⬆ MELHORIAS (40 🪙)!', 'ruim', 4); break; } if (E.arma) { aviso('Você já está com o canhão de plasma.', 'info'); break; } E.arma = true; canhaoMesa.visible = false; somItem(); tom(400, 1600, 0.4, 'sawtooth', 0.06); aviso('🔫 Você pegou o CANHÃO DE PLASMA! Lá fora, clique (ou aperte ESPAÇO / Atirar) para atirar nos gigantes.', 'bom', 6); break;
+    case 'oficina': if (E.coletas.oficina === dia()) { aviso('Você já consertou o casco na oficina hoje. Volte amanhã!', 'info'); break; } E.coletas.oficina = dia(); E.casco = Math.min(100, E.casco + 15); somItem(); aviso('🔧 Você consertou o casco na oficina azul. +15 🛡', 'bom'); break;
     case 'sofa': if (E.coletas.sofa === dia()) { aviso('Você já descansou no sofá hoje. Volte amanhã!', 'info'); break; } E.coletas.sofa = dia(); E.saude = Math.min(100, E.saude + 15); somItem(); aviso('😌 Você relaxou no sofá da sala de estar. +15 ❤', 'bom'); break;
     case 'estufa': if (E.coletas.estufa === dia()) { aviso('A horta já foi colhida hoje. Amanhã tem mais!', 'info'); break; } E.coletas.estufa = dia(); progressoMissao('horta'); E.inv.racao += 2; E.inv.agua += 1; somItem(); aviso('🌱 Colheu a horta: 🥫 🥫 💧', 'bom'); break;
     case 'caixa': abrirCaixa(u.caixa); break;
@@ -1830,7 +1912,7 @@ function mudarGerador(ligar) { if (E.gerador !== !!ligar) usar({ id: 'gerador' }
 
 // ---- mapa ----
 const SALAS = [['sala de segurança', -6.5, -27.5, [-9, -4, -31, -24]], ['dormitório', -5.5, -6.5, [-9, -2, -10, -3]], ['cozinha', 5.5, -6.5, [2, 9, -10, -3]], ['sala de máquinas', -5.5, -17, [-9, -2, -21, -13]], ['sala de controle', 5.5, -17, [2, 9, -21, -13]],
-  ['eclusa e porta de saída', 0, -28, [-3, 3, -31, -24]], ['estufa', 17, -6.5, [13, 21, -10, -3]], ['arsenal', 17, -17, [13, 21, -21, -13]], ['núcleo da ÍRIS', 12, -27.5, [7, 17, -31, -24]], ['sala do reator', 29, -17, [21, 35, -23, -11]], ['sala de estar', 29, -6, [21, 35, -10, -1]]];
+  ['eclusa e porta de saída', 0, -28, [-3, 3, -31, -24]], ['estufa', 17, -6.5, [13, 21, -10, -3]], ['arsenal', 17, -17, [13, 21, -21, -13]], ['núcleo da ÍRIS', 12, -27.5, [7, 17, -31, -24]], ['sala do reator', 29, -17, [21, 35, -23, -11]], ['sala de estar', 29, -6, [21, 35, -10, -1]], ['oficina azul', 29, -28, [17, 35, -32, -24]]];
 function salaDe(x, z) { if (jog.fora) return 'lá fora na superfície'; const s = SALAS.find(([, , , [x0, x1, z0, z1]]) => x >= x0 && x <= x1 && z >= z0 && z <= z1); return s ? s[0] : 'no corredor'; }
 function direcao(dx, dz) { let rel = Math.atan2(dx, dz) - (jog.yaw + Math.PI); rel = Math.atan2(Math.sin(rel), Math.cos(rel)); const d = Math.round(Math.hypot(dx, dz));
   return (Math.abs(rel) < 0.6 ? 'em frente' : rel < -0.6 && rel > -2.4 ? 'à sua direita' : rel > 0.6 && rel < 2.4 ? 'à sua esquerda' : 'atrás de você') + `, a ${d} metros`; }
@@ -1870,7 +1952,7 @@ const PALAVRAS = [['racao', ['comida', 'racao', 'racoes', 'fome', 'comer', 'lanc
 function cerebroLocal(txt) { const s = ' ' + semAcento(txt).replace(/[^a-z0-9 ]/g, ' ') + ' ', tem = (...w) => w.some(x => s.includes(x));
   const num = (s.match(/ ([1-4]) /) || [])[1] || (tem(' um ', ' uma ') ? 1 : tem(' dois ', ' duas ') ? 2 : tem(' tres ') ? 3 : tem(' quatro ', ' muito', ' bastante') ? 4 : 3);
   const itens = PALAVRAS.filter(([, ws]) => ws.some(w => s.includes(w))).map(([k]) => k), pergunta = tem('como esta', 'quanto', 'quantos', 'quantas', 'tem ');
-  const CHAVES = [[0, ['seguranca', 'camera']], [1, ['dormitorio', 'quarto', 'cama']], [2, ['cozinha', 'despensa']], [3, ['maquina', 'gerador', 'filtro']], [4, ['controle', 'comando', 'radar', 'radio']], [5, ['saida', 'eclusa', 'porta', 'traje']], [6, ['estufa', 'horta']], [7, ['arsenal', 'canhao', 'arma']], [8, ['nucleo']], [9, ['reator']], [10, ['sala de estar', 'sofa', 'jardim']]];
+  const CHAVES = [[0, ['seguranca', 'camera']], [1, ['dormitorio', 'quarto', 'cama']], [2, ['cozinha', 'despensa']], [3, ['maquina', 'gerador', 'filtro']], [4, ['controle', 'comando', 'radar', 'radio']], [5, ['saida', 'eclusa', 'porta', 'traje']], [6, ['estufa', 'horta']], [7, ['arsenal', 'canhao', 'arma']], [8, ['nucleo']], [9, ['reator']], [10, ['sala de estar', 'sofa', 'jardim']], [11, ['oficina', 'sala azul', 'azul']]];
   const fora = { posto: 'posto', mercado: 'mercado', hospital: 'hospital', torre: 'torre' }; let lugar = null;
   for (const m of MARCOS) if (s.includes(fora[m.lugar] || '#')) lugar = [m.nome, m.x, m.z, true]; if (!lugar) for (const [i, ws] of CHAVES) if (ws.some(w => s.includes(w))) { lugar = [SALAS[i][0], SALAS[i][1], SALAS[i][2], false]; break; }
   { const liga = tem(' liga', 'ativa', 'acende', 'ligue'), desl = tem('desliga', 'desativa', 'apaga', 'desligue', 'para de');
@@ -1912,7 +1994,7 @@ function cerebroLocal(txt) { const s = ' ' + semAcento(txt).replace(/[^a-z0-9 ]/
 
 // ---- cérebro de verdade (IA do Claude, no link) ----
 const INSTRUCOES = 'Você é a ÍRIS, a inteligência artificial do Abrigo 7, um bunker futurista e superprotegido num jogo de sobrevivência. Você conversa com uma criança que está jogando. Você é muito esperta, prestativa e toma iniciativa: resolva o problema da criança usando as ferramentas, sem pedir confirmação, e depois diga o que fez e qual é o próximo passo. ' +
-  'O abrigo tem: dormitório, cozinha, sala de máquinas (gerador e filtro), sala de controle (radar e rádio), eclusa com a porta de SAÍDA, e na ala leste: estufa (horta que dá comida), arsenal (canhão de plasma para atirar nos gigantes), núcleo da ÍRIS, a SALA DO REATOR (o reator nuclear que é o gerador principal, depois do arsenal) e a SALA DE ESTAR com jardim de plantas atrás do vidro e um sofá para relaxar (+15 de vida por dia, depois da estufa). Lá fora: posto, mercado, hospital, torre de rádio, escudo de energia, placas solares (energia infinita), 2 lasers e 4 lançadores de mísseis automáticos. Para direções use ver_mapa. Para fome, sede, radiação, filtro ou rachaduras use usar_recurso. ' +
+  'O abrigo tem: dormitório, cozinha, sala de máquinas (gerador e filtro), sala de controle (radar e rádio), eclusa com a porta de SAÍDA, e na ala leste: estufa (horta que dá comida), arsenal (canhão de plasma para atirar nos gigantes), núcleo da ÍRIS, a SALA DO REATOR (o reator nuclear que é o gerador principal, depois do arsenal) e a SALA DE ESTAR com jardim de plantas atrás do vidro e um sofá para relaxar (+15 de vida por dia, depois da estufa). Pelo túnel vermelho do núcleo se chega à OFICINA AZUL, onde a bancada conserta o casco (+15 por dia). Os corredores têm luz vermelha e tubos de luz laranja. Lá fora: posto, mercado, hospital, torre de rádio, escudo de energia, placas solares (energia infinita), 2 lasers e 4 lançadores de mísseis automáticos. Para direções use ver_mapa. Para fome, sede, radiação, filtro ou rachaduras use usar_recurso. ' +
   'Responda sempre em português do Brasil, com no máximo 3 frases curtas e simples, de um jeito carinhoso e animado, como uma amiga robô. Pode usar 1 ou 2 emojis. ' +
   'Quando a criança pedir um recurso (comida, água, remédio, filtro de ar, peças ou um pouco de tudo), use a ferramenta enviar_drone. Para saber como está o abrigo, use ver_abrigo; para os gigantes, use ver_gigantes. Nunca invente números. ' +
   'Na SALA DE COMANDO (dentro da sala de controle) tem botões para ligar e desligar o campo de força e as armas; você também pode fazer isso com campo_de_forca e armas_do_abrigo. ' +
