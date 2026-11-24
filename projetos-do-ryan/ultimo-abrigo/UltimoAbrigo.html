@@ -277,7 +277,7 @@ body.pos #vinheta{display:none}
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 4.4 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 4.5 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -1438,8 +1438,8 @@ ret(33, 44, 11, 22); ret(31, 32, 16, 17); ret(33, 44, 1, 9); ret(31, 32, 5, 6);
 // v4.1: túnel vermelho saindo do núcleo e a OFICINA AZUL (pé-direito de 4.5 m)
 ret(27, 32, 26, 27); ret(33, 44, 24, 31);
 // v4.3: BUNKER 9 por dentro: corredor do reator, TÚNEL GIGANTE do armazém, sala de câmeras e sala da escada
-ret(45, 52, 21, 22); ret(53, 60, 2, 31); ret(61, 64, 8, 9); ret(65, 75, 3, 13); ret(61, 63, 26, 27); ret(64, 71, 21, 31);
-const altCel = (c, r) => { if (c >= 33 && c <= 44) return r >= 11 && r <= 22 ? 7 : r >= 1 && r <= 9 ? 4 : r >= 24 ? 4.5 : ALT; if (c >= 53 && c <= 60 && r >= 2) return 7.2; if (c >= 65 && c <= 75 && r >= 3 && r <= 13) return 3.6; if (c >= 64 && c <= 71 && r >= 21) return 7; return ALT; };
+ret(46, 51, 14, 29); ret(52, 52, 21, 22); ret(53, 60, 2, 31); ret(61, 64, 8, 9); ret(65, 75, 3, 13); ret(61, 63, 26, 27); ret(64, 71, 21, 31);
+const altCel = (c, r) => { if (c >= 33 && c <= 44) return r >= 11 && r <= 22 ? 7 : r >= 1 && r <= 9 ? 4 : r >= 24 ? 4.5 : ALT; if (c >= 53 && c <= 60 && r >= 2) return 7.2; if (c >= 46 && c <= 51 && r >= 14 && r <= 29) return 6.5; if (c >= 65 && c <= 75 && r >= 3 && r <= 13) return 3.6; if (c >= 64 && c <= 71 && r >= 21) return 7; return ALT; };
 const alturaEm = (x, z) => altCel(Math.floor(x + 10), Math.floor(-z));
 const ehPiso = (x, z) => { const c = Math.floor(x + 10), r = Math.floor(-z); return c >= 0 && c < COLS && r >= 0 && r < LINHAS && PISO[r * COLS + c] === 1; };
 const abrigo = new THREE.Group(); cena.add(abrigo);
@@ -2006,14 +2006,31 @@ const B9 = (() => { const concB = std({ map: tConcreto, color: 0xcacdd0, roughne
   const ledAz = std({ color: 0x0a2a4a, emissive: 0x2a9cff, emissiveIntensity: 2.6 }), tuboLuz = std({ color: 0xffffff, emissive: 0xe4f2ff, emissiveIntensity: 2.6 });
   const amarelo = std({ color: 0xd8a018, roughness: 0.7 }), prat = std({ color: 0x6a7480, roughness: 0.45, metalness: 0.75 });
   const chao = (x, z, w, d, mat) => { const p = paredeP(x, z, 0, w, d, 0, mat, w / 3, d / 3); p.rotation.set(-Math.PI / 2, 0, 0); p.position.y = 0.01; return p; };
-  // ---------- corredor do reator até o túnel, com a porta blindada do Bunker 9 ----------
-  paredeP(39, -21.02, Math.PI, 8, 3, 0, concB); paredeP(39, -22.98, 0, 8, 3, 0, concB);
-  for (let x = 36; x < 43; x += 1.5) { add(new THREE.BoxGeometry(0.6, 0.04, 0.08), ledAz, x, 2.95, -22, abrigo); add(new THREE.BoxGeometry(0.5, 0.03, 0.2), tuboLuz, x + 0.75, 2.96, -22, abrigo); }
-  const portaB9 = new THREE.Group(); portaB9.position.set(41.6, 0, -22); abrigo.add(portaB9);
-  { const t = tex(256, 256, (g, w, h) => { g.fillStyle = '#3a4248'; g.fillRect(0, 0, w, h); g.fillStyle = '#d8a018'; for (let x = -40; x < w; x += 40) { g.beginPath(); g.moveTo(x, h); g.lineTo(x + 20, h); g.lineTo(x + 60, h - 40); g.lineTo(x + 40, h - 40); g.fill(); } g.fillStyle = '#ffc94a'; g.font = '700 46px Oswald, Arial'; g.textAlign = 'center'; g.fillText('BUNKER 9', w / 2, 90); g.font = '600 24px Oswald, Arial'; g.fillText('ACESSO RESTRITO', w / 2, 128); });
-    const m = add(new THREE.BoxGeometry(0.25, 3, 2), std({ map: t, roughness: 0.5, metalness: 0.6 }), 0, 1.5, 0, portaB9, true); }
-  const bloqPorta = [[41.6, -21.5, 0.6], [41.6, -22.5, 0.6]]; bloqPorta.forEach(b => OBST2.push(b));
-  placaParede('⬢ BUNKER 9 ▶', 34.98, 2.4, -19.6, -Math.PI / 2, '#ffc94a', 1.2);
+  // ---------- O GERADOR PRÓPRIO DO BUNKER 9 (x 36..42, z -14..-30) ----------
+  paredeP(39, -14.02, Math.PI, 6, 6.5, 0, concB); paredeP(39, -29.98, 0, 6, 6.5, 0, concB); paredeP(36.02, -22, Math.PI / 2, 16, 6.5, 0, concB);
+  paredeP(41.98, -17.5, -Math.PI / 2, 7, 6.5, 0, concB); paredeP(41.98, -26.5, -Math.PI / 2, 7, 6.5, 0, concB); paredeP(41.98, -22, -Math.PI / 2, 2, 3.5, 3, concB, 1, 2);
+  chao(39, -22, 6, 16, std({ map: tGrade, color: 0x5a6068, roughness: 0.5, metalness: 0.7 })); { const t = paredeP(39, -22, 0, 6, 16, 0, concEsc); t.rotation.set(Math.PI / 2, 0, 0); t.position.y = 6.48; }
+  const GER = { x: 39, z: -22 }, gerador9 = grupo(GER.x, 0, GER.z);
+  add(new THREE.CylinderGeometry(1.7, 1.9, 0.5, 32), prat, 0, 0.25, 0, gerador9, true); add(new THREE.CylinderGeometry(1.3, 1.3, 0.35, 32), M.metalEsc, 0, 0.65, 0, gerador9);
+  add(new THREE.CylinderGeometry(1.3, 1.3, 0.5, 32), M.metalEsc, 0, 4.55, 0, gerador9); add(new THREE.CylinderGeometry(0.8, 1.2, 0.6, 32), prat, 0, 5.1, 0, gerador9);
+  const vidroGer = add(new THREE.CylinderGeometry(1.0, 1.0, 3.6, 32, 1, true), new THREE.MeshStandardMaterial({ color: 0xbfe8ff, transparent: true, opacity: 0.18, roughness: 0.05, metalness: 0.3, side: THREE.DoubleSide, depthWrite: false }), 0, 2.6, 0, gerador9);
+  const tPlasma = tex(64, 256, (g, w, h) => { const Rr = semente(1201); const gr = g.createLinearGradient(0, 0, w, 0); gr.addColorStop(0, 'rgba(20,120,255,0)'); gr.addColorStop(0.5, '#bff6ff'); gr.addColorStop(1, 'rgba(20,120,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 30; i++) { g.strokeStyle = `rgba(255,255,255,${0.3 + Rr() * 0.5})`; g.lineWidth = 1 + Rr() * 2; g.beginPath(); let x = w / 2 + (Rr() - 0.5) * 20, y = Rr() * h; g.moveTo(x, y); for (let k = 0; k < 5; k++) { x += (Rr() - 0.5) * 14; y += 10 + Rr() * 14; g.lineTo(x, y); } g.stroke(); } }, true);
+  const plasmaM = new THREE.MeshBasicMaterial({ map: tPlasma, color: 0x6ad8ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+  const plasma = add(new THREE.CylinderGeometry(0.45, 0.45, 3.6, 16, 1, true), plasmaM, 0, 2.6, 0, gerador9); const plasma2 = add(new THREE.CylinderGeometry(0.22, 0.22, 3.6, 12, 1, true), plasmaM, 0, 2.6, 0, gerador9);
+  const aneisGer = [1.3, 2.4, 3.5].map((y, k) => add(new THREE.TorusGeometry(1.25 + (k % 2) * 0.12, 0.08, 8, 40).rotateX(Math.PI / 2), std({ color: 0x1a2a3a, emissive: 0x2a9cff, emissiveIntensity: 2.2, metalness: 0.7, roughness: 0.3 }), 0, y + 0.3, 0, gerador9));
+  for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + Math.PI / 4; add(new THREE.BoxGeometry(0.18, 4.2, 0.18), prat, Math.cos(a) * 1.35, 2.6, Math.sin(a) * 1.35, gerador9); add(new THREE.CylinderGeometry(0.14, 0.14, 1.6, 10), M.metal, Math.cos(a) * 1.5, 5.7, Math.sin(a) * 1.5, gerador9); add(new THREE.BoxGeometry(0.22, 0.12, 0.22), ledAz, Math.cos(a) * 1.5, 6.1, Math.sin(a) * 1.5, gerador9); }
+  const brilhoGer = add(new THREE.PlaneGeometry(7, 7).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: tBrilho, color: 0x2a90ff, transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }), GER.x, 0.03, GER.z, abrigo);
+  for (const [x1, z1, x2, z2] of [[37.4, -20.6, 36.2, -16], [40.6, -23.4, 41.8, -28.5], [37.2, -23.6, 36.4, -29]]) tubo([[x1, 0.08, z1], [(x1 + x2) / 2 + 0.3, 0.05, (z1 + z2) / 2], [x2, 0.08, z2]], 0.06, M.metalEsc, 12);
+  OBST2.push([GER.x, GER.z, 2.1]);
+  const consoleGer = (x, z, ry, id, txt) => { const g = grupo(x, 0, z, ry); add(new THREE.BoxGeometry(1.6, 0.95, 0.7), prat, 0, 0.48, 0, g, true); const tp = add(new THREE.BoxGeometry(1.6, 0.06, 0.6), prat, 0, 1.0, 0.08, g); tp.rotation.x = 0.35;
+    add(new THREE.BoxGeometry(1.6, 0.7, 0.12), prat, 0, 1.5, -0.3, g); const tl = add(new THREE.PlaneGeometry(1.4, 0.55), std({ color: 0x000000, emissive: 0x4ad0ff, emissiveIntensity: 1.2 }), 0, 1.5, -0.235, g);
+    usavel(g, { id, txt, segurar: 0.6 }); OBST2.push([x, z, 0.85]); return tl; };
+  const telaGer = consoleGer(37.2, -16.2, 0.4, 'gerador9', 'Ligar/desligar o GERADOR do Bunker 9'), telaCampo = consoleGer(40.8, -27.8, Math.PI + 0.4, 'campo9', 'Ligar/desligar o CAMPO DE FORÇA do Bunker 9');
+  placaParede('⚡ GERADOR DO BUNKER 9', 39, 4.6, -14.05, Math.PI, '#5ff0ff', 2.4);
+  const luzGer = new THREE.PointLight(0x5ac8ff, 1, 13, 1.3); luzGer.position.set(GER.x, 3.5, GER.z); abrigo.add(luzGer); LUZES.push({ l: luzGer, lamp: add(new THREE.BoxGeometry(1.2, 0.05, 0.3), M.luz, GER.x, 6.45, GER.z - 4, abrigo), nome: 'b9', base: 1.6, pisca: 0 });
+  const animGer = (t, ligado) => { plasma.visible = plasma2.visible = ligado; tPlasma.offset.y = -t * 0.6; plasma.rotation.y = t * 0.7; plasma2.rotation.y = -t * 1.3; aneisGer.forEach((a, k) => { a.rotation.z = Math.sin(t * (0.8 + k * 0.3) + k) * 0.08; a.material.emissiveIntensity = ligado ? 1.8 + Math.sin(t * 3 + k * 2) * 0.6 : 0.05; });
+    brilhoGer.material.opacity = ligado ? 0.45 + Math.sin(t * 2) * 0.1 : 0.03; telaGer.material.emissive.setHex(ligado ? 0x40ff90 : 0xff3020); telaCampo.material.emissive.setHex(ligado && E.campo9 !== false ? 0x4ad0ff : 0xff3020); };
   // ---------- O TÚNEL GIGANTE DO ARMAZÉM (x 43..51, z -2..-32) ----------
   const L = 30, zc = -17;
   paredeP(43.02, -11.5, Math.PI / 2, 19, 3.4, 0, concB); paredeP(43.02, -27.5, Math.PI / 2, 9, 3.4, 0, concB);
@@ -2073,7 +2090,7 @@ const B9 = (() => { const concB = std({ map: tConcreto, color: 0xcacdd0, roughne
     g.fillStyle = '#e8f4ff'; g.font = '600 13px IBM Plex Mono'; g.fillText('CAM ' + String(k + 1).padStart(2, '0'), 6, 16); for (let y = 0; y < h; y += 3) { g.fillStyle = 'rgba(0,0,0,.15)'; g.fillRect(0, y, w, 1); } });
   const feeds = Array.from({ length: minimo ? 4 : 9 }, (_, k) => std({ color: 0x000000, emissive: 0xffffff, emissiveMap: tFeed(k), emissiveIntensity: 1.1 }));
   let nf = 0; const monitor = (x, y, z, ry, w = 1.15, h = 0.66) => { const g = grupo(x, y, z, ry); add(new THREE.BoxGeometry(w + 0.06, h + 0.06, 0.06), M.metalEsc, 0, 0, 0, g); add(new THREE.PlaneGeometry(w, h), feeds[nf++ % feeds.length], 0, 0, 0.035, g); return g; };
-  for (let rr = 0; rr < 3; rr++) { for (let c = 0; c < 8; c++) monitor(56.4 + c * 1.22, 1.55 + rr * 0.7, -3.1, Math.PI); for (let c = 0; c < 8; c++) monitor(65.9, 1.55 + rr * 0.7, -4.2 - c * 1.22, -Math.PI / 2); for (let c = 0; c < 7; c++) monitor(57.6 + c * 1.22, 1.55 + rr * 0.7, -13.9, 0); }
+  const telasVivas = []; for (let rr = 0; rr < 3; rr++) { for (let c = 0; c < 8; c++) { const mg = monitor(56.4 + c * 1.22, 1.55 + rr * 0.7, -3.1, Math.PI); if (rr === 1 && c < 7) telasVivas.push(mg.children[1]); } for (let c = 0; c < 8; c++) monitor(65.9, 1.55 + rr * 0.7, -4.2 - c * 1.22, -Math.PI / 2); for (let c = 0; c < 7; c++) monitor(57.6 + c * 1.22, 1.55 + rr * 0.7, -13.9, 0); }
   const madeira = std({ color: 0xb08a5e, roughness: 0.6 }), preto = std({ color: 0x1a1c20, roughness: 0.6 });
   const mesaCam = (x, z, comp, ry) => { const g = grupo(x, 0, z, ry); add(new THREE.BoxGeometry(comp, 0.05, 0.8), madeira, 0, 0.76, 0, g, true); add(new THREE.BoxGeometry(0.5, 0.72, 0.7), madeira, -comp / 2 + 0.3, 0.37, 0, g); add(new THREE.BoxGeometry(0.5, 0.72, 0.7), madeira, comp / 2 - 0.3, 0.37, 0, g);
     for (let k = 0; k < Math.floor(comp / 1.1); k++) { const px = -comp / 2 + 0.6 + k * 1.1; add(new THREE.BoxGeometry(0.05, 0.3, 0.05), M.metalEsc, px, 0.92, -0.2, g); const m = add(new THREE.PlaneGeometry(0.62, 0.38), std({ color: 0x000000, emissive: 0x2a78d8, emissiveIntensity: 0.9 }), px, 1.22, -0.22, g); add(new THREE.BoxGeometry(0.66, 0.42, 0.03), preto, px, 1.22, -0.245, g);
@@ -2083,6 +2100,7 @@ const B9 = (() => { const concB = std({ map: tConcreto, color: 0xcacdd0, roughne
   usavel(m1, { id: 'cameras2', txt: 'Ver as câmeras do Bunker 9', segurar: 0.5 }); usavel(m2, { id: 'cameras2', txt: 'Ver as câmeras do Bunker 9', segurar: 0.5 });
   obstLinha(56.2, -4.3, 64.8, -4.3, 0.5); obstLinha(64.7, -5.6, 64.7, -12.7, 0.5); obstLinha(56.5, -12.7, 63.5, -12.7, 0.5); OBST2.push([59.6, -5.4, 0.55], [61.4, -5.4, 0.55]);
   const luzCam = new THREE.PointLight(0x9cc4ff, 1, 12, 1.3); luzCam.position.set(60.5, 3.2, -8.5); abrigo.add(luzCam); LUZES.push({ l: luzCam, lamp: add(new THREE.BoxGeometry(1.2, 0.04, 0.6), M.luz, 60.5, 3.55, -8.5, abrigo), nome: 'b9', base: 1.3, pisca: 0 });
+  placaParede('⚡ GERADOR ◀', 43.02, 2.6, -19.6, Math.PI / 2, '#5ff0ff', 1.2);
   placaParede('📹 SALA DE CÂMERAS ▶', 50.98, 2.6, -11.2, -Math.PI / 2, '#7fe8ff', 1.2);
   // ---------- SALA DA ESCADA (x 54..62, z -21..-32): sobe para o telhado (sala de armas) ----------
   paredeP(52.5, -26.02, Math.PI, 3, 3, 0, concB); paredeP(52.5, -27.98, 0, 3, 3, 0, concB);
@@ -2104,7 +2122,7 @@ const B9 = (() => { const concB = std({ map: tConcreto, color: 0xcacdd0, roughne
   usavel(portaTeto, { id: 'telhado9', txt: 'Subir para o telhado (sala de armas)', segurar: 1 });
   placaParede('🔫 ESCADA · TELHADO ▶', 50.98, 2.6, -29.4, -Math.PI / 2, '#ffb630', 1.2);
   const luzEsc = new THREE.PointLight(0xffe2b8, 1, 12, 1.3); luzEsc.position.set(58, 6, -27); abrigo.add(luzEsc); LUZES.push({ l: luzEsc, lamp: add(new THREE.BoxGeometry(1, 0.05, 0.3), M.luz, 58, 6.95, -27, abrigo), nome: 'b9', base: 1.4, pisca: 0 });
-  return { portaB9, bloqPorta, orbeJ, orbeJ2, aneisJ }; })();
+  return { orbeJ, orbeJ2, aneisJ, animGer, telasVivas }; })();
 
 // v4.3 · o reator mais bonito: anel de refrigeração brilhando, brilho no chão, fachos de luz e vapor
 { const anel = add(new THREE.TorusGeometry(2.5, 0.09, 8, 64).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x40e8ff, toneMapped: false }), REA.x, 0.07, REA.z, abrigo);
@@ -2347,7 +2365,12 @@ const B2 = (() => { const ang = 2.85, dist = 128, bx = SX + Math.cos(ang) * dist
   const laserB2 = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1, 6, 1, true), new THREE.MeshBasicMaterial({ color: 0xff5030, toneMapped: false, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false })); laserB2.visible = false; sup.add(laserB2);
   const feixe = add(new THREE.CylinderGeometry(1, 1, 90, 14, 1, true).translate(0, 45, 0), new THREE.MeshBasicMaterial({ color: 0xffc94a, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, side: THREE.DoubleSide }), 3, 0, 6, g); feixe.visible = false;
   const luzes = [[0xcfe8ff, 3.2, 3.0, 2.2], [0xffe2b8, -7, T + 2.8, -7.5]].map(([c, x, y, z]) => { const l = new THREE.PointLight(c, 0, 10, 1.4); l.position.set(x, y, z); g.add(l); return l; });
-  return { g, x: bx, z: bz, ry, mundo, local, noDeck, T, telaPainel, folhas, torretas, radarB2, antLuz, laserB2, feixe, luzes, luzVermB: [] }; })();
+  // CAMPO DE FORÇA do Bunker 9 (cúpula azul-dourada)
+  const R9 = 24, [cx9, cz9] = mundo(0, -4); const campo9 = new THREE.Group(); campo9.position.set(cx9, 0, cz9); campo9.visible = false; sup.add(campo9);
+  add(new THREE.SphereGeometry(R9, 40, 20, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x4ab8ff, transparent: true, opacity: 0.06, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false }), 0, 0, 0, campo9);
+  const grade9 = add(new THREE.IcosahedronGeometry(R9 + 0.05, 3), new THREE.MeshBasicMaterial({ color: 0xffd27a, wireframe: true, transparent: true, opacity: 0.14, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), 0, 0, 0, campo9);
+  add(new THREE.TorusGeometry(R9, 0.14, 6, 96).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0x4ad0ff, toneMapped: false }), 0, 0.1, 0, campo9);
+  return { g, x: bx, z: bz, ry, mundo, local, noDeck, T, telaPainel, folhas, torretas, radarB2, antLuz, laserB2, feixe, luzes, luzVermB: [], campo9, grade9, R9, cx9, cz9 }; })();
 function naBase2(margem = 0) { const [lx, lz] = B2.local(jog.x, jog.z); return lx > -12.6 - margem && lx < 12.2 + margem && lz > -12.4 - margem && lz < 2.8 + margem; }
 { const caixa = new THREE.BoxGeometry(1, 1, 1); caixa.translate(0, 0.5, 0); const predios = [];
   for (let i = 0, k = 0; i < 1200 && k < Math.round(Q.ruinas * 1.9); i++) { const a = R() * 6.28, d = rr(18, 184), x = SX + Math.cos(a) * d, z = SZ + Math.sin(a) * d; const w = rr(6, 16), dd = rr(6, 16), h = rr(5, 34) * (R() < 0.3 ? 0.35 : 1);
@@ -2523,7 +2546,7 @@ function animarInvasao(dt, t) { const I = INVASAO; I.nave.rotation.y += dt * 0.0
 const CHAVE = 'ultimo-abrigo-1', ITENS = [['racao', '🥫', 'Ração'], ['agua', '💧', 'Água'], ['filtro', '🌀', 'Filtro'], ['peca', '🔩', 'Peça'], ['remedio', '💊', 'Remédio']];
 const MIN_POR_SEG = 3, HATCH = { x: SX, z: SZ };
 function novoEstado() { return { min: 8 * 60, saude: 100, rad: 0, comida: 85, agua: 80, ar: 100, diesel: 60, filtroVida: 55, casco: 100, gerador: true, traje: false, trajeAr: 100,
-  inv: { racao: 4, agua: 4, galao: 2, filtro: 1, peca: 2, remedio: 1 }, rachas: [], ultimaCaixa: 0, avisos: {}, coletas: {}, sinal: false, bunker2: 0, armas2: false, silenciador: false, drone: null, arma: false, auto: true, campo: true, armas: true, v2: true, moedas: 40, nivel: { casco: 0, escudo: 0, torres: 0, arma: 0, iris: 0, mochila: 0 } }; }
+  inv: { racao: 4, agua: 4, galao: 2, filtro: 1, peca: 2, remedio: 1 }, rachas: [], ultimaCaixa: 0, avisos: {}, coletas: {}, sinal: false, bunker2: 0, armas2: false, gerador9: true, campo9: true, silenciador: false, drone: null, arma: false, auto: true, campo: true, armas: true, v2: true, moedas: 40, nivel: { casco: 0, escudo: 0, torres: 0, arma: 0, iris: 0, mochila: 0 } }; }
 // níveis das melhorias (0 a 3) e o que cada um muda
 const NV = k => (E.nivel && E.nivel[k]) || 0;
 const mochilaMax = () => 6 + NV('mochila') * 4, raioEscudo = () => NV('escudo') ? 17 * (1 + (NV('escudo') - 1) * 0.25) : 0;
@@ -2653,7 +2676,7 @@ function textoAcao(u) { if (u.id === 'gerador') return E.gerador ? 'Desligar o g
   if (u.id === 'diesel') return 'Tanque de energia (solar ∞)'; if (u.id === 'filtro') return `Trocar o filtro de ar (${E.inv.filtro}) · filtro em ${Math.round(E.filtroVida)}%`;
   if (u.id === 'racha') return `Tapar a rachadura (${E.inv.peca} peças)`;
   if (u.id === 'saque') return E.coletas[u.lugar] === dia() ? 'Já pegou tudo aqui hoje (volte amanhã)' : u.txt; if (u.id === 'torre') return E.sinal ? 'O sinal de socorro já está ligado' : u.txt;
-  if (u.id === 'arma') return E.arma ? 'O canhão já está com você' : NV('arma') ? u.txt : '🔒 Canhão trancado: compre em ⬆ MELHORIAS'; if (u.id === 'armazem') return E.coletas.armazem === dia() ? 'Armazém já usado hoje' : u.txt; if (u.id === 'armas2') return E.armas2 ? 'Armas já pegas' : u.txt; if (u.id === 'ativar2') return E.bunker2 >= 2 ? 'Bunker 9 ativado ✔' : u.txt; if (u.id === 'oficina') return E.coletas.oficina === dia() ? 'Casco já consertado hoje' : u.txt; if (u.id === 'sofa') return E.coletas.sofa === dia() ? 'Você já descansou no sofá hoje' : u.txt; if (u.id === 'estufa') return E.coletas.estufa === dia() ? 'Horta já colhida hoje' : u.txt;
+  if (u.id === 'arma') return E.arma ? 'O canhão já está com você' : NV('arma') ? u.txt : '🔒 Canhão trancado: compre em ⬆ MELHORIAS'; if (u.id === 'gerador9') return E.gerador9 === false ? 'Ligar o GERADOR do Bunker 9' : 'Desligar o GERADOR do Bunker 9'; if (u.id === 'campo9') return E.campo9 === false ? 'Ligar o CAMPO DE FORÇA do Bunker 9' : 'Desligar o CAMPO DE FORÇA do Bunker 9'; if (u.id === 'armazem') return E.coletas.armazem === dia() ? 'Armazém já usado hoje' : u.txt; if (u.id === 'armas2') return E.armas2 ? 'Armas já pegas' : u.txt; if (u.id === 'ativar2') return E.bunker2 >= 2 ? 'Bunker 9 ativado ✔' : u.txt; if (u.id === 'oficina') return E.coletas.oficina === dia() ? 'Casco já consertado hoje' : u.txt; if (u.id === 'sofa') return E.coletas.sofa === dia() ? 'Você já descansou no sofá hoje' : u.txt; if (u.id === 'estufa') return E.coletas.estufa === dia() ? 'Horta já colhida hoje' : u.txt;
   if (u.id === 'silenciador') return E.silenciador ? 'Desligar o silenciador' : 'Ligar o silenciador (gerador sem barulho)';
   if (u.id === 'subir') return E.traje ? 'Abrir a porta e sair' : 'Vestir o traje e sair pela porta'; return u.txt; }
 function usar(u) {
@@ -2691,6 +2714,8 @@ function usar(u) {
     case 'sair9': { const [x, z] = B2.mundo(3.2, 3.2); irPara(true, { x, z, yaw: B2.ry + Math.PI, msg: 'Você saiu pela casa do Bunker 9.' }); break; }
     case 'telhado9': { const [x, z] = B2.mundo(-3.2, -0.4); irPara(true, { x, z, y: B2.T, yaw: B2.ry + Math.PI * 0.75, msg: '🔫 Telhado do Bunker 9: a sala de armas e as torretas.' }); break; }
     case 'descer9': irPara(false, { x: 57.5, z: -23, y: 4.2, yaw: Math.PI, msg: 'Escada do Bunker 9.' }); break;
+    case 'gerador9': if (E.bunker2 < 2) break; E.gerador9 = E.gerador9 === false; tom(E.gerador9 ? 300 : 220, E.gerador9 ? 900 : 40, 1.2, 'sawtooth', 0.08); aviso(E.gerador9 ? '⚡ Gerador do Bunker 9 LIGADO: luzes, câmeras, torretas e campo de força funcionando.' : 'Gerador do Bunker 9 desligado. Tudo apagou por aqui...', E.gerador9 ? 'bom' : 'info', 5); salvar(); break;
+    case 'campo9': if (E.bunker2 < 2) break; if (E.gerador9 === false) { aviso('Ligue o gerador do Bunker 9 primeiro!', 'ruim', 3); break; } E.campo9 = E.campo9 === false; tom(500, E.campo9 ? 1200 : 200, 0.6, 'sine', 0.08); aviso(E.campo9 ? '🛡 CAMPO DE FORÇA do Bunker 9 ligado!' : 'Campo de força do Bunker 9 desligado.', E.campo9 ? 'bom' : 'info', 4); salvar(); break;
     case 'jarvis': if (E.bunker2 < 2) { aviso('A JARVIS está desligada. Ative o Bunker 9 no painel da porta (2 🔩).', 'info', 4); break; } abrirChat(); break;
     case 'sofa': if (E.coletas.sofa === dia()) { aviso('Você já descansou no sofá hoje. Volte amanhã!', 'info'); break; } E.coletas.sofa = dia(); E.saude = Math.min(100, E.saude + 15); somItem(); aviso('😌 Você relaxou no sofá da sala de estar. +15 ❤', 'bom'); break;
     case 'estufa': if (E.coletas.estufa === dia()) { aviso('A horta já foi colhida hoje. Amanhã tem mais!', 'info'); break; } E.coletas.estufa = dia(); progressoMissao('horta'); E.inv.racao += 2; E.inv.agua += 1; somItem(); aviso('🌱 Colheu a horta: 🥫 🥫 💧', 'bom'); break;
@@ -2789,7 +2814,7 @@ function simularColossos(dt, correndo) {
     if (c.ataque && dH < 12) ataqueAoAbrigo(c);
     alertaMax = Math.max(alertaMax, c.alerta);
     // lá fora: a luz do holofote procura você
-    if (jog.fora && !c.fugindo) { const fx = Math.sin(c.rot), fz = Math.cos(c.rot), mx = c.x + fx * 24, mz = c.z + fz * 24, dentroEscudo = (temEscudo() && Math.hypot(jog.x - SX, jog.z - (SZ - 5)) < raioEscudo()) || (E.bunker2 >= 2 && naBase2()), naLuz = !dentroEscudo && Math.hypot(jog.x - mx, jog.z - mz) < 8, ouviuVoz = voz > 0 && dP < 65, ouviu = !dentroEscudo && ((correndo && dP < 30) || ouviuVoz);
+    if (jog.fora && !c.fugindo) { const fx = Math.sin(c.rot), fz = Math.cos(c.rot), mx = c.x + fx * 24, mz = c.z + fz * 24, dentroEscudo = (temEscudo() && Math.hypot(jog.x - SX, jog.z - (SZ - 5)) < raioEscudo()) || (E.bunker2 >= 2 && naBase2()) || naCampo9(), naLuz = !dentroEscudo && Math.hypot(jog.x - mx, jog.z - mz) < 8, ouviuVoz = voz > 0 && dP < 65, ouviu = !dentroEscudo && ((correndo && dP < 30) || ouviuVoz);
       if (ouviuVoz && !dentroEscudo) { c.viu = Math.min(100, c.viu + voz * 22 * (1 - dP / 65) * dt); if (voz > 1.5) aviso('O COLOSSO OUVIU A SUA VOZ! FIQUE QUIETO!', 'ruim', 1.5); }
       if (naLuz || ouviu) c.viu = Math.min(100, c.viu + (naLuz ? 70 : 25) * dt); else c.viu = Math.max(0, c.viu - 30 * dt);
       if (naLuz && c.viu > 30) aviso('A LUZ DO COLOSSO ESTÁ EM VOCÊ! CORRA!', 'ruim', 1);
@@ -2893,6 +2918,21 @@ const CAMS_SEG = (() => { const posto = MARCOS.find(m => m.lugar === 'posto'), m
     const cab = add(new THREE.BoxGeometry(0.3, 0.25, 0.55), M.branco, 0, c.position.y, 0, g, true); cab.quaternion.copy(c.quaternion); add(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2010, toneMapped: false }), 0, c.position.y + 0.18, 0, g); });
   return [c1, c2, c3, c4]; })();
 let segT = 0;
+const naCampo9 = () => jog.fora && E.bunker2 >= 2 && E.gerador9 !== false && E.campo9 !== false && Math.hypot(jog.x - B2.cx9, jog.z - B2.cz9) < B2.R9;
+const CAMS9 = (() => { const M_ = l => MARCOS.find(m => m.lugar === l), hosp = M_('hospital'), torre = M_('torre'), merc = M_('mercado'), posto = M_('posto');
+  const mk = (x, y, z, lx, ly, lz, nome, poste = true) => { const c = new THREE.PerspectiveCamera(60, 1.6, 0.3, 700); c.position.set(x, y, z); c.lookAt(lx, ly, lz); c.userData.nome = nome;
+    if (poste) { const g = new THREE.Group(); g.position.set(x, 0, z); sup.add(g); add(new THREE.CylinderGeometry(0.08, 0.1, y, 8).translate(0, y / 2, 0), M.metalEsc, 0, 0, 0, g, true); const cab = add(new THREE.BoxGeometry(0.3, 0.25, 0.55), M.branco, 0, y, 0, g, true); cab.quaternion.copy(c.quaternion); add(new THREE.SphereGeometry(0.05, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffc94a, toneMapped: false }), 0, y + 0.18, 0, g); } return c; };
+  const [fx, fz] = B2.mundo(9, 18), [tx, tz] = B2.mundo(0, -2);
+  return [mk(fx, 8, fz, tx, 2, tz, 'BUNKER 9'), mk(SX - 10, 8, SZ + 18, SX, 1.5, SZ, 'ABRIGO 7'), mk(merc.x + 10, 8, merc.z - 14, merc.x, 2, merc.z, 'MERCADO'), mk(hosp.x - 12, 8, hosp.z + 10, hosp.x, 2, hosp.z, 'HOSPITAL'),
+    mk(torre.x + 14, 10, torre.z + 10, torre.x, 12, torre.z, 'TORRE DE RÁDIO'), mk(posto.x - 12, 7, posto.z - 12, posto.x, 2, posto.z, 'POSTO'), mk(B2.x, 30, B2.z, B2.x + 10, 15, B2.z + 10, 'GIGANTE MAIS PERTO', false)]; })();
+const RT9 = CAMS9.map(() => new THREE.WebGLRenderTarget(minimo ? 176 : 320, minimo ? 110 : 200, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }));
+const ROT9 = CAMS9.map(c => { const cv = document.createElement('canvas'); cv.width = 320; cv.height = 200; const g = cv.getContext('2d'); g.font = '600 20px IBM Plex Mono, monospace'; g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(8, 8, g.measureText(c.userData.nome).width + 16, 30); g.fillStyle = '#e8f4ff'; g.fillText(c.userData.nome, 16, 30); g.fillStyle = '#ff3a2a'; g.beginPath(); g.arc(290, 22, 7, 0, 7); g.fill(); const t = new THREE.CanvasTexture(cv); return t; });
+B9.telasVivas.forEach((m, k) => { if (!RT9[k]) return; m.material = new THREE.MeshBasicMaterial({ map: RT9[k].texture, color: 0xc4d8ff, toneMapped: false }); const rot = new THREE.Mesh(m.geometry, new THREE.MeshBasicMaterial({ map: ROT9[k], transparent: true, toneMapped: false, depthWrite: false })); rot.position.z = 0.005; m.add(rot); });
+let seg9T = 0, seg9I = 0;
+function filmarB9(dt) { seg9T -= dt; const dentro = !jog.fora && jogando && jog.x > 54 && jog.x < 67 && jog.z > -14.5 && jog.z < -2.5 && E.gerador9 !== false && E.bunker2 >= 2; if (!dentro || seg9T > 0) return;
+  seg9T = minimo ? 1 / 2 : fraco ? 1 / 3 : eco ? 1 / 8 : 1 / 24; const k = seg9I++ % CAMS9.length, cam = CAMS9[k];
+  if (k === CAMS9.length - 1) { let alvo = null, md = 1e9; COLOSSOS.forEach(c => { if (c.ativo === false) return; const d = Math.hypot(c.x - B2.x, c.z - B2.z); if (d < md) { md = d; alvo = c; } }); if (alvo) { cam.position.set(alvo.x + 40, 28, alvo.z + 40); cam.lookAt(alvo.x, 18, alvo.z); } }
+  filmarSup(cam, RT9[k]); }
 // celular fraco: telas com imagem menor (gasta pouca memória)
 if (minimo) { janelaRT.setSize(256, 160); SEG.telas.forEach(t => t.rt.setSize(176, 110)); }
 function filmarSeguranca(dt) { const dentro = !jog.fora && jogando && jog.x < -3.2 && jog.z < -23.5; segT -= dt;
@@ -2917,7 +2957,7 @@ function atualizarVisual(dt, perto) {
   portaE.position.x = lerp(portaE.position.x, -0.71 - portaAbre * 1.4, Math.min(1, dt * 4)); portaD.position.x = lerp(portaD.position.x, 0.71 + portaAbre * 1.4, Math.min(1, dt * 4)); { const u = portaSaida.userData; u.volante.rotation.z = lerp(u.volante.rotation.z, portaAbre * Math.PI * 2, Math.min(1, dt * 3)); u.giroflex.rotation.y += dt * (portaAbre > 0.05 ? 8 : 0); u.luzGiro.intensity = portaAbre > 0.05 ? 3 : 0; u.luzPressao.material.color.setHex(portaAbre > 0.05 ? (Math.sin(performance.now() / 120) > 0 ? 0xff3020 : 0x300000) : 0x40ff60); }
   luzSaida.intensity = 0.7 + Math.sin(t * 2.5) * 0.3;
   janelaT -= dt; if (janelaT <= 0) { janelaT = minimo ? 1 / 3 : fraco ? 1 / 4 : eco ? 1 / 10 : 1 / 24; seguro('janela', filmarJanela); }
-  seguro('cameras', () => filmarSeguranca(dt));
+  seguro('cameras', () => filmarSeguranca(dt)); seguro('cameras9', () => filmarB9(dt));
   MARCOS.forEach(m => { const livre = m.lugar === 'torre' ? !E.sinal : E.coletas[m.lugar] !== dia(); m.feixe.visible = livre && Math.hypot(jog.x - m.x, jog.z - m.z) > 22; m.feixe.material.opacity = 0.18 + Math.sin(t * 2 + m.x) * 0.06; });
   torreLuz.material.emissiveIntensity = Math.sin(t * 3) > 0 ? 4 : 0.3;
   const bus = $('bussola'); bus.hidden = !(jog.fora && jogando); if (jog.fora && jogando) { const dx = HATCH.x - jog.x, dz = HATCH.z - jog.z, dist = Math.hypot(dx, dz); let rel = Math.atan2(dx, dz) - (jog.yaw + Math.PI); rel = Math.atan2(Math.sin(rel), Math.cos(rel));
@@ -2927,7 +2967,7 @@ function atualizarVisual(dt, perto) {
     const vis = visualAbrigo(NV('casco')); M.neon.color.setHex(E.gerador ? vis.neon : 0x5a0a08); irisOrbe.position.y = 1.35 + Math.sin(t * 1.6) * 0.06; irisAneis[0].rotation.set(t * 0.9, t * 0.6, 0); irisAneis[1].rotation.set(-t * 0.5, 0, t * 0.8); irisBrilho.material.opacity = 0.6 + Math.sin(t * (falando ? 14 : 2)) * 0.25;
     droneMesh.visible = !E.drone; { const cOn = E.campo !== false, aOn = E.armas !== false; if (telaCampo.material.map !== (cOn ? tCampoOn : tCampoOff)) { telaCampo.material.map = cOn ? tCampoOn : tCampoOff; telaCampo.material.needsUpdate = true; } if (telaArmas.material.map !== (aOn ? tArmasOn : tArmasOff)) { telaArmas.material.map = aOn ? tArmasOn : tArmasOff; telaArmas.material.needsUpdate = true; }
       botaoCampo.material.emissive.setHex(cOn ? 0x3ccfff : 0x501010); botaoArmas.material.emissive.setHex(aOn ? 0xffb630 : 0x501010); botaoCampo.position.y = cOn ? 1.1 : 1.07; botaoArmas.position.y = aOn ? 1.1 : 1.07; }
-    const ligado = E.gerador && apagaoT <= 0; botaoSil.material.emissive.setHex(E.silenciador ? 0x33ff33 : 0xff2010); botaoSil.position.z = E.silenciador ? 0.08 : 0.12; LUZES.forEach((L, i) => { const pisc = flicker > 0 && Math.sin(t * 40 + i * 7) > 0.2 - flicker ? 0.15 : 1; L.l.intensity = ligado ? L.base * pisc * vis.mult * (vis.ferr && Math.sin(t * 23 + i * 5) > 0.97 ? 0.3 : 1) : 0; if (L.cone) L.cone.visible = L.l.intensity > 0.35; L.lamp.material = ligado && pisc > 0.5 ? M.luz : M.metalEsc; });
+    const ligado = E.gerador && apagaoT <= 0; botaoSil.material.emissive.setHex(E.silenciador ? 0x33ff33 : 0xff2010); botaoSil.position.z = E.silenciador ? 0.08 : 0.12; const lig9 = E.gerador9 !== false && E.bunker2 >= 2 && apagaoT <= 0; LUZES.forEach((L, i) => { const pisc = flicker > 0 && Math.sin(t * 40 + i * 7) > 0.2 - flicker ? 0.15 : 1, lig = L.nome === 'b9' ? lig9 : ligado; L.l.intensity = lig ? L.base * pisc * vis.mult * (vis.ferr && Math.sin(t * 23 + i * 5) > 0.97 ? 0.3 : 1) : 0; if (L.cone) L.cone.visible = L.l.intensity > 0.35; L.lamp.material = lig && pisc > 0.5 ? M.luz : M.metalEsc; });
     emerg.forEach((l, i) => { l.intensity = ligado ? 0 : 0.9 + Math.sin(t * 3 + i) * 0.3; });
     M.luzVerm.emissiveIntensity = ligado ? 0.4 : 1.5 + Math.sin(t * 3) * 0.5;
     pistoes.forEach((p, i) => { p.position.y = 1.75 + (ligado ? Math.sin(t * 18 + i * 2.1) * 0.08 : 0); }); ledGer.material.emissive.setHex(ligado ? 0x33ff33 : 0xff2010); atualizarSalas(t, ligado, horaDec(), E.min);
@@ -3115,7 +3155,7 @@ function mudarGerador(ligar) { if (E.gerador !== !!ligar) usar({ id: 'gerador' }
 
 // ---- mapa ----
 const SALAS = [['sala de segurança', -6.5, -27.5, [-9, -4, -31, -24]], ['dormitório', -5.5, -6.5, [-9, -2, -10, -3]], ['cozinha', 5.5, -6.5, [2, 9, -10, -3]], ['sala de máquinas', -5.5, -17, [-9, -2, -21, -13]], ['sala de controle', 5.5, -17, [2, 9, -21, -13]],
-  ['eclusa e porta de saída', 0, -28, [-3, 3, -31, -24]], ['estufa', 17, -6.5, [13, 21, -10, -3]], ['arsenal', 17, -17, [13, 21, -21, -13]], ['núcleo da ÍRIS', 12, -27.5, [7, 17, -31, -24]], ['sala do reator', 29, -17, [21, 35, -23, -11]], ['sala de estar', 29, -6, [21, 35, -10, -1]], ['oficina azul', 29, -28, [17, 35, -32, -24]], ['túnel do armazém do Bunker 9', 47, -17, [35, 51, -32, -2]], ['sala de câmeras do Bunker 9', 60, -8, [51, 66, -14, -3]], ['escada do Bunker 9 (sobe para a sala de armas)', 58, -26, [51, 62, -32, -21]]];
+  ['eclusa e porta de saída', 0, -28, [-3, 3, -31, -24]], ['estufa', 17, -6.5, [13, 21, -10, -3]], ['arsenal', 17, -17, [13, 21, -21, -13]], ['núcleo da ÍRIS', 12, -27.5, [7, 17, -31, -24]], ['sala do reator', 29, -17, [21, 35, -23, -11]], ['sala de estar', 29, -6, [21, 35, -10, -1]], ['oficina azul', 29, -28, [17, 35, -32, -24]], ['gerador do Bunker 9', 39, -22, [36, 42, -30, -14]], ['túnel do armazém do Bunker 9', 47, -17, [42, 51, -32, -2]], ['sala de câmeras do Bunker 9', 60, -8, [51, 66, -14, -3]], ['escada do Bunker 9 (sobe para a sala de armas)', 58, -26, [51, 62, -32, -21]]];
 function salaDe(x, z) { if (jog.fora) return 'lá fora na superfície'; const s = SALAS.find(([, , , [x0, x1, z0, z1]]) => x >= x0 && x <= x1 && z >= z0 && z <= z1); return s ? s[0] : 'no corredor'; }
 function direcao(dx, dz) { let rel = Math.atan2(dx, dz) - (jog.yaw + Math.PI); rel = Math.atan2(Math.sin(rel), Math.cos(rel)); const d = Math.round(Math.hypot(dx, dz));
   return (Math.abs(rel) < 0.6 ? 'em frente' : rel < -0.6 && rel > -2.4 ? 'à sua direita' : rel > 0.6 && rel < 2.4 ? 'à sua esquerda' : 'atrás de você') + `, a ${d} metros`; }
@@ -3199,7 +3239,7 @@ function cerebroLocal(txt) { const s = ' ' + semAcento(txt).replace(/[^a-z0-9 ]/
 
 // ---- cérebro de verdade (IA do Claude, no link) ----
 const INSTRUCOES = 'Você é a ÍRIS, a inteligência artificial do Abrigo 7, um bunker futurista e superprotegido num jogo de sobrevivência. Você conversa com uma criança que está jogando. Você é muito esperta, prestativa e toma iniciativa: resolva o problema da criança usando as ferramentas, sem pedir confirmação, e depois diga o que fez e qual é o próximo passo. ' +
-  'O abrigo tem: dormitório, cozinha, sala de máquinas (gerador e filtro), sala de controle (radar e rádio), eclusa com a porta de SAÍDA, e na ala leste: estufa (horta que dá comida), arsenal (canhão de plasma para atirar nos gigantes), núcleo da ÍRIS, a SALA DO REATOR (o reator nuclear que é o gerador principal, depois do arsenal) e a SALA DE ESTAR com jardim de plantas atrás do vidro e um sofá para relaxar (+15 de vida por dia, depois da estufa). Pelo túnel vermelho do núcleo se chega à OFICINA AZUL, onde a bancada conserta o casco (+15 por dia). Os corredores têm luz vermelha e tubos de luz laranja. Lá fora, perto do mercado, existe o BUNKER 9 (missão especial: descobrir e ativar com 2 peças); lá vive a JARVIS, outra IA, sua amiga. Por fora é uma casa de concreto com placas solares; por dentro tem um TÚNEL GIGANTE cheio de comida (armazém), uma sala de câmeras cheia de monitores e uma escada que sobe para a SALA DE ARMAS no telhado, com torretas. Depois de ativado, um corredor liga a sala do REATOR do Abrigo 7 ao túnel do Bunker 9. Lá fora: posto, mercado, hospital, torre de rádio, escudo de energia, placas solares (energia infinita), 2 lasers e 4 lançadores de mísseis automáticos. Para direções use ver_mapa. Para fome, sede, radiação, filtro ou rachaduras use usar_recurso. ' +
+  'O abrigo tem: dormitório, cozinha, sala de máquinas (gerador e filtro), sala de controle (radar e rádio), eclusa com a porta de SAÍDA, e na ala leste: estufa (horta que dá comida), arsenal (canhão de plasma para atirar nos gigantes), núcleo da ÍRIS, a SALA DO REATOR (o reator nuclear que é o gerador principal, depois do arsenal) e a SALA DE ESTAR com jardim de plantas atrás do vidro e um sofá para relaxar (+15 de vida por dia, depois da estufa). Pelo túnel vermelho do núcleo se chega à OFICINA AZUL, onde a bancada conserta o casco (+15 por dia). Os corredores têm luz vermelha e tubos de luz laranja. Lá fora, perto do mercado, existe o BUNKER 9 (missão especial: descobrir e ativar com 2 peças); lá vive a JARVIS, outra IA, sua amiga. Por fora é uma casa de concreto com placas solares; por dentro tem um TÚNEL GIGANTE cheio de comida (armazém), uma sala de câmeras cheia de monitores e uma escada que sobe para a SALA DE ARMAS no telhado, com torretas. O Bunker 9 tem o seu PRÓPRIO GERADOR (de plasma, numa sala ao lado do túnel), um CAMPO DE FORÇA em volta da casa (liga e desliga no console do gerador) e 7 câmeras ao vivo na sala de câmeras: Bunker 9, Abrigo 7, mercado, hospital, torre, posto e o gigante mais perto. Lá fora: posto, mercado, hospital, torre de rádio, escudo de energia, placas solares (energia infinita), 2 lasers e 4 lançadores de mísseis automáticos. Para direções use ver_mapa. Para fome, sede, radiação, filtro ou rachaduras use usar_recurso. ' +
   'Responda sempre em português do Brasil, com no máximo 3 frases curtas e simples, de um jeito carinhoso e animado, como uma amiga robô. Pode usar 1 ou 2 emojis. ' +
   'Quando a criança pedir um recurso (comida, água, remédio, filtro de ar, peças ou um pouco de tudo), use a ferramenta enviar_drone. Para saber como está o abrigo, use ver_abrigo; para os gigantes, use ver_gigantes. Nunca invente números. ' +
   'Na SALA DE COMANDO (dentro da sala de controle) tem botões para ligar e desligar o campo de força e as armas; você também pode fazer isso com campo_de_forca e armas_do_abrigo. ' +
@@ -3544,7 +3584,7 @@ function animarEsp(m, dt, t, vel, bote) { m.fase += dt * (1.2 + vel * 2.4); cons
 function gritoEsp(v = 1) { tom(1700, 380, 0.65, 'sawtooth', 0.05 * v); tom(2300, 900, 0.4, 'square', 0.02 * v, 0.05); chiado(0.6, 3200, 0.06 * v, 'bandpass'); }
 function novoEspreitador() { const e = montarEspreitador(sup); const L = lugarLonge(); const m = Object.assign(e, { tipo: 'esp', x: L.x, z: L.z, rot: Math.random() * 6, hp: 50, morto: 0, alvo: lugarLonge(), mordeT: 0, recuo: 0, caca: false, correndo: false }); MONSTROS.push(m); return m; }
 function atualizarEsp(m, dt, t, dJ, nt, fora, esc, rEsc) { m.mordeT -= dt; m.recuo = Math.max(0, m.recuo - dt);
-  const noEscudo = (esc && Math.hypot(jog.x - SX, jog.z - (SZ - 5)) < rEsc) || (E.bunker2 >= 2 && naBase2()); let vel = 1.4;
+  const noEscudo = (esc && Math.hypot(jog.x - SX, jog.z - (SZ - 5)) < rEsc) || (E.bunker2 >= 2 && naBase2()) || naCampo9(); let vel = 1.4;
   if (fora && !noEscudo && (dJ < (nt ? 48 : 30) || m.caca) && dJ < 90) { m.caca = true;
     if (m.recuo > 0) { m.tx = m.x + (m.x - jog.x); m.tz = m.z + (m.z - jog.z); vel = 6; }
     else { m.tx = jog.x; m.tz = jog.z; if (dJ > 15) vel = 2.2; else { vel = nt ? 8.2 : 7.2; if (!m.correndo) gritoEsp(clamp(1 - dJ / 30, 0.3, 1)); } } }
@@ -3594,7 +3634,7 @@ function atualizarMonstros(dt) { const t = performance.now() / 1000, nt = noite(
     // torres de laser do abrigo também acertam os monstros pequenos
     if (lasers && dBase < 34 && Math.random() < dt * 2) { ferirMonstro(m, 10); laserVis = 0.1; }
     if (m.tipo === 'rast') { const ve = (nt ? 52 : 34);
-      if (fora && (dJ < ve || m.caca) && dJ < 80 && !(esc && Math.hypot(jog.x - SX, jog.z - (SZ - 5)) < rEsc) && !(E.bunker2 >= 2 && naBase2())) { m.caca = true; m.tx = jog.x; m.tz = jog.z; } else { m.caca = false; if (Math.hypot(m.alvo.x - m.x, m.alvo.z - m.z) < 3) m.alvo = lugarLonge(); m.tx = m.alvo.x; m.tz = m.alvo.z; }
+      if (fora && (dJ < ve || m.caca) && dJ < 80 && !(esc && Math.hypot(jog.x - SX, jog.z - (SZ - 5)) < rEsc) && !(E.bunker2 >= 2 && naBase2()) && !naCampo9()) { m.caca = true; m.tx = jog.x; m.tz = jog.z; } else { m.caca = false; if (Math.hypot(m.alvo.x - m.x, m.alvo.z - m.z) < 3) m.alvo = lugarLonge(); m.tx = m.alvo.x; m.tz = m.alvo.z; }
       // o robô também é caçado
       const r = ROBO; if (r.estado !== 'morto' && r.estado !== 'base' && r.estado !== 'consertando') { const dR = Math.hypot(r.x - m.x, r.z - m.z); if (!m.caca && dR < 25) { m.tx = r.x; m.tz = r.z; } if (dR < 1.4) matarRobo('UM RASTEJADOR ATACOU O ROBÔ! O robô morreu.'); }
       const dx = m.tx - m.x, dz = m.tz - m.z, d = Math.hypot(dx, dz), vel = m.caca ? (nt ? 4 : 3.6) : 1.6;
@@ -3802,9 +3842,10 @@ let b2T = 0, b2Tiro = 0, b2Laser = 0, b2Portao = 0, b2Desc = false;
 function atualizarBase2(dt) { const t = performance.now() / 1000, d = Math.hypot(jog.x - B2.x, jog.z - B2.z), ativo = E.bunker2 >= 2;
   if (jog.fora && !E.bunker2 && d < 35) { E.bunker2 = 1; ganhar(50, 'descobriu o Bunker 9'); [0, 0.2, 0.4].forEach(k => tom(500 + k * 600, 900 + k * 600, 0.3, 'triangle', 0.06, k)); aviso('📡 VOCÊ DESCOBRIU UM BUNKER DESCONHECIDO: o BUNKER 9! Leve 2 🔩 e segure E no painel da porta para ativar. +50 🪙', 'bom', 7); desenharMissoes(); salvar(); }
   if (ativo && !b2Desc) { b2Desc = true; desenharMissoes(); }
-  // porta blindada do corredor (abrigo → Bunker 9), luzes, telas, núcleo da JARVIS
-  b2Portao = ativo ? Math.min(1, b2Portao + dt * 0.35) : 0; B9.portaB9.position.y = b2Portao * 3.1; B9.portaB9.visible = b2Portao < 0.98;
-  if (ativo && b2Portao > 0.5 && B9.bloqPorta.length) { B9.bloqPorta.forEach(b => { const i = OBST.indexOf(b); if (i >= 0) OBST.splice(i, 1); }); B9.bloqPorta.length = 0; }
+  // gerador próprio e campo de força do Bunker 9
+  const ger9 = ativo && E.gerador9 !== false; B9.animGer(t, ger9);
+  const campoOn = ger9 && E.campo9 !== false; B2.campo9.visible = campoOn && jog.fora; if (campoOn) { B2.grade9.rotation.y = t * 0.02; B2.grade9.material.opacity = 0.12 + Math.sin(t * 1.5) * 0.04;
+    MONSTROS.forEach(m => { if (m.morto > 0) return; const ex = m.x - B2.cx9, ez = m.z - B2.cz9, de = Math.hypot(ex, ez); if (de < B2.R9 + 1) { m.x = B2.cx9 + ex / de * (B2.R9 + 1); m.z = B2.cz9 + ez / de * (B2.R9 + 1); m.g.position.set(m.x, m.g.position.y, m.z); m.caca = false; } }); }
   const perto = jog.fora && d < 55; B2.luzes.forEach((l, i) => { l.intensity = ativo && perto ? [1.6, 1.4][i] : 0; });
   B2.telaPainel.material.emissive.setHex(ativo ? 0x40ff90 : (Math.sin(t * 4) > 0 ? 0xff3020 : 0x400806));
   B9.orbeJ.rotation.y = t * 0.8; B9.orbeJ.rotation.x = t * 0.5; B9.orbeJ.visible = B9.orbeJ2.visible = ativo; B9.aneisJ.forEach((a, k) => { a.visible = ativo; a.rotation.x = t * (0.6 + k * 0.5); a.rotation.y = t * (0.9 - k * 0.3); });
@@ -3813,7 +3854,7 @@ function atualizarBase2(dt) { const t = performance.now() / 1000, d = Math.hypot
   if ($('b-iris')) { const sp = $('b-iris').children[1], q = ativo && perto9() ? 'JARVIS' : 'ÍRIS'; if (sp && sp.textContent !== q) sp.textContent = q; }
   // torretas do telhado
   b2Laser -= dt; if (b2Laser <= 0) B2.laserB2.visible = false;
-  if (!ativo || (NET.modo && !NET.host)) return;
+  if (!ativo || E.gerador9 === false || (NET.modo && !NET.host)) return;
   let alvo = null, dAlvo = 1e9, ehGig = false; COLOSSOS.forEach(c => { if (c.ativo === false || c.fugindo) return; const dd = Math.hypot(c.x - B2.x, c.z - B2.z); if (dd < 75 && dd < dAlvo) { alvo = c; dAlvo = dd; ehGig = true; } });
   if (!alvo) MONSTROS.forEach(m => { if (m.morto > 0) return; const dd = Math.hypot(m.x - B2.x, m.z - B2.z); if (dd < 35 && dd < dAlvo) { alvo = m; dAlvo = dd; ehGig = false; } });
   if (!alvo) return; const [tx, tz] = [alvo.x, alvo.z], ty = ehGig ? 22 : (alvo.tipo === 'voa' ? alvo.y : 0.8);
@@ -3822,7 +3863,7 @@ function atualizarBase2(dt) { const t = performance.now() / 1000, d = Math.hypot
   const L = B2.laserB2; L.position.copy(de).add(para).multiplyScalar(0.5); L.scale.set(1, de.distanceTo(para), 1); L.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), para.clone().sub(de).normalize()); L.visible = true; b2Laser = 0.12;
   if (ehGig) ferir(alvo, 14 * (1 + 0.6 * nvAcima('torres'))); else ferirMonstro(alvo, 25);
   if (d < 90) tom(900, 300, 0.12, 'sawtooth', 0.04 * clamp(1 - d / 90, 0.2, 1)); }
-Object.assign(window.__abrigo, { B2, naBase2 });
+Object.assign(window.__abrigo, { B2, naBase2, B9, RT9, CAMS9 });
 
 })();
 </script>
