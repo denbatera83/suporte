@@ -277,7 +277,7 @@ body.pos #vinheta{display:none}
 
 <div class="tela" id="menu">
   <div class="m-fundo" aria-hidden="true"></div><div class="m-brasas" aria-hidden="true"></div>
-  <div class="m-topo"><span>VERSÃO 4.3 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
+  <div class="m-topo"><span>VERSÃO 4.4 · ABRIGO 7 · ANO 2097</span><span id="m-info"></span></div>
   <div class="m-col">
     <h1 class="logo"><span class="l1">Último Abrigo</span><span class="l3">Invasão alienígena</span></h1>
     <nav class="m-botoes" aria-label="Menu">
@@ -1825,7 +1825,7 @@ for (let k = 0; k < 4; k++) add(new THREE.SphereGeometry(0.04, 8, 6), LEDS_REA[k
 { const n = 16, topo = 3.6, z0 = -12.75, run = 5.6; for (let i = 0; i < n; i++) add(new THREE.BoxGeometry(1.05, 0.05, run / n + 0.02), gradeM, 34.2, topo - (i + 1) * topo / n, z0 - (i + 0.5) * run / n, abrigo);
   const ang = Math.atan2(topo, run), L = Math.hypot(topo, run); for (const x of [33.65, 34.75]) { const s = add(new THREE.BoxGeometry(0.05, 0.22, L), M.metalEsc, x, topo / 2, z0 - run / 2, abrigo); s.rotation.x = -ang; const c = add(new THREE.CylinderGeometry(0.03, 0.03, L, 6).rotateX(Math.PI / 2), M.metal, x === 33.65 ? 33.62 : 34.8, topo / 2 + 0.95, z0 - run / 2, abrigo); c.rotation.x = -ang; } }
 // dá para SUBIR a escada e andar na passarela: altura do chão em cada ponto
-function chaoEm(x, z, yAtual) { if (x > 54 && x < 62.2 && z < -21 && z > -32) { if (x > 60.3 && z < -24.4) return clamp(4.2 * (z + 30.8) / 6.4, 0, 4.2); if (yAtual > 3 && z > -24.6) return 4.2; if (x > 60.3) return 4.2; return 0; } if (x > 33.62 && x < 34.78 && z > -18.6 && z < -11) return clamp(3.6 * (z + 18.35) / 5.6, 0, 3.6); if (yAtual > 2.5 && x > 23 && x < 35 && z > -12.45 && z < -11) return 3.6; return 0; }
+function chaoEm(x, z, yAtual) { if (x > 54 && x < 62.2 && z < -21 && z > -32) { if (x > 59.6 && z < -24.4) return clamp(4.2 * (z + 30.8) / 6.4, 0, 4.2); if (z > -24.6) return 4.2; return 0; } if (x > 33.62 && x < 34.78 && z > -18.6 && z < -11) return clamp(3.6 * (z + 18.35) / 5.6, 0, 3.6); if (yAtual > 2.5 && x > 23 && x < 35 && z > -12.45 && z < -11) return 3.6; return 0; }
 const OBST_ALTO = [[25.6, -11.35, 0.4], [26.2, -11.35, 0.4], [26.8, -11.35, 0.4], [30.6, -11.35, 0.4], [31, -11.35, 0.4], [31.4, -11.35, 0.4]];
 // lâmpadas penduradas e cabos caindo do teto
 const pendente = (x, z) => { add(new THREE.CylinderGeometry(0.012, 0.012, 1.8, 4), M.metalEsc, x, 6.1, z, abrigo); add(new THREE.ConeGeometry(0.42, 0.3, 18, 1, true), std({ color: 0x5a6058, roughness: 0.5, metalness: 0.7, side: THREE.DoubleSide }), x, 5.1, z, abrigo); return add(new THREE.SphereGeometry(0.13, 12, 8), M.luz, x, 4.95, z, abrigo); };
@@ -2038,18 +2038,18 @@ const B9 = (() => { const concB = std({ map: tConcreto, color: 0xcacdd0, roughne
     const tag = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.3, 0.12), std({ color: 0x0a1a2a, emissive: 0x4ab8ff, emissiveIntensity: 1.6 }), caixasB.length); caixasB.forEach(([x, y, z], i) => { m4.makeRotationY(x < 47 ? Math.PI / 2 : -Math.PI / 2); m4.setPosition(x + (x < 47 ? 0.46 : -0.46), y + 0.3, z); tag.setMatrixAt(i, m4); }); abrigo.add(tag); }
   // tanques de gás, geradores verdes e carrinhos
   const tanqueM = std({ color: 0x6e7a84, roughness: 0.4, metalness: 0.6 }), tanqueAz = std({ color: 0x1e2c48, roughness: 0.35, metalness: 0.6 });
-  for (const [x, z, r, h, m] of [[49.4, -27, 0.55, 2.4, tanqueM], [49.6, -28.6, 0.5, 2.2, tanqueM], [48.6, -30.4, 0.38, 1.6, tanqueAz], [49.6, -31, 0.38, 1.6, tanqueAz], [48.4, -26.2, 0.32, 1.4, tanqueM]]) {
+  for (const [x, z, r, h, m] of [[50.0, -29.6, 0.5, 2.4, tanqueM], [50.1, -31.0, 0.45, 2.2, tanqueM], [49.0, -31.2, 0.38, 1.6, tanqueAz], [50.2, -4.4, 0.34, 1.6, tanqueAz]]) {
     add(new THREE.CylinderGeometry(r, r, h, 16), m, x, h / 2, z, abrigo, true); add(new THREE.SphereGeometry(r, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), m, x, h, z, abrigo); add(new THREE.CylinderGeometry(0.05, 0.05, 0.3, 8), M.metal, x, h + r, z, abrigo); OBST2.push([x, z, r + 0.15]); }
   const verdeG = std({ color: 0x3e5a44, roughness: 0.6, metalness: 0.4 });
   for (const [x, z] of [[44.1, -21.8], [44.1, -22.9]]) { }
   for (const [x, z] of [[44.3, -3.6], [49.7, -3.6]]) { add(new THREE.BoxGeometry(1.1, 1.5, 1.0), verdeG, x, 0.75, z, abrigo, true); add(new THREE.PlaneGeometry(0.5, 0.3), M.tela, x, 1.15, z - 0.51, abrigo).rotation.y = Math.PI; OBST2.push([x, z, 0.75]); }
-  for (const [x, z, a] of [[46, -14, 0.2], [48.3, -23.6, -0.4]]) { const c = grupo(x, 0, z, a); add(new THREE.BoxGeometry(0.9, 0.5, 1.3), prat, 0, 0.45, 0, c, true); add(new THREE.CylinderGeometry(0.22, 0.22, 0.5, 12), std({ color: 0xe8b018, roughness: 0.5 }), 0, 0.95, -0.3, c); add(new THREE.CylinderGeometry(0.22, 0.22, 0.5, 12), tanqueAz, 0, 0.95, 0.3, c);
+  for (const [x, z, a] of [[46, -14, 0.2], [48.3, -21.0, -0.4]]) { const c = grupo(x, 0, z, a); add(new THREE.BoxGeometry(0.9, 0.5, 1.3), prat, 0, 0.45, 0, c, true); add(new THREE.CylinderGeometry(0.22, 0.22, 0.5, 12), std({ color: 0xe8b018, roughness: 0.5 }), 0, 0.95, -0.3, c); add(new THREE.CylinderGeometry(0.22, 0.22, 0.5, 12), tanqueAz, 0, 0.95, 0.3, c);
     for (const [wx, wz] of [[-0.45, -0.5], [0.45, -0.5], [-0.45, 0.5], [0.45, 0.5]]) add(new THREE.CylinderGeometry(0.14, 0.14, 0.1, 10).rotateZ(Math.PI / 2), M.metalEsc, wx, 0.14, wz, c); OBST2.push([x, z, 0.8]); }
   // armazém: dá comida todo dia
   const terminalArm = grupo(43.9, 0, -13.2, Math.PI / 2); add(new THREE.BoxGeometry(0.9, 1.4, 0.5), prat, 0, 0.7, 0, terminalArm, true); add(new THREE.PlaneGeometry(0.7, 0.45), std({ color: 0x000000, emissive: 0x6ad0ff, emissiveIntensity: 1.4 }), 0, 1.1, 0.26, terminalArm);
   usavel(terminalArm, { id: 'armazem', txt: 'Pegar suprimentos do armazém', segurar: 1.5 });
   // porta de saída (sobe para a casa do Bunker 9) e o núcleo da JARVIS
-  const portaSai = grupo(47, 0, -2.15); { const t = tex(256, 128, (g, w, h) => { g.fillStyle = '#2a3036'; g.fillRect(0, 0, w, h); g.fillStyle = '#7fe8ff'; g.font = '700 40px Oswald, Arial'; g.textAlign = 'center'; g.fillText('▲ SUPERFÍCIE', w / 2, 56); g.font = '600 24px Oswald, Arial'; g.fillStyle = '#ffc94a'; g.fillText('CASA DO BUNKER 9', w / 2, 96); });
+  const portaSai = grupo(47, 0, -2.15, Math.PI); { const t = tex(256, 128, (g, w, h) => { g.fillStyle = '#2a3036'; g.fillRect(0, 0, w, h); g.fillStyle = '#7fe8ff'; g.font = '700 40px Oswald, Arial'; g.textAlign = 'center'; g.fillText('▲ SUPERFÍCIE', w / 2, 56); g.font = '600 24px Oswald, Arial'; g.fillStyle = '#ffc94a'; g.fillText('CASA DO BUNKER 9', w / 2, 96); });
     add(new THREE.BoxGeometry(2.6, 3.2, 0.2), std({ color: 0x2c3238, roughness: 0.4, metalness: 0.7 }), 0, 1.6, 0, portaSai, true); add(new THREE.PlaneGeometry(1.6, 0.8), std({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.8 }), 0, 3.8, 0.11, portaSai);
     add(new THREE.BoxGeometry(2.8, 0.06, 0.06), ledAz, 0, 3.25, 0.12, portaSai); }
   usavel(portaSai, { id: 'sair9', txt: 'Subir para a casa do Bunker 9', segurar: 1 });
@@ -2090,13 +2090,17 @@ const B9 = (() => { const concB = std({ map: tConcreto, color: 0xcacdd0, roughne
   paredeP(54.02, -23.5, Math.PI / 2, 5, 7, 0, concB); paredeP(54.02, -30, Math.PI / 2, 4, 7, 0, concB); paredeP(54.02, -27, Math.PI / 2, 2, 4, 3, concB, 1, 2);
   chao(58, -26.5, 8, 11, concEsc); { const t = paredeP(58, -26.5, 0, 8, 11, 0, concEsc); t.rotation.set(Math.PI / 2, 0, 0); t.position.y = 6.98; }
   const grade = std({ map: tGrade, color: 0x8a9096, roughness: 0.5, metalness: 0.7 });
-  { const n = 16, topo = 4.2, run = 6.4, z0 = -30.8; for (let i = 0; i < n; i++) add(new THREE.BoxGeometry(1.25, 0.06, run / n + 0.02), grade, 60.95, (i + 1) * topo / n, z0 + (i + 0.5) * run / n, abrigo);
-    const ang = Math.atan2(topo, run), Lr = Math.hypot(topo, run); for (const x of [60.3, 61.6]) { const s = add(new THREE.BoxGeometry(0.06, 0.25, Lr), M.metalEsc, x, topo / 2, z0 + run / 2, abrigo); s.rotation.x = -ang; }
-    const c = add(new THREE.CylinderGeometry(0.03, 0.03, Lr, 6).rotateX(Math.PI / 2), amarelo, 60.25, topo / 2 + 0.95, z0 + run / 2, abrigo); c.rotation.x = -ang; }
-  add(new THREE.BoxGeometry(8, 0.15, 3.5), grade, 58, 4.13, -22.85, abrigo, true); for (let x = 54.4; x < 60.3; x += 0.9) add(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 6), amarelo, x, 4.7, -24.55, abrigo); add(new THREE.CylinderGeometry(0.035, 0.035, 6, 6).rotateZ(Math.PI / 2), amarelo, 57.3, 5.2, -24.55, abrigo);
-  for (const x of [55, 59.5]) add(new THREE.BoxGeometry(0.25, 4.1, 0.25), M.metalEsc, x, 2.05, -24.5, abrigo, true);
-  const portaTeto = grupo(58.5, 4.2, -21.15); { const t = tex(256, 128, (g, w, h) => { g.fillStyle = '#3a2a10'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffb630'; g.font = '700 38px Oswald, Arial'; g.textAlign = 'center'; g.fillText('▲ TELHADO', w / 2, 54); g.font = '600 24px Oswald, Arial'; g.fillText('SALA DE ARMAS', w / 2, 94); });
-    add(new THREE.BoxGeometry(1.8, 2.5, 0.15), std({ color: 0x4a3c22, roughness: 0.5, metalness: 0.6 }), 0, 1.25, 0, portaTeto, true); add(new THREE.PlaneGeometry(1.4, 0.7), std({ map: t, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.8 }), 0, 2.95, 0.09, portaTeto); }
+  { const n = 16, topo = 4.2, run = 6.4, z0 = -30.8; for (let i = 0; i < n; i++) add(new THREE.BoxGeometry(1.95, 0.06, run / n + 0.02), grade, 60.65, (i + 1) * topo / n, z0 + (i + 0.5) * run / n, abrigo);
+    const ang = Math.atan2(topo, run), Lr = Math.hypot(topo, run); for (const x of [59.65, 61.65]) { const s = add(new THREE.BoxGeometry(0.06, 0.25, Lr), M.metalEsc, x, topo / 2, z0 + run / 2, abrigo); s.rotation.x = -ang; }
+    for (let i = 0; i < n; i += 2) add(new THREE.BoxGeometry(1.8, 0.02, 0.05), std({ color: 0x0a2a4a, emissive: 0x2a9cff, emissiveIntensity: 2.4 }), 60.65, (i + 1) * topo / n + 0.04, z0 + (i + 1) * run / n - 0.05, abrigo);
+    const c = add(new THREE.CylinderGeometry(0.03, 0.03, Lr, 6).rotateX(Math.PI / 2), amarelo, 59.6, topo / 2 + 0.95, z0 + run / 2, abrigo); c.rotation.x = -ang; }
+  add(new THREE.BoxGeometry(8, 0.15, 3.5), grade, 58, 4.13, -22.85, abrigo, true); for (let x = 54.4; x < 59.6; x += 0.9) add(new THREE.CylinderGeometry(0.03, 0.03, 1.0, 6), amarelo, x, 4.7, -24.55, abrigo); add(new THREE.CylinderGeometry(0.035, 0.035, 5.4, 6).rotateZ(Math.PI / 2), amarelo, 56.9, 5.2, -24.55, abrigo);
+  add(new THREE.BoxGeometry(5.6, 4.05, 0.25), concB, 56.8, 2.02, -24.6, abrigo, true); placaParede('▲ SUBA A ESCADA ▲', 56.8, 2.2, -24.46, 0, '#ffb630', 2.2);
+  
+  const portaTeto = grupo(58.5, 4.2, -21.15, Math.PI); { const t = tex(256, 128, (g, w, h) => { g.fillStyle = '#3a2a10'; g.fillRect(0, 0, w, h); g.fillStyle = '#ffb630'; g.font = '700 38px Oswald, Arial'; g.textAlign = 'center'; g.fillText('▲ TELHADO', w / 2, 54); g.font = '600 24px Oswald, Arial'; g.fillText('SALA DE ARMAS', w / 2, 94); });
+    add(new THREE.BoxGeometry(1.8, 2.5, 0.15), std({ color: 0x4a3c22, roughness: 0.5, metalness: 0.6 }), 0, 1.25, 0, portaTeto, true); add(new THREE.PlaneGeometry(1.5, 0.75), new THREE.MeshBasicMaterial({ map: t, toneMapped: false }), 0, 1.55, 0.09, portaTeto);
+    for (const [w, h, x, y] of [[2.0, 0.06, 0, 2.55], [0.06, 2.55, -0.98, 1.27], [0.06, 2.55, 0.98, 1.27]]) add(new THREE.BoxGeometry(w, h, 0.05), new THREE.MeshBasicMaterial({ color: 0xffb630, toneMapped: false }), x, y, 0.1, portaTeto);
+    const lz = new THREE.PointLight(0xffb630, 0.8, 5, 2); lz.position.set(0, 2, 0.8); portaTeto.add(lz); }
   usavel(portaTeto, { id: 'telhado9', txt: 'Subir para o telhado (sala de armas)', segurar: 1 });
   placaParede('🔫 ESCADA · TELHADO ▶', 50.98, 2.6, -29.4, -Math.PI / 2, '#ffb630', 1.2);
   const luzEsc = new THREE.PointLight(0xffe2b8, 1, 12, 1.3); luzEsc.position.set(58, 6, -27); abrigo.add(luzEsc); LUZES.push({ l: luzEsc, lamp: add(new THREE.BoxGeometry(1, 0.05, 0.3), M.luz, 58, 6.95, -27, abrigo), nome: 'b9', base: 1.4, pisca: 0 });
