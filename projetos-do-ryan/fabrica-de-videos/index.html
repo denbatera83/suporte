@@ -46,6 +46,16 @@
   .cena b { display: block; font: 700 13px var(--display); color: var(--claquete); margin-bottom: 3px; letter-spacing: .5px; }
   .cena .emo { font-size: 22px; line-height: 1.2; color: var(--texto); }
   .nota { font-size: 13px; color: var(--suave); }
+  .coluna { display: grid; gap: 18px; min-width: 0; align-content: start; }
+  .chat-log { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; padding-right: 4px; }
+  .msg { padding: 9px 12px; border-radius: 12px; font-size: 14px; line-height: 1.45; max-width: 92%; overflow-wrap: anywhere; }
+  .msg.ia { background: var(--painel2); border: 1px solid var(--linha); align-self: flex-start; border-bottom-left-radius: 4px; }
+  .msg.eu { background: var(--claquete); color: var(--claquete-esc); align-self: flex-end; border-bottom-right-radius: 4px; font-weight: 500; }
+  .msg.pensando { color: var(--suave); font-style: italic; }
+  .chat-form { display: flex; gap: 8px; }
+  .chat-form input { flex: 1; min-width: 0; background: var(--painel2); color: var(--texto); border: 1px solid var(--linha); border-radius: 10px; padding: 10px 12px; font: 15px var(--corpo); }
+  .chat-form input:focus { outline: 2px solid var(--claquete); outline-offset: 2px; }
+  .chat-form .bt { padding: 10px 14px; background: var(--claquete); color: var(--claquete-esc); }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
 </style>
 
@@ -56,8 +66,9 @@
   </header>
 
   <div class="grade">
+    <div class="coluna">
     <form class="caixa" id="form" autocomplete="off">
-      <label class="rot" for="pedido">Quero um vídeo de…</label>
+      <label class="rot" for="pedido">Peça um vídeo ou faça uma pergunta</label>
       <textarea id="pedido" maxlength="400">um dinossauro que vira astronauta e viaja até a lua</textarea>
       <div class="ideias" aria-label="Ideias de vídeo">
         <button type="button" data-ideia="um gato que vira super-herói e salva a cidade">🐱 gato super-herói</button>
@@ -76,6 +87,15 @@
       <div class="estado" id="estado" role="status"></div>
       <p class="nota" id="nota-ia">No claude.ai a história é escrita pela inteligência do Claude. Fora dele, a fábrica monta uma história sozinha com as palavras do seu pedido.</p>
     </form>
+    <section class="caixa" aria-label="Conversar com a Fábrica">
+      <label class="rot" for="chat-in">🤖 Converse com a Fábrica</label>
+      <div class="chat-log" id="chat-log" aria-live="polite"></div>
+      <form class="chat-form" id="chat-form" autocomplete="off">
+        <input id="chat-in" maxlength="300" placeholder="Pergunte algo ou peça um conserto…">
+        <button class="bt" id="chat-enviar" type="submit" aria-label="Enviar">➤</button>
+      </form>
+    </section>
+    </div>
 
     <section class="caixa" aria-label="Vídeo">
       <div class="tela"><canvas id="cv" width="1280" height="720" aria-label="Vídeo animado"></canvas><span class="rec-sel" id="rec-sel" hidden>GRAVANDO</span></div>
@@ -214,16 +234,34 @@ const EXEMPLO = { titulo: 'O Dino Astronauta', musica: 'aventura', cenas: [
   { fundo: 'lua', personagens: [{ emoji: '🦖', acao: 'pular', x: 0.45 }, { emoji: '👽', acao: 'pular', x: 0.68 }], objetos: [{ emoji: '🚩', x: 0.25 }], efeito: 'estrelas', narracao: 'Juntos, eles pularam bem alto na lua, porque lá quase não tem gravidade.' },
   { fundo: 'festa', personagens: [{ emoji: '🦖', acao: 'dancar', x: 0.35 }, { emoji: '👽', acao: 'dancar', x: 0.65 }], efeito: 'confete', narracao: 'E no final, fizeram uma festa espacial. Fim!' } ] };
 
-const INSTRUCOES = `Você é roteirista de vídeos animados curtos para crianças. Crie um roteiro em português do Brasil para o pedido do usuário.
-Responda SOMENTE com JSON neste formato:
-{"titulo": string curto, "musica": "alegre"|"aventura"|"misterio"|"calma",
+const FORMATO = `{"titulo": string curto, "musica": "alegre"|"aventura"|"misterio"|"calma",
  "cenas": [{"fundo": um de [${Object.keys(FUNDOS).join(', ')}],
    "personagens": [{"emoji": UM emoji, "acao": um de [${ACOES.join(', ')}], "x": número de 0.1 a 0.9, "direcao": "direita"|"esquerda", "tamanho": 100 a 230}],
    "objetos": [{"emoji": UM emoji, "x": 0.05 a 0.95}],
    "efeito": um de [${EFEITOS.join(', ')}],
    "narracao": uma ou duas frases simples (máx 25 palavras),
-   "fala": {"quem": índice do personagem, "texto": frase curta} ou null}]}
-Regras: personagens são emojis (animais, pessoas, veículos, monstros fofos); 1 a 3 personagens por cena; o mesmo personagem usa sempre o mesmo emoji; a história tem começo, meio e final feliz; nada assustador demais nem violento; use cenários que combinem com o pedido.`;
+   "fala": {"quem": índice do personagem, "texto": frase curta} ou null}]}`;
+const REGRAS = `Regras: personagens são emojis (animais, pessoas, veículos, monstros fofos); 1 a 3 personagens por cena; o mesmo personagem usa sempre o mesmo emoji; a história tem começo, meio e final feliz; nada assustador demais nem violento; use cenários que combinem com o pedido.
+Se o pedido for uma PERGUNTA (por que, como, o que, quem, quando, quanto…), faça um vídeo que EXPLICA a resposta certa de um jeito simples para criança: um personagem curioso pergunta e outro explica, cena por cena, e a última cena resume a resposta.`;
+const INSTRUCOES = `Você é roteirista de vídeos animados curtos para crianças. Crie um roteiro em português do Brasil para o pedido do usuário.
+Responda SOMENTE com JSON neste formato:
+${FORMATO}
+${REGRAS}`;
+const INSTR_CHAT = `Você é a Fábrica de Vídeos: uma IA amiga e animada que conversa em português do Brasil com crianças e famílias, e que responde criando vídeos animados.
+Você recebe o roteiro do vídeo que está na tela (JSON), a conversa até agora e a nova mensagem.
+Decida o que fazer:
+- PERGUNTA (ex.: "por que o céu é azul?", "como nascem as estrelas?"): responda certinho e simples na "resposta" e crie um vídeo novo que explica isso (acao "novo").
+- CONSERTO ou MUDANÇA no vídeo (algo errado, estranho, "troca o gato por um cachorro", "põe neve", "deixa mais longo", "a fala está errada"): devolva o roteiro INTEIRO já consertado, mudando só o que foi pedido (acao "editar").
+- PEDIDO de vídeo novo: crie (acao "novo").
+- Só conversa (oi, obrigado, piada…): responda e use acao "nenhum" com roteiro null.
+Responda SOMENTE com JSON: {"resposta": 1 a 3 frases curtas e simpáticas, "acao": "novo"|"editar"|"nenhum", "roteiro": roteiro ou null}
+Formato do roteiro:
+${FORMATO}
+${REGRAS}`;
+async function pedirIA(prompt) {
+  try { return await sample.json(prompt, { modelTier: 'default' }); }
+  catch (e) { if (e && e.code === 'invalid_json') return await sample.json(prompt + '\n\nAtenção: sua resposta anterior não era um JSON válido. Responda de novo SOMENTE com o JSON correto.', { modelTier: 'default' }); throw e; }
+}
 
 const PALAVRAS = [[/dinoss|dino/, '🦖'], [/gat[oa]/, '🐱'], [/cachorr|cão|cao/, '🐶'], [/rob[oô]/, '🤖'], [/drag[aã]o/, '🐉'], [/peix/, '🐠'], [/tubar/, '🦈'], [/unic[oó]rnio/, '🦄'], [/lea[oõ]|leão/, '🦁'], [/macac/, '🐵'], [/coelh/, '🐰'], [/sap[oa]/, '🐸'], [/p[aá]ssar|pássaro/, '🐦'], [/carr[oa]|corrida/, '🏎️'], [/caminh[aã]o/, '🚚'], [/avi[aã]o/, '✈️'], [/foguete|astronaut/, '🚀'], [/alien|et\b/, '👽'], [/princes/, '👸'], [/pr[ií]ncipe|rei\b/, '🤴'], [/fantasma/, '👻'], [/menin[oa]|criança|garot/, '🧒'], [/super-?her[oó]i|heroi|herói/, '🦸'], [/bruxa/, '🧙'], [/pirata/, '🏴‍☠️'], [/vaca/, '🐮'], [/porc/, '🐷'], [/panda/, '🐼'], [/urso/, '🐻'], [/elefant/, '🐘'], [/cobra/, '🐍'], [/abelh/, '🐝'], [/borbolet/, '🦋']];
 const LUGARES = [[/espa[cç]o|planeta|estrela/, 'espaco'], [/\blua\b/, 'lua'], [/fundo do mar|oceano/, 'fundo_do_mar'], [/praia/, 'praia'], [/\bmar\b/, 'mar'], [/floresta|selva|mata/, 'floresta'], [/cidade/, 'cidade'], [/neve|gelo|inverno/, 'neve'], [/deserto/, 'deserto'], [/montanha/, 'montanha'], [/castelo/, 'castelo'], [/estrada|corrida/, 'estrada'], [/vulc/, 'vulcao'], [/festa|dan[cç]/, 'festa'], [/escola/, 'escola'], [/casa/, 'casa'], [/noite/, 'noite']];
@@ -313,7 +351,7 @@ function tocar({ gravar = false } = {}) {
     const stream = new MediaStream([...cv.captureStream(30).getVideoTracks(), ...sd.stream.getAudioTracks()]);
     rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 5_000_000 }); rec.ondataavailable = e => { if (e.data && e.data.size) partes.push(e.data); }; rec.start(250); $('rec-sel').hidden = false; }
   pararMusica = iniciarMusica(dests);
-  const passo = () => { const T = (performance.now() - inicio) / 1000; quadro(Math.min(T, total)); $('progresso').style.width = (Math.min(1, T / total) * 100) + '%';
+  const passo = () => { const T = (performance.now() - inicio) / 1000; try { quadro(Math.min(T, total)); } catch (e) { g.restore && g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1; } $('progresso').style.width = (Math.min(1, T / total) * 100) + '%';
     let t = T - 2.5, ci = -1; for (let i = 0; i < roteiro.cenas.length && t >= 0; i++) { if (t < roteiro.cenas[i].dur) { ci = i; break; } t -= roteiro.cenas[i].dur; }
     if (ci !== ultimaCena && ci >= 0) { ultimaCena = ci; falar(roteiro.cenas[ci].narracao); }
     if (T >= total) { terminar(true); return; } tocando.raf = requestAnimationFrame(passo); };
@@ -334,7 +372,7 @@ function status(txt, tipo) { const e = $('estado'); e.textContent = txt; e.class
 $('form').addEventListener('submit', async ev => { ev.preventDefault(); const pedido = $('pedido').value.trim(), n = +$('tam').value; if (!pedido) { status('Escreva qual vídeo você quer.', 'erro'); return; }
   parar(); $('b-criar').disabled = true; status('Escrevendo a história…', '');
   try { let r = null;
-    if (sample) { try { r = await sample.json(`${INSTRUCOES}\n\nNúmero de cenas: ${n}.\nPedido: ${pedido}`, { modelTier: 'default' }); } catch (e) { if (e && e.code === 'not_granted') sample = null; r = null; } }
+    if (sample) { try { r = await pedirIA(`${INSTRUCOES}\n\nNúmero de cenas: ${n}.\nPedido: ${pedido}`); } catch (e) { if (e && e.code === 'not_granted') sample = null; r = null; } }
     roteiro = validar(r || roteiroLocal(pedido, n)); mostrarCenas(); quadro(0.2); status(`Pronto! "${roteiro.titulo}" tem ${roteiro.cenas.length} cenas e ${Math.round(duracaoTotal())} segundos. Aperte Assistir.`, 'ok');
   } catch (e) { roteiro = validar(roteiroLocal(pedido, n)); mostrarCenas(); quadro(0.2); status('Montei uma história com as palavras do seu pedido.', 'ok'); }
   $('b-criar').disabled = false; });
@@ -342,6 +380,25 @@ document.querySelectorAll('[data-ideia]').forEach(b => b.addEventListener('click
 $('b-ver').addEventListener('click', () => tocar());
 $('b-parar').addEventListener('click', parar);
 $('b-baixar').addEventListener('click', () => tocar({ gravar: true }));
+
+// ===================== CHAT COM A FÁBRICA (IA) =====================
+const conversa = [];
+function msg(quem, txt) { const d = document.createElement('div'); d.className = 'msg ' + quem; d.textContent = txt; $('chat-log').appendChild(d); $('chat-log').scrollTop = 1e9; return d; }
+function trocarVideo(novo) { roteiro = validar(novo); mostrarCenas(); quadro(0.2); }
+$('chat-form').addEventListener('submit', async ev => { ev.preventDefault(); const m = $('chat-in').value.trim(); if (!m) return;
+  $('chat-in').value = ''; msg('eu', m); $('chat-enviar').disabled = true; parar(); const pens = msg('ia pensando', 'Pensando…'); let resp = '';
+  if (!sample) { trocarVideo(roteiroLocal(m, +$('tam').value)); resp = 'Fiz um vídeo com as palavras da sua mensagem. Aperte Assistir! Para eu responder perguntas e consertar o vídeo de verdade, abra a fábrica no claude.ai.'; }
+  else { try {
+      const atual = JSON.stringify(roteiro, (k, v) => k === 'dur' ? undefined : v), hist = conversa.slice(-8).map(c => `${c.quem}: ${c.texto}`).join('\n') || '(começo da conversa)';
+      const r = await pedirIA(`${INSTR_CHAT}\n\nVídeo na tela agora:\n${atual}\n\nConversa:\n${hist}\n\nNova mensagem da pessoa: ${m}`);
+      resp = String((r && r.resposta) || 'Pronto!').slice(0, 400);
+      if (r && r.roteiro && r.acao !== 'nenhum') {
+        try { trocarVideo(r.roteiro); resp += r.acao === 'editar' ? ' ✅ Consertei o vídeo. Aperte Assistir!' : ' 🎬 Vídeo novo pronto. Aperte Assistir!'; }
+        catch (e) { resp += ' (O vídeo veio com defeito e eu não troquei. Pede de novo que eu tento outra vez.)'; }
+      }
+    } catch (e) { if (e && e.code === 'not_granted') sample = null; resp = e && e.code === 'rate_limited' ? 'Muitos pedidos seguidos! Espera um pouquinho e tenta de novo.' : 'Deu um probleminha para eu pensar. Tenta mandar de novo.'; } }
+  pens.remove(); msg('ia', resp); conversa.push({ quem: 'pessoa', texto: m }, { quem: 'fabrica', texto: resp }); falar(resp.replace(/[✅🎬]/g, '')); status(`Vídeo na tela: "${roteiro.titulo}" · ${Math.round(duracaoTotal())} segundos.`, 'ok'); $('chat-enviar').disabled = false; $('chat-in').focus(); });
+msg('ia', 'Oi! Eu sou a Fábrica 🤖. Me faça uma pergunta, tipo "por que o céu é azul?", que eu respondo com um vídeo. Ou me diga o que consertar no vídeo, tipo "troca o dinossauro por um gato".');
 
 roteiro = validar(JSON.parse(JSON.stringify(EXEMPLO))); mostrarCenas(); quadro(6); atualizarBaixar();
 status('Exemplo pronto: aperte Assistir, ou escreva o seu pedido e crie um vídeo novo.', '');
