@@ -1,3 +1,11 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0}</style>
+</head>
+<body>
 <title>Fábrica de Vídeos</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -56,6 +64,9 @@
   .chat-form input { flex: 1; min-width: 0; background: var(--painel2); color: var(--texto); border: 1px solid var(--linha); border-radius: 10px; padding: 10px 12px; font: 15px var(--corpo); }
   .chat-form input:focus { outline: 2px solid var(--claquete); outline-offset: 2px; }
   .chat-form .bt { padding: 10px 14px; background: var(--claquete); color: var(--claquete-esc); }
+  .chave summary { cursor: pointer; font-weight: 600; color: var(--suave); padding: 4px 0; }
+  .chave[open] { display: grid; gap: 8px; }
+  .chave .bt.sec { padding: 8px 12px; font-size: 14px; justify-self: start; }
   @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
 </style>
 
@@ -85,7 +96,7 @@
       </div>
       <button class="bt principal" id="b-criar" type="submit">🎬 Criar vídeo</button>
       <div class="estado" id="estado" role="status"></div>
-      <p class="nota" id="nota-ia">No claude.ai a história é escrita pela inteligência do Claude. Fora dele, a fábrica monta uma história sozinha com as palavras do seu pedido.</p>
+      <p class="nota" id="nota-ia"></p>
     </form>
     <section class="caixa" aria-label="Conversar com a Fábrica">
       <label class="rot" for="chat-in">🤖 Converse com a Fábrica</label>
@@ -94,6 +105,14 @@
         <input id="chat-in" maxlength="300" placeholder="Pergunte algo ou peça um conserto…">
         <button class="bt" id="chat-enviar" type="submit" aria-label="Enviar">➤</button>
       </form>
+      <details class="chave" id="chave-box">
+        <summary>🔑 Ligar a inteligência neste navegador</summary>
+        <p class="nota">Fora do claude.ai, a Fábrica usa a inteligência do Claude com uma <b>chave de API</b> da Anthropic (peça para um adulto). Crie a chave em <b>console.anthropic.com</b> → API Keys. Cada vídeo gasta um pouquinho de crédito da conta dessa chave.</p>
+        <div class="chat-form"><input id="chave-in" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false"><button class="bt" id="chave-salvar" type="button">Salvar</button></div>
+        <label class="nota"><input type="checkbox" id="chave-lembrar" checked> Lembrar a chave neste navegador</label>
+        <button class="bt sec" id="chave-apagar" type="button">Apagar chave</button>
+        <p class="nota">A chave fica só neste navegador e vai direto para a Anthropic. Não use em computador de outra pessoa.</p>
+      </details>
     </section>
     </div>
 
@@ -118,7 +137,7 @@ const $ = id => document.getElementById(id);
 const cv = $('cv'), g = cv.getContext('2d'), W = 1280, H = 720;
 let sample = null, tts = null, downloads = null;
 try { if (window.claude && claude.use) {
-  claude.use('sample').then(s => { sample = s; }).catch(() => {});
+  claude.use('sample').then(s => { sample = s; atualizarNotaIA(); }).catch(() => {});
   claude.use('tts').then(t => { tts = t; }).catch(() => {});
   claude.use('downloads').then(d => { downloads = d; atualizarBaixar(); }).catch(() => {});
 } } catch (e) {}
@@ -462,9 +481,28 @@ Responda SOMENTE com JSON: {"resposta": 1 a 3 frases curtas e simpáticas, "acao
 Formato do roteiro:
 ${FORMATO}
 ${REGRAS}`;
+// ----- IA fora do claude.ai: chave de API da Anthropic, direto do navegador -----
+let chaveAPI = '';
+try { chaveAPI = localStorage.getItem('fabrica-chave') || ''; } catch (e) {}
+const temIA = () => !!(sample || chaveAPI);
+async function claudeDireto(prompt) {
+  const resp = await fetch('https://api.anthropic.com/v1/messages', { method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-api-key': chaveAPI, 'anthropic-version': '2026-10-21', 'anthropic-beta': 'server-side-fallback-2026-07-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({ model: 'claude-opus-5-5', max_tokens: 16000, output_config: { effort: 'low' }, fallbacks: 'default', messages: [{ role: 'user', content: prompt }] }) });
+  const j = await resp.json().catch(() => ({}));
+  if (!resp.ok) { const e = new Error((j.error && j.error.message) || ('HTTP ' + resp.status)); e.code = resp.status === 401 || resp.status === 403 ? 'chave_invalida' : resp.status === 429 || resp.status === 529 ? 'rate_limited' : /credit|billing/i.test(e.message) ? 'sem_credito' : 'erro_api'; throw e; }
+  if (j.stop_reason === 'refusal') { const e = new Error('recusado'); e.code = 'recusado'; throw e; }
+  const txt = (j.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+  const ini = txt.indexOf('{'), fim = txt.lastIndexOf('}');
+  try { return JSON.parse(txt.slice(ini, fim + 1)); } catch (x) { const e = new Error('json'); e.code = 'invalid_json'; throw e; }
+}
+async function perguntarIA(prompt) { return sample ? sample.json(prompt, { modelTier: 'default' }) : claudeDireto(prompt); }
+function erroIA(e) { const c = e && e.code;
+  if (c === 'not_granted') sample = null;
+  return c === 'rate_limited' ? 'Muitos pedidos seguidos! Espera um pouquinho e tenta de novo.' : c === 'chave_invalida' ? 'A chave de API não funcionou. Confira a chave em 🔑 e salve de novo.' : c === 'sem_credito' ? 'A conta da chave de API está sem crédito.' : c === 'recusado' ? 'Esse pedido eu não posso fazer. Tenta outra ideia!' : 'Deu um probleminha para eu pensar. Tenta mandar de novo.'; }
 async function pedirIA(prompt) {
-  try { return await sample.json(prompt, { modelTier: 'default' }); }
-  catch (e) { if (e && e.code === 'invalid_json') return await sample.json(prompt + '\n\nAtenção: sua resposta anterior não era um JSON válido. Responda de novo SOMENTE com o JSON correto.', { modelTier: 'default' }); throw e; }
+  try { return await perguntarIA(prompt); }
+  catch (e) { if (e && e.code === 'invalid_json') return await perguntarIA(prompt + '\n\nAtenção: sua resposta anterior não era um JSON válido. Responda de novo SOMENTE com o JSON correto.'); throw e; }
 }
 
 const PALAVRAS = [[/dinoss|dino/, '🦖'], [/gat[oa]/, '🐱'], [/cachorr|cão|cao/, '🐶'], [/rob[oô]/, '🤖'], [/drag[aã]o/, '🐉'], [/peix/, '🐠'], [/tubar/, '🦈'], [/unic[oó]rnio/, '🦄'], [/lea[oõ]|leão/, '🦁'], [/macac/, '🐵'], [/coelh/, '🐰'], [/sap[oa]/, '🐸'], [/p[aá]ssar|pássaro/, '🐦'], [/carr[oa]|corrida/, '🏎️'], [/caminh[aã]o/, '🚚'], [/avi[aã]o/, '✈️'], [/foguete|astronaut/, '🚀'], [/alien|et\b/, '👽'], [/princes/, '👸'], [/pr[ií]ncipe|rei\b/, '🤴'], [/fantasma/, '👻'], [/menin[oa]|criança|garot/, '🧒'], [/super-?her[oó]i|heroi|herói/, '🦸'], [/bruxa/, '🧙'], [/pirata/, '🏴‍☠️'], [/vaca/, '🐮'], [/porc/, '🐷'], [/panda/, '🐼'], [/urso/, '🐻'], [/elefant/, '🐘'], [/cobra/, '🐍'], [/abelh/, '🐝'], [/borbolet/, '🦋']];
@@ -559,25 +597,27 @@ function tocar({ gravar = false } = {}) {
     let t = T - 2.5, ci = -1; for (let i = 0; i < roteiro.cenas.length && t >= 0; i++) { if (t < roteiro.cenas[i].dur) { ci = i; break; } t -= roteiro.cenas[i].dur; }
     if (ci !== ultimaCena && ci >= 0) { ultimaCena = ci; falar(roteiro.cenas[ci].narracao); }
     if (T >= total) { terminar(true); return; } tocando.raf = requestAnimationFrame(passo); };
-  const terminar = (completo) => { cancelAnimationFrame(tocando && tocando.raf); pararMusica && pararMusica(); calarVoz(); $('rec-sel').hidden = true; $('b-parar').disabled = true; $('b-ver').disabled = false; $('b-baixar').disabled = !downloads; const r = rec; tocando = null;
+  const terminar = (completo) => { cancelAnimationFrame(tocando && tocando.raf); pararMusica && pararMusica(); calarVoz(); $('rec-sel').hidden = true; $('b-parar').disabled = true; $('b-ver').disabled = false; $('b-baixar').disabled = !podeBaixar(); const r = rec; tocando = null;
     if (r) { r.onstop = () => { if (completo) salvarVideo(new Blob(partes, { type: mime.split(';')[0] }), mime); else status('Gravação cancelada.', ''); }; r.stop(); } };
   tocando = { raf: 0, terminar }; $('b-parar').disabled = false; $('b-ver').disabled = true; $('b-baixar').disabled = true; tocando.raf = requestAnimationFrame(passo);
   if (gravar) status('Gravando o vídeo… espere ele terminar de passar.', '');
 }
 function parar() { if (tocando) tocando.terminar(false); }
 async function salvarVideo(blob, mime) { const ext = mime.includes('mp4') ? 'mp4' : 'webm', nome = (roteiro.titulo || 'video').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'video';
-  if (!downloads) { status('Para baixar, abra a Fábrica de Vídeos no claude.ai.', 'erro'); return; }
+  if (!downloads) { const url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = `${nome}.${ext}`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 60000); status(`Vídeo baixado: ${nome}.${ext} (${(blob.size / 1048576).toFixed(1)} MB). Veja na pasta Downloads.`, 'ok'); return; }
   try { await downloads.save({ filename: `${nome}.${ext}`, data: blob }); status(`Vídeo salvo: ${nome}.${ext} (${(blob.size / 1048576).toFixed(1)} MB).`, 'ok'); }
   catch (e) { status(e && e.code === 'declined' ? 'Você cancelou o download.' : 'Não deu para salvar o vídeo aqui.', 'erro'); } }
-function atualizarBaixar() { $('b-baixar').disabled = !downloads || !!tocando; $('nota-baixar').textContent = downloads ? 'O vídeo baixado leva as cenas, as legendas e a música.' : 'Baixar funciona quando a página está aberta no claude.ai.'; }
+const podeBaixar = () => !!(downloads || window.MediaRecorder);
+function atualizarBaixar() { $('b-baixar').disabled = !podeBaixar() || !!tocando; $('nota-baixar').textContent = podeBaixar() ? 'O vídeo baixado leva as cenas, as legendas e a música.' : 'Este navegador não consegue gravar vídeo. Tente no Chrome ou no Edge.'; }
+function atualizarNotaIA() { $('nota-ia').textContent = sample ? '🧠 Inteligência do Claude ligada (claude.ai).' : chaveAPI ? '🧠 Inteligência do Claude ligada pela sua chave de API.' : 'Sem inteligência ligada: a fábrica monta a história sozinha com as palavras do pedido. Ligue a inteligência em 🔑, no chat.'; }
 function status(txt, tipo) { const e = $('estado'); e.textContent = txt; e.className = 'estado' + (tipo ? ' ' + tipo : ''); }
 
 // ===================== CRIAR =====================
 $('form').addEventListener('submit', async ev => { ev.preventDefault(); const pedido = $('pedido').value.trim(), n = +$('tam').value; if (!pedido) { status('Escreva qual vídeo você quer.', 'erro'); return; }
   parar(); $('b-criar').disabled = true; status('Escrevendo a história…', '');
   try { let r = null;
-    if (sample) { try { r = await pedirIA(`${INSTRUCOES}\n\nNúmero de cenas: ${n}.\nPedido: ${pedido}`); } catch (e) { if (e && e.code === 'not_granted') sample = null; r = null; } }
-    roteiro = validar(r || roteiroLocal(pedido, n)); mostrarCenas(); quadro(0.2); status(`Pronto! "${roteiro.titulo}" tem ${roteiro.cenas.length} cenas e ${Math.round(duracaoTotal())} segundos. Aperte Assistir.`, 'ok');
+    let aviso = ''; if (temIA()) { try { r = await pedirIA(`${INSTRUCOES}\n\nNúmero de cenas: ${n}.\nPedido: ${pedido}`); } catch (e) { aviso = erroIA(e) + ' Montei uma história sozinha. '; r = null; } }
+    roteiro = validar(r || roteiroLocal(pedido, n)); mostrarCenas(); quadro(0.2); status(`${aviso}Pronto! "${roteiro.titulo}" tem ${roteiro.cenas.length} cenas e ${Math.round(duracaoTotal())} segundos. Aperte Assistir.`, 'ok');
   } catch (e) { roteiro = validar(roteiroLocal(pedido, n)); mostrarCenas(); quadro(0.2); status('Montei uma história com as palavras do seu pedido.', 'ok'); }
   $('b-criar').disabled = false; });
 document.querySelectorAll('[data-ideia]').forEach(b => b.addEventListener('click', () => { $('pedido').value = b.dataset.ideia; $('pedido').focus(); }));
@@ -591,7 +631,7 @@ function msg(quem, txt) { const d = document.createElement('div'); d.className =
 function trocarVideo(novo) { roteiro = validar(novo); mostrarCenas(); quadro(0.2); }
 $('chat-form').addEventListener('submit', async ev => { ev.preventDefault(); const m = $('chat-in').value.trim(); if (!m) return;
   $('chat-in').value = ''; msg('eu', m); $('chat-enviar').disabled = true; parar(); const pens = msg('ia pensando', 'Pensando…'); let resp = '';
-  if (!sample) { trocarVideo(roteiroLocal(m, +$('tam').value)); resp = 'Fiz um vídeo com as palavras da sua mensagem. Aperte Assistir! Para eu responder perguntas e consertar o vídeo de verdade, abra a fábrica no claude.ai.'; }
+  if (!temIA()) { trocarVideo(roteiroLocal(m, +$('tam').value)); resp = 'Fiz um vídeo com as palavras da sua mensagem. Aperte Assistir! Para eu responder perguntas e consertar o vídeo de verdade, ligue a inteligência em 🔑 aqui embaixo (ou abra a fábrica no claude.ai).'; }
   else { try {
       const atual = JSON.stringify(roteiro, (k, v) => k === 'dur' ? undefined : v), hist = conversa.slice(-8).map(c => `${c.quem}: ${c.texto}`).join('\n') || '(começo da conversa)';
       const r = await pedirIA(`${INSTR_CHAT}\n\nVídeo na tela agora:\n${atual}\n\nConversa:\n${hist}\n\nNova mensagem da pessoa: ${m}`);
@@ -600,12 +640,19 @@ $('chat-form').addEventListener('submit', async ev => { ev.preventDefault(); con
         try { trocarVideo(r.roteiro); resp += r.acao === 'editar' ? ' ✅ Consertei o vídeo. Aperte Assistir!' : ' 🎬 Vídeo novo pronto. Aperte Assistir!'; }
         catch (e) { resp += ' (O vídeo veio com defeito e eu não troquei. Pede de novo que eu tento outra vez.)'; }
       }
-    } catch (e) { if (e && e.code === 'not_granted') sample = null; resp = e && e.code === 'rate_limited' ? 'Muitos pedidos seguidos! Espera um pouquinho e tenta de novo.' : 'Deu um probleminha para eu pensar. Tenta mandar de novo.'; } }
+    } catch (e) { resp = erroIA(e); } }
   pens.remove(); msg('ia', resp); conversa.push({ quem: 'pessoa', texto: m }, { quem: 'fabrica', texto: resp }); falar(resp.replace(/[✅🎬]/g, '')); status(`Vídeo na tela: "${roteiro.titulo}" · ${Math.round(duracaoTotal())} segundos.`, 'ok'); $('chat-enviar').disabled = false; $('chat-in').focus(); });
 msg('ia', 'Oi! Eu sou a Fábrica 🤖. Me faça uma pergunta, tipo "por que o céu é azul?", que eu respondo com um vídeo. Ou me diga o que consertar no vídeo, tipo "troca o dinossauro por um gato".');
 
 window.__fabrica = { quadro: T => quadro(T), definir: (r, durs) => { roteiro = validar(r); if (durs) roteiro.cenas.forEach((c, i) => { c.dur = durs[i]; }); mostrarCenas(); return duracaoTotal(); } };
-roteiro = validar(JSON.parse(JSON.stringify(EXEMPLO))); mostrarCenas(); quadro(6); atualizarBaixar();
+$('chave-salvar').addEventListener('click', () => { const v = $('chave-in').value.trim(); if (!/^sk-ant-/.test(v)) { msg('ia', 'Essa chave não parece certa. Ela começa com sk-ant-.'); return; }
+  chaveAPI = v; $('chave-in').value = ''; try { if ($('chave-lembrar').checked) localStorage.setItem('fabrica-chave', v); else localStorage.removeItem('fabrica-chave'); } catch (e) {}
+  $('chave-box').open = false; atualizarNotaIA(); msg('ia', 'Chave salva! 🧠 Agora eu consigo pensar de verdade neste navegador. Me pergunte alguma coisa!'); });
+$('chave-apagar').addEventListener('click', () => { chaveAPI = ''; try { localStorage.removeItem('fabrica-chave'); } catch (e) {} atualizarNotaIA(); msg('ia', 'Chave apagada deste navegador.'); });
+roteiro = validar(JSON.parse(JSON.stringify(EXEMPLO))); mostrarCenas(); quadro(6); atualizarBaixar(); atualizarNotaIA();
 status('Exemplo pronto: aperte Assistir, ou escreva o seu pedido e crie um vídeo novo.', '');
 })();
 </script>
+
+</body>
+</html>
