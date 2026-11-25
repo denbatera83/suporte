@@ -44,7 +44,7 @@
   .cenas { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
   .cena { background: var(--painel2); border: 1px solid var(--linha); border-radius: 10px; padding: 10px; font-size: 13px; color: var(--suave); min-width: 0; }
   .cena b { display: block; font: 700 13px var(--display); color: var(--claquete); margin-bottom: 3px; letter-spacing: .5px; }
-  .cena .emo { font-size: 22px; line-height: 1.2; color: var(--texto); }
+  .cena .emo { font: 600 13px var(--corpo); line-height: 1.3; color: var(--texto); margin-bottom: 4px; }
   .nota { font-size: 13px; color: var(--suave); }
   .coluna { display: grid; gap: 18px; min-width: 0; align-content: start; }
   .chat-log { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; padding-right: 4px; }
@@ -211,18 +211,203 @@ function balao(txt, x, y) { g.font = '600 30px Inter, sans-serif'; const linhas 
   g.fillStyle = '#1a1a1a'; g.textAlign = 'center'; linhas.forEach((l, i) => g.fillText(l, bx + w / 2, by + 44 + i * 36)); }
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function quebrar(txt, max) { const ps = String(txt).split(/\s+/), out = []; let l = ''; for (const p of ps) { const t = l ? l + ' ' + p : p; if (g.measureText(t).width > max && l) { out.push(l); l = p; } else l = t; } if (l) out.push(l); return out.slice(0, 4); }
-function personagem(p, i, n, t, dur) {
-  const k = clamp(t / dur, 0, 1), base = 560, tam = clamp(p.tamanho || 150, 70, 260), x0 = (p.x ?? ((i + 1) / (n + 1))) * W;
-  let x = x0, y = base, rot = 0, esp = false; const a = p.acao || 'parado';
-  if (a === 'andar' || a === 'correr' || a === 'nadar') { const v = a === 'correr' ? 520 : 260, dir = p.direcao === 'esquerda' ? -1 : 1; x = x0 + dir * (k - 0.5) * v; y = base - Math.abs(Math.sin(t * (a === 'correr' ? 14 : 8))) * (a === 'correr' ? 18 : 10); esp = dir > 0; if (a === 'nadar') y = base - 160 + Math.sin(t * 3) * 20; }
+// ----- bonecos desenhados: cabeça, corpo, braços e pernas -----
+const TIPOS = {
+  menino: { corpo: '#3b82f6', calca: '#1e3a8a', pele: '#f2c29b', cabelo: '#4a2c18', estilo: 'curto' },
+  menina: { corpo: '#ec4899', calca: '#be185d', pele: '#e8b48a', cabelo: '#3a2414', estilo: 'longo', saia: true },
+  heroi: { corpo: '#dc2626', calca: '#1d4ed8', pele: '#f2c29b', cabelo: '#1a1a1a', estilo: 'curto', capa: '#facc15', mascara: true, emblema: true },
+  princesa: { corpo: '#f472b6', calca: '#f472b6', pele: '#f5cba7', cabelo: '#f5c542', estilo: 'longo', saia: true, coroa: true },
+  pirata: { corpo: '#f1f5f9', calca: '#334155', pele: '#e0a878', chapeu: 'pirata', tapaOlho: true, barba: '#5a3a1a', listras: '#ef4444' },
+  bruxo: { corpo: '#6d28d9', calca: '#6d28d9', pele: '#f2c29b', chapeu: 'bruxo', saia: true, barba: '#e5e7eb' },
+  astronauta: { corpo: '#f1f5f9', calca: '#cbd5e1', pele: '#f2c29b', cabelo: '#4a2c18', estilo: 'curto', capacete: true, mao: '#e2e8f0', sapato: '#94a3b8', emblema: true },
+  robo: { corpo: '#94a3b8', calca: '#64748b', pele: '#cbd5e1', robo: true, mao: '#64748b', sapato: '#475569' },
+  alien: { corpo: '#7c3aed', calca: '#5b21b6', pele: '#4ade80', olhoGrande: true, antenas: '#facc15', mao: '#4ade80', sapato: '#16a34a' },
+  monstro: { corpo: '#a855f7', pele: '#a855f7', umOlho: true, chifres: '#fde68a', barriga: '#d8b4fe', animal: true },
+  gato: { corpo: '#f59e0b', pele: '#fbbf24', orelhas: 'gato', cauda: 'fina', focinho: '#fde68a', bigode: true, animal: true, barriga: '#fde68a' },
+  cachorro: { corpo: '#b45309', pele: '#d97706', orelhas: 'cachorro', cauda: 'fina', focinho: '#fcd9a8', nariz: true, animal: true, barriga: '#fcd9a8' },
+  urso: { corpo: '#7c4a1e', pele: '#8b5a2b', orelhas: 'urso', focinho: '#d6a878', nariz: true, animal: true, barriga: '#c08a5a' },
+  panda: { corpo: '#1f2937', pele: '#f8fafc', orelhas: 'urso', orelhaCor: '#1f2937', olheiras: true, focinho: '#ffffff', nariz: true, animal: true, barriga: '#f8fafc' },
+  coelho: { corpo: '#e5e7eb', pele: '#f8fafc', orelhas: 'coelho', focinho: '#ffffff', nariz: true, dentes: true, animal: true, barriga: '#ffffff' },
+  leao: { corpo: '#eab308', pele: '#facc15', orelhas: 'urso', juba: '#b45309', cauda: 'fina', focinho: '#fef08a', nariz: true, animal: true, barriga: '#fef08a' },
+  macaco: { corpo: '#7c4a1e', pele: '#7c4a1e', orelhas: 'macaco', rosto: '#e8c39e', cauda: 'fina', animal: true, barriga: '#e8c39e' },
+  porco: { corpo: '#f9a8d4', pele: '#fbcfe8', orelhas: 'gato', focinho: '#f472b6', narinas: true, animal: true, barriga: '#fce7f3' },
+  vaca: { corpo: '#f8fafc', pele: '#f8fafc', orelhas: 'cachorro', orelhaCor: '#1f2937', manchas: true, focinho: '#fbcfe8', narinas: true, chifres: '#fef3c7', animal: true },
+  elefante: { corpo: '#94a3b8', pele: '#a8b4c4', orelhas: 'elefante', tromba: true, animal: true, barriga: '#cbd5e1' },
+  sapo: { corpo: '#16a34a', pele: '#22c55e', olhosAltos: true, bocaGrande: true, animal: true, barriga: '#bbf7d0' },
+  dino: { corpo: '#16a34a', pele: '#22c55e', cauda: 'grossa', espinhos: '#f97316', animal: true, barriga: '#bbf7d0' },
+  dragao: { corpo: '#dc2626', pele: '#ef4444', cauda: 'grossa', asas: '#f97316', chifres: '#fde68a', espinhos: '#facc15', animal: true, barriga: '#fecaca' },
+  unicornio: { corpo: '#f8fafc', pele: '#ffffff', orelhas: 'gato', chifreUnico: true, crina: true, cauda: 'fina', animal: true, barriga: '#fce7f3' },
+  abelha: { corpo: '#facc15', pele: '#facc15', listras: '#1f2937', asas: '#e0f2fe', antenas: '#1f2937', animal: true },
+  passaro: { especial: 'passaro', corpo: '#38bdf8' },
+  peixe: { especial: 'peixe', corpo: '#fb923c' },
+  tubarao: { especial: 'peixe', corpo: '#64748b', tubarao: true },
+  fantasma: { especial: 'fantasma', corpo: '#f8fafc' },
+  carro: { especial: 'carro', corpo: '#ef4444' },
+  caminhao: { especial: 'caminhao', corpo: '#2563eb' },
+  foguete: { especial: 'foguete', corpo: '#e5e7eb' },
+  aviao: { especial: 'aviao', corpo: '#f8fafc' },
+};
+const NOMES = { menino: 'menino', menina: 'menina', heroi: 'super-herói', princesa: 'princesa', pirata: 'pirata', bruxo: 'mago', astronauta: 'astronauta', robo: 'robô', alien: 'alienígena', monstro: 'monstrinho', gato: 'gato', cachorro: 'cachorro', urso: 'urso', panda: 'panda', coelho: 'coelho', leao: 'leão', macaco: 'macaco', porco: 'porquinho', vaca: 'vaca', elefante: 'elefante', sapo: 'sapo', dino: 'dinossauro', dragao: 'dragão', unicornio: 'unicórnio', abelha: 'abelha', passaro: 'pássaro', peixe: 'peixe', tubarao: 'tubarão', fantasma: 'fantasminha', carro: 'carro', caminhao: 'caminhão', foguete: 'foguete', aviao: 'avião' };
+const EMOJI_TIPO = { '🦖': 'dino', '🦕': 'dino', '🐱': 'gato', '🐈': 'gato', '🐶': 'cachorro', '🐕': 'cachorro', '🤖': 'robo', '🐉': 'dragao', '🐲': 'dragao', '🐠': 'peixe', '🐟': 'peixe', '🐡': 'peixe', '🦈': 'tubarao', '🐻': 'urso', '🐼': 'panda', '🐰': 'coelho', '🐇': 'coelho', '🦁': 'leao', '🐵': 'macaco', '🐒': 'macaco', '🐸': 'sapo', '🐦': 'passaro', '🦉': 'passaro', '🐧': 'passaro', '🦜': 'passaro', '🏎': 'carro', '🚗': 'carro', '🚙': 'carro', '🚓': 'carro', '🚚': 'caminhao', '🚛': 'caminhao', '✈': 'aviao', '🛩': 'aviao', '🚀': 'foguete', '👽': 'alien', '👾': 'monstro', '👹': 'monstro', '👸': 'princesa', '🤴': 'menino', '👻': 'fantasma', '🧒': 'menino', '👦': 'menino', '🧑': 'menino', '👨': 'menino', '👧': 'menina', '👩': 'menina', '🦸': 'heroi', '🦹': 'heroi', '🧙': 'bruxo', '🏴‍☠️': 'pirata', '👨‍🚀': 'astronauta', '🧑‍🚀': 'astronauta', '👩‍🚀': 'astronauta', '🦄': 'unicornio', '🐷': 'porco', '🐮': 'vaca', '🐄': 'vaca', '🐘': 'elefante', '🐝': 'abelha', '🦋': 'abelha', '🐍': 'monstro' };
+function tipoDe(p) {
+  const n = String(p.tipo || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z]/g, '');
+  if (TIPOS[n]) return n;
+  const sin = { dinossauro: 'dino', superheroi: 'heroi', mago: 'bruxo', aliengena: 'alien', alienigena: 'alien', et: 'alien', cao: 'cachorro', leaozinho: 'leao', ave: 'passaro', crianca: 'menino', garoto: 'menino', garota: 'menina', rei: 'menino', rainha: 'princesa', monstrinho: 'monstro', fantasminha: 'fantasma', porquinho: 'porco', nave: 'foguete' };
+  if (sin[n]) return sin[n];
+  const e = String(p.emoji || '').replace(/️/g, '');
+  return EMOJI_TIPO[e] || EMOJI_TIPO[p.emoji] || 'menino';
+}
+function caminho(desenho, cor, borda = 'rgba(0,0,0,.35)', lw = 4) { g.beginPath(); desenho(); g.fillStyle = cor; g.fill(); g.strokeStyle = borda; g.lineWidth = lw; g.stroke(); }
+function boneco(tipo, cor, x, y, tam, rot, olhar, t, acao, falando) {
+  const T = TIPOS[tipo] || TIPOS.menino, s = tam / 200, C = cor || T.corpo, P = (T.animal && cor) ? cor : T.pele, ln = 'rgba(0,0,0,.38)';
+  g.save(); g.translate(x, y); g.rotate(rot); g.scale(s, s); g.lineCap = 'round'; g.lineJoin = 'round'; g.globalAlpha = 1;
+  try {
+    if (T.especial) { ESPECIAIS[T.especial](T, C, t, acao, falando, olhar || 1); return; }
+    const calca = T.calca && !(cor && T.animal) ? T.calca : C, mao = T.mao || P, sapato = T.sapato || (T.animal ? P : '#2b2b2b');
+    const anda = acao === 'andar' || acao === 'correr' || acao === 'nadar', pe = anda ? Math.sin(t * (acao === 'correr' ? 14 : 8)) * (acao === 'correr' ? 0.5 : 0.32) : 0;
+    let bE = -0.25 + pe * 1.4, bD = 0.25 + pe * 1.4, pE = -0.06 + pe, pD = 0.06 + pe;
+    if (acao === 'pular') { bE = -2.5; bD = 2.5; pE = -0.45; pD = 0.45; }
+    if (acao === 'voar') { bE = -2.8; bD = 2.8; pE = 0.12; pD = 0.3; }
+    if (acao === 'dancar') { const d = Math.sin(t * 8); bE = -2.2 + d * 0.6; bD = 2.2 + d * 0.6; pE = -0.15 - Math.max(0, d) * 0.45; pD = 0.15 + Math.max(0, -d) * 0.45; }
+    if (acao === 'girar') { bE = -1.6; bD = 1.6; }
+    if (acao === 'falar' || falando) bD = 2.0 + Math.sin(t * 6) * 0.35;
+    const membro = (x0, y0, a, L, w, c1, ponta, rp) => { const x1 = x0 + Math.sin(a) * L, y1 = y0 + Math.cos(a) * L;
+      g.strokeStyle = ln; g.lineWidth = w + 7; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+      g.strokeStyle = c1; g.lineWidth = w; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke();
+      caminho(() => g.ellipse(x1, y1 + (rp > 13 ? 3 : 0), rp * (rp > 13 ? 1.25 : 1), rp * 0.85, 0, 0, 7), ponta, ln, 3); };
+    // atrás do corpo
+    if (T.cauda === 'fina') { const o = Math.sin(t * 4) * 10; g.strokeStyle = ln; g.lineWidth = 15; g.beginPath(); g.moveTo(20, -70); g.quadraticCurveTo(80, -60 + o, 70, -125 + o); g.stroke(); g.strokeStyle = tipo === 'unicornio' ? '#c084fc' : C; g.lineWidth = 10; g.stroke(); }
+    if (T.cauda === 'grossa') { const o = Math.sin(t * 3) * 6; caminho(() => { g.moveTo(10, -110); g.quadraticCurveTo(85, -70, 118 + o, -8); g.quadraticCurveTo(60, -30, 10, -58); g.closePath(); }, C, ln); if (T.espinhos) for (let i = 0; i < 3; i++) caminho(() => { const bx = 45 + i * 22, by = -82 + i * 22; g.moveTo(bx - 9, by); g.lineTo(bx + 4, by - 18); g.lineTo(bx + 11, by + 4); g.closePath(); }, T.espinhos, ln, 3); }
+    if (T.capa) { const o = Math.sin(t * 5) * 9; caminho(() => { g.moveTo(-34, -138); g.lineTo(34, -138); g.lineTo(54 + o, -16); g.quadraticCurveTo(0, -2 + o, -54 - o, -16); g.closePath(); }, T.capa, ln); }
+    if (T.asas) { const f = Math.sin(t * (acao === 'voar' ? 12 : 4)) * 0.35; for (const sd of [-1, 1]) { g.save(); g.translate(sd * 22, -126); g.rotate(sd * (-0.35 + f)); g.scale(sd, 1);
+      if (tipo === 'abelha') caminho(() => g.ellipse(40, -20, 42, 22, -0.5, 0, 7), 'rgba(224,242,254,.85)', ln, 3);
+      else caminho(() => { g.moveTo(0, 0); g.quadraticCurveTo(55, -80, 110, -60); g.quadraticCurveTo(85, -30, 95, 0); g.quadraticCurveTo(55, -10, 0, 22); g.closePath(); }, T.asas, ln);
+      g.restore(); } }
+    // pernas
+    membro(-16, -64, pE, 56, 22, calca, sapato, 15); membro(16, -64, pD, 56, 22, calca, sapato, 15);
+    // corpo
+    if (T.saia) caminho(() => { g.moveTo(-30, -140); g.lineTo(30, -140); g.lineTo(58, -54); g.quadraticCurveTo(0, -40, -58, -54); g.closePath(); }, C, ln);
+    else caminho(() => g.roundRect(-37, -144, 74, 90, T.robo ? 10 : 30), C, ln);
+    if (T.barriga) { g.fillStyle = T.barriga; g.beginPath(); g.ellipse(0, -96, 25, 33, 0, 0, 7); g.fill(); }
+    if (T.listras) { g.save(); g.beginPath(); g.roundRect(-37, -144, 74, 90, 30); g.clip(); g.fillStyle = T.listras; for (let i = 0; i < 4; i++) g.fillRect(-40, -132 + i * 24, 80, 10); g.restore(); }
+    if (T.manchas) { g.fillStyle = '#1f2937'; g.beginPath(); g.ellipse(-16, -118, 12, 9, 0.4, 0, 7); g.ellipse(18, -84, 13, 10, -0.3, 0, 7); g.fill(); }
+    if (T.robo) { g.fillStyle = '#334155'; g.beginPath(); g.roundRect(-22, -128, 44, 34, 6); g.fill(); ['#f87171', '#facc15', '#4ade80'].forEach((c, i) => { g.fillStyle = (Math.floor(t * 3) + i) % 3 === 0 ? '#fff' : c; g.beginPath(); g.arc(-12 + i * 12, -111, 5, 0, 7); g.fill(); }); g.fillStyle = '#64748b'; g.fillRect(-28, -84, 56, 8); }
+    if (T.emblema) { g.fillStyle = tipo === 'heroi' ? '#facc15' : '#3b82f6'; estrela(0, -112, 15); }
+    if (tipo === 'menino' || tipo === 'menina') { g.fillStyle = 'rgba(255,255,255,.85)'; estrela(0, -112, 9); }
+    // braços
+    membro(-37, -132, bE, 52, 17, C, mao, 11); membro(37, -132, bD, 52, 17, C, mao, 11);
+    // cabeça (atrás)
+    const R = 43, hy = -190;
+    if (T.juba) { g.fillStyle = T.juba; for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; g.beginPath(); g.arc(Math.cos(a) * 46, hy + Math.sin(a) * 46, 20, 0, 7); g.fill(); } }
+    if (T.cabelo && T.estilo === 'longo') caminho(() => g.roundRect(-50, hy - 30, 100, 98, 34), T.cabelo, ln);
+    if (T.crina) ['#f472b6', '#c084fc', '#60a5fa', '#facc15'].forEach((c, i) => { g.fillStyle = c; g.beginPath(); g.arc(-40 - (i % 2) * 6, hy - 30 + i * 18, 14, 0, 7); g.fill(); });
+    const oc = T.orelhaCor || P;
+    if (T.orelhas === 'gato') for (const sd of [-1, 1]) { caminho(() => { g.moveTo(sd * 14, hy - 38); g.lineTo(sd * 38, hy - 64); g.lineTo(sd * 42, hy - 22); g.closePath(); }, oc, ln); g.fillStyle = '#f9a8d4'; g.beginPath(); g.moveTo(sd * 22, hy - 36); g.lineTo(sd * 36, hy - 52); g.lineTo(sd * 37, hy - 30); g.fill(); }
+    if (T.orelhas === 'urso') for (const sd of [-1, 1]) { caminho(() => g.arc(sd * 32, hy - 32, 15, 0, 7), oc, ln); g.fillStyle = 'rgba(0,0,0,.15)'; g.beginPath(); g.arc(sd * 32, hy - 32, 7, 0, 7); g.fill(); }
+    if (T.orelhas === 'coelho') for (const sd of [-1, 1]) { caminho(() => g.ellipse(sd * 17, hy - 76, 13, 40, sd * 0.15, 0, 7), oc, ln); g.fillStyle = '#f9a8d4'; g.beginPath(); g.ellipse(sd * 17, hy - 74, 6, 28, sd * 0.15, 0, 7); g.fill(); }
+    if (T.orelhas === 'macaco') for (const sd of [-1, 1]) caminho(() => g.arc(sd * 45, hy + 2, 15, 0, 7), T.rosto || P, ln);
+    if (T.orelhas === 'elefante') for (const sd of [-1, 1]) caminho(() => g.ellipse(sd * 50, hy + 2, 28, 36, sd * 0.2, 0, 7), oc, ln);
+    // cabeça
+    if (T.robo) caminho(() => g.roundRect(-45, hy - 42, 90, 82, 16), P, ln); else caminho(() => g.arc(0, hy, R, 0, 7), P, ln);
+    if (T.rosto) { g.fillStyle = T.rosto; g.beginPath(); g.ellipse(0, hy + 10, 31, 26, 0, 0, 7); g.fill(); }
+    if (T.manchas) { g.fillStyle = '#1f2937'; g.beginPath(); g.ellipse(24, hy - 18, 13, 10, 0.5, 0, 7); g.fill(); }
+    if (T.orelhas === 'cachorro') for (const sd of [-1, 1]) caminho(() => g.ellipse(sd * 42, hy + 2, 12, 27, sd * 0.35, 0, 7), T.orelhaCor || (cor ? 'rgba(0,0,0,.25)' : '#7c3a0a'), ln, 3);
+    if (T.cabelo) caminho(() => { g.arc(0, hy - 4, R + 3, Math.PI * 1.03, Math.PI * 1.97); g.quadraticCurveTo(20, hy - 22, 0, hy - 20); g.quadraticCurveTo(-24, hy - 16, -45, hy - 8); g.closePath(); }, T.cabelo, ln, 3);
+    if (T.olheiras) { g.fillStyle = '#1f2937'; for (const sd of [-1, 1]) { g.beginPath(); g.ellipse(sd * 16, hy - 2, 12, 15, sd * -0.4, 0, 7); g.fill(); } }
+    if (T.mascara) { g.fillStyle = '#111827'; g.beginPath(); g.roundRect(-40, hy - 14, 80, 22, 10); g.fill(); }
+    // olhos
+    const pisca = (t % 3.4) < 0.12, ox = clamp(olhar || 0, -1, 1) * 3;
+    const olho = (ex, ey, r) => { if (pisca) { g.strokeStyle = '#111'; g.lineWidth = 4; g.beginPath(); g.moveTo(ex - r, ey); g.lineTo(ex + r, ey); g.stroke(); return; }
+      g.fillStyle = '#fff'; g.beginPath(); g.arc(ex, ey, r, 0, 7); g.fill(); g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 2; g.stroke();
+      g.fillStyle = '#111'; g.beginPath(); g.arc(ex + ox, ey + 1, r * 0.55, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(ex + ox + r * 0.2, ey - r * 0.2, r * 0.18, 0, 7); g.fill(); };
+    if (T.robo) { g.fillStyle = '#0f172a'; g.beginPath(); g.roundRect(-34, hy - 22, 68, 26, 8); g.fill(); g.fillStyle = pisca ? '#0f172a' : '#22d3ee'; g.beginPath(); g.roundRect(-26 + ox, hy - 15, 16, 12, 4); g.roundRect(10 + ox, hy - 15, 16, 12, 4); g.fill(); }
+    else if (T.umOlho) olho(0, hy - 6, 18);
+    else if (T.olhoGrande) for (const sd of [-1, 1]) { g.fillStyle = '#111'; g.beginPath(); g.ellipse(sd * 17, hy - 4, 12, 17, sd * -0.35, 0, 7); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.arc(sd * 17 + 3, hy - 10, 4, 0, 7); g.fill(); }
+    else if (T.olhosAltos) for (const sd of [-1, 1]) { caminho(() => g.arc(sd * 22, hy - 38, 16, 0, 7), P, ln, 3); olho(sd * 22, hy - 38, 11); }
+    else for (const sd of [-1, 1]) olho(sd * 16, hy - 4, 10);
+    if (T.tapaOlho) { g.fillStyle = '#111'; g.beginPath(); g.arc(16, hy - 4, 12, 0, 7); g.fill(); g.strokeStyle = '#111'; g.lineWidth = 3; g.beginPath(); g.moveTo(-42, hy - 20); g.lineTo(42, hy + 6); g.stroke(); }
+    // focinho, boca
+    const my = T.focinho ? hy + 25 : hy + 20;
+    if (!T.robo && !T.olhoGrande) { g.fillStyle = 'rgba(244,114,182,.35)'; for (const sd of [-1, 1]) { g.beginPath(); g.ellipse(sd * 28, hy + 12, 8, 5, 0, 0, 7); g.fill(); } }
+    if (T.focinho) { g.fillStyle = T.focinho; g.beginPath(); g.ellipse(0, hy + 16, 19, 14, 0, 0, 7); g.fill(); }
+    if (T.nariz) { g.fillStyle = '#1f2937'; g.beginPath(); g.ellipse(0, hy + 9, 7, 5, 0, 0, 7); g.fill(); }
+    if (T.narinas) { g.fillStyle = 'rgba(0,0,0,.45)'; g.beginPath(); g.arc(-6, hy + 15, 3, 0, 7); g.arc(6, hy + 15, 3, 0, 7); g.fill(); }
+    if (T.tromba) { g.strokeStyle = ln; g.lineWidth = 22; g.beginPath(); g.moveTo(0, hy + 6); g.quadraticCurveTo(4, hy + 50, 22 + Math.sin(t * 3) * 8, hy + 58); g.stroke(); g.strokeStyle = P; g.lineWidth = 16; g.stroke(); }
+    const fala = acao === 'falar' || falando;
+    if (T.robo) { g.fillStyle = '#334155'; g.fillRect(-18, hy + 14, 36, fala ? 6 + Math.abs(Math.sin(t * 12)) * 8 : 6); }
+    else if (!T.tromba) { const L = T.bocaGrande ? 22 : 12;
+      if (fala) { g.fillStyle = '#7f1d1d'; g.beginPath(); g.ellipse(0, my + 2, L * 0.7, 3 + Math.abs(Math.sin(t * 12)) * 8, 0, 0, 7); g.fill(); }
+      else { g.strokeStyle = '#3b1d14'; g.lineWidth = 4; g.beginPath(); g.arc(0, my - 6, L, Math.PI * 0.18, Math.PI * 0.82); g.stroke(); } }
+    if (T.dentes) { g.fillStyle = '#fff'; g.fillRect(-6, my + 4, 5, 8); g.fillRect(1, my + 4, 5, 8); }
+    if (T.bigode) { g.strokeStyle = 'rgba(0,0,0,.5)'; g.lineWidth = 2; for (const sd of [-1, 1]) for (const dy of [-4, 4]) { g.beginPath(); g.moveTo(sd * 16, hy + 16); g.lineTo(sd * 42, hy + 14 + dy * 2); g.stroke(); } }
+    if (T.barba) caminho(() => { g.moveTo(-30, hy + 18); g.quadraticCurveTo(0, hy + (tipo === 'bruxo' ? 85 : 50), 30, hy + 18); g.quadraticCurveTo(0, hy + 30, -30, hy + 18); }, T.barba, ln, 3);
+    // topo da cabeça
+    if (T.antenas) for (const sd of [-1, 1]) { g.strokeStyle = '#1f2937'; g.lineWidth = 4; g.beginPath(); g.moveTo(sd * 12, hy - 40); g.lineTo(sd * 24, hy - 72); g.stroke(); g.fillStyle = T.antenas; g.beginPath(); g.arc(sd * 24, hy - 74, 7, 0, 7); g.fill(); }
+    if (T.robo) { g.strokeStyle = '#475569'; g.lineWidth = 5; g.beginPath(); g.moveTo(0, hy - 42); g.lineTo(0, hy - 66); g.stroke(); g.fillStyle = Math.sin(t * 6) > 0 ? '#ef4444' : '#7f1d1d'; g.beginPath(); g.arc(0, hy - 70, 8, 0, 7); g.fill(); for (const sd of [-1, 1]) caminho(() => g.roundRect(sd * 45 - 7, hy - 14, 14, 26, 4), '#64748b', ln, 3); }
+    if (T.chifres) for (const sd of [-1, 1]) caminho(() => { g.moveTo(sd * 14, hy - 38); g.lineTo(sd * 30, hy - 72); g.lineTo(sd * 32, hy - 32); g.closePath(); }, T.chifres, ln, 3);
+    if (T.chifreUnico) caminho(() => { g.moveTo(-9, hy - 40); g.lineTo(0, hy - 92); g.lineTo(9, hy - 40); g.closePath(); }, '#facc15', ln, 3);
+    if (T.espinhos) for (const dx of [-22, 0, 22]) caminho(() => { g.moveTo(dx - 9, hy - 38 + Math.abs(dx) * 0.3); g.lineTo(dx, hy - 60 + Math.abs(dx) * 0.3); g.lineTo(dx + 9, hy - 38 + Math.abs(dx) * 0.3); g.closePath(); }, T.espinhos, ln, 3);
+    if (T.coroa) caminho(() => { g.moveTo(-24, hy - 38); g.lineTo(-24, hy - 62); g.lineTo(-12, hy - 50); g.lineTo(0, hy - 66); g.lineTo(12, hy - 50); g.lineTo(24, hy - 62); g.lineTo(24, hy - 38); g.closePath(); }, '#facc15', ln, 3);
+    if (T.chapeu === 'pirata') { caminho(() => { g.ellipse(0, hy - 34, 60, 14, 0, 0, 7); }, '#111827', ln, 3); caminho(() => g.arc(0, hy - 36, 36, Math.PI, 0), '#111827', ln, 3); g.fillStyle = '#fff'; g.beginPath(); g.arc(0, hy - 52, 7, 0, 7); g.fill(); }
+    if (T.chapeu === 'bruxo') { caminho(() => { g.moveTo(-44, hy - 30); g.lineTo(6, hy - 122); g.lineTo(44, hy - 30); g.closePath(); }, '#4c1d95', ln, 3); caminho(() => g.ellipse(0, hy - 30, 60, 12, 0, 0, 7), '#4c1d95', ln, 3); g.fillStyle = '#facc15'; estrela(4, hy - 68, 10); }
+    if (T.capacete) { g.fillStyle = 'rgba(186,230,253,.28)'; g.beginPath(); g.arc(0, hy, 60, 0, 7); g.fill(); g.strokeStyle = '#e2e8f0'; g.lineWidth = 7; g.stroke(); g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = 6; g.beginPath(); g.arc(0, hy, 48, Math.PI * 1.15, Math.PI * 1.4); g.stroke(); }
+  } finally { g.restore(); }
+}
+const ESPECIAIS = {
+  peixe(T, C, t, a, fal, o) { g.scale(o, 1); const y = -120, c = Math.sin(t * 8) * 0.3, ln = 'rgba(0,0,0,.35)';
+    g.save(); g.translate(-70, y); g.rotate(c); caminho(() => { g.moveTo(0, 0); g.lineTo(-55, -42); g.lineTo(-55, 42); g.closePath(); }, C, ln); g.restore();
+    caminho(() => { g.moveTo(-12, y - 46); g.lineTo(T.tubarao ? 14 : 22, y - (T.tubarao ? 98 : 78)); g.lineTo(34, y - 44); g.closePath(); }, C, ln);
+    caminho(() => g.ellipse(0, y, 85, 52, 0, 0, 7), C, ln);
+    if (T.tubarao) { g.save(); g.beginPath(); g.ellipse(0, y, 85, 52, 0, 0, 7); g.clip(); g.fillStyle = '#f1f5f9'; g.fillRect(-90, y + 8, 180, 60); g.restore(); g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 3; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(-5 - i * 10, y - 14); g.lineTo(-10 - i * 10, y + 6); g.stroke(); } }
+    else { g.fillStyle = '#fff'; g.fillRect(-25, y - 50, 14, 100); g.fillRect(15, y - 50, 10, 100); g.save(); g.beginPath(); g.ellipse(0, y, 85, 52, 0, 0, 7); g.lineWidth = 4; g.strokeStyle = 'rgba(0,0,0,.35)'; g.stroke(); g.restore(); }
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(45, y - 14, 13, 0, 7); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(48, y - 13, 7, 0, 7); g.fill();
+    g.strokeStyle = '#3b1d14'; g.lineWidth = 4; g.beginPath(); if (fal || a === 'falar') g.ellipse(68, y + 16, 7, 3 + Math.abs(Math.sin(t * 12)) * 6, 0, 0, 7); else g.arc(58, y + 6, 14, Math.PI * 0.2, Math.PI * 0.7); g.stroke(); },
+  passaro(T, C, t, a, fal, o) { g.scale(o, 1); const y = -110, ln = 'rgba(0,0,0,.35)', f = Math.sin(t * (a === 'voar' ? 14 : 4)) * 0.6;
+    g.strokeStyle = '#f59e0b'; g.lineWidth = 6; for (const dx of [-12, 12]) { g.beginPath(); g.moveTo(dx, y + 45); g.lineTo(dx, 0); g.lineTo(dx + 12, 0); g.stroke(); }
+    caminho(() => g.arc(0, y, 55, 0, 7), C, ln); g.fillStyle = '#fef3c7'; g.beginPath(); g.ellipse(8, y + 18, 30, 28, 0, 0, 7); g.fill();
+    g.save(); g.translate(-18, y); g.rotate(-0.4 + f); caminho(() => g.ellipse(-24, 0, 34, 18, 0, 0, 7), C, ln); g.restore();
+    caminho(() => { g.moveTo(45, y - 20); g.lineTo(84, y - 8); g.lineTo(45, y + (fal || a === 'falar' ? 8 + Math.abs(Math.sin(t * 12)) * 8 : 4)); g.closePath(); }, '#f59e0b', ln, 3);
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(24, y - 22, 12, 0, 7); g.fill(); g.fillStyle = '#111'; g.beginPath(); g.arc(28, y - 21, 6, 0, 7); g.fill();
+    caminho(() => { g.moveTo(-6, y - 52); g.quadraticCurveTo(0, y - 80, 14, y - 72); g.quadraticCurveTo(8, y - 60, 10, y - 52); }, C, ln, 3); },
+  fantasma(T, C, t, a, fal) { const ln = 'rgba(0,0,0,.3)', y = -20 - Math.sin(t * 3) * 10;
+    caminho(() => { g.moveTo(-58, y - 10); g.lineTo(-58, y - 150); g.arc(0, y - 150, 58, Math.PI, 0); g.lineTo(58, y - 10); for (let i = 0; i < 4; i++) { const x1 = 58 - i * 29; g.quadraticCurveTo(x1 - 7, y + 10 + Math.sin(t * 6 + i) * 6, x1 - 14.5, y - 10); g.quadraticCurveTo(x1 - 22, y - 28, x1 - 29, y - 10); } g.closePath(); }, C, ln);
+    g.fillStyle = '#111'; for (const sd of [-1, 1]) { g.beginPath(); g.ellipse(sd * 20, y - 150, 9, 14, 0, 0, 7); g.fill(); }
+    g.beginPath(); g.ellipse(0, y - 112, 10, fal || a === 'falar' ? 6 + Math.abs(Math.sin(t * 12)) * 8 : 10, 0, 0, 7); g.fill();
+    g.fillStyle = 'rgba(244,114,182,.4)'; for (const sd of [-1, 1]) { g.beginPath(); g.ellipse(sd * 36, y - 128, 9, 5, 0, 0, 7); g.fill(); } },
+  carro(T, C, t, a, fal, o) { g.scale(o, 1); const ln = 'rgba(0,0,0,.4)';
+    caminho(() => g.roundRect(-62, -128, 112, 56, 24), C, ln); g.fillStyle = '#bae6fd'; g.beginPath(); g.roundRect(-50, -118, 44, 38, 10); g.roundRect(2, -118, 40, 38, 10); g.fill();
+    caminho(() => g.roundRect(-115, -86, 230, 56, 18), C, ln); g.fillStyle = '#fde047'; g.beginPath(); g.ellipse(108, -66, 8, 11, 0, 0, 7); g.fill(); g.fillStyle = '#f87171'; g.fillRect(-116, -76, 7, 16);
+    roda(-66, -28, 27, t); roda(66, -28, 27, t); },
+  caminhao(T, C, t, a, fal, o) { g.scale(o, 1); const ln = 'rgba(0,0,0,.4)';
+    caminho(() => g.roundRect(-150, -170, 180, 128, 10), '#f8fafc', ln); g.fillStyle = C; g.fillRect(-140, -120, 160, 14);
+    caminho(() => g.roundRect(34, -140, 92, 98, 16), C, ln); g.fillStyle = '#bae6fd'; g.beginPath(); g.roundRect(62, -128, 52, 40, 8); g.fill(); g.fillStyle = '#fde047'; g.beginPath(); g.arc(122, -60, 8, 0, 7); g.fill();
+    roda(-112, -28, 27, t); roda(-50, -28, 27, t); roda(84, -28, 27, t); },
+  foguete(T, C, t, a) { const ln = 'rgba(0,0,0,.4)', fogo = 30 + Math.random() * 25;
+    caminho(() => { g.moveTo(-26, -40); g.lineTo(0, -40 + fogo + 20); g.lineTo(26, -40); g.closePath(); }, '#f97316', 'rgba(0,0,0,0)', 1); g.fillStyle = '#fde047'; g.beginPath(); g.moveTo(-14, -40); g.lineTo(0, -40 + fogo); g.lineTo(14, -40); g.fill();
+    for (const sd of [-1, 1]) caminho(() => { g.moveTo(sd * 36, -110); g.lineTo(sd * 70, -40); g.lineTo(sd * 30, -50); g.closePath(); }, '#ef4444', ln);
+    caminho(() => g.ellipse(0, -150, 44, 112, 0, 0, 7), C, ln);
+    caminho(() => { g.moveTo(-34, -224); g.quadraticCurveTo(0, -300, 34, -224); g.quadraticCurveTo(0, -238, -34, -224); }, '#ef4444', ln, 3);
+    caminho(() => g.arc(0, -168, 20, 0, 7), '#7dd3fc', '#64748b', 6); g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); g.arc(-6, -175, 6, 0, 7); g.fill(); },
+  aviao(T, C, t, a, fal, o) { g.scale(o, 1); const ln = 'rgba(0,0,0,.4)';
+    caminho(() => { g.moveTo(-100, -110); g.lineTo(-132, -168); g.lineTo(-104, -168); g.lineTo(-70, -112); g.closePath(); }, '#ef4444', ln);
+    caminho(() => g.ellipse(0, -105, 130, 32, 0, 0, 7), C, ln); g.fillStyle = '#7dd3fc'; for (let i = 0; i < 5; i++) { g.beginPath(); g.arc(-60 + i * 26, -110, 7, 0, 7); g.fill(); }
+    g.beginPath(); g.ellipse(104, -112, 18, 10, 0.3, 0, 7); g.fill();
+    caminho(() => { g.moveTo(-20, -98); g.lineTo(-56, -52); g.lineTo(-30, -52); g.lineTo(30, -98); g.closePath(); }, '#94a3b8', ln, 3); },
+};
+function roda(x, y, r, t) { g.fillStyle = '#1f2937'; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); g.fillStyle = '#cbd5e1'; g.beginPath(); g.arc(x, y, r * 0.45, 0, 7); g.fill(); g.strokeStyle = '#64748b'; g.lineWidth = 3; for (let i = 0; i < 4; i++) { const a = t * 9 + i * Math.PI / 2; g.beginPath(); g.moveTo(x, y); g.lineTo(x + Math.cos(a) * r * 0.45, y + Math.sin(a) * r * 0.45); g.stroke(); } }
+function personagem(p, i, n, t, dur, falando) {
+  const k = clamp(t / dur, 0, 1), base = 548, tam = clamp(p.tamanho || 170, 70, 260), x0 = (p.x ?? ((i + 1) / (n + 1))) * W;
+  let x = x0, y = base, rot = 0, olhar = p.direcao === 'esquerda' ? -1 : 1; const a = p.acao || 'parado', T = TIPOS[p.tipo] || {};
+  if (a === 'andar' || a === 'correr' || a === 'nadar') { const v = a === 'correr' ? 520 : 260; x = x0 + olhar * (k - 0.5) * v; y = base - Math.abs(Math.sin(t * (a === 'correr' ? 14 : 8))) * (a === 'correr' ? 14 : 6); if (a === 'nadar') y = base - 140 + Math.sin(t * 3) * 20; }
   if (a === 'pular') y = base - Math.abs(Math.sin(t * 4)) * 150;
-  if (a === 'voar') { y = 260 + Math.sin(t * 2 + i) * 40; x = x0 + Math.sin(t * 0.8 + i) * 120; rot = Math.sin(t * 2) * 0.15; }
-  if (a === 'girar') rot = t * 4;
-  if (a === 'dancar') { rot = Math.sin(t * 8) * 0.3; y = base - Math.abs(Math.sin(t * 8)) * 40; }
-  if (a === 'falar' || a === 'parado') y = base - Math.abs(Math.sin(t * 2)) * 6;
-  g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(x, base + 6, tam * 0.35, tam * 0.08, 0, 0, 7); g.fill();
-  emoji(p.emoji || '🙂', x, y, tam, rot, esp);
-  return { x, y: y - tam * 0.95 };
+  if (a === 'voar') { y = 330 + Math.sin(t * 2 + i) * 40; x = x0 + Math.sin(t * 0.8 + i) * 120; rot = Math.sin(t * 2) * 0.12; olhar = Math.cos(t * 0.8 + i) >= 0 ? 1 : -1; }
+  if (a === 'girar') rot = T.especial ? Math.sin(t * 3) * 0.3 : Math.sin(t * 5) * 0.5;
+  if (a === 'dancar') { rot = Math.sin(t * 8) * 0.18; y = base - Math.abs(Math.sin(t * 8)) * 30; }
+  if (a === 'falar' || a === 'parado') y = base - Math.abs(Math.sin(t * 2)) * 4;
+  if (a === 'parado' || a === 'falar') olhar = p.direcao === 'esquerda' ? -1 : p.direcao === 'direita' && T.especial ? 1 : 0;
+  g.fillStyle = 'rgba(0,0,0,.2)'; g.beginPath(); g.ellipse(x, base + 4, tam * 0.32, tam * 0.06, 0, 0, 7); g.fill();
+  boneco(p.tipo, p.cor, x, y, tam, rot, olhar, t + i * 1.7, a, falando);
+  return { x, y: y - tam * (T.especial ? 0.9 : 1.2) };
 }
 // ===================== ROTEIRO =====================
 let roteiro = null;
@@ -236,12 +421,12 @@ const EXEMPLO = { titulo: 'O Dino Astronauta', musica: 'aventura', cenas: [
 
 const FORMATO = `{"titulo": string curto, "musica": "alegre"|"aventura"|"misterio"|"calma",
  "cenas": [{"fundo": um de [${Object.keys(FUNDOS).join(', ')}],
-   "personagens": [{"emoji": UM emoji, "acao": um de [${ACOES.join(', ')}], "x": número de 0.1 a 0.9, "direcao": "direita"|"esquerda", "tamanho": 100 a 230}],
+   "personagens": [{"tipo": um de [${Object.keys(TIPOS).join(', ')}], "cor": cor principal em hex tipo "#3b82f6" (opcional, para diferenciar personagens do mesmo tipo), "acao": um de [${ACOES.join(', ')}], "x": número de 0.1 a 0.9, "direcao": "direita"|"esquerda", "tamanho": 100 a 230}],
    "objetos": [{"emoji": UM emoji, "x": 0.05 a 0.95}],
    "efeito": um de [${EFEITOS.join(', ')}],
    "narracao": uma ou duas frases simples (máx 25 palavras),
    "fala": {"quem": índice do personagem, "texto": frase curta} ou null}]}`;
-const REGRAS = `Regras: personagens são emojis (animais, pessoas, veículos, monstros fofos); 1 a 3 personagens por cena; o mesmo personagem usa sempre o mesmo emoji; a história tem começo, meio e final feliz; nada assustador demais nem violento; use cenários que combinem com o pedido.
+const REGRAS = `Regras: personagens são bonecos desenhados com cabeça, corpo, braços e pernas: escolha o tipo mais parecido com o que foi pedido; objetos do cenário são emojis; 1 a 3 personagens por cena; o mesmo personagem usa sempre o mesmo tipo e a mesma cor; a história tem começo, meio e final feliz; nada assustador demais nem violento; use cenários que combinem com o pedido.
 Se o pedido for uma PERGUNTA (por que, como, o que, quem, quando, quanto…), faça um vídeo que EXPLICA a resposta certa de um jeito simples para criança: um personagem curioso pergunta e outro explica, cena por cena, e a última cena resume a resposta.`;
 const INSTRUCOES = `Você é roteirista de vídeos animados curtos para crianças. Crie um roteiro em português do Brasil para o pedido do usuário.
 Responda SOMENTE com JSON neste formato:
@@ -285,14 +470,14 @@ function validar(r) {
   if (!r || !Array.isArray(r.cenas) || !r.cenas.length) throw new Error('roteiro vazio');
   r.titulo = String(r.titulo || 'Meu vídeo').slice(0, 60); r.musica = ['alegre', 'aventura', 'misterio', 'calma'].includes(r.musica) ? r.musica : 'alegre';
   r.cenas = r.cenas.slice(0, 10).map(c => ({ fundo: FUNDOS[c.fundo] ? c.fundo : 'ceu', efeito: EFEITOS.includes(c.efeito) ? c.efeito : 'nenhum', narracao: String(c.narracao || '').slice(0, 220),
-    personagens: (Array.isArray(c.personagens) ? c.personagens : []).slice(0, 3).map(p => ({ emoji: String(p.emoji || '🙂').slice(0, 8), acao: ACOES.includes(p.acao) ? p.acao : 'parado', x: clamp(+p.x || 0.5, 0.1, 0.9), direcao: p.direcao === 'esquerda' ? 'esquerda' : 'direita', tamanho: clamp(+p.tamanho || 150, 90, 240) })),
+    personagens: (Array.isArray(c.personagens) ? c.personagens : []).slice(0, 3).map(p => ({ tipo: tipoDe(p), cor: /^#[0-9a-f]{6}$/i.test(p.cor || '') ? p.cor : null, acao: ACOES.includes(p.acao) ? p.acao : 'parado', x: clamp(+p.x || 0.5, 0.1, 0.9), direcao: p.direcao === 'esquerda' ? 'esquerda' : 'direita', tamanho: clamp(+p.tamanho || 170, 90, 240) })),
     objetos: (Array.isArray(c.objetos) ? c.objetos : []).slice(0, 4).map(o => ({ emoji: String(o.emoji || '').slice(0, 8), x: clamp(+o.x || 0.5, 0.05, 0.95) })),
     fala: c.fala && c.fala.texto ? { quem: clamp(+c.fala.quem || 0, 0, 2), texto: String(c.fala.texto).slice(0, 60) } : null }));
   // tempo de cada cena pelo tamanho da narração
   r.cenas.forEach(c => { c.dur = clamp(2.2 + c.narracao.split(/\s+/).length * 0.42, 4.5, 11); });
   return r;
 }
-function mostrarCenas() { const box = $('cenas'); box.innerHTML = ''; roteiro.cenas.forEach((c, i) => { const d = document.createElement('div'); d.className = 'cena'; const b = document.createElement('b'); b.textContent = `CENA ${i + 1} · ${c.fundo.replace(/_/g, ' ')}`; const e = document.createElement('div'); e.className = 'emo'; e.textContent = c.personagens.map(p => p.emoji).join(' ') + ' ' + c.objetos.map(o => o.emoji).join(' '); const p = document.createElement('div'); p.textContent = c.narracao; d.append(b, e, p); box.appendChild(d); }); }
+function mostrarCenas() { const box = $('cenas'); box.innerHTML = ''; roteiro.cenas.forEach((c, i) => { const d = document.createElement('div'); d.className = 'cena'; const b = document.createElement('b'); b.textContent = `CENA ${i + 1} · ${c.fundo.replace(/_/g, ' ')}`; const e = document.createElement('div'); e.className = 'emo'; e.textContent = c.personagens.map(p => NOMES[p.tipo] || p.tipo).join(' · ') + (c.objetos.length ? ' · ' + c.objetos.map(o => o.emoji).join(' ') : ''); const p = document.createElement('div'); p.textContent = c.narracao; d.append(b, e, p); box.appendChild(d); }); }
 const duracaoTotal = () => 2.5 + roteiro.cenas.reduce((a, c) => a + c.dur, 0) + 2.5;
 
 // ===================== DESENHAR UM INSTANTE DO VÍDEO =====================
@@ -307,7 +492,7 @@ function cena(c, t, idx) {
   const k = t / c.dur, z = 1 + k * 0.06; g.save(); g.translate(W / 2, H / 2); g.scale(z, z); g.translate(-W / 2, -H / 2);
   desenharFundo(c.fundo, t + idx * 10, k);
   c.objetos.forEach(o => emoji(o.emoji, o.x * W, 560, 110));
-  const pos = c.personagens.map((p, i) => personagem(p, i, c.personagens.length, t, c.dur));
+  const pos = c.personagens.map((p, i) => personagem(p, i, c.personagens.length, t, c.dur, !!(c.fala && c.fala.quem === i && t > 0.6 && t < c.dur - 0.4)));
   efeito(c.efeito, t + idx);
   g.restore();
   if (c.fala && pos[c.fala.quem] && t > 0.6 && t < c.dur - 0.4) balao(c.fala.texto, pos[c.fala.quem].x, pos[c.fala.quem].y);
