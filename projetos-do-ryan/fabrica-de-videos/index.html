@@ -143,9 +143,12 @@ const FUNDOS = {
   festa:      { ceu: ['#2a0f4a', '#7a2a8a'], chao: '#3a2a5a', astro: 'globo', camadas: ['palco'], estrelas: true },
   escola:     { ceu: ['#8cc8ff', '#eaf6ff'], chao: '#69b04f', astro: 'sol', camadas: ['escola'] },
   casa:       { ceu: ['#ffe2b8', '#fff6e8'], chao: '#b07a4a', astro: 'nenhum', camadas: ['sala'] },
+  destruido:  { ceu: ['#4a1010', '#ff7a3a'], chao: '#4a3a32', astro: 'nenhum', camadas: ['ruinas'] },
+  entrada_bunker: { ceu: ['#5a2a20', '#ff9a5a'], chao: '#5b5040', astro: 'nenhum', camadas: ['bunkerEntrada'] },
+  bunker:     { ceu: ['#3f4651', '#59616d'], chao: '#33373e', astro: 'nenhum', camadas: ['bunkerDentro'] },
 };
 const ACOES = ['parado', 'andar', 'correr', 'pular', 'voar', 'girar', 'dancar', 'falar', 'nadar'];
-const EFEITOS = ['nenhum', 'chuva', 'neve', 'estrelas', 'confete', 'brilho', 'fogo', 'bolhas', 'coracoes'];
+const EFEITOS = ['nenhum', 'chuva', 'neve', 'estrelas', 'confete', 'brilho', 'fogo', 'bolhas', 'coracoes', 'meteoros', 'explosao'];
 
 function rnd(seed) { let s = seed | 0; return () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
@@ -183,6 +186,18 @@ function camada(c, t, par, chaoY) {
   if (c === 'vulcao') { g.fillStyle = '#4a2f28'; g.beginPath(); g.moveTo(300, chaoY); g.lineTo(560, chaoY - 300); g.lineTo(720, chaoY - 300); g.lineTo(980, chaoY); g.fill(); g.fillStyle = '#ff5a1a'; g.beginPath(); g.ellipse(640, chaoY - 300, 80, 16, 0, 0, 7); g.fill(); for (let i = 0; i < 12; i++) { const a = (t * 1.2 + i * 0.4) % 2; g.fillStyle = `rgba(255,${120 + i * 8},30,${1 - a / 2})`; g.beginPath(); g.arc(640 + Math.sin(i * 7) * a * 90, chaoY - 300 - a * 160 + a * a * 40, 9 - a * 3, 0, 7); g.fill(); } }
   if (c === 'palco') { g.fillStyle = '#1a0f2a'; g.fillRect(0, chaoY - 40, W, 40); for (let i = 0; i < 10; i++) { g.fillStyle = `hsl(${(i * 36 + t * 120) % 360},90%,60%)`; g.beginPath(); g.arc(80 + i * 125, chaoY - 20, 8, 0, 7); g.fill(); } }
   if (c === 'escola') { const x = 760 + par(0.3); g.fillStyle = '#e8a25a'; g.fillRect(x, chaoY - 200, 320, 200); g.fillStyle = '#c0392b'; g.beginPath(); g.moveTo(x - 20, chaoY - 200); g.lineTo(x + 160, chaoY - 280); g.lineTo(x + 340, chaoY - 200); g.fill(); g.fillStyle = '#bfe4ff'; for (let i = 0; i < 4; i++) g.fillRect(x + 25 + i * 75, chaoY - 160, 45, 45); g.fillStyle = '#6b4a2a'; g.fillRect(x + 135, chaoY - 80, 50, 80); }
+  if (c === 'ruinas') { const off = par(0.3); for (let i = -1; i < 14; i++) { const w = 80 + R() * 60, h = 120 + R() * 200, x = i * 100 + (off % 100); g.fillStyle = '#2a1f22'; g.beginPath(); g.moveTo(x, chaoY); g.lineTo(x, chaoY - h); for (let j = 1; j <= 4; j++) g.lineTo(x + w * j / 4, chaoY - h + (R() * 60) * (j % 2 ? 1 : 0.3)); g.lineTo(x + w, chaoY); g.fill(); g.fillStyle = 'rgba(255,140,60,.55)'; for (let yy = chaoY - h + 40; yy < chaoY - 20; yy += 34) if (R() > 0.6) g.fillRect(x + 12 + R() * (w - 30), yy, 12, 14); }
+    for (let i = 0; i < 5; i++) { const x = (i * 263 + 90) % W; for (let j = 0; j < 6; j++) { const a = ((t * 0.4 + j / 6 + i * 0.13) % 1); g.fillStyle = `rgba(60,50,50,${0.45 * (1 - a)})`; g.beginPath(); g.arc(x + Math.sin(a * 5 + i) * 30, chaoY - 60 - a * 380, 30 + a * 60, 0, 7); g.fill(); } g.fillStyle = `rgba(255,${120 + (i * 20) % 80},30,.9)`; g.beginPath(); g.ellipse(x, chaoY - 4, 26 + Math.sin(t * 9 + i) * 5, 12, 0, 0, 7); g.fill(); } }
+  if (c === 'bunkerEntrada') { const x = 640 + par(0.3); g.fillStyle = '#5c6b3a'; g.beginPath(); g.ellipse(x, chaoY + 20, 520, 260, 0, Math.PI, 0); g.fill(); g.fillStyle = '#4a5630'; g.beginPath(); g.ellipse(x - 200, chaoY + 10, 200, 120, 0, Math.PI, 0); g.fill();
+    g.fillStyle = '#8a8f96'; g.beginPath(); g.roundRect(x - 150, chaoY - 230, 300, 240, 30); g.fill(); g.fillStyle = '#5b6068'; g.beginPath(); g.arc(x, chaoY - 100, 100, 0, 7); g.fill(); g.fillStyle = '#9aa1aa'; g.beginPath(); g.arc(x, chaoY - 100, 86, 0, 7); g.fill(); g.strokeStyle = '#4b5058'; g.lineWidth = 10; for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3 + 0.3; g.beginPath(); g.moveTo(x + Math.cos(a) * 60, chaoY - 100 + Math.sin(a) * 60); g.lineTo(x - Math.cos(a) * 60, chaoY - 100 - Math.sin(a) * 60); g.stroke(); } g.fillStyle = '#4b5058'; g.beginPath(); g.arc(x, chaoY - 100, 18, 0, 7); g.fill();
+    g.fillStyle = '#facc15'; for (let i = 0; i < 8; i++) { g.fillRect(x - 150 + i * 40, chaoY - 230, 20, 14); } g.fillStyle = '#111'; for (let i = 0; i < 8; i++) g.fillRect(x - 130 + i * 40, chaoY - 230, 20, 14);
+    g.fillStyle = Math.sin(t * 6) > 0 ? '#ef4444' : '#7f1d1d'; g.beginPath(); g.arc(x + 120, chaoY - 205, 9, 0, 7); g.fill(); }
+  if (c === 'bunkerDentro') { g.fillStyle = '#4b5563'; g.fillRect(0, 0, W, chaoY); g.strokeStyle = 'rgba(0,0,0,.25)'; g.lineWidth = 3; for (let x = 0; x < W; x += 160) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, chaoY); g.stroke(); } for (let y = 0; y < chaoY; y += 120) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+    g.fillStyle = '#6b7280'; g.fillRect(0, 40, W, 22); g.fillStyle = '#9a3412'; g.fillRect(0, 74, W, 14); g.fillStyle = 'rgba(0,0,0,.25)'; for (let x = 60; x < W; x += 240) g.fillRect(x, 36, 14, 56);
+    for (const lx of [320, 960]) { const f = (Math.sin(t * 13 + lx) > 0.93) ? 0.35 : 1; g.fillStyle = `rgba(255,230,150,${0.16 * f})`; g.beginPath(); g.moveTo(lx - 20, 110); g.lineTo(lx + 20, 110); g.lineTo(lx + 170, chaoY); g.lineTo(lx - 170, chaoY); g.fill(); g.fillStyle = `rgba(255,236,170,${f})`; g.beginPath(); g.roundRect(lx - 30, 100, 60, 14, 6); g.fill(); }
+    g.fillStyle = '#5b4636'; for (let i = 0; i < 3; i++) g.fillRect(40, 250 + i * 95, 200, 12); g.fillRect(40, 240, 10, 320); g.fillRect(230, 240, 10, 320); const latas = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b']; for (let i = 0; i < 3; i++) for (let j = 0; j < 5; j++) { g.fillStyle = latas[(i + j) % 4]; g.fillRect(56 + j * 34, 214 + i * 95, 24, 36); g.fillStyle = '#cbd5e1'; g.fillRect(56 + j * 34, 214 + i * 95, 24, 6); }
+    const dx = 1080; g.fillStyle = '#374151'; g.beginPath(); g.arc(dx, 380, 130, 0, 7); g.fill(); g.fillStyle = '#6b7280'; g.beginPath(); g.arc(dx, 380, 112, 0, 7); g.fill(); g.strokeStyle = '#374151'; g.lineWidth = 12; g.beginPath(); g.arc(dx, 380, 60, 0, 7); g.stroke(); for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3; g.beginPath(); g.moveTo(dx + Math.cos(a) * 60, 380 + Math.sin(a) * 60); g.lineTo(dx - Math.cos(a) * 60, 380 - Math.sin(a) * 60); g.stroke(); }
+    g.fillStyle = '#1f2937'; g.beginPath(); g.roundRect(560, 200, 150, 90, 8); g.fill(); g.fillStyle = '#22c55e'; g.font = '600 20px monospace'; g.textAlign = 'left'; g.fillText('O2  98%', 576, 236); g.fillText('DIA ' + (1 + Math.floor(t)), 576, 268); }
   if (c === 'sala') { g.fillStyle = '#f2d7b0'; g.fillRect(0, 0, W, chaoY); g.fillStyle = '#9ad0ff'; g.fillRect(140, 120, 260, 180); g.strokeStyle = '#fff'; g.lineWidth = 10; g.strokeRect(140, 120, 260, 180); g.fillStyle = '#c06a4a'; g.fillRect(760, chaoY - 120, 360, 90); g.fillRect(760, chaoY - 170, 360, 60); }
 }
 function arvore(tipo, x, y, s) {
@@ -201,6 +216,10 @@ function efeito(e, t) {
   if (e === 'confete') { for (let i = 0; i < 120; i++) { g.fillStyle = `hsl(${i * 37 % 360},90%,60%)`; const x = (i * 71 + Math.sin(t * 2 + i) * 20) % W, y = (i * 29 + t * 160) % H; g.save(); g.translate(x, y); g.rotate(t * 3 + i); g.fillRect(-5, -3, 10, 6); g.restore(); } }
   if (e === 'fogo') { for (let i = 0; i < 60; i++) { const a = (t * 1.5 + i * 0.13) % 1; g.fillStyle = `rgba(255,${100 + (i % 5) * 30},20,${1 - a})`; g.beginPath(); g.arc((i * 97) % W, H - a * 240, 14 * (1 - a) + 3, 0, 7); g.fill(); } }
   if (e === 'bolhas') { g.strokeStyle = 'rgba(220,245,255,.7)'; g.lineWidth = 2; for (let i = 0; i < 40; i++) { const y = H - ((t * 90 + i * 61) % H); g.beginPath(); g.arc((i * 131) % W + Math.sin(t * 2 + i) * 12, y, 5 + (i % 5) * 2, 0, 7); g.stroke(); } }
+  if (e === 'meteoros') { for (let i = 0; i < 7; i++) { const p = (t * 0.45 + i * 0.37) % 1, sx = (i * 317) % W + 380, x = sx - p * 560, y = -60 + p * 700, r = 14 + (i % 3) * 8;
+      const gr = g.createLinearGradient(x, y, x + 220, y - 270); gr.addColorStop(0, 'rgba(255,200,80,.9)'); gr.addColorStop(1, 'rgba(255,90,30,0)'); g.strokeStyle = gr; g.lineWidth = r * 1.4; g.lineCap = 'round'; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 220, y - 270); g.stroke();
+      const b = g.createRadialGradient(x, y, 2, x, y, r * 2.4); b.addColorStop(0, '#fff7cc'); b.addColorStop(0.35, '#ff9a3a'); b.addColorStop(1, 'rgba(255,80,20,0)'); g.fillStyle = b; g.beginPath(); g.arc(x, y, r * 2.4, 0, 7); g.fill(); g.fillStyle = '#5a3a2a'; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); } }
+  if (e === 'explosao') { const a = Math.max(0, 1 - t / 1.8); if (a > 0) { const b = g.createRadialGradient(W / 2, 420, 20, W / 2, 420, 900); b.addColorStop(0, `rgba(255,255,230,${a})`); b.addColorStop(0.4, `rgba(255,170,60,${a * 0.85})`); b.addColorStop(1, `rgba(255,80,20,${a * 0.4})`); g.fillStyle = b; g.fillRect(0, 0, W, H); } }
   if (e === 'coracoes') { g.font = '34px serif'; for (let i = 0; i < 18; i++) { const y = H - ((t * 70 + i * 81) % H); g.globalAlpha = 0.8; g.fillText('💖', (i * 151) % W, y); } g.globalAlpha = 1; }
 }
 function estrela(x, y, r) { g.beginPath(); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? r * 0.45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.fill(); }
@@ -469,7 +488,7 @@ function roteiroLocal(pedido, n) {
 function validar(r) {
   if (!r || !Array.isArray(r.cenas) || !r.cenas.length) throw new Error('roteiro vazio');
   r.titulo = String(r.titulo || 'Meu vídeo').slice(0, 60); r.musica = ['alegre', 'aventura', 'misterio', 'calma'].includes(r.musica) ? r.musica : 'alegre';
-  r.cenas = r.cenas.slice(0, 10).map(c => ({ fundo: FUNDOS[c.fundo] ? c.fundo : 'ceu', efeito: EFEITOS.includes(c.efeito) ? c.efeito : 'nenhum', narracao: String(c.narracao || '').slice(0, 220),
+  r.cenas = r.cenas.slice(0, 16).map(c => ({ fundo: FUNDOS[c.fundo] ? c.fundo : 'ceu', efeito: EFEITOS.includes(c.efeito) ? c.efeito : 'nenhum', narracao: String(c.narracao || '').slice(0, 220),
     personagens: (Array.isArray(c.personagens) ? c.personagens : []).slice(0, 3).map(p => ({ tipo: tipoDe(p), cor: /^#[0-9a-f]{6}$/i.test(p.cor || '') ? p.cor : null, acao: ACOES.includes(p.acao) ? p.acao : 'parado', x: clamp(+p.x || 0.5, 0.1, 0.9), direcao: p.direcao === 'esquerda' ? 'esquerda' : 'direita', tamanho: clamp(+p.tamanho || 170, 90, 240) })),
     objetos: (Array.isArray(c.objetos) ? c.objetos : []).slice(0, 4).map(o => ({ emoji: String(o.emoji || '').slice(0, 8), x: clamp(+o.x || 0.5, 0.05, 0.95) })),
     fala: c.fala && c.fala.texto ? { quem: clamp(+c.fala.quem || 0, 0, 2), texto: String(c.fala.texto).slice(0, 60) } : null }));
@@ -489,7 +508,7 @@ function quadro(T) {
   fim(T - (total - 2.5));
 }
 function cena(c, t, idx) {
-  const k = t / c.dur, z = 1 + k * 0.06; g.save(); g.translate(W / 2, H / 2); g.scale(z, z); g.translate(-W / 2, -H / 2);
+  const k = t / c.dur, z = 1 + k * 0.06; g.save(); if (c.efeito === 'explosao' && t < 2.2) g.translate((Math.random() - 0.5) * 26 * (2.2 - t), (Math.random() - 0.5) * 26 * (2.2 - t)); g.translate(W / 2, H / 2); g.scale(z, z); g.translate(-W / 2, -H / 2);
   desenharFundo(c.fundo, t + idx * 10, k);
   c.objetos.forEach(o => emoji(o.emoji, o.x * W, 560, 110));
   const pos = c.personagens.map((p, i) => personagem(p, i, c.personagens.length, t, c.dur, !!(c.fala && c.fala.quem === i && t > 0.6 && t < c.dur - 0.4)));
@@ -585,6 +604,7 @@ $('chat-form').addEventListener('submit', async ev => { ev.preventDefault(); con
   pens.remove(); msg('ia', resp); conversa.push({ quem: 'pessoa', texto: m }, { quem: 'fabrica', texto: resp }); falar(resp.replace(/[✅🎬]/g, '')); status(`Vídeo na tela: "${roteiro.titulo}" · ${Math.round(duracaoTotal())} segundos.`, 'ok'); $('chat-enviar').disabled = false; $('chat-in').focus(); });
 msg('ia', 'Oi! Eu sou a Fábrica 🤖. Me faça uma pergunta, tipo "por que o céu é azul?", que eu respondo com um vídeo. Ou me diga o que consertar no vídeo, tipo "troca o dinossauro por um gato".');
 
+window.__fabrica = { quadro: T => quadro(T), definir: (r, durs) => { roteiro = validar(r); if (durs) roteiro.cenas.forEach((c, i) => { c.dur = durs[i]; }); mostrarCenas(); return duracaoTotal(); } };
 roteiro = validar(JSON.parse(JSON.stringify(EXEMPLO))); mostrarCenas(); quadro(6); atualizarBaixar();
 status('Exemplo pronto: aperte Assistir, ou escreva o seu pedido e crie um vídeo novo.', '');
 })();
