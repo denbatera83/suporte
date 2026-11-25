@@ -205,7 +205,7 @@ function efeito(e, t) {
 }
 function estrela(x, y, r) { g.beginPath(); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? r * 0.45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.fill(); }
 // ===================== PERSONAGENS =====================
-function emoji(ch, x, y, tam, rot = 0, espelho = false) { g.save(); g.translate(x, y); g.rotate(rot); if (espelho) g.scale(-1, 1); g.font = `${tam}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",serif`; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillText(ch, 0, 0); g.restore(); }
+function emoji(ch, x, y, tam, rot = 0, espelho = false) { g.save(); g.translate(x, y); g.rotate(rot); if (espelho) g.scale(-1, 1); g.globalAlpha = 1; g.fillStyle = '#000'; g.font = `${tam}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",serif`; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillText(ch, 0, 0); g.restore(); }
 function balao(txt, x, y) { g.font = '600 30px Inter, sans-serif'; const linhas = quebrar(txt, 300), w = Math.min(360, Math.max(...linhas.map(l => g.measureText(l).width)) + 40), h = linhas.length * 36 + 26, bx = clamp(x - w / 2, 20, W - w - 20), by = Math.max(20, y - h - 30);
   g.fillStyle = '#fff'; g.strokeStyle = '#222'; g.lineWidth = 4; g.beginPath(); g.roundRect(bx, by, w, h, 20); g.fill(); g.stroke(); g.beginPath(); g.moveTo(x - 14, by + h - 2); g.lineTo(x, by + h + 24); g.lineTo(x + 14, by + h - 2); g.fill();
   g.fillStyle = '#1a1a1a'; g.textAlign = 'center'; linhas.forEach((l, i) => g.fillText(l, bx + w / 2, by + 44 + i * 36)); }
