@@ -13,7 +13,13 @@
   canvas#cena { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
   button { font-family: var(--display); font-weight: 700; letter-spacing: .02em; color: var(--tinta); cursor: pointer; border-radius: 10px; border: 1px solid var(--linha); background: rgba(255,255,255,.07); padding: 8px 16px; font-size: 19px; transition: transform .1s, background .15s; }
   button:hover { background: rgba(255,255,255,.14); } button:active { transform: scale(.96); }
-  button:focus-visible { outline: 3px solid var(--azul); outline-offset: 2px; }
+  button:focus-visible, button.pad-foco { outline: 3px solid var(--azul); outline-offset: 2px; }
+  button.pad-foco { box-shadow: 0 0 0 6px rgba(79,160,255,.35); }
+  #p-controle { display: grid; gap: 8px; border-top: 1px solid rgba(255,255,255,.12); padding-top: 12px; }
+  #p-controle h3 { margin: 0; font-size: 16px; }
+  #p-ctl-estado { font-size: 14px; color: #ffb4a8; } #p-ctl-estado.ok { color: #7ee2a8; }
+  #p-ctl-mapa { width: 100%; border-collapse: collapse; font-size: 13px; } #p-ctl-mapa td { padding: 3px 6px; border-bottom: 1px solid rgba(255,255,255,.08); } #p-ctl-mapa td:first-child { color: #ffc531; font-weight: 700; width: 48%; }
+  [data-pmodo].on { background: var(--azul); color: #fff; }
   button:disabled { opacity: .4; cursor: default; }
   .num { font-variant-numeric: tabular-nums; }
   /* HUD */
@@ -124,7 +130,7 @@
 </div>
 <div id="aviso" hidden></div>
 <div id="flash"></div>
-<div class="hud" id="dicas"><kbd>W</kbd> acelerar · <kbd>S</kbd> frear e ré · <kbd>A</kbd><kbd>D</kbd> virar<br><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 1ª, 2ª e 3ª pessoa · <kbd>C</kbd> troca câmera · <kbd>L</kbd> faróis · <kbd>M</kbd> câmbio manual/auto · <kbd>E</kbd><kbd>Q</kbd> sobe/desce marcha · <kbd>H</kbd> buzina · <kbd>ESC</kbd> pausa · arraste o mouse para olhar</div>
+<div class="hud" id="dicas"><kbd>W</kbd> acelerar · <kbd>S</kbd> frear e ré · <kbd>A</kbd><kbd>D</kbd> virar<br><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 1ª, 2ª e 3ª pessoa · <kbd>C</kbd> troca câmera · <kbd>L</kbd> faróis · <kbd>M</kbd> câmbio manual/auto · <kbd>E</kbd><kbd>Q</kbd> sobe/desce marcha · <kbd>H</kbd> buzina · <kbd>ESC</kbd> pausa · 🎮 controle: ligue e aperte um botão · arraste o mouse para olhar</div>
 <div class="ctl" id="ctl-volante"><div class="aro"></div><span>ARRASTE PARA OS LADOS</span></div>
 <div class="ctl" id="ctl-pedais"><button class="pedal" id="b-freio" type="button">FREIO<br>RÉ</button><button class="pedal" id="b-acel" type="button">ACELERAR</button></div>
 <div class="ctl" id="ctl-botoes"><button type="button" data-cam="1" title="1ª pessoa: dentro da cabine">1ª<br>PESSOA</button><button type="button" data-cam="2" title="2ª pessoa: olhando para você">2ª<br>PESSOA</button><button type="button" data-cam="3" class="on" title="3ª pessoa: atrás do caminhão">3ª<br>PESSOA</button><button type="button" data-cam="4" title="Câmera de cinema">🎬</button><button type="button" id="b-cambio">AUTO</button><button type="button" id="b-msobe">MARCHA<br>▲</button><button type="button" id="b-mdesce">MARCHA<br>▼</button><button type="button" id="b-farol">FAROL</button><button type="button" id="b-buzina">BUZINA</button><button type="button" id="b-pausa">PAUSA</button></div>
@@ -164,6 +170,12 @@
     <button class="principal" id="p-voltar" type="button">Continuar viagem</button>
     <button id="p-guincho" type="button">Chamar guincho (R$ 400)</button>
     <button id="p-desistir" type="button">Desistir da carga</button>
+    <div id="p-controle">
+      <h3>🎮 Controle de videogame</h3>
+      <div id="p-ctl-estado"></div>
+      <div class="linha" role="group" aria-label="Jeito de jogar com o controle"><button type="button" data-pmodo="gatilhos">Gatilhos (RT/LT)</button><button type="button" data-pmodo="botoes">Botões (A/X)</button></div>
+      <table id="p-ctl-mapa"></table>
+    </div>
   </div>
 </div>
 
@@ -795,7 +807,7 @@ function verificarBatidas() { const c = caminhao, cs = circulosCaminhao(), fx = 
     const n = Math.max(2, Math.ceil(L / (r * 2))); for (let k = 0; k < n; k++) { const d = (k / (n - 1) - 0.5) * (L - r * 2), px = g.position.x + cx * d, pz = g.position.z + cz * d;
       for (const [qx, qz, qr, parte] of cs) { const dx = px - qx, dz = pz - qz, dist = Math.hypot(dx, dz), pen = r + qr - dist; if (pen <= 0) continue;
         const rvx = fx * c.v - cx * cr.v, rvz = fz * c.v - cz * cr.v, rel = Math.hypot(rvx, rvz);
-        if (cr.frio <= 0 && rel > 1.2) { const dn = Math.min(22, rel * 1.1); c.danoViagem = Math.min(100, c.danoViagem + dn); cr.frio = 1.4; cr.batido = 1; cr.v *= 0.4; c.v *= parte === 'cab' && Math.sign(dx * fx + dz * fz) > 0 ? 0.45 : 0.85; tremor = Math.min(1, rel / 12); somBatida(rel); aviso(`Batida! A carga ficou ${Math.round(c.danoViagem)}% danificada.`, 'ruim', 3); }
+        if (cr.frio <= 0 && rel > 1.2) { const dn = Math.min(22, rel * 1.1); c.danoViagem = Math.min(100, c.danoViagem + dn); cr.frio = 1.4; cr.batido = 1; vibrar(1, 400); cr.v *= 0.4; c.v *= parte === 'cab' && Math.sign(dx * fx + dz * fz) > 0 ? 0.45 : 0.85; tremor = Math.min(1, rel / 12); somBatida(rel); aviso(`Batida! A carga ficou ${Math.round(c.danoViagem)}% danificada.`, 'ruim', 3); }
         if (cr.s > c.s) cr.s += pen * 0.6 * cr.faixa; else cr.s -= pen * 0.6 * cr.faixa; } } } }
 let tremor = 0;
 // batidas com as coisas da beira da estrada (árvores, postes, defensas, posto, prédios): o caminhão não atravessa nada
@@ -808,7 +820,7 @@ let beiraFrio = 0;
 function passoFisica(h) { const c = caminhao, x0 = c.x, z0 = c.z, p0 = c.psi, f0 = c.phi, presoAntes = Math.abs(c.v) > 0.05 && bateuBeira();
   fisica(h); atualizarTrafego(h); verificarBatidas();
   if (!presoAntes && Math.abs(c.v) > 0.05 && bateuBeira()) { const v = Math.abs(c.v); c.x = x0; c.z = z0; c.psi = p0; c.phi = f0; c.v = v > 2 ? -Math.sign(c.v) * Math.min(2, v * 0.15) : 0;
-    if (beiraFrio <= 0 && v > 3) { beiraFrio = 1.2; c.danoViagem = Math.min(100, c.danoViagem + Math.min(20, v * 0.7)); tremor = Math.min(1, v / 14); somBatida(v); aviso(`Bateu! A carga ficou ${Math.round(c.danoViagem)}% danificada.`, 'ruim', 2.5); } } }
+    if (beiraFrio <= 0 && v > 3) { beiraFrio = 1.2; vibrar(Math.min(1, v / 12), 300); c.danoViagem = Math.min(100, c.danoViagem + Math.min(20, v * 0.7)); tremor = Math.min(1, v / 14); somBatida(v); aviso(`Bateu! A carga ficou ${Math.round(c.danoViagem)}% danificada.`, 'ruim', 2.5); } } }
 
 // ===================== FÍSICA DO CAMINHÃO =====================
 const ent = { acel: 0, freio: 0, volante: 0, volTec: 0 };
@@ -1074,7 +1086,7 @@ function cenaMenu() { cargaAtual = CARGAS[0]; hora = 17.25; chuvaAlvo = chuvaNiv
 function atualizarMenu() { $('m-din').textContent = reais(est.dinheiro); $('m-cid').textContent = '📍 ' + est.cidade; $('m-ent').textContent = `${est.entregas} ${est.entregas === 1 ? 'entrega' : 'entregas'} · ${est.km.toLocaleString('pt-BR')} km`; }
 function guincho() { if (!viagem) return; if (est.dinheiro < 400) { aviso('Você não tem R$ 400 para o guincho.', 'ruim'); return; } est.dinheiro -= 400; viagem.multas += 0; const c = caminhao, s = Math.max(30, c.s);
   colocarCaminhao(s, 2, 0); c.diesel = Math.max(c.diesel, 90); fecharPausa(); aviso('O guincho colocou você de volta na estrada e deixou um pouco de diesel.', 'info', 4); }
-function abrirPausa() { if (!jogando) return; pausado = true; $('pausa').hidden = false; $('p-info').textContent = viagem ? `${viagem.carga.nome} para ${viagem.dest} · faltam ${Math.round(Math.max(0, ROTA.comp - caminhao.s) / 1000 * ESCALA_KM)} km · você tem ${reais(est.dinheiro)}` : ''; }
+function abrirPausa() { if (!jogando) return; pausado = true; $('pausa').hidden = false; mostrarMapa(); setTimeout(() => { if (controleAtual()) { $('p-voltar').focus(); marcarFoco($('p-voltar')); } }, 50); $('p-info').textContent = viagem ? `${viagem.carga.nome} para ${viagem.dest} · faltam ${Math.round(Math.max(0, ROTA.comp - caminhao.s) / 1000 * ESCALA_KM)} km · você tem ${reais(est.dinheiro)}` : ''; }
 function fecharPausa() { pausado = false; $('pausa').hidden = true; }
 
 // ===================== GARAGEM =====================
@@ -1103,6 +1115,7 @@ const toqueEnt = { acel: false, freio: false, vol: 0 };
 const pedal = (id, k) => { const b = $(id); b.addEventListener('pointerdown', e => { e.preventDefault(); iniciarAudio(); toqueEnt[k] = true; b.classList.add('on'); try { b.setPointerCapture(e.pointerId); } catch (er) {} });
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => b.addEventListener(ev, () => { toqueEnt[k] = false; b.classList.remove('on'); })); };
 pedal('b-acel', 'acel'); pedal('b-freio', 'freio');
+document.querySelectorAll('[data-pmodo]').forEach(b => b.addEventListener('click', () => { pad.modo = b.dataset.pmodo; try { localStorage.setItem('estrada-controle', pad.modo); } catch (e) {} mostrarMapa(); }));
 $('b-cambio').addEventListener('click', trocarCambio); $('b-msobe').addEventListener('click', () => trocarMarcha(1)); $('b-mdesce').addEventListener('click', () => trocarMarcha(-1)); atualizarBotaoCambio();
 { const v = $('ctl-volante'), aro = v.querySelector('.aro'); let id = null, x0 = 0;
   v.addEventListener('pointerdown', e => { e.preventDefault(); id = e.pointerId; x0 = e.clientX; try { v.setPointerCapture(id); } catch (er) {} });
@@ -1113,10 +1126,58 @@ document.querySelectorAll('[data-cam]').forEach(b => b.addEventListener('click',
 { let id = null, px = 0, py = 0; canvas.addEventListener('pointerdown', e => { if (!jogando) return; id = e.pointerId; px = e.clientX; py = e.clientY; try { canvas.setPointerCapture(id); } catch (er) {} });
   canvas.addEventListener('pointermove', e => { if (e.pointerId !== id) return; const k = e.pointerType === 'mouse' ? 0.005 : 0.008; olharYaw -= (e.clientX - px) * k; olharPitch = clamp(olharPitch - (e.clientY - py) * k * 0.6, -0.5, 0.6); olharYaw = clamp(olharYaw, -Math.PI, Math.PI); px = e.clientX; py = e.clientY; olharT = 0; });
   ['pointerup', 'pointercancel'].forEach(ev => canvas.addEventListener(ev, e => { if (e.pointerId === id) id = null; })); }
+// ===================== CONTROLE DE VIDEOGAME (Xbox, PlayStation e genéricos) =====================
+const pad = { acel: 0, freio: 0, vol: 0, ant: [], dirAnt: '', dirT: 0, modo: 'gatilhos', nome: '', conectado: false };
+try { pad.modo = localStorage.getItem('estrada-controle') || 'gatilhos'; } catch (e) {}
+const MAPAS = {
+  gatilhos: [['RT (gatilho direito)', 'Acelerar'], ['LT (gatilho esquerdo)', 'Frear e ré'], ['Analógico esquerdo', 'Volante'], ['Analógico direito', 'Olhar em volta'], ['A / ✕', 'Buzina'], ['B / ○', 'Farol'], ['X / □', 'Trocar câmera'], ['Y / △', 'Câmbio manual/auto'], ['RB e LB', 'Sobe e desce marcha'], ['Start / Options', 'Pausa']],
+  botoes: [['A / ✕', 'Acelerar'], ['X / □', 'Frear e ré'], ['Analógico esquerdo', 'Volante'], ['Analógico direito', 'Olhar em volta'], ['Y / △', 'Trocar câmera'], ['B / ○', 'Farol'], ['Clique no analógico esq.', 'Buzina'], ['Select / Share', 'Câmbio manual/auto'], ['RB e LB', 'Sobe e desce marcha'], ['Start / Options', 'Pausa']] };
+function controleAtual() { const l = navigator.getGamepads ? [...navigator.getGamepads()].filter(g => g && g.connected) : []; return l.find(g => g.mapping === 'standard') || l[0] || null; }
+function vibrar(forca, ms) { const gp = controleAtual(); try { if (gp && gp.vibrationActuator) gp.vibrationActuator.playEffect('dual-rumble', { duration: ms, strongMagnitude: forca, weakMagnitude: forca * 0.6 }).catch(() => {}); } catch (e) {} }
+function mostrarMapa() { const box = $('p-controle'); if (!box) return; const gp = controleAtual();
+  $('p-ctl-estado').textContent = gp ? `🎮 Conectado: ${gp.id.replace(/\s*\(.*\)\s*/g, ' ').trim().slice(0, 40)}` : '🎮 Nenhum controle. Ligue o controle no USB (ou Bluetooth) e aperte qualquer botão dele.';
+  $('p-ctl-estado').className = gp ? 'ok' : '';
+  document.querySelectorAll('[data-pmodo]').forEach(b => b.classList.toggle('on', b.dataset.pmodo === pad.modo));
+  const t = $('p-ctl-mapa'); t.textContent = ''; for (const [bt, acao] of MAPAS[pad.modo]) { const tr = document.createElement('tr'), a = document.createElement('td'), b = document.createElement('td'); a.textContent = bt; b.textContent = acao; tr.append(a, b); t.appendChild(tr); } }
+addEventListener('gamepadconnected', e => { pad.conectado = true; vibrar(0.5, 250);
+  aviso(`🎮 Controle conectado! ${pad.modo === 'gatilhos' ? 'RT acelera, LT freia' : 'A acelera, X freia'}, analógico esquerdo vira. Start = pausa e todos os botões.`, 'info', 6); mostrarMapa(); });
+addEventListener('gamepaddisconnected', () => { aviso('🎮 Controle desconectado.', 'ruim'); mostrarMapa(); });
+function focaveis() { return [...document.querySelectorAll('button, a.botao, [data-oferta] button')].filter(el => !el.disabled && el.offsetParent !== null && getComputedStyle(el).visibility !== 'hidden' && !el.closest('.ctl')); }
+function moverFoco(dir) { const lista = focaveis(); if (!lista.length) return; let atual = document.activeElement; if (!lista.includes(atual)) { lista[0].focus(); marcarFoco(lista[0]); return; }
+  const r0 = atual.getBoundingClientRect(), c0 = [r0.left + r0.width / 2, r0.top + r0.height / 2]; let melhor = null, mv = Infinity;
+  for (const el of lista) { if (el === atual) continue; const r = el.getBoundingClientRect(), dx = r.left + r.width / 2 - c0[0], dy = r.top + r.height / 2 - c0[1];
+    const ok = dir === 'dir' ? dx > 4 : dir === 'esq' ? dx < -4 : dir === 'baixo' ? dy > 4 : dy < -4; if (!ok) continue;
+    const prin = dir === 'dir' || dir === 'esq' ? Math.abs(dx) : Math.abs(dy), lat = dir === 'dir' || dir === 'esq' ? Math.abs(dy) : Math.abs(dx), d = prin + lat * 2.5; if (d < mv) { mv = d; melhor = el; } }
+  if (melhor) { melhor.focus(); marcarFoco(melhor); melhor.scrollIntoView({ block: 'nearest' }); } }
+function marcarFoco(el) { document.querySelectorAll('.pad-foco').forEach(e => e.classList.remove('pad-foco')); el.classList.add('pad-foco'); }
+function lerControle(dt) { const gp = controleAtual(); if (!gp) { pad.acel = pad.freio = pad.vol = 0; return; }
+  const bt = i => { const b = gp.buttons[i]; return b ? Math.max(b.value || 0, b.pressed ? 1 : 0) : 0; }, ap = i => bt(i) > 0.5, novo = i => ap(i) && !pad.ant[i];
+  const zona = (v, z = 0.15) => Math.abs(v) < z ? 0 : (v - Math.sign(v) * z) / (1 - z), gat = v => v < 0.06 ? 0 : v;
+  const ax = gp.axes, lx = zona(ax[0] || 0), ly = zona(ax[1] || 0), rx = zona(ax[2] || 0);
+  const g = pad.modo === 'gatilhos';
+  const dirigindo = jogando && !pausado && !document.querySelector('.tela:not([hidden])');
+  if (dirigindo) {
+    pad.acel = g ? gat(bt(7)) : bt(0); pad.freio = g ? gat(bt(6)) : bt(2); pad.vol = -lx * Math.abs(lx) * 0.35 - lx * 0.65;
+    if (Math.abs(rx) > 0) { olharYaw -= rx * dt * 2.2; olharT = 0; }
+    if (g ? novo(0) : novo(10)) buzina();
+    if (novo(1)) { caminhao.farol = !caminhao.farol; $('b-farol').classList.toggle('on', caminhao.farol); aviso(caminhao.farol ? 'Farol ligado' : 'Farol desligado', '', 1.2); }
+    if (g ? novo(2) : novo(3)) trocarCamera();
+    if (g ? novo(3) : novo(8)) trocarCambio();
+    if (novo(5) || novo(12)) trocarMarcha(1); if (novo(4) || novo(13)) trocarMarcha(-1);
+    if (novo(9)) abrirPausa();
+  } else { pad.acel = pad.freio = pad.vol = 0;
+    // menus: direcional ou analógico move, A confirma, B volta
+    const dir = ap(12) || ly < -0.6 ? 'cima' : ap(13) || ly > 0.6 ? 'baixo' : ap(14) || lx < -0.6 ? 'esq' : ap(15) || lx > 0.6 ? 'dir' : '';
+    if (dir && (dir !== pad.dirAnt || pad.dirT <= 0)) { moverFoco(dir); pad.dirT = dir === pad.dirAnt ? 0.16 : 0.38; } pad.dirAnt = dir; pad.dirT -= dt;
+    if (novo(0)) { const el = document.activeElement; if (el && el.tagName === 'BUTTON' && focaveis().includes(el)) el.click(); else moverFoco('baixo'); }
+    if ((novo(1) || novo(9)) && pausado) fecharPausa();
+  }
+  pad.ant = gp.buttons.map(b => b.pressed || b.value > 0.5); }
+setInterval(() => { if (!$('pausa').hidden) mostrarMapa(); }, 1000);
 function lerEntradas(dt) { const kA = teclas.has('w') || teclas.has('arrowup'), kF = teclas.has('s') || teclas.has('arrowdown') || teclas.has(' ');
   const alvoVol = (teclas.has('a') || teclas.has('arrowleft') ? 1 : 0) - (teclas.has('d') || teclas.has('arrowright') ? 1 : 0);
   ent.volTec += clamp(alvoVol - ent.volTec, -dt * (alvoVol === 0 ? 3.5 : 1.8), dt * (alvoVol === 0 ? 3.5 : 1.8));
-  ent.acel = kA || toqueEnt.acel ? 1 : 0; ent.freio = kF || toqueEnt.freio ? 1 : 0; ent.volante = clamp(ent.volTec + toqueEnt.vol, -1, 1); }
+  ent.acel = Math.max(kA || toqueEnt.acel ? 1 : 0, pad.acel); ent.freio = Math.max(kF || toqueEnt.freio ? 1 : 0, pad.freio); ent.volante = clamp(ent.volTec + toqueEnt.vol + pad.vol, -1, 1); }
 
 // ===================== MENU E TELAS =====================
 document.querySelectorAll('#qual button').forEach(b => { b.setAttribute('aria-pressed', String(+b.dataset.q === qual)); b.addEventListener('click', () => { try { localStorage.setItem('estrada-q', b.dataset.q); } catch (e) {} location.reload(); }); });
@@ -1134,6 +1195,7 @@ cenaMenu(); atualizarMenu();
 let antes = performance.now();
 function quadro(agora) { requestAnimationFrame(quadro);
   const dt = Math.min(0.05, (agora - antes) / 1000) * (window.__vel || 1); antes = agora; tempo += dt;
+  lerControle(dt);
   if (jogando && !pausado) { lerEntradas(dt); const n = Math.max(1, Math.ceil(dt * 90)); for (let k = 0; k < n; k++) passoFisica(dt / n); beiraFrio -= dt; regras(dt); }
   else if (!jogando) { atualizarTrafego(dt); }
   posicionarCaminhao(dt); atualizarPedacos(caminhao.s); ambiente(dt); atualizarCamera(dt); ceu.position.copy(camera.position); serra.position.set(camera.position.x, camera.position.y + 40, camera.position.z);
