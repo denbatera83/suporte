@@ -1,0 +1,6 @@
+Como montar o instalador de Windows do Estrada Longa
+1. Baixe electron-v33.2.1-win32-x64.zip e descompacte em dist/EstradaLonga
+2. Renomeie electron.exe para EstradaLonga.exe e apague resources/default_app.asar
+3. Copie main.js, package.json, icone.png e o EstradaLonga.html (como index.html) para dist/EstradaLonga/resources/app/
+4. Copie icone.ico para dist/EstradaLonga/
+5. Rode: makensis instalador.nsi  -> gera Instalar-Estrada-Longa.exe
