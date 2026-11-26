@@ -180,6 +180,17 @@
   </div>
 </div>
 
+<div class="tela cheia" id="ctl-teste" hidden>
+  <div class="bloco" style="width:min(100%,600px)">
+    <div class="topo"><h2>🎮 Teste do controle</h2><button type="button" id="t-voltar">Voltar</button></div>
+    <div id="t-estado" style="font:700 18px var(--display);line-height:1.35"></div>
+    <ol id="t-passos" class="sub" style="margin:0;padding-left:22px;line-height:1.5"></ol>
+    <div id="t-botoes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    <div id="t-eixos" style="display:grid;gap:6px"></div>
+    <button class="principal" id="t-config" type="button">Configurar meu controle (aperte os botões)</button>
+  </div>
+</div>
+
 <div class="tela cheia" id="calib" hidden>
   <div class="bloco" style="width:min(100%,560px);text-align:center;justify-items:center">
     <h2>🎮 Configurar meu controle</h2>
@@ -1131,7 +1142,9 @@ pedal('b-acel', 'acel'); pedal('b-freio', 'freio');
 $('p-calib').addEventListener('click', abrirCalib); $('cal-cancelar').addEventListener('click', () => fecharCalib(false));
 $('cal-pular').addEventListener('click', () => { cal.passo++; cal.solta = true; if (cal.passo >= ACOES_CTL.length) fecharCalib(true); else passoCalib(controleAtual()); });
 $('cal-padrao').addEventListener('click', () => { const gp = controleAtual(); try { localStorage.removeItem(chaveCtl(gp)); } catch (e) {} cal.novo = {}; fecharCalib(false); aviso('🎮 Botões voltaram ao padrão.', 'info'); });
-$('b-controle').addEventListener('click', () => { if (!controleAtual()) aviso('🎮 Ligue o controle, ponha o receptor no USB e aperte qualquer botão dele. Depois toque aqui de novo.', 'info', 6); else abrirCalib(); });
+$('b-controle').addEventListener('click', abrirTeste); $('t-voltar').addEventListener('click', () => { $('ctl-teste').hidden = true; });
+$('t-config').addEventListener('click', () => { if (!controleAtual()) { aviso('Primeiro o controle precisa aparecer aqui no teste.', 'ruim', 3); return; } $('ctl-teste').hidden = true; abrirCalib(); });
+$('p-controle').insertAdjacentHTML('beforeend', '<button id="p-teste" type="button">🔎 Testar controle (ver se o jogo enxerga)</button>'); $('p-teste').addEventListener('click', abrirTeste);
 document.querySelectorAll('[data-pmodo]').forEach(b => b.addEventListener('click', () => { pad.modo = b.dataset.pmodo; try { localStorage.setItem('estrada-controle', pad.modo); } catch (e) {} mostrarMapa(); }));
 $('b-cambio').addEventListener('click', trocarCambio); $('b-msobe').addEventListener('click', () => trocarMarcha(1)); $('b-mdesce').addEventListener('click', () => trocarMarcha(-1)); atualizarBotaoCambio();
 { const v = $('ctl-volante'), aro = v.querySelector('.aro'); let id = null, x0 = 0;
@@ -1212,8 +1225,25 @@ function direcional(gp) { // botões 12-15, chapéu (eixo especial dos genérico
   if (pad.hat >= 0) { const v = ax[pad.hat]; if (Math.abs(v) <= 1.02) { const dirs = [[-1, 'cima'], [-0.714, 'cima'], [-0.428, 'dir'], [-0.142, 'baixo'], [0.142, 'baixo'], [0.428, 'esq'], [0.714, 'esq'], [1, 'cima']]; let mel = dirs[0]; for (const d of dirs) if (Math.abs(d[0] - v) < Math.abs(mel[0] - v)) mel = d; return mel[1]; } }
   const lx = ax[0] || 0, ly = ax[1] || 0;
   return bt(12) || ly < -0.6 ? 'cima' : bt(13) || ly > 0.6 ? 'baixo' : bt(14) || lx < -0.6 ? 'esq' : bt(15) || lx > 0.6 ? 'dir' : ''; }
+// ---- tela de teste: mostra se o navegador enxerga o controle e quais botões acendem ----
+function abrirTeste() { $('ctl-teste').hidden = false; const el = $('t-voltar'); el.focus(); marcarFoco(el); atualizarTeste(); }
+function atualizarTeste() { if ($('ctl-teste').hidden) return; requestAnimationFrame(atualizarTeste);
+  const est = $('t-estado'), ps = $('t-passos'), bx = $('t-botoes'), ex = $('t-eixos'); let passos = [];
+  const dentroDeApp = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+  const todos = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : null, gp = todos && todos.find(g => g.connected);
+  if (!todos) { est.textContent = '❌ Este navegador não aceita controle.'; passos = ['Abra o jogo no Google Chrome ou no Microsoft Edge.']; }
+  else if (!gp) { est.textContent = dentroDeApp ? '❌ O jogo está aberto DENTRO de outro aplicativo, e ele bloqueia o controle.' : '⏳ Ainda não achei nenhum controle.';
+    passos = (dentroDeApp ? ['Salve o arquivo EstradaLonga.html no computador.', 'Clique nele com o botão direito → Abrir com → Google Chrome (ou Microsoft Edge).'] : [])
+      .concat(['Ponha o receptor USB no computador (de preferência direto no PC, sem extensão).', 'Ligue o controle no botão do meio. A luz tem que parar de piscar.', 'Clique uma vez aqui nesta página e aperte qualquer botão do controle (o navegador só mostra o controle depois de um botão).', 'Não achou? Segure o botão do meio por uns 7 segundos (troca o modo do controle) e aperte um botão de novo.', 'Ainda não? Troque o receptor de porta USB, feche e abra o navegador.']); }
+  else { est.textContent = `✅ Achei o controle: ${gp.id.replace(/\s*\(.*\)\s*/g, ' ').trim() || 'controle'}${gp.mapping === 'standard' ? '' : ' (genérico)'}`; passos = ['Aperte os botões: as bolinhas de baixo acendem. Mexa os analógicos: as barras andam.', 'Se tudo acender mas o jogo fizer coisa errada, toque em "Configurar meu controle".']; }
+  if (ps.dataset.k !== passos.join('|')) { ps.dataset.k = passos.join('|'); ps.textContent = ''; for (const p of passos) { const li = document.createElement('li'); li.textContent = p; ps.appendChild(li); } }
+  const nb = gp ? gp.buttons.length : 0; if (bx.childElementCount !== nb) { bx.textContent = ''; for (let i = 0; i < nb; i++) { const d = document.createElement('div'); d.textContent = i + 1; d.style.cssText = 'width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font:800 15px var(--display);border:2px solid rgba(255,255,255,.3)'; bx.appendChild(d); } }
+  for (let i = 0; i < nb; i++) { const on = gp.buttons[i].pressed || gp.buttons[i].value > 0.5; bx.children[i].style.background = on ? '#3fd47c' : 'transparent'; bx.children[i].style.color = on ? '#062' : '#fff'; }
+  const na = gp ? gp.axes.length : 0; if (ex.childElementCount !== na) { ex.textContent = ''; for (let i = 0; i < na; i++) { const d = document.createElement('div'); d.style.cssText = 'display:grid;grid-template-columns:70px 1fr;gap:8px;align-items:center;font-size:13px'; d.innerHTML = `<span>Eixo ${i + 1}</span><span style="height:10px;background:rgba(255,255,255,.12);border-radius:5px;position:relative;overflow:hidden"><i style="position:absolute;top:0;bottom:0;width:6px;background:#ffc531;left:50%"></i></span>`; ex.appendChild(d); } }
+  for (let i = 0; i < na; i++) { const v = Math.max(-1, Math.min(1, gp.axes[i])); ex.children[i].querySelector('i').style.left = `calc(${(v + 1) * 50}% - 3px)`; } }
 function lerControle(dt) { const gp = controleAtual(); if (!gp) { pad.acel = pad.freio = pad.vol = 0; if (cal.on) lerCalib(null); return; }
   if (cal.on) { pad.acel = pad.freio = pad.vol = 0; lerCalib(gp); pad.ant = {}; return; }
+  if (!$('ctl-teste').hidden) { pad.acel = pad.freio = pad.vol = 0; pad.ant = { _a: true, _b: true, _start: true }; return; }
   const m = mapaDe(gp), agora = {}; for (const [k] of ACOES_CTL) agora[k] = acao(gp, m, k) > 0.5; const novo = k => agora[k] && !pad.ant[k];
   const btA = i => gp.buttons[i] && gp.buttons[i].pressed; agora._a = gp.mapping === 'standard' ? btA(0) : btA(2) || btA(1); agora._b = gp.mapping === 'standard' ? btA(1) : btA(3) || btA(0); agora._start = btA(9);
   const dirigindo = jogando && !pausado && !document.querySelector('.tela:not([hidden])');
