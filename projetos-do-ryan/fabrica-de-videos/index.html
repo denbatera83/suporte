@@ -173,7 +173,7 @@ const FUNDOS = {
   bunker:     { ceu: ['#3f4651', '#59616d'], chao: '#33373e', astro: 'nenhum', camadas: ['bunkerDentro'] },
 };
 const ACOES = ['parado', 'andar', 'correr', 'pular', 'voar', 'girar', 'dancar', 'falar', 'nadar'];
-const EFEITOS = ['nenhum', 'chuva', 'neve', 'estrelas', 'confete', 'brilho', 'fogo', 'bolhas', 'coracoes', 'meteoros', 'explosao'];
+const EFEITOS = ['nenhum', 'chuva', 'neve', 'estrelas', 'confete', 'brilho', 'fogo', 'bolhas', 'coracoes', 'meteoros', 'explosao', 'missil', 'alarme'];
 
 function rnd(seed) { let s = seed | 0; return () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
@@ -222,7 +222,7 @@ function camada(c, t, par, chaoY) {
     for (const lx of [320, 960]) { const f = (Math.sin(t * 13 + lx) > 0.93) ? 0.35 : 1; g.fillStyle = `rgba(255,230,150,${0.16 * f})`; g.beginPath(); g.moveTo(lx - 20, 110); g.lineTo(lx + 20, 110); g.lineTo(lx + 170, chaoY); g.lineTo(lx - 170, chaoY); g.fill(); g.fillStyle = `rgba(255,236,170,${f})`; g.beginPath(); g.roundRect(lx - 30, 100, 60, 14, 6); g.fill(); }
     g.fillStyle = '#5b4636'; for (let i = 0; i < 3; i++) g.fillRect(40, 250 + i * 95, 200, 12); g.fillRect(40, 240, 10, 320); g.fillRect(230, 240, 10, 320); const latas = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b']; for (let i = 0; i < 3; i++) for (let j = 0; j < 5; j++) { g.fillStyle = latas[(i + j) % 4]; g.fillRect(56 + j * 34, 214 + i * 95, 24, 36); g.fillStyle = '#cbd5e1'; g.fillRect(56 + j * 34, 214 + i * 95, 24, 6); }
     const dx = 1080; g.fillStyle = '#374151'; g.beginPath(); g.arc(dx, 380, 130, 0, 7); g.fill(); g.fillStyle = '#6b7280'; g.beginPath(); g.arc(dx, 380, 112, 0, 7); g.fill(); g.strokeStyle = '#374151'; g.lineWidth = 12; g.beginPath(); g.arc(dx, 380, 60, 0, 7); g.stroke(); for (let i = 0; i < 3; i++) { const a = i * Math.PI / 3; g.beginPath(); g.moveTo(dx + Math.cos(a) * 60, 380 + Math.sin(a) * 60); g.lineTo(dx - Math.cos(a) * 60, 380 - Math.sin(a) * 60); g.stroke(); }
-    g.fillStyle = '#1f2937'; g.beginPath(); g.roundRect(560, 200, 150, 90, 8); g.fill(); g.fillStyle = '#22c55e'; g.font = '600 20px monospace'; g.textAlign = 'left'; g.fillText('O2  98%', 576, 236); g.fillText('DIA ' + (1 + Math.floor(t)), 576, 268); }
+    g.fillStyle = '#1f2937'; g.beginPath(); g.roundRect(560, 200, 150, 90, 8); g.fill(); g.fillStyle = '#22c55e'; g.font = '600 20px monospace'; g.textAlign = 'left'; g.fillStyle = Math.sin(t * 4) > 0 ? '#facc15' : '#a16207'; g.fillText('RADIAÇÃO', 576, 236); g.fillText('ALTA ☢', 576, 268); }
   if (c === 'sala') { g.fillStyle = '#f2d7b0'; g.fillRect(0, 0, W, chaoY); g.fillStyle = '#9ad0ff'; g.fillRect(140, 120, 260, 180); g.strokeStyle = '#fff'; g.lineWidth = 10; g.strokeRect(140, 120, 260, 180); g.fillStyle = '#c06a4a'; g.fillRect(760, chaoY - 120, 360, 90); g.fillRect(760, chaoY - 170, 360, 60); }
 }
 function arvore(tipo, x, y, s) {
@@ -241,6 +241,13 @@ function efeito(e, t) {
   if (e === 'confete') { for (let i = 0; i < 120; i++) { g.fillStyle = `hsl(${i * 37 % 360},90%,60%)`; const x = (i * 71 + Math.sin(t * 2 + i) * 20) % W, y = (i * 29 + t * 160) % H; g.save(); g.translate(x, y); g.rotate(t * 3 + i); g.fillRect(-5, -3, 10, 6); g.restore(); } }
   if (e === 'fogo') { for (let i = 0; i < 60; i++) { const a = (t * 1.5 + i * 0.13) % 1; g.fillStyle = `rgba(255,${100 + (i % 5) * 30},20,${1 - a})`; g.beginPath(); g.arc((i * 97) % W, H - a * 240, 14 * (1 - a) + 3, 0, 7); g.fill(); } }
   if (e === 'bolhas') { g.strokeStyle = 'rgba(220,245,255,.7)'; g.lineWidth = 2; for (let i = 0; i < 40; i++) { const y = H - ((t * 90 + i * 61) % H); g.beginPath(); g.arc((i * 131) % W + Math.sin(t * 2 + i) * 12, y, 5 + (i % 5) * 2, 0, 7); g.stroke(); } }
+  if (e === 'missil') { const p = Math.min(1, t / 3.2), x = W + 120 - p * (W * 0.75), y = -80 + p * 520, a = Math.atan2(520, -W * 0.75);
+    for (let i = 0; i < 26; i++) { const q = i / 26; g.fillStyle = `rgba(200,200,205,${0.5 * (1 - q)})`; g.beginPath(); g.arc(x - Math.cos(a) * (i * 26) + Math.sin(i * 1.7 + t * 3) * 6, y - Math.sin(a) * (i * 26), 12 + i * 1.6, 0, 7); g.fill(); }
+    g.save(); g.translate(x, y); g.rotate(a); g.fillStyle = '#ff9a3a'; g.beginPath(); g.moveTo(-40, -9); g.lineTo(-62 - Math.random() * 22, 0); g.lineTo(-40, 9); g.fill();
+    g.fillStyle = '#e5e7eb'; g.beginPath(); g.roundRect(-42, -11, 86, 22, 10); g.fill(); g.fillStyle = '#dc2626'; g.beginPath(); g.moveTo(44, -11); g.quadraticCurveTo(70, 0, 44, 11); g.fill(); g.fillStyle = '#374151'; g.beginPath(); g.moveTo(-42, -11); g.lineTo(-54, -24); g.lineTo(-26, -11); g.moveTo(-42, 11); g.lineTo(-54, 24); g.lineTo(-26, 11); g.fill();
+    g.fillStyle = '#facc15'; g.beginPath(); g.arc(10, 0, 7, 0, 7); g.fill(); g.restore(); }
+  if (e === 'alarme') { const a = (Math.sin(t * 7) + 1) / 2; g.fillStyle = `rgba(220,20,20,${0.08 + a * 0.2})`; g.fillRect(0, 0, W, H);
+    for (const [lx, ly] of [[60, 40], [W - 60, 40]]) { const gr = g.createRadialGradient(lx, ly, 4, lx, ly, 140); gr.addColorStop(0, `rgba(255,60,40,${0.4 + a * 0.6})`); gr.addColorStop(1, 'rgba(255,60,40,0)'); g.fillStyle = gr; g.beginPath(); g.arc(lx, ly, 140, 0, 7); g.fill(); g.fillStyle = '#7f1d1d'; g.beginPath(); g.arc(lx, ly, 18, 0, 7); g.fill(); g.fillStyle = `rgba(255,80,60,${0.5 + a * 0.5})`; g.beginPath(); g.arc(lx, ly, 13, 0, 7); g.fill(); } }
   if (e === 'meteoros') { for (let i = 0; i < 7; i++) { const p = (t * 0.45 + i * 0.37) % 1, sx = (i * 317) % W + 380, x = sx - p * 560, y = -60 + p * 700, r = 14 + (i % 3) * 8;
       const gr = g.createLinearGradient(x, y, x + 220, y - 270); gr.addColorStop(0, 'rgba(255,200,80,.9)'); gr.addColorStop(1, 'rgba(255,90,30,0)'); g.strokeStyle = gr; g.lineWidth = r * 1.4; g.lineCap = 'round'; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 220, y - 270); g.stroke();
       const b = g.createRadialGradient(x, y, 2, x, y, r * 2.4); b.addColorStop(0, '#fff7cc'); b.addColorStop(0.35, '#ff9a3a'); b.addColorStop(1, 'rgba(255,80,20,0)'); g.fillStyle = b; g.beginPath(); g.arc(x, y, r * 2.4, 0, 7); g.fill(); g.fillStyle = '#5a3a2a'; g.beginPath(); g.arc(x, y, r, 0, 7); g.fill(); } }
@@ -250,7 +257,7 @@ function efeito(e, t) {
 function estrela(x, y, r) { g.beginPath(); for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? r * 0.45 : r; g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.fill(); }
 // ===================== PERSONAGENS =====================
 function emoji(ch, x, y, tam, rot = 0, espelho = false) { g.save(); g.translate(x, y); g.rotate(rot); if (espelho) g.scale(-1, 1); g.globalAlpha = 1; g.fillStyle = '#000'; g.font = `${tam}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",serif`; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillText(ch, 0, 0); g.restore(); }
-function balao(txt, x, y) { g.font = '600 30px Inter, sans-serif'; const linhas = quebrar(txt, 300), w = Math.min(360, Math.max(...linhas.map(l => g.measureText(l).width)) + 40), h = linhas.length * 36 + 26, bx = clamp(x - w / 2, 20, W - w - 20), by = Math.max(20, y - h - 30);
+function balao(txt, x, y) { g.font = '600 30px Inter, sans-serif'; const linhas = quebrar(txt, 300), w = Math.min(360, Math.max(...linhas.map(l => g.measureText(l).width)) + 40), h = linhas.length * 36 + 26, bx = clamp(x - w / 2, 20, W - w - 20), by = Math.max(150, y - h - 30);
   g.fillStyle = '#fff'; g.strokeStyle = '#222'; g.lineWidth = 4; g.beginPath(); g.roundRect(bx, by, w, h, 20); g.fill(); g.stroke(); g.beginPath(); g.moveTo(x - 14, by + h - 2); g.lineTo(x, by + h + 24); g.lineTo(x + 14, by + h - 2); g.fill();
   g.fillStyle = '#1a1a1a'; g.textAlign = 'center'; linhas.forEach((l, i) => g.fillText(l, bx + w / 2, by + 44 + i * 36)); }
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -468,6 +475,7 @@ const FORMATO = `{"titulo": string curto, "musica": "alegre"|"aventura"|"misteri
    "personagens": [{"tipo": um de [${Object.keys(TIPOS).join(', ')}], "cor": cor principal em hex tipo "#3b82f6" (opcional, para diferenciar personagens do mesmo tipo), "acao": um de [${ACOES.join(', ')}], "x": número de 0.1 a 0.9, "direcao": "direita"|"esquerda", "tamanho": 100 a 230}],
    "objetos": [{"emoji": UM emoji, "x": 0.05 a 0.95}],
    "efeito": um de [${EFEITOS.join(', ')}],
+   "letreiro": texto curto e grande no topo da cena (ex.: "DIA 1", "3 HORAS DEPOIS") ou "",
    "narracao": uma ou duas frases simples (máx 25 palavras),
    "fala": {"quem": índice do personagem, "texto": frase curta} ou null}]}`;
 const REGRAS = `Regras: personagens são bonecos desenhados com cabeça, corpo, braços e pernas: escolha o tipo mais parecido com o que foi pedido; objetos do cenário são emojis; 1 a 3 personagens por cena; o mesmo personagem usa sempre o mesmo tipo e a mesma cor; a história tem começo, meio e final feliz; nada assustador demais nem violento; use cenários que combinem com o pedido.
@@ -535,7 +543,7 @@ function validar(r) {
   r.cenas = r.cenas.slice(0, 16).map(c => ({ fundo: FUNDOS[c.fundo] ? c.fundo : 'ceu', efeito: EFEITOS.includes(c.efeito) ? c.efeito : 'nenhum', narracao: String(c.narracao || '').slice(0, 220),
     personagens: (Array.isArray(c.personagens) ? c.personagens : []).slice(0, 3).map(p => ({ tipo: tipoDe(p), cor: /^#[0-9a-f]{6}$/i.test(p.cor || '') ? p.cor : null, acao: ACOES.includes(p.acao) ? p.acao : 'parado', x: clamp(+p.x || 0.5, 0.1, 0.9), direcao: p.direcao === 'esquerda' ? 'esquerda' : 'direita', tamanho: clamp(+p.tamanho || 170, 90, 240) })),
     objetos: (Array.isArray(c.objetos) ? c.objetos : []).slice(0, 4).map(o => ({ emoji: String(o.emoji || '').slice(0, 8), x: clamp(+o.x || 0.5, 0.05, 0.95) })),
-    fala: c.fala && c.fala.texto ? { quem: clamp(+c.fala.quem || 0, 0, 2), texto: String(c.fala.texto).slice(0, 60) } : null }));
+    letreiro: String(c.letreiro || '').slice(0, 24), fala: c.fala && c.fala.texto ? { quem: clamp(+c.fala.quem || 0, 0, 2), texto: String(c.fala.texto).slice(0, 60) } : null }));
   // tempo de cada cena pelo tamanho da narração
   r.cenas.forEach(c => { c.dur = clamp(2.2 + c.narracao.split(/\s+/).length * 0.42, 4.5, 11); });
   return r;
@@ -560,7 +568,9 @@ function cena(c, t, idx) {
   g.restore();
   if (c.fala && pos[c.fala.quem] && t > 0.6 && t < c.dur - 0.4) balao(c.fala.texto, pos[c.fala.quem].x, pos[c.fala.quem].y);
   legenda(c.narracao, t);
+  if (c.letreiro) letreiro(c.letreiro, t);
 }
+function letreiro(txt, t) { const s = Math.min(1, t / 0.25), esc = 1 + (1 - s) * 0.6; g.save(); g.translate(W / 2, 92); g.scale(esc, esc); g.globalAlpha = s; g.font = '800 92px "Bricolage Grotesque", Inter, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 16; g.strokeStyle = '#111'; g.strokeText(txt, 0, 0); g.fillStyle = '#ffd23f'; g.fillText(txt, 0, 0); g.restore(); g.globalAlpha = 1; }
 function legenda(txt, t) { if (!txt) return; g.font = '600 34px Inter, sans-serif'; const linhas = quebrar(txt, 1040); const h = linhas.length * 44 + 24, y = H - h - 26;
   g.fillStyle = 'rgba(10,10,18,.68)'; g.beginPath(); g.roundRect(80, y, W - 160, h, 16); g.fill(); g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; linhas.forEach((l, i) => g.fillText(l, W / 2, y + 46 + i * 44)); }
 function titulo(txt, t) { const gr = g.createLinearGradient(0, 0, W, H); gr.addColorStop(0, '#1b1d3a'); gr.addColorStop(1, '#3a1f4a'); g.fillStyle = gr; g.fillRect(0, 0, W, H);
