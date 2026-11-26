@@ -141,7 +141,7 @@
     <h1>Estrada<br><span>Longa</span></h1>
     <p class="sub">Pegue uma carga, engate a carreta e atravesse o país. Curvas, serras, trânsito, chuva e estrada de noite. Abasteça nos postos e entregue tudo inteiro para ganhar dinheiro.</p>
     <div class="chips"><span class="chip num" id="m-din">R$ 5.000</span><span class="chip" id="m-cid">📍 Porto Sol</span><span class="chip num" id="m-ent">0 entregas</span></div>
-    <div class="linha"><button class="principal" id="b-cargas" type="button">Escolher carga</button><button id="b-garagem" type="button">Garagem</button><button id="b-tela" type="button">Tela cheia</button></div>
+    <div class="linha"><button class="principal" id="b-cargas" type="button">Escolher carga</button><button id="b-garagem" type="button">Garagem</button><button id="b-tela" type="button">Tela cheia</button><button id="b-controle" type="button">🎮 Controle</button></div>
     <div class="linha"><span class="rot">Gráficos</span><div class="linha" id="qual" role="group" aria-label="Gráficos"><button type="button" data-q="-1">PC fraco</button><button type="button" data-q="0">Leve</button><button type="button" data-q="1">Normal</button><button type="button" data-q="2">Ultra</button></div></div>
   </div>
 </div>
@@ -174,8 +174,20 @@
       <h3>🎮 Controle de videogame</h3>
       <div id="p-ctl-estado"></div>
       <div class="linha" role="group" aria-label="Jeito de jogar com o controle"><button type="button" data-pmodo="gatilhos">Gatilhos (RT/LT)</button><button type="button" data-pmodo="botoes">Botões (A/X)</button></div>
+      <button id="p-calib" type="button">🎮 Configurar meu controle (aperte os botões)</button>
       <table id="p-ctl-mapa"></table>
     </div>
+  </div>
+</div>
+
+<div class="tela cheia" id="calib" hidden>
+  <div class="bloco" style="width:min(100%,560px);text-align:center;justify-items:center">
+    <h2>🎮 Configurar meu controle</h2>
+    <p class="sub" id="cal-passo"></p>
+    <div id="cal-icone" style="font-size:72px;line-height:1"></div>
+    <div id="cal-texto" style="font:800 30px var(--display);line-height:1.15"></div>
+    <p class="sub" id="cal-dica"></p>
+    <div class="linha" style="justify-content:center"><button id="cal-pular" type="button">Pular</button><button id="cal-padrao" type="button">Voltar ao padrão</button><button id="cal-cancelar" type="button">Cancelar</button></div>
   </div>
 </div>
 
@@ -2058,6 +2070,7 @@ $('g-conserto').addEventListener('click', () => { const custo = Math.round(est.d
 // ===================== CONTROLES =====================
 const teclas = new Set();
 addEventListener('keydown', e => { const k = e.key.toLowerCase(); teclas.add(k); if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
+  if (k === 'escape' && cal.on) { fecharCalib(false); return; }
   if (k === 'escape') { if (jogando && !pausado) abrirPausa(); else if (pausado) fecharPausa(); }
   if (!jogando || pausado) return; if (k === 'c') trocarCamera(); if (k === '1') camBotao(1); if (k === '2') camBotao(2); if (k === '3') camBotao(3); if (k === '4') camBotao(4); if (k === 'l') { caminhao.farol = !caminhao.farol; $('b-farol').classList.toggle('on', caminhao.farol); } if (k === 'h') buzina(); if (k === 'm') trocarCambio(); if (k === 'e') trocarMarcha(1); if (k === 'q') trocarMarcha(-1); });
 addEventListener('keyup', e => teclas.delete(e.key.toLowerCase())); addEventListener('blur', () => teclas.clear());
@@ -2070,6 +2083,10 @@ const toqueEnt = { acel: false, freio: false, vol: 0 };
 const pedal = (id, k) => { const b = $(id); b.addEventListener('pointerdown', e => { e.preventDefault(); iniciarAudio(); toqueEnt[k] = true; b.classList.add('on'); try { b.setPointerCapture(e.pointerId); } catch (er) {} });
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => b.addEventListener(ev, () => { toqueEnt[k] = false; b.classList.remove('on'); })); };
 pedal('b-acel', 'acel'); pedal('b-freio', 'freio');
+$('p-calib').addEventListener('click', abrirCalib); $('cal-cancelar').addEventListener('click', () => fecharCalib(false));
+$('cal-pular').addEventListener('click', () => { cal.passo++; cal.solta = true; if (cal.passo >= ACOES_CTL.length) fecharCalib(true); else passoCalib(controleAtual()); });
+$('cal-padrao').addEventListener('click', () => { const gp = controleAtual(); try { localStorage.removeItem(chaveCtl(gp)); } catch (e) {} cal.novo = {}; fecharCalib(false); aviso('🎮 Botões voltaram ao padrão.', 'info'); });
+$('b-controle').addEventListener('click', () => { if (!controleAtual()) aviso('🎮 Ligue o controle, ponha o receptor no USB e aperte qualquer botão dele. Depois toque aqui de novo.', 'info', 6); else abrirCalib(); });
 document.querySelectorAll('[data-pmodo]').forEach(b => b.addEventListener('click', () => { pad.modo = b.dataset.pmodo; try { localStorage.setItem('estrada-controle', pad.modo); } catch (e) {} mostrarMapa(); }));
 $('b-cambio').addEventListener('click', trocarCambio); $('b-msobe').addEventListener('click', () => trocarMarcha(1)); $('b-mdesce').addEventListener('click', () => trocarMarcha(-1)); atualizarBotaoCambio();
 { const v = $('ctl-volante'), aro = v.querySelector('.aro'); let id = null, x0 = 0;
@@ -2081,53 +2098,93 @@ document.querySelectorAll('[data-cam]').forEach(b => b.addEventListener('click',
 { let id = null, px = 0, py = 0; canvas.addEventListener('pointerdown', e => { if (!jogando) return; id = e.pointerId; px = e.clientX; py = e.clientY; try { canvas.setPointerCapture(id); } catch (er) {} });
   canvas.addEventListener('pointermove', e => { if (e.pointerId !== id) return; const k = e.pointerType === 'mouse' ? 0.005 : 0.008; olharYaw -= (e.clientX - px) * k; olharPitch = clamp(olharPitch - (e.clientY - py) * k * 0.6, -0.5, 0.6); olharYaw = clamp(olharYaw, -Math.PI, Math.PI); px = e.clientX; py = e.clientY; olharT = 0; });
   ['pointerup', 'pointercancel'].forEach(ev => canvas.addEventListener(ev, e => { if (e.pointerId === id) id = null; })); }
-// ===================== CONTROLE DE VIDEOGAME (Xbox, PlayStation e genéricos) =====================
-const pad = { acel: 0, freio: 0, vol: 0, ant: [], dirAnt: '', dirT: 0, modo: 'gatilhos', nome: '', conectado: false };
+// ===================== CONTROLE DE VIDEOGAME (Xbox, PlayStation, genéricos USB/sem fio) =====================
+const pad = { acel: 0, freio: 0, vol: 0, ant: {}, dirAnt: '', dirT: 0, modo: 'gatilhos', hat: -1, avisouGen: '' };
 try { pad.modo = localStorage.getItem('estrada-controle') || 'gatilhos'; } catch (e) {}
-const MAPAS = {
-  gatilhos: [['RT (gatilho direito)', 'Acelerar'], ['LT (gatilho esquerdo)', 'Frear e ré'], ['Analógico esquerdo', 'Volante'], ['Analógico direito', 'Olhar em volta'], ['A / ✕', 'Buzina'], ['B / ○', 'Farol'], ['X / □', 'Trocar câmera'], ['Y / △', 'Câmbio manual/auto'], ['RB e LB', 'Sobe e desce marcha'], ['Start / Options', 'Pausa']],
-  botoes: [['A / ✕', 'Acelerar'], ['X / □', 'Frear e ré'], ['Analógico esquerdo', 'Volante'], ['Analógico direito', 'Olhar em volta'], ['Y / △', 'Trocar câmera'], ['B / ○', 'Farol'], ['Clique no analógico esq.', 'Buzina'], ['Select / Share', 'Câmbio manual/auto'], ['RB e LB', 'Sobe e desce marcha'], ['Start / Options', 'Pausa']] };
+const ACOES_CTL = [['acel', 'ACELERAR', '🟢'], ['freio', 'FREAR e dar RÉ', '🔴'], ['esq', 'VIRAR para a ESQUERDA', '⬅️'], ['dir', 'VIRAR para a DIREITA', '➡️'], ['buzina', 'BUZINA', '📯'], ['farol', 'FAROL', '💡'], ['camera', 'TROCAR CÂMERA', '🎥'], ['cambio', 'CÂMBIO manual/automático', '⚙️'], ['sobe', 'SUBIR MARCHA', '⏫'], ['desce', 'DESCER MARCHA', '⏬'], ['pausa', 'PAUSA', '⏸️']];
+const B = i => ({ t: 'b', i }), EIXO = (i, s) => ({ t: 'a', i, s, r: 0 });
+function mapaPadrao(gp) {
+  if (gp && gp.mapping === 'standard') { const g = pad.modo === 'gatilhos';
+    return { acel: [g ? B(7) : B(0)], freio: [g ? B(6) : B(2)], esq: [EIXO(0, -1), B(14)], dir: [EIXO(0, 1), B(15)], buzina: [g ? B(0) : B(10)], farol: [B(1)], camera: [g ? B(2) : B(3)], cambio: [g ? B(3) : B(8)], sobe: [B(5), B(12)], desce: [B(4), B(13)], pausa: [B(9)] }; }
+  // controle genérico (receptor USB, estilo PlayStation): R2 ou o botão de baixo acelera, L2 ou o da esquerda freia
+  return { acel: [B(7), B(2)], freio: [B(6), B(3)], esq: [EIXO(0, -1)], dir: [EIXO(0, 1)], buzina: [B(10)], farol: [B(1)], camera: [B(0)], cambio: [B(8)], sobe: [B(5)], desce: [B(4)], pausa: [B(9)] }; }
+function chaveCtl(gp) { return 'estrada-mapa:' + (gp ? gp.id : ''); }
+function mapaDe(gp) { let m = mapaPadrao(gp); try { const s = JSON.parse(localStorage.getItem(chaveCtl(gp)) || 'null'); if (s) m = Object.assign(m, s); } catch (e) {} return m; }
 function controleAtual() { const l = navigator.getGamepads ? [...navigator.getGamepads()].filter(g => g && g.connected) : []; return l.find(g => g.mapping === 'standard') || l[0] || null; }
+function valor(gp, x) { if (x.t === 'b') { const b = gp.buttons[x.i]; return b ? Math.max(b.value || 0, b.pressed ? 1 : 0) : 0; }
+  const v = gp.axes[x.i]; if (v === undefined) return 0;
+  if (x.t === 'h') return Math.abs(v - x.v) < 0.12 ? 1 : 0;
+  const d = (v - (x.r || 0)) * x.s; return d < 0.15 ? 0 : Math.min(1, (d - 0.15) / 0.85); }
+function acao(gp, m, nome) { let v = 0; for (const x of m[nome] || []) v = Math.max(v, valor(gp, x)); return v; }
 function vibrar(forca, ms) { const gp = controleAtual(); try { if (gp && gp.vibrationActuator) gp.vibrationActuator.playEffect('dual-rumble', { duration: ms, strongMagnitude: forca, weakMagnitude: forca * 0.6 }).catch(() => {}); } catch (e) {} }
-function mostrarMapa() { const box = $('p-controle'); if (!box) return; const gp = controleAtual();
-  $('p-ctl-estado').textContent = gp ? `🎮 Conectado: ${gp.id.replace(/\s*\(.*\)\s*/g, ' ').trim().slice(0, 40)}` : '🎮 Nenhum controle. Ligue o controle no USB (ou Bluetooth) e aperte qualquer botão dele.';
+const NOMES_STD = ['A / ✕', 'B / ○', 'X / □', 'Y / △', 'LB / L1', 'RB / R1', 'LT / L2', 'RT / R2', 'Select', 'Start', 'Clique analóg. esq.', 'Clique analóg. dir.', 'Direcional ↑', 'Direcional ↓', 'Direcional ←', 'Direcional →'];
+const NOMES_GEN = ['Botão de cima (△/Y)', 'Botão da direita (○/B)', 'Botão de baixo (✕/A)', 'Botão da esquerda (□/X)', 'L1', 'R1', 'L2', 'R2', 'SELECT', 'START', 'Clique analóg. esq.', 'Clique analóg. dir.'];
+function nomeEntrada(gp, x) { if (x.t === 'b') return ((gp && gp.mapping === 'standard' ? NOMES_STD : NOMES_GEN)[x.i]) || 'Botão ' + (x.i + 1);
+  if (x.t === 'h') return 'Direcional'; return x.i <= 1 ? `Analógico esquerdo ${x.s < 0 ? (x.i ? '↑' : '←') : (x.i ? '↓' : '→')}` : `Eixo ${x.i + 1} ${x.s < 0 ? '−' : '+'}`; }
+function mostrarMapa() { if (!$('p-controle')) return; const gp = controleAtual(), m = mapaDe(gp);
+  $('p-ctl-estado').textContent = gp ? `🎮 Conectado: ${gp.id.replace(/\s*\(.*\)\s*/g, ' ').trim().slice(0, 40) || 'controle'}${gp.mapping === 'standard' ? '' : ' (genérico)'}` : '🎮 Nenhum controle. Ligue o controle, ponha o receptor no USB e aperte qualquer botão dele.';
   $('p-ctl-estado').className = gp ? 'ok' : '';
-  document.querySelectorAll('[data-pmodo]').forEach(b => b.classList.toggle('on', b.dataset.pmodo === pad.modo));
-  const t = $('p-ctl-mapa'); t.textContent = ''; for (const [bt, acao] of MAPAS[pad.modo]) { const tr = document.createElement('tr'), a = document.createElement('td'), b = document.createElement('td'); a.textContent = bt; b.textContent = acao; tr.append(a, b); t.appendChild(tr); } }
-addEventListener('gamepadconnected', e => { pad.conectado = true; vibrar(0.5, 250);
-  aviso(`🎮 Controle conectado! ${pad.modo === 'gatilhos' ? 'RT acelera, LT freia' : 'A acelera, X freia'}, analógico esquerdo vira. Start = pausa e todos os botões.`, 'info', 6); mostrarMapa(); });
+  document.querySelectorAll('[data-pmodo]').forEach(b => { b.classList.toggle('on', b.dataset.pmodo === pad.modo); b.hidden = !(gp && gp.mapping === 'standard'); });
+  const t = $('p-ctl-mapa'); t.textContent = '';
+  for (const [k, txt] of ACOES_CTL) { const tr = document.createElement('tr'), a = document.createElement('td'), b = document.createElement('td'); a.textContent = (m[k] || []).map(x => nomeEntrada(gp, x)).join(' ou ') || '—'; b.textContent = txt.charAt(0) + txt.slice(1).toLowerCase(); tr.append(a, b); t.appendChild(tr); } }
+addEventListener('gamepadconnected', e => { vibrar(0.5, 250); const gp = e.gamepad;
+  aviso(gp && gp.mapping !== 'standard' ? '🎮 Controle genérico conectado! R2 (ou ✕) acelera, L2 (ou □) freia. Se algum botão não funcionar, abra 🎮 Controle e toque em "Configurar meu controle".' : `🎮 Controle conectado! ${pad.modo === 'gatilhos' ? 'RT acelera, LT freia' : 'A acelera, X freia'}, analógico esquerdo vira. Start = pausa.`, 'info', 7); mostrarMapa(); });
 addEventListener('gamepaddisconnected', () => { aviso('🎮 Controle desconectado.', 'ruim'); mostrarMapa(); });
-function focaveis() { return [...document.querySelectorAll('button, a.botao, [data-oferta] button')].filter(el => !el.disabled && el.offsetParent !== null && getComputedStyle(el).visibility !== 'hidden' && !el.closest('.ctl')); }
-function moverFoco(dir) { const lista = focaveis(); if (!lista.length) return; let atual = document.activeElement; if (!lista.includes(atual)) { lista[0].focus(); marcarFoco(lista[0]); return; }
+// ---- tela "Configurar meu controle": o jogo pede cada botão e você aperta ----
+const cal = { on: false, passo: 0, base: null, solta: false, novo: {}, origem: null };
+function abrirCalib() { const gp = controleAtual(); cal.origem = [...document.querySelectorAll('.tela')].find(t => !t.hidden && t.id !== 'calib') || null; if (cal.origem && cal.origem.id !== 'menu') cal.origem.hidden = true;
+  $('calib').hidden = false; cal.on = true; cal.passo = 0; cal.novo = {}; cal.base = null; cal.solta = true; passoCalib(gp); }
+function passoCalib(gp) { const [, txt, ico] = ACOES_CTL[cal.passo] || [];
+  $('cal-passo').textContent = `Passo ${cal.passo + 1} de ${ACOES_CTL.length}`; $('cal-icone').textContent = ico || '🎮';
+  $('cal-texto').textContent = gp ? `Aperte o botão para ${txt}` : 'Ligue o controle e aperte qualquer botão dele';
+  $('cal-dica').textContent = !gp ? 'Ponha o receptor no USB do computador e ligue o controle (botão do meio). Se a luz piscar sem parar, aperte o botão do meio de novo.' : cal.passo === 2 || cal.passo === 3 ? 'Pode mexer o analógico esquerdo para esse lado (ou apertar um botão).' : 'Aperte e solte o botão do controle que você quer usar. Se não quiser trocar, toque em Pular.'; }
+function fecharCalib(salvar) { const gp = controleAtual(); cal.on = false; $('calib').hidden = true; if (cal.origem && cal.origem.id !== 'menu') cal.origem.hidden = false;
+  if (salvar && gp) { try { const velho = JSON.parse(localStorage.getItem(chaveCtl(gp)) || '{}'); localStorage.setItem(chaveCtl(gp), JSON.stringify(Object.assign(velho, cal.novo))); } catch (e) {} aviso('🎮 Pronto! Seu controle está configurado.', 'info', 3); vibrar(0.6, 300); }
+  mostrarMapa(); }
+function lerCalib(gp) { if (!gp) { passoCalib(null); return; }
+  const ax = [...gp.axes], bts = gp.buttons.map(b => b.pressed || b.value > 0.5);
+  if (!cal.base) { cal.base = { ax, bts }; passoCalib(gp); return; }
+  const mexido = () => { for (let i = 0; i < bts.length; i++) if (bts[i] && !cal.base.bts[i]) return B(i);
+    for (let i = 0; i < ax.length; i++) { const r = cal.base.ax[i], d = ax[i] - r; if (Math.abs(r) > 1.05) { if (Math.abs(d) > 0.1) return { t: 'h', i, v: ax[i] }; } else if (Math.abs(d) > 0.6) return { t: 'a', i, s: Math.sign(d), r: Math.abs(r) < 0.3 ? 0 : r }; }
+    return null; };
+  const x = mexido();
+  if (cal.solta) { if (!x) cal.solta = false; return; }   // espera soltar tudo antes de ler o próximo
+  if (!x) return;
+  const k = ACOES_CTL[cal.passo][0]; cal.novo[k] = [x]; vibrar(0.3, 120); tom(880, 880, 0.08, 'sine', 0.06); cal.solta = true; cal.passo++;
+  if (cal.passo >= ACOES_CTL.length) fecharCalib(true); else passoCalib(gp); }
+// ---- navegação nos menus com o controle ----
+function focaveis() { return [...document.querySelectorAll('button')].filter(el => !el.disabled && !el.hidden && el.offsetParent !== null && !el.closest('.ctl')); }
+function moverFoco(dir) { const lista = focaveis(); if (!lista.length) return; const atual = document.activeElement; if (!lista.includes(atual)) { lista[0].focus(); marcarFoco(lista[0]); return; }
   const r0 = atual.getBoundingClientRect(), c0 = [r0.left + r0.width / 2, r0.top + r0.height / 2]; let melhor = null, mv = Infinity;
   for (const el of lista) { if (el === atual) continue; const r = el.getBoundingClientRect(), dx = r.left + r.width / 2 - c0[0], dy = r.top + r.height / 2 - c0[1];
     const ok = dir === 'dir' ? dx > 4 : dir === 'esq' ? dx < -4 : dir === 'baixo' ? dy > 4 : dy < -4; if (!ok) continue;
-    const prin = dir === 'dir' || dir === 'esq' ? Math.abs(dx) : Math.abs(dy), lat = dir === 'dir' || dir === 'esq' ? Math.abs(dy) : Math.abs(dx), d = prin + lat * 2.5; if (d < mv) { mv = d; melhor = el; } }
+    const hz = dir === 'dir' || dir === 'esq', d = (hz ? Math.abs(dx) : Math.abs(dy)) + (hz ? Math.abs(dy) : Math.abs(dx)) * 2.5; if (d < mv) { mv = d; melhor = el; } }
   if (melhor) { melhor.focus(); marcarFoco(melhor); melhor.scrollIntoView({ block: 'nearest' }); } }
 function marcarFoco(el) { document.querySelectorAll('.pad-foco').forEach(e => e.classList.remove('pad-foco')); el.classList.add('pad-foco'); }
-function lerControle(dt) { const gp = controleAtual(); if (!gp) { pad.acel = pad.freio = pad.vol = 0; return; }
-  const bt = i => { const b = gp.buttons[i]; return b ? Math.max(b.value || 0, b.pressed ? 1 : 0) : 0; }, ap = i => bt(i) > 0.5, novo = i => ap(i) && !pad.ant[i];
-  const zona = (v, z = 0.15) => Math.abs(v) < z ? 0 : (v - Math.sign(v) * z) / (1 - z), gat = v => v < 0.06 ? 0 : v;
-  const ax = gp.axes, lx = zona(ax[0] || 0), ly = zona(ax[1] || 0), rx = zona(ax[2] || 0);
-  const g = pad.modo === 'gatilhos';
+function direcional(gp) { // botões 12-15, chapéu (eixo especial dos genéricos) ou analógico
+  const bt = i => gp.buttons[i] && gp.buttons[i].pressed, ax = gp.axes;
+  for (let i = 0; i < ax.length; i++) if (Math.abs(ax[i]) > 1.05) pad.hat = i;
+  if (pad.hat >= 0) { const v = ax[pad.hat]; if (Math.abs(v) <= 1.02) { const dirs = [[-1, 'cima'], [-0.714, 'cima'], [-0.428, 'dir'], [-0.142, 'baixo'], [0.142, 'baixo'], [0.428, 'esq'], [0.714, 'esq'], [1, 'cima']]; let mel = dirs[0]; for (const d of dirs) if (Math.abs(d[0] - v) < Math.abs(mel[0] - v)) mel = d; return mel[1]; } }
+  const lx = ax[0] || 0, ly = ax[1] || 0;
+  return bt(12) || ly < -0.6 ? 'cima' : bt(13) || ly > 0.6 ? 'baixo' : bt(14) || lx < -0.6 ? 'esq' : bt(15) || lx > 0.6 ? 'dir' : ''; }
+function lerControle(dt) { const gp = controleAtual(); if (!gp) { pad.acel = pad.freio = pad.vol = 0; if (cal.on) lerCalib(null); return; }
+  if (cal.on) { pad.acel = pad.freio = pad.vol = 0; lerCalib(gp); pad.ant = {}; return; }
+  const m = mapaDe(gp), agora = {}; for (const [k] of ACOES_CTL) agora[k] = acao(gp, m, k) > 0.5; const novo = k => agora[k] && !pad.ant[k];
+  const btA = i => gp.buttons[i] && gp.buttons[i].pressed; agora._a = gp.mapping === 'standard' ? btA(0) : btA(2) || btA(1); agora._b = gp.mapping === 'standard' ? btA(1) : btA(3) || btA(0); agora._start = btA(9);
   const dirigindo = jogando && !pausado && !document.querySelector('.tela:not([hidden])');
   if (dirigindo) {
-    pad.acel = g ? gat(bt(7)) : bt(0); pad.freio = g ? gat(bt(6)) : bt(2); pad.vol = -lx * Math.abs(lx) * 0.35 - lx * 0.65;
-    if (Math.abs(rx) > 0) { olharYaw -= rx * dt * 2.2; olharT = 0; }
-    if (g ? novo(0) : novo(10)) buzina();
-    if (novo(1)) { caminhao.farol = !caminhao.farol; $('b-farol').classList.toggle('on', caminhao.farol); aviso(caminhao.farol ? 'Farol ligado' : 'Farol desligado', '', 1.2); }
-    if (g ? novo(2) : novo(3)) trocarCamera();
-    if (g ? novo(3) : novo(8)) trocarCambio();
-    if (novo(5) || novo(12)) trocarMarcha(1); if (novo(4) || novo(13)) trocarMarcha(-1);
-    if (novo(9)) abrirPausa();
+    pad.acel = acao(gp, m, 'acel'); pad.freio = acao(gp, m, 'freio'); const lx = acao(gp, m, 'dir') - acao(gp, m, 'esq'); pad.vol = -(lx * Math.abs(lx) * 0.35 + lx * 0.65);
+    const rx = gp.axes[2] || 0; if (Math.abs(rx) > 0.2 && Math.abs(rx) <= 1 && !(m.esq || []).concat(m.dir || []).some(x => x.i === 2 && x.t !== 'b')) { olharYaw -= rx * dt * 2.2; olharT = 0; }
+    if (novo('buzina')) buzina();
+    if (novo('farol')) { caminhao.farol = !caminhao.farol; $('b-farol').classList.toggle('on', caminhao.farol); aviso(caminhao.farol ? 'Farol ligado' : 'Farol desligado', '', 1.2); }
+    if (novo('camera')) trocarCamera(); if (novo('cambio')) trocarCambio(); if (novo('sobe')) trocarMarcha(1); if (novo('desce')) trocarMarcha(-1); if (novo('pausa')) abrirPausa();
   } else { pad.acel = pad.freio = pad.vol = 0;
-    // menus: direcional ou analógico move, A confirma, B volta
-    const dir = ap(12) || ly < -0.6 ? 'cima' : ap(13) || ly > 0.6 ? 'baixo' : ap(14) || lx < -0.6 ? 'esq' : ap(15) || lx > 0.6 ? 'dir' : '';
+    const dir = direcional(gp);
     if (dir && (dir !== pad.dirAnt || pad.dirT <= 0)) { moverFoco(dir); pad.dirT = dir === pad.dirAnt ? 0.16 : 0.38; } pad.dirAnt = dir; pad.dirT -= dt;
-    if (novo(0)) { const el = document.activeElement; if (el && el.tagName === 'BUTTON' && focaveis().includes(el)) el.click(); else moverFoco('baixo'); }
-    if ((novo(1) || novo(9)) && pausado) fecharPausa();
+    if (agora._a && !pad.ant._a) { const el = document.activeElement; if (el && el.tagName === 'BUTTON' && focaveis().includes(el)) el.click(); else moverFoco('baixo'); }
+    if (((agora._b && !pad.ant._b) || (agora._start && !pad.ant._start) || novo('pausa')) && pausado) fecharPausa();
   }
-  pad.ant = gp.buttons.map(b => b.pressed || b.value > 0.5); }
+  pad.ant = agora; }
 setInterval(() => { if (!$('pausa').hidden) mostrarMapa(); }, 1000);
 function lerEntradas(dt) { const kA = teclas.has('w') || teclas.has('arrowup'), kF = teclas.has('s') || teclas.has('arrowdown') || teclas.has(' ');
   const alvoVol = (teclas.has('a') || teclas.has('arrowleft') ? 1 : 0) - (teclas.has('d') || teclas.has('arrowright') ? 1 : 0);
