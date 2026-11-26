@@ -124,10 +124,10 @@
 </div>
 <div id="aviso" hidden></div>
 <div id="flash"></div>
-<div class="hud" id="dicas"><kbd>W</kbd> acelerar · <kbd>S</kbd> frear e ré · <kbd>A</kbd><kbd>D</kbd> virar<br><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 1ª, 2ª e 3ª pessoa · <kbd>C</kbd> troca câmera · <kbd>L</kbd> faróis · <kbd>H</kbd> buzina · <kbd>ESC</kbd> pausa · arraste o mouse para olhar</div>
+<div class="hud" id="dicas"><kbd>W</kbd> acelerar · <kbd>S</kbd> frear e ré · <kbd>A</kbd><kbd>D</kbd> virar<br><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 1ª, 2ª e 3ª pessoa · <kbd>C</kbd> troca câmera · <kbd>L</kbd> faróis · <kbd>M</kbd> câmbio manual/auto · <kbd>E</kbd><kbd>Q</kbd> sobe/desce marcha · <kbd>H</kbd> buzina · <kbd>ESC</kbd> pausa · arraste o mouse para olhar</div>
 <div class="ctl" id="ctl-volante"><div class="aro"></div><span>ARRASTE PARA OS LADOS</span></div>
 <div class="ctl" id="ctl-pedais"><button class="pedal" id="b-freio" type="button">FREIO<br>RÉ</button><button class="pedal" id="b-acel" type="button">ACELERAR</button></div>
-<div class="ctl" id="ctl-botoes"><button type="button" data-cam="1" title="1ª pessoa: dentro da cabine">1ª<br>PESSOA</button><button type="button" data-cam="2" title="2ª pessoa: olhando para você">2ª<br>PESSOA</button><button type="button" data-cam="3" class="on" title="3ª pessoa: atrás do caminhão">3ª<br>PESSOA</button><button type="button" data-cam="4" title="Câmera de cinema">🎬</button><button type="button" id="b-farol">FAROL</button><button type="button" id="b-buzina">BUZINA</button><button type="button" id="b-pausa">PAUSA</button></div>
+<div class="ctl" id="ctl-botoes"><button type="button" data-cam="1" title="1ª pessoa: dentro da cabine">1ª<br>PESSOA</button><button type="button" data-cam="2" title="2ª pessoa: olhando para você">2ª<br>PESSOA</button><button type="button" data-cam="3" class="on" title="3ª pessoa: atrás do caminhão">3ª<br>PESSOA</button><button type="button" data-cam="4" title="Câmera de cinema">🎬</button><button type="button" id="b-cambio">AUTO</button><button type="button" id="b-msobe">MARCHA<br>▲</button><button type="button" id="b-mdesce">MARCHA<br>▼</button><button type="button" id="b-farol">FAROL</button><button type="button" id="b-buzina">BUZINA</button><button type="button" id="b-pausa">PAUSA</button></div>
 <div id="fade"></div>
 
 <div class="tela" id="menu">
@@ -1700,7 +1700,7 @@ function montarCarro(tipo, R) {
 // ===================== ESTADO =====================
 let jogando = false, pausado = false, viagem = null, hora = 17.3, chuvaAlvo = 0, chuvaNivel = 0, nublado = 0.1, tempo = 0, nf = 0;
 const TANQUE = 400;
-const caminhao = { x: 0, z: 0, y: 0, psi: 0, phi: 0, v: 0, steer: 0, s: 60, u: 10, tp: 0, roll: 0, rp: 0, ry: 0, diesel: TANQUE, rpm: 700, marcha: 0, farol: false, paradoT: 0, freando: false, danoViagem: 0, entregaT: 0, chocalho: 0 };
+const caminhao = { x: 0, z: 0, y: 0, psi: 0, phi: 0, v: 0, steer: 0, mg: 1, s: 60, u: 10, tp: 0, roll: 0, rp: 0, ry: 0, diesel: TANQUE, rpm: 700, marcha: 0, farol: false, paradoT: 0, freando: false, danoViagem: 0, entregaT: 0, chocalho: 0 };
 let cavalo = null, reboque = null, cargaAtual = CARGAS[0];
 function montarJogador() {
   if (cavalo) cena.remove(cavalo.g); if (reboque) cena.remove(reboque.g);
@@ -1768,15 +1768,37 @@ function passoFisica(h) { const c = caminhao, x0 = c.x, z0 = c.z, p0 = c.psi, f0
 // ===================== FÍSICA DO CAMINHÃO =====================
 const ent = { acel: 0, freio: 0, volante: 0, volTec: 0 };
 function alturaPonto(x, z) { return alturaEm(x, z, caminhao.s); }
+const TOPS = [9, 15, 22, 29, 37, 46, 56, 66, 77, 89, 101, 125];
+let cambioManual = false; try { cambioManual = localStorage.getItem('estrada-cambio') === 'manual'; } catch (e) {}
+function engate() { tom(140, 90, 0.07, 'square', 0.05); }
+function trocarCambio() { const c = caminhao; cambioManual = !cambioManual; c.mg = cambioManual ? (c.v < -0.2 ? -1 : c.v * 3.6 < 0.5 ? 1 : Math.max(1, c.marcha)) : 0;
+  try { localStorage.setItem('estrada-cambio', cambioManual ? 'manual' : 'auto'); } catch (e) {} atualizarBotaoCambio(); engate();
+  aviso(cambioManual ? 'Câmbio MANUAL: E sobe marcha, Q desce. N é ponto morto, R é ré (W acelera para trás).' : 'Câmbio AUTOMÁTICO: o caminhão troca as marchas sozinho.', 'info', 4); }
+function trocarMarcha(d) { const c = caminhao, kmh = c.v * 3.6;
+  if (!cambioManual) { aviso('O câmbio está no automático. Aperte M (ou o botão AUTO) para usar o manual.', 'info'); return; }
+  const novo = clamp(c.mg + d, -1, 12); if (novo === c.mg) return;
+  if (novo === -1 && kmh > 2) { aviso('Pare o caminhão antes de engatar a ré!', 'ruim'); return; }
+  if (novo > 0 && kmh < -2) { aviso('Pare o caminhão antes de engatar para frente!', 'ruim'); return; }
+  if (novo > 0 && kmh > TOPS[novo - 1] + 2) { aviso(`Rápido demais para a ${novo}ª marcha! Diminua antes de reduzir.`, 'ruim'); return; }
+  c.mg = novo; engate(); }
+function atualizarBotaoCambio() { const b = $('b-cambio'); if (b) b.textContent = cambioManual ? 'MANUAL' : 'AUTO'; }
 function fisica(dt) { const c = caminhao, M = cavalo.M, massa = 8500 + cargaAtual.t * 1000 + (M.extra ? 1800 : 0), g = 9.81, grip = 1 - chuvaNivel * 0.28;
   const p = procurar(c.x, c.z, c.s, 25); c.s = p.s; c.u = p.u; const fora = Math.abs(c.u) > 6.6 && zonaPlana(c.s, c.u) < 0.5;
   const dmax = 0.6 / (1 + c.v * c.v / 160); c.steer += (ent.volante * dmax - c.steer) * Math.min(1, dt * 3.5);
   if (Math.abs(c.v) < 0.25 && ent.acel === 0) c.paradoT += dt; else c.paradoT = 0;
-  const re = ent.freio > 0 && ent.acel === 0 && c.v <= 0.3 && c.paradoT > 0.35 || (c.v < -0.2 && ent.freio > 0);
-  let F = 0; const P = M.kw * 1000;
-  if (c.diesel > 0) { if (ent.acel > 0 && c.v > -0.3 && c.v < 30.6) F = ent.acel * Math.min(46000, P / Math.max(Math.abs(c.v), 2.2)); if (re && c.v > -5) F = -ent.freio * 16000; }
+  let re = false, F = 0, freioW = 0; const P = M.kw * 1000, kmhA = c.v * 3.6;
+  if (!cambioManual) { // automático: S freia e depois dá ré; W freia a ré e depois vai pra frente
+    re = ent.freio > 0 && ent.acel === 0 && c.v <= 0.3 && c.paradoT > 0.35 || (c.v < -0.2 && ent.freio > 0 && ent.acel === 0);
+    if (c.v < -0.2 && ent.acel > 0) freioW = 1;
+    if (c.diesel > 0) { if (ent.acel > 0 && c.v > -0.3 && c.v < 30.6) F = ent.acel * Math.min(46000, P / Math.max(Math.abs(c.v), 2.2)); if (re && c.v > -5) F = -ent.freio * 16000; }
+  } else if (c.diesel > 0 && ent.acel > 0) { // manual: a marcha engatada manda
+    const mg = c.mg;
+    if (mg === -1) { if (c.v < 0.3) { if (c.v > -5) F = -ent.acel * 16000; } else freioW = 1; }
+    else if (mg > 0) { if (c.v < -0.2) freioW = 1; else { const top = TOPS[mg - 1], lo = mg > 2 ? TOPS[mg - 3] : 0;
+      if (kmhA < top) { F = Math.min(52000 - mg * 3000, P / Math.max(c.v, 2.2)); if (kmhA < lo) { F *= 0.25; c.forcando = (c.forcando || 0) + dt; } else c.forcando = 0; } } }
+  }
   const rampa = g * Math.sin(c.tp), res = (fora ? 0.07 : 0.008) * g + 0.5 * 1.2 * 7.5 * c.v * c.v / massa + (ent.acel === 0 ? 0.25 : 0);
-  const freio = !re && ent.freio > 0 ? ent.freio * g * 0.6 * grip : 0; c.freando = freio > 0;
+  const freio = !re && (ent.freio > 0 || freioW > 0) ? Math.max(ent.freio, freioW) * g * 0.6 * grip : 0; c.freando = freio > 0;
   let a = F / massa - rampa; const op = res + freio;
   if (Math.abs(c.v) < 0.25 && F === 0) { c.v = 0; } else { const vNovo = c.v + (a - Math.sign(c.v || a) * op) * dt; c.v = Math.sign(vNovo) !== Math.sign(c.v) && c.v !== 0 && F === 0 ? 0 : vNovo; }
   let yr = c.v * Math.tan(c.steer) / M.entre; const lat = Math.abs(c.v * yr), maxLat = g * 0.6 * grip * (fora ? 0.7 : 1); c.derrapa = lat > maxLat; if (c.derrapa) yr *= maxLat / lat;
@@ -1784,9 +1806,9 @@ function fisica(dt) { const c = caminhao, M = cavalo.M, massa = 8500 + cargaAtua
   c.phi += (c.v / reboque.LT) * Math.sin(c.psi - c.phi) * dt; const dd = angDif(c.phi, c.psi); if (Math.abs(dd) > 1.25) c.phi = c.psi - Math.sign(dd) * 1.25;
   const q = procurar(c.x, c.z, c.s, 25); if (Math.abs(q.u) > 140) { const P2 = mundo(q.s, Math.sign(q.u) * 140); c.x = P2.x; c.z = P2.z; c.v *= -0.2; }
   // motor e diesel
-  const kmh = Math.abs(c.v) * 3.6, tops = [9, 15, 22, 29, 37, 46, 56, 66, 77, 89, 101, 125]; let gi = tops.findIndex(t => kmh < t * 0.97); if (gi < 0) gi = 11;
-  const lo = gi ? tops[gi - 1] * 0.97 : 0, hi = tops[gi] * 0.97; c.marcha = c.v < -0.2 ? -1 : kmh < 0.5 ? 0 : gi + 1;
-  const alvoRpm = kmh < 0.5 ? 650 + ent.acel * 500 : 900 + clamp((kmh - lo) / (hi - lo), 0, 1) * 1100 + ent.acel * 120; c.rpm += (alvoRpm - c.rpm) * Math.min(1, dt * 6);
+  const kmh = Math.abs(c.v) * 3.6, tops = TOPS; let gi = tops.findIndex(t => kmh < t * 0.97); if (gi < 0) gi = 11;
+  const lo = gi ? tops[gi - 1] * 0.97 : 0, hi = tops[gi] * 0.97; c.marcha = cambioManual ? c.mg : c.v < -0.2 ? -1 : kmh < 0.5 ? 0 : gi + 1;
+  const alvoRpm = cambioManual ? (c.mg > 0 ? clamp(650 + kmh / TOPS[c.mg - 1] * 1550, 600, 2250) + (kmh >= TOPS[c.mg - 1] - 0.5 && ent.acel ? Math.sin(tempo * 40) * 120 : 0) : c.mg === -1 ? 650 + Math.min(1, kmh / 18) * 1400 : 650 + ent.acel * 1500) : kmh < 0.5 ? 650 + ent.acel * 500 : 900 + clamp((kmh - lo) / (hi - lo), 0, 1) * 1100 + ent.acel * 120; c.rpm += (alvoRpm - c.rpm) * Math.min(1, dt * 6);
   c.diesel = Math.max(0, c.diesel - (3.2e-6 * Math.max(0, F * c.v) * M.gasto + 0.012) * dt);
   c.fora = fora; }
 function posicionarCaminhao(dt) { const c = caminhao, M = cavalo.M, fx = Math.sin(c.psi), fz = Math.cos(c.psi), lx = Math.cos(c.psi), lz = -Math.sin(c.psi);
@@ -1947,6 +1969,18 @@ let sAnt = 0, avisouPosto = -1, avisouChegada = false, abastecendo = false;
 function regras(dt) { const c = caminhao, kmh = Math.abs(c.v) * 3.6;
   // radar
   for (const r of ROTA.radares) if (sAnt < r && c.s >= r && kmh > 88 && Math.abs(c.u) < 7) { viagem.multas += 300; $('flash').style.transition = 'none'; $('flash').style.opacity = 0.85; requestAnimationFrame(() => { $('flash').style.transition = 'opacity .6s'; $('flash').style.opacity = 0; }); tom(1800, 1800, 0.15, 'square', 0.05); aviso(`Radar! Você passou a ${Math.round(kmh)} km/h. Multa de R$ 300.`, 'ruim', 4); }
+  // polícia rodoviária: multas de verdade
+  const inf = viagem.inf || (viagem.inf = { vel: 0, contra: 0, farol: 0, fora: 0, frio: {}, avisos: {} });
+  const multar = (ch, valor, txt, espera) => { if ((inf.frio[ch] || 0) > tempo) return; inf.frio[ch] = tempo + espera; viagem.multas += valor;
+    $('flash').style.transition = 'none'; $('flash').style.opacity = 0.6; requestAnimationFrame(() => { $('flash').style.transition = 'opacity .6s'; $('flash').style.opacity = 0; });
+    tom(900, 700, 0.25, 'square', 0.05); tom(900, 700, 0.25, 'square', 0.05, 0.3); aviso(`🚓 Multa: ${txt}. ${reais(valor)}`, 'ruim', 4.5); };
+  const avisar = (ch, txt) => { if ((inf.avisos[ch] || 0) > tempo) return; inf.avisos[ch] = tempo + 25; aviso(txt, 'ruim', 3); };
+  const naRodovia = kmh > 20 && !zonaPlana(c.s, c.u);
+  if (kmh > 92) { inf.vel += dt; if (inf.vel > 2) avisar('vel', 'Devagar! O limite da rodovia é 80 km/h.'); if (inf.vel > 6) { multar('vel', 195, `excesso de velocidade (${Math.round(kmh)} km/h, limite 80)`, 45); inf.vel = 0; } } else inf.vel = Math.max(0, inf.vel - dt);
+  if (c.u < -0.9 && c.u > -6.6 && kmh > 10) { inf.contra += dt; if (inf.contra > 2) avisar('contra', 'Você está na contramão! Volte para a faixa da direita.'); if (inf.contra > 5) { multar('contra', 293, 'dirigir na contramão', 30); inf.contra = 0; } } else inf.contra = Math.max(0, inf.contra - dt * 2);
+  if (naRodovia && !c.farolLigado) { inf.farol += dt; if (inf.farol > 4) avisar('farol', 'Na rodovia o farol tem que ficar ligado, até de dia! Aperte L.'); if (inf.farol > 14) { multar('farol', 130, 'farol apagado na rodovia', 90); inf.farol = 0; } } else inf.farol = 0;
+  if (c.fora && kmh > 25) { inf.fora += dt; if (inf.fora > 3) { multar('fora', 195, 'trafegar fora da pista', 40); inf.fora = 0; } } else inf.fora = Math.max(0, inf.fora - dt);
+  if (cambioManual && (c.forcando || 0) > 1.5) { c.forcando = 0; avisar('forca', 'Marcha alta demais! O motor está sem força. Aperte Q para reduzir.'); }
   // postos
   for (let i = 0; i < ROTA.postos.length; i++) { const p = ROTA.postos[i]; if (avisouPosto < i && c.s > p - 700 && c.s < p - 400) { avisouPosto = i; aviso(c.diesel < TANQUE * 0.6 ? 'Posto de diesel em 700 m, à direita. Pare embaixo da cobertura para abastecer.' : 'Posto de diesel em 700 m à direita.', 'info', 4); } }
   abastecendo = false; for (const p of ROTA.postos) if (Math.abs(c.s - p) < 16 && c.u > 11 && c.u < 26 && Math.abs(c.v) < 0.6) { abastecendo = true; if (c.diesel < TANQUE - 0.5) { const l = Math.min(TANQUE - c.diesel, 45 * dt), custo = l * 6; if (est.dinheiro >= custo) { c.diesel += l; est.dinheiro -= custo; viagem.dieselGasto += custo; aviso(`Abastecendo... ${Math.round(c.diesel / TANQUE * 100)}%`, 'info', 0.6); } else aviso('Sem dinheiro para o diesel.', 'ruim'); } else aviso('Tanque cheio! Boa viagem.', 'bom', 1.5); }
@@ -2013,7 +2047,7 @@ $('g-conserto').addEventListener('click', () => { const custo = Math.round(est.d
 const teclas = new Set();
 addEventListener('keydown', e => { const k = e.key.toLowerCase(); teclas.add(k); if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
   if (k === 'escape') { if (jogando && !pausado) abrirPausa(); else if (pausado) fecharPausa(); }
-  if (!jogando || pausado) return; if (k === 'c') trocarCamera(); if (k === '1') camBotao(1); if (k === '2') camBotao(2); if (k === '3') camBotao(3); if (k === '4') camBotao(4); if (k === 'l') { caminhao.farol = !caminhao.farol; $('b-farol').classList.toggle('on', caminhao.farol); } if (k === 'h') buzina(); });
+  if (!jogando || pausado) return; if (k === 'c') trocarCamera(); if (k === '1') camBotao(1); if (k === '2') camBotao(2); if (k === '3') camBotao(3); if (k === '4') camBotao(4); if (k === 'l') { caminhao.farol = !caminhao.farol; $('b-farol').classList.toggle('on', caminhao.farol); } if (k === 'h') buzina(); if (k === 'm') trocarCambio(); if (k === 'e') trocarMarcha(1); if (k === 'q') trocarMarcha(-1); });
 addEventListener('keyup', e => teclas.delete(e.key.toLowerCase())); addEventListener('blur', () => teclas.clear());
 const ORDEM_CAM = [0, 4, 1, 2, 3];
 function usarCamera(m) { camModo = m; cine.ok = false; olharYaw = olharPitch = 0; aviso(NOMES_CAM[camModo], '', 1.4); marcarCam(); }
@@ -2024,6 +2058,7 @@ const toqueEnt = { acel: false, freio: false, vol: 0 };
 const pedal = (id, k) => { const b = $(id); b.addEventListener('pointerdown', e => { e.preventDefault(); iniciarAudio(); toqueEnt[k] = true; b.classList.add('on'); try { b.setPointerCapture(e.pointerId); } catch (er) {} });
   ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => b.addEventListener(ev, () => { toqueEnt[k] = false; b.classList.remove('on'); })); };
 pedal('b-acel', 'acel'); pedal('b-freio', 'freio');
+$('b-cambio').addEventListener('click', trocarCambio); $('b-msobe').addEventListener('click', () => trocarMarcha(1)); $('b-mdesce').addEventListener('click', () => trocarMarcha(-1)); atualizarBotaoCambio();
 { const v = $('ctl-volante'), aro = v.querySelector('.aro'); let id = null, x0 = 0;
   v.addEventListener('pointerdown', e => { e.preventDefault(); id = e.pointerId; x0 = e.clientX; try { v.setPointerCapture(id); } catch (er) {} });
   v.addEventListener('pointermove', e => { if (e.pointerId !== id) return; toqueEnt.vol = clamp((x0 - e.clientX) / 90, -1, 1); aro.style.transform = `rotate(${-toqueEnt.vol * 110}deg)`; });
