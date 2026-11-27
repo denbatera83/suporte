@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RYAN STATION</title>
+<style>
+  :root { --azul: #4f8cff; --texto: #f1f4fb; --suave: #a8b3cc; color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #02030a; color: var(--texto); font-family: "Segoe UI", system-ui, sans-serif; cursor: default; }
+  [hidden] { display: none !important; }
+  #abertura { position: fixed; inset: 0; z-index: 30; background: #000; }
+  #abertura canvas { width: 100%; height: 100%; display: block; }
+  #ab-nome { position: absolute; left: 0; right: 0; top: 46%; text-align: center; font: 300 clamp(30px, 5vw, 58px) "Segoe UI", system-ui, sans-serif; letter-spacing: .5em; opacity: 0; transition: opacity 1.6s, letter-spacing 3s; text-shadow: 0 0 24px rgba(120,160,255,.6); }
+  #ab-nome.on { opacity: 1; letter-spacing: .32em; }
+  #ab-aperte { position: absolute; left: 0; right: 0; bottom: 16%; text-align: center; font-size: 18px; letter-spacing: .2em; color: var(--suave); opacity: 0; transition: opacity 1s; }
+  #ab-aperte.on { opacity: 1; animation: pisca 1.6s infinite; } @keyframes pisca { 50% { opacity: .35; } }
+  /* tela inicial */
+  #fundo { position: fixed; inset: 0; background-size: cover; background-position: center; transition: opacity .6s; filter: saturate(1.1); }
+  #fundo2 { position: fixed; inset: 0; background: linear-gradient(90deg, rgba(2,4,14,.94) 0%, rgba(2,4,14,.7) 42%, rgba(2,4,14,.2) 75%), linear-gradient(0deg, rgba(2,4,14,.9) 0%, rgba(2,4,14,0) 45%); }
+  #topo { position: fixed; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 18px; padding: 22px max(28px, env(safe-area-inset-right, 0px)) 0 max(28px, env(safe-area-inset-left, 0px)); z-index: 2; }
+  #topo .logo { font-weight: 300; letter-spacing: .3em; font-size: 15px; color: #cfd9ff; }
+  #topo .esp { flex: 1; }
+  #usuario { display: flex; align-items: center; gap: 10px; font-weight: 700; } #usuario i { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-style: normal; background: linear-gradient(135deg, #4f8cff, #b04fff); }
+  #relogio { font-size: 22px; font-weight: 300; } #ctl-ic { font-size: 14px; color: var(--suave); }
+  #trilho { position: fixed; top: 96px; left: max(28px, env(safe-area-inset-left, 0px)); right: 0; display: flex; gap: 16px; align-items: flex-start; z-index: 2; padding: 10px 0; }
+  .tile { width: 128px; height: 128px; border-radius: 18px; background-size: cover; background-position: center; flex: none; position: relative; transition: width .25s, height .25s, box-shadow .25s, transform .25s; box-shadow: 0 8px 20px rgba(0,0,0,.5); cursor: pointer; border: 0; padding: 0; color: #fff; }
+  .tile.sel { width: 176px; height: 176px; box-shadow: 0 0 0 4px #fff, 0 0 30px rgba(120,170,255,.8); }
+  .tile .nm { position: absolute; left: 0; right: 0; bottom: -28px; text-align: left; font-size: 14px; font-weight: 700; opacity: 0; transition: opacity .2s; white-space: nowrap; }
+  .tile.sel .nm { opacity: 1; }
+  .tile.cfg { background: linear-gradient(135deg, #20283e, #0d1222); display: grid; place-items: center; font-size: 44px; }
+  #info { position: fixed; left: max(28px, env(safe-area-inset-left, 0px)); bottom: 12%; z-index: 2; max-width: min(620px, 88vw); display: grid; gap: 14px; }
+  #i-tit { font-size: clamp(40px, 6vw, 72px); font-weight: 800; margin: 0; line-height: 1; letter-spacing: -.5px; text-shadow: 0 4px 24px rgba(0,0,0,.6); }
+  #i-desc { margin: 0; color: #dfe6f8; font-size: 18px; line-height: 1.45; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
+  #i-tags { display: flex; gap: 8px; flex-wrap: wrap; } #i-tags span { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); }
+  #b-jogar { justify-self: start; font: 700 20px "Segoe UI", system-ui, sans-serif; padding: 14px 44px; border-radius: 999px; border: 0; background: #fff; color: #0a0f24; cursor: pointer; box-shadow: 0 0 0 0 rgba(255,255,255,.7); }
+  #b-jogar.foco { box-shadow: 0 0 0 4px rgba(120,170,255,.9), 0 0 24px rgba(120,170,255,.7); }
+  #ajuda { position: fixed; right: max(28px, env(safe-area-inset-right, 0px)); bottom: 22px; z-index: 2; display: flex; gap: 18px; font-size: 14px; color: var(--suave); }
+  #ajuda b { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,.15); color: #fff; margin-right: 6px; font-size: 12px; }
+  #carregando { position: fixed; inset: 0; z-index: 40; background: #000; display: grid; place-items: center; font-size: 18px; letter-spacing: .3em; color: #cfd9ff; }
+  #cfg { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: rgba(2,4,14,.85); }
+  #cfg .caixa { width: min(92vw, 620px); background: #0e1426; border: 1px solid rgba(255,255,255,.15); border-radius: 18px; padding: 24px; display: grid; gap: 12px; }
+  #cfg h2 { margin: 0; } #cfg p { margin: 0; color: var(--suave); line-height: 1.5; }
+  #c-bts { display: flex; flex-wrap: wrap; gap: 6px; } #c-bts span { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; border: 2px solid rgba(255,255,255,.3); font-size: 12px; font-weight: 700; } #c-bts span.on { background: #3fd47c; color: #052; border-color: #3fd47c; }
+</style>
+
+<div id="abertura"><canvas id="ab-c"></canvas><div id="ab-nome">RYAN STATION</div><div id="ab-aperte">APERTE ✕ / A OU ENTER</div></div>
+<div id="fundo"></div><div id="fundo2"></div>
+<div id="topo"><span class="logo">RYAN STATION</span><span class="esp"></span><span id="ctl-ic"></span><span id="usuario"><i>R</i>Ryan</span><span id="relogio"></span></div>
+<div id="trilho"></div>
+<div id="info"><h1 id="i-tit"></h1><div id="i-tags"></div><p id="i-desc"></p><button id="b-jogar" type="button">▶ JOGAR</button></div>
+<div id="ajuda"><span><b>✕</b>Entrar</span><span><b>○</b>Voltar</span><span>Dentro do jogo: segure <b style="width:auto;padding:0 6px;border-radius:8px">SELECT + START</b>para voltar</span></div>
+<div id="carregando" hidden>CARREGANDO…</div>
+<div id="cfg" hidden><div class="caixa"><h2>⚙️ Configurações · Controle</h2><p id="c-est"></p><div id="c-bts"></div>
+  <p>Aperte os botões do controle: as bolinhas acendem. Se um jogo usar os botões errados, dentro dele vá em <b>🎮 Controle → Configurar meu controle</b>.</p>
+  <p>Sem controle? Use as <b>setas</b> do teclado, <b>ENTER</b> para entrar e <b>ESC</b> para voltar. Dentro dos jogos, a tecla <b>F1</b> volta para o console.</p><p style="color:#fff">Aperte <b>○ / B</b> para voltar.</p></div></div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const JOGOS = [
+  { id: 'Getac', nome: 'GETAC', desc: 'Mundo aberto na cidade de Vila Aurora: ande a pé, entre nos carros (até no Turbo Noturno!) e faça entregas, táxi e corridas.', tags: ['Mundo aberto', 'Carros', 'Missões'] },
+  { id: 'Teia', nome: 'TEIA', desc: 'Você é o Faísca, o herói da teia. Balance entre os arranha-céus, escale paredes, pegue ladrões na teia e resgate gatinhos.', tags: ['Herói', 'Física de teia', 'Ação'] },
+  { id: 'EstradaLonga', nome: 'ESTRADA LONGA', desc: 'Pegue uma carga, engate a carreta e atravesse o país de caminhão, com câmbio manual, chuva, noite e multas da polícia.', tags: ['Caminhão', 'Simulador', 'Viagem'] },
+  { id: 'CasteloDeFerro', nome: 'CASTELO DE FERRO', desc: 'Os robôs tomaram o castelo! Lute andar por andar, ache as chaves e as passagens secretas e salve a Agente Dani.', tags: ['Tiro', 'Pixel', 'Labirinto'] },
+  { id: 'cfg', nome: 'CONFIGURAÇÕES', desc: 'Veja se o controle está ligado e teste todos os botões.', tags: ['Controle'] } ];
+let sel = 0, foco = 'tiles', tela = 'abertura';
+// ---------------- trilho de jogos ----------------
+const trilho = $('trilho');
+JOGOS.forEach((j, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tile' + (j.id === 'cfg' ? ' cfg' : ''); if (j.id !== 'cfg') b.style.backgroundImage = `url(jogos/capas/${j.id}.jpg)`; else b.textContent = '⚙️';
+  const n = document.createElement('span'); n.className = 'nm'; n.textContent = j.nome; b.appendChild(n); b.addEventListener('click', () => { if (sel === i) abrir(); else escolher(i); }); trilho.appendChild(b); });
+function escolher(i) { sel = (i + JOGOS.length) % JOGOS.length; foco = 'tiles'; const j = JOGOS[sel]; [...trilho.children].forEach((t, k) => t.classList.toggle('sel', k === sel));
+  $('fundo').style.opacity = 0; setTimeout(() => { $('fundo').style.backgroundImage = j.id === 'cfg' ? 'radial-gradient(ellipse at 70% 40%, #1d2c5a, #02030a 70%)' : `url(jogos/capas/${j.id}.jpg)`; $('fundo').style.opacity = 1; }, 160);
+  $('i-tit').textContent = j.nome; $('i-desc').textContent = j.desc; const tg = $('i-tags'); tg.textContent = ''; j.tags.forEach(t => { const s = document.createElement('span'); s.textContent = t; tg.appendChild(s); });
+  $('b-jogar').textContent = j.id === 'cfg' ? '⚙️ ABRIR' : '▶ JOGAR'; $('b-jogar').classList.toggle('foco', false); som(660, 0.05, 'sine', 0.05); try { localStorage.setItem('rs-sel', String(sel)); } catch (e) {} }
+function abrir() { const j = JOGOS[sel]; som(880, 0.12, 'triangle', 0.08); som(1320, 0.18, 'sine', 0.05, 0.08);
+  if (j.id === 'cfg') { $('cfg').hidden = false; tela = 'cfg'; return; }
+  $('carregando').hidden = false; $('carregando').textContent = j.nome + '  ·  CARREGANDO…'; setTimeout(() => { location.href = `jogos/${j.id}.html`; }, 600); }
+$('b-jogar').addEventListener('click', abrir);
+function voltar() { if (tela === 'cfg') { $('cfg').hidden = true; tela = 'inicio'; som(440, 0.08, 'sine', 0.05); } else if (foco === 'botao') { foco = 'tiles'; $('b-jogar').classList.remove('foco'); som(440, 0.06, 'sine', 0.04); } }
+setInterval(() => { const d = new Date(); $('relogio').textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }, 1000);
+// ---------------- som ----------------
+let AC = null; function audio() { if (!AC) try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} if (AC && AC.state !== 'running') AC.resume(); }
+function som(f, dur, tipo = 'sine', vol = 0.06, at = 0) { if (!AC) return; const t = AC.currentTime + at, o = AC.createOscillator(), g = AC.createGain(); o.type = tipo; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + 0.05); }
+function somAbertura() { if (!AC) return; const t = AC.currentTime; [[110, 0, 7], [164.8, 0.6, 6.4], [220, 1.2, 5.8], [329.6, 2.6, 4.4], [440, 3.4, 3.6], [659, 3.8, 3.2]].forEach(([f, a, d]) => { const o = AC.createOscillator(), o2 = AC.createOscillator(), g = AC.createGain(), fl = AC.createBiquadFilter();
+    o.type = 'sawtooth'; o2.type = 'sine'; o.frequency.value = f; o2.frequency.value = f * 1.003; fl.type = 'lowpass'; fl.frequency.setValueAtTime(300, t + a); fl.frequency.linearRampToValueAtTime(1800, t + a + d * 0.6);
+    g.gain.setValueAtTime(0.0001, t + a); g.gain.linearRampToValueAtTime(0.03, t + a + 1.2); g.gain.linearRampToValueAtTime(0.0001, t + a + d); o.connect(fl); o2.connect(fl); fl.connect(g); g.connect(AC.destination); o.start(t + a); o2.start(t + a); o.stop(t + a + d + 0.1); o2.stop(t + a + d + 0.1); }); }
+// ---------------- abertura: névoa azul, cubos de vidro e luzinhas ----------------
+const cv = $('ab-c'), g = cv.getContext('2d'); let abT = 0, abAtiva = true;
+const cubos = Array.from({ length: 22 }, (_, i) => ({ x: Math.random() * 2 - 1, y: Math.random() * 2 - 1, z: Math.random() * 2 + 0.5, s: 0.06 + Math.random() * 0.12, rx: Math.random() * 6, ry: Math.random() * 6, vr: (Math.random() - 0.5) * 0.6 }));
+const luzes = Array.from({ length: 9 }, (_, i) => ({ a: Math.random() * 6, r: 0.2 + Math.random() * 0.5, v: 0.2 + Math.random() * 0.4, c: ['#ff3b3b', '#3bff6a', '#6a7bff', '#ff9a3b', '#3bd5ff'][i % 5] }));
+const nevoas = Array.from({ length: 16 }, () => ({ x: (Math.random() - 0.5) * 0.7, y: (Math.random() - 0.5) * 0.5, r: 0.15 + Math.random() * 0.3, v: Math.random() * 6 }));
+const VERT = [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]], FACES = [[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [2, 3, 7, 6], [0, 3, 7, 4], [1, 2, 6, 5]];
+function desenharAbertura(dt) { abT += dt; const w = cv.width = innerWidth * Math.min(2, devicePixelRatio || 1), h = cv.height = innerHeight * Math.min(2, devicePixelRatio || 1), cx = w / 2, cy = h / 2, k = Math.min(w, h);
+  g.fillStyle = '#000'; g.fillRect(0, 0, w, h); const fade = Math.min(1, abT / 2);
+  for (const n of nevoas) { const x = cx + (n.x + Math.sin(abT * 0.1 + n.v) * 0.05) * k, y = cy + (n.y + Math.cos(abT * 0.13 + n.v) * 0.04) * k, r = n.r * k * (1 + 0.1 * Math.sin(abT * 0.3 + n.v));
+    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(40,70,200,${0.22 * fade})`); gr.addColorStop(0.5, `rgba(25,40,140,${0.1 * fade})`); gr.addColorStop(1, 'rgba(0,0,40,0)'); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+  const ordem = cubos.map(c => { c.z -= dt * 0.08; if (c.z < 0.3) { c.z = 2.5; c.x = Math.random() * 2 - 1; c.y = Math.random() * 2 - 1; } c.rx += c.vr * dt; c.ry += c.vr * 0.7 * dt; return c; }).sort((a, b) => b.z - a.z);
+  for (const c of ordem) { const pts = VERT.map(([x, y, z]) => { let X = x * c.s, Y = y * c.s, Z = z * c.s; let t = Y * Math.cos(c.rx) - Z * Math.sin(c.rx); Z = Y * Math.sin(c.rx) + Z * Math.cos(c.rx); Y = t; t = X * Math.cos(c.ry) + Z * Math.sin(c.ry); Z = -X * Math.sin(c.ry) + Z * Math.cos(c.ry); X = t;
+      const zz = c.z + Z, f = k * 0.6 / zz; return [cx + (c.x * 1.4 + X) * f, cy + (c.y + Y) * f]; }); const a = Math.min(1, (2.5 - c.z) * 0.8) * fade * 0.55;
+    for (const fc of FACES) { g.beginPath(); fc.forEach((v, i) => i ? g.lineTo(...pts[v]) : g.moveTo(...pts[v])); g.closePath(); g.fillStyle = `rgba(120,140,190,${a * 0.18})`; g.fill(); g.strokeStyle = `rgba(190,205,255,${a * 0.5})`; g.lineWidth = 1.2; g.stroke(); } }
+  for (const l of luzes) { l.a += l.v * dt; const x = cx + Math.cos(l.a) * l.r * k, y = cy + Math.sin(l.a * 1.3) * l.r * k * 0.6; const gr = g.createRadialGradient(x, y, 0, x, y, k * 0.02); gr.addColorStop(0, l.c); gr.addColorStop(1, 'rgba(0,0,0,0)'); g.globalAlpha = fade * (0.6 + 0.4 * Math.sin(abT * 3 + l.a)); g.fillStyle = gr; g.fillRect(x - k * 0.02, y - k * 0.02, k * 0.04, k * 0.04); g.globalAlpha = 1; }
+  if (abT > 2.6) $('ab-nome').classList.add('on'); if (abT > 5.2) $('ab-aperte').classList.add('on'); }
+function sairAbertura() { if (tela !== 'abertura') return; audio(); tela = 'inicio'; som(880, 0.2, 'sine', 0.06); $('abertura').style.transition = 'opacity .8s'; $('abertura').style.opacity = 0; setTimeout(() => { $('abertura').hidden = true; abAtiva = false; }, 800); }
+// voltando de um jogo: pula a abertura
+if (location.hash === '#inicio') { $('abertura').hidden = true; abAtiva = false; tela = 'inicio'; }
+// ---------------- controle (mesmo sistema dos jogos: usa o controle em que você apertou) ----------------
+const pad = { ativo: -1, snap: {}, ant: {}, dirAnt: '', dirT: 0, hat: -1 };
+function listaPads() { try { return navigator.getGamepads ? [...navigator.getGamepads()].filter(p => p && p.connected) : []; } catch (e) { return []; } }
+function controle() { const l = listaPads(); for (const p of l) { const s = pad.snap[p.index] || (pad.snap[p.index] = []); let mex = false; p.buttons.forEach((b, i) => { const on = b.pressed || b.value > 0.5; if (on && !s[i]) mex = true; s[i] = on; }); if (mex) pad.ativo = p.index; }
+  return l.find(p => p.index === pad.ativo) || l.find(p => p.mapping === 'standard') || l.slice().sort((a, b) => b.buttons.length - a.buttons.length)[0] || null; }
+function direcao(p) { const ax = p.axes, bt = i => p.buttons[i] && p.buttons[i].pressed; for (let i = 0; i < ax.length; i++) if (Math.abs(ax[i]) > 1.05) pad.hat = i;
+  if (pad.hat >= 0 && Math.abs(ax[pad.hat]) <= 1.02) { const v = ax[pad.hat], ds = [[-1, 'cima'], [-0.714, 'cima'], [-0.428, 'dir'], [-0.142, 'baixo'], [0.142, 'baixo'], [0.428, 'esq'], [0.714, 'esq'], [1, 'cima']]; return ds.reduce((m, d) => Math.abs(d[0] - v) < Math.abs(m[0] - v) ? d : m)[1]; }
+  const lx = ax[0] || 0, ly = ax[1] || 0; return bt(12) || ly < -0.6 ? 'cima' : bt(13) || ly > 0.6 ? 'baixo' : bt(14) || lx < -0.6 ? 'esq' : bt(15) || lx > 0.6 ? 'dir' : ''; }
+function mover(d) { if (tela !== 'inicio') return; audio();
+  if (d === 'dir') { if (foco === 'tiles') escolher(sel + 1); } else if (d === 'esq') { if (foco === 'tiles') escolher(sel - 1); }
+  else if (d === 'baixo') { if (foco === 'tiles') { foco = 'botao'; $('b-jogar').classList.add('foco'); som(520, 0.05, 'sine', 0.05); } }
+  else if (d === 'cima') { if (foco === 'botao') { foco = 'tiles'; $('b-jogar').classList.remove('foco'); som(520, 0.05, 'sine', 0.05); } } }
+function confirmar() { audio(); if (tela === 'abertura') { if (abT > 1) sairAbertura(); return; } if (tela === 'inicio') abrir(); }
+function lerControle(dt) { const p = controle(); $('ctl-ic').textContent = p ? '🎮 controle ligado' : '🎮 sem controle'; if (!p) return; const b = i => p.buttons[i] && p.buttons[i].pressed;
+  const std = p.mapping === 'standard', A = std ? b(0) : b(2), B = std ? b(1) : b(1), ST = b(9);
+  if (A && !pad.ant.A) confirmar(); if (B && !pad.ant.B) voltar(); if (ST && !pad.ant.ST) { if (tela === 'abertura') sairAbertura(); else if (tela === 'inicio') abrir(); }
+  const d = direcao(p); if (d && (d !== pad.dirAnt || pad.dirT <= 0)) { mover(d); pad.dirT = d === pad.dirAnt ? 0.18 : 0.4; } pad.dirAnt = d; pad.dirT -= dt;
+  pad.ant = { A, B, ST };
+  if (tela === 'cfg') { $('c-est').textContent = `✅ ${p.id.replace(/\s*\(.*\)\s*/g, ' ').trim() || 'controle'}${listaPads().length > 1 ? ` (o computador mostra ${listaPads().length} controles; uso o último em que você apertou)` : ''}`; const bx = $('c-bts');
+    if (bx.childElementCount !== p.buttons.length) { bx.textContent = ''; p.buttons.forEach((_, i) => { const s = document.createElement('span'); s.textContent = i + 1; bx.appendChild(s); }); } p.buttons.forEach((x, i) => bx.children[i].classList.toggle('on', x.pressed || x.value > 0.5)); } }
+addEventListener('keydown', e => { const k = e.key; if (k === 'Enter' || k === ' ') { e.preventDefault(); confirmar(); } else if (k === 'Escape' || k === 'Backspace') voltar(); else if (k.startsWith('Arrow')) { e.preventDefault(); if (tela === 'abertura') return; mover({ ArrowRight: 'dir', ArrowLeft: 'esq', ArrowDown: 'baixo', ArrowUp: 'cima' }[k]); } });
+$('abertura').addEventListener('click', () => { audio(); if (abT < 1.5) return; sairAbertura(); });
+addEventListener('pointerdown', () => { if (!AC) { audio(); if (tela === 'abertura' && abT < 4) somAbertura(); } }, { once: true });
+// ---------------- laço ----------------
+let antes = performance.now(); try { sel = +localStorage.getItem('rs-sel') || 0; } catch (e) {} escolher(sel);
+if (abAtiva) { audio(); if (AC && AC.state === 'running') somAbertura(); }
+function quadro(t) { requestAnimationFrame(quadro); const dt = Math.min(0.05, (t - antes) / 1000); antes = t; if (abAtiva) desenharAbertura(dt); lerControle(dt); if (tela === 'cfg' && !controle()) $('c-est').textContent = '⏳ Nenhum controle: ligue o controle e aperte um botão.'; }
+requestAnimationFrame(quadro);
+window.__rs = { get tela() { return tela; }, get sel() { return sel; }, abrir, escolher };
+})();
+</script>
+</html>
