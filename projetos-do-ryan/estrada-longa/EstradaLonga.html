@@ -19,6 +19,8 @@
   #p-controle h3 { margin: 0; font-size: 16px; }
   #p-ctl-estado { font-size: 14px; color: #ffb4a8; } #p-ctl-estado.ok { color: #7ee2a8; }
   #p-ctl-mapa { width: 100%; border-collapse: collapse; font-size: 13px; } #p-ctl-mapa td { padding: 3px 6px; border-bottom: 1px solid rgba(255,255,255,.08); } #p-ctl-mapa td:first-child { color: #ffc531; font-weight: 700; width: 48%; }
+  .ctl-status { justify-self: start; text-align: left; font: 600 14px/1.35 var(--corpo, sans-serif); padding: 8px 12px; border-radius: 10px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); color: #e6e9f0; max-width: 560px; }
+  .ctl-status.ok { border-color: rgba(126,226,168,.6); color: #7ee2a8; } .ctl-status.ruim { border-color: rgba(255,120,100,.6); color: #ffb4a8; }
   [data-pmodo].on { background: var(--azul); color: #fff; }
   button:disabled { opacity: .4; cursor: default; }
   .num { font-variant-numeric: tabular-nums; }
@@ -141,6 +143,7 @@
     <h1>Estrada<br><span>Longa</span></h1>
     <p class="sub">Pegue uma carga, engate a carreta e atravesse o país. Curvas, serras, trânsito, chuva e estrada de noite. Abasteça nos postos e entregue tudo inteiro para ganhar dinheiro.</p>
     <div class="chips"><span class="chip num" id="m-din">R$ 5.000</span><span class="chip" id="m-cid">📍 Porto Sol</span><span class="chip num" id="m-ent">0 entregas</span></div>
+    <button type="button" id="m-ctl" class="ctl-status"></button>
     <div class="linha"><button class="principal" id="b-cargas" type="button">Escolher carga</button><button id="b-garagem" type="button">Garagem</button><button id="b-tela" type="button">Tela cheia</button><button id="b-controle" type="button">🎮 Controle</button></div>
     <div class="linha"><span class="rot">Gráficos</span><div class="linha" id="qual" role="group" aria-label="Gráficos"><button type="button" data-q="-1">PC fraco</button><button type="button" data-q="0">Leve</button><button type="button" data-q="1">Normal</button><button type="button" data-q="2">Ultra</button></div></div>
   </div>
@@ -2097,7 +2100,7 @@ pedal('b-acel', 'acel'); pedal('b-freio', 'freio');
 $('p-calib').addEventListener('click', abrirCalib); $('cal-cancelar').addEventListener('click', () => fecharCalib(false));
 $('cal-pular').addEventListener('click', () => { cal.passo++; cal.solta = true; if (cal.passo >= ACOES_CTL.length) fecharCalib(true); else passoCalib(controleAtual()); });
 $('cal-padrao').addEventListener('click', () => { const gp = controleAtual(); try { localStorage.removeItem(chaveCtl(gp)); } catch (e) {} cal.novo = {}; fecharCalib(false); aviso('🎮 Botões voltaram ao padrão.', 'info'); });
-$('b-controle').addEventListener('click', abrirTeste); $('t-voltar').addEventListener('click', () => { $('ctl-teste').hidden = true; });
+$('b-controle').addEventListener('click', abrirTeste); $('m-ctl').addEventListener('click', abrirTeste); mostrarStatusControle(); $('t-voltar').addEventListener('click', () => { $('ctl-teste').hidden = true; });
 $('t-config').addEventListener('click', () => { if (!controleAtual()) { aviso('Primeiro o controle precisa aparecer aqui no teste.', 'ruim', 3); return; } $('ctl-teste').hidden = true; abrirCalib(); });
 $('p-controle').insertAdjacentHTML('beforeend', '<button id="p-teste" type="button">🔎 Testar controle (ver se o jogo enxerga)</button>'); $('p-teste').addEventListener('click', abrirTeste);
 document.querySelectorAll('[data-pmodo]').forEach(b => b.addEventListener('click', () => { pad.modo = b.dataset.pmodo; try { localStorage.setItem('estrada-controle', pad.modo); } catch (e) {} mostrarMapa(); }));
@@ -2180,6 +2183,15 @@ function direcional(gp) { // botões 12-15, chapéu (eixo especial dos genérico
   if (pad.hat >= 0) { const v = ax[pad.hat]; if (Math.abs(v) <= 1.02) { const dirs = [[-1, 'cima'], [-0.714, 'cima'], [-0.428, 'dir'], [-0.142, 'baixo'], [0.142, 'baixo'], [0.428, 'esq'], [0.714, 'esq'], [1, 'cima']]; let mel = dirs[0]; for (const d of dirs) if (Math.abs(d[0] - v) < Math.abs(mel[0] - v)) mel = d; return mel[1]; } }
   const lx = ax[0] || 0, ly = ax[1] || 0;
   return bt(12) || ly < -0.6 ? 'cima' : bt(13) || ly > 0.6 ? 'baixo' : bt(14) || lx < -0.6 ? 'esq' : bt(15) || lx > 0.6 ? 'dir' : ''; }
+// ---- aviso no menu: o controle foi encontrado? se não, por quê? ----
+function statusControle() { const dentro = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+  if (!('getGamepads' in navigator)) return ['ruim', '❌ Este navegador não aceita controle de videogame. Use o Chrome, o Edge ou o programa de Windows.'];
+  if (window.isSecureContext === false) return ['ruim', '❌ O navegador bloqueou o controle nesta página. Abra o jogo pelo programa de Windows ou pelo arquivo salvo no computador.'];
+  if (dentro) return ['ruim', '❌ O jogo está aberto DENTRO de outro aplicativo, e ele não entrega o controle ao jogo. Abra o arquivo direto no Chrome/Edge ou use o programa de Windows.'];
+  const gp = controleAtual(); if (gp) return ['ok', `✅ Controle encontrado: ${gp.id.replace(/\s*\(.*\)\s*/g, ' ').trim() || 'controle'}${gp.mapping === 'standard' ? '' : ' (genérico)'}. Toque aqui para testar os botões.`];
+  return ['', '🎮 Nenhum controle ainda. Ligue o controle e APERTE UM BOTÃO dele: o navegador só entrega o controle ao jogo depois disso. Toque aqui para ajuda.']; }
+function mostrarStatusControle() { const el = $('m-ctl'); if (!el) return; const [cls, txt] = statusControle(); if (el.textContent !== txt) el.textContent = txt; el.className = 'ctl-status ' + cls; }
+setInterval(mostrarStatusControle, 700); addEventListener('gamepadconnected', mostrarStatusControle); addEventListener('gamepaddisconnected', mostrarStatusControle);
 // ---- tela de teste: mostra se o navegador enxerga o controle e quais botões acendem ----
 function abrirTeste() { $('ctl-teste').hidden = false; const el = $('t-voltar'); el.focus(); marcarFoco(el); atualizarTeste(); }
 function atualizarTeste() { if ($('ctl-teste').hidden) return; requestAnimationFrame(atualizarTeste);
