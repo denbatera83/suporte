@@ -29,7 +29,12 @@
   .opcoes { display: flex; flex-wrap: wrap; gap: 8px; }
   button { font-family: var(--pixel); font-size: 12px; cursor: pointer; padding: 12px 14px; border: 2px solid var(--borda); background: #0f1520; color: var(--texto); }
   button:hover { background: #1d2a3c; }
-  button:focus-visible { outline: 3px solid var(--ouro); outline-offset: 2px; }
+  button:focus-visible, button.pad-foco { outline: 3px solid var(--ouro); outline-offset: 2px; }
+  .ctl-status { text-align: left; font-size: 10px; line-height: 1.6; padding: 10px 12px; color: #e6e9f0; }
+  .ctl-status.ok { color: #7ee2a8; border-color: #3f8f63; } .ctl-status.ruim { color: #ffb4a8; border-color: #9a4a3f; }
+  #c-bts { display: flex; flex-wrap: wrap; gap: 6px; } #c-bts span { width: 34px; height: 34px; display: grid; place-items: center; border: 2px solid var(--borda); font-size: 10px; }
+  #c-bts span.on { background: #3fd47c; color: #062; } #c-eixos, #c-msg { font-size: 9px; line-height: 1.7; } #c-msg { color: #ffcf3d; }
+  #c-ic { font-size: 54px; text-align: center; } #c-txt { font-size: 14px; line-height: 1.6; text-align: center; color: #ffcf3d; }
   button[aria-pressed="true"] { background: var(--ouro); color: #2a1a00; border-color: var(--ouro); }
   .grande { font-size: 15px; padding: 14px 22px; background: var(--ouro); color: #2a1a00; border-color: #fff1b0; }
   .grande:hover { background: #ffe07a; }
@@ -81,7 +86,26 @@
       <kbd>SHIFT</kbd><span>correr</span>
       <kbd>M · ESC</kbd><span>música · pausa</span>
     </div>
-    <div class="opcoes"><button class="grande" id="b-comecar">▶ NOVO JOGO</button><button id="b-continuar" hidden>CONTINUAR</button></div>
+    <button type="button" id="m-ctl" class="ctl-status"></button>
+    <div class="opcoes"><button class="grande" id="b-comecar">▶ NOVO JOGO</button><button id="b-continuar" hidden>CONTINUAR</button><button id="b-ctl">🎮 CONTROLE</button></div>
+  </div>
+</div>
+
+<div class="painel" id="ctl" hidden>
+  <div class="placa">
+    <div class="rotulo">🎮 CONTROLE DE VIDEOGAME</div>
+    <div id="c-teste" style="display:grid;gap:12px">
+      <p id="c-estado" style="font-size:10px;line-height:1.7;margin:0"></p>
+      <div id="c-bts"></div>
+      <div id="c-eixos"></div>
+      <div class="opcoes"><button id="c-config">CONFIGURAR MEU CONTROLE</button><button id="c-usb">🔌 USB DIRETO</button><button id="c-voltar">VOLTAR</button></div>
+      <p class="sub" style="font-size:9px;line-height:1.7;margin:0">Padrão: analógico esquerdo anda e vira · analógico direito vira · R2 ou R1 atira · botão de baixo abre portas · botão da esquerda troca arma · L2 ou L1 corre · START pausa.</p>
+    </div>
+    <div id="c-cal" hidden style="display:grid;gap:12px">
+      <div class="rotulo" id="c-passo"></div><div id="c-ic"></div><div id="c-txt"></div>
+      <div class="opcoes"><button id="c-pular">PULAR</button><button id="c-padrao">VOLTAR AO PADRÃO</button><button id="c-cancelar">CANCELAR</button></div>
+    </div>
+    <p id="c-msg"></p>
   </div>
 </div>
 
@@ -603,7 +627,7 @@ function ferir(e, dano) {
 function somarPontos(p) { J.pontos += p; while (J.pontos >= J.proxVida) { J.proxVida += 40000; J.vidas++; tocar('vida'); msgMostrar('VIDA EXTRA!', 2); } }
 function machucar(d) {
   if (estado !== 'jogando') return;
-  J.saude = Math.max(0, J.saude - Math.round(d * DIF[dific].dano)); flashTela = 0.35; flashCor = '255,0,0'; tocar('dor'); rostoOlhar = Math.random() < 0.5 ? -1 : 1;
+  J.saude = Math.max(0, J.saude - Math.round(d * DIF[dific].dano)); flashTela = 0.35; flashCor = '255,0,0'; vibrar(0.8, 220); tocar('dor'); rostoOlhar = Math.random() < 0.5 ? -1 : 1;
   if (J.saude <= 0) { estado = 'morrendo'; mortoT = 0; }
 }
 function atirar() {
@@ -790,26 +814,129 @@ $('b-continuar').addEventListener('click', () => { audio(); $('menu').hidden = t
 $('b-comecar').addEventListener('click', () => { audio(); novoJogo(); });
 document.querySelectorAll('#dific button').forEach(b => b.addEventListener('click', () => { dific = +b.dataset.d; document.querySelectorAll('#dific button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); }));
 
+// ===================== CONTROLE DE VIDEOGAME (mesmo sistema do Estrada Longa) =====================
+var pad = { f: 0, g: 0, lado: 0, correr: false, tiro: false, ant: {}, dirAnt: '', dirT: 0, hat: -1, ativo: -1, snap: {}, bloqueado: false };
+var hidPad = { dev: null, bytes: null, rest: null, analog: null, nome: '' };
+const ACOES = [['frente', 'ANDAR PARA FRENTE (analógico para cima)', '⬆️'], ['tras', 'ANDAR PARA TRÁS (analógico para baixo)', '⬇️'], ['esq', 'VIRAR PARA A ESQUERDA', '⬅️'], ['dir', 'VIRAR PARA A DIREITA', '➡️'],
+  ['tiro', 'ATIRAR', '🔫'], ['usar', 'ABRIR PORTA / EMPURRAR / ELEVADOR', '🚪'], ['arma', 'TROCAR DE ARMA', '🔁'], ['correr', 'CORRER', '🏃'], ['pausa', 'PAUSA', '⏸️']];
+const Bt = i => ({ t: 'b', i }), Ex = (i, s) => ({ t: 'a', i, s, r: 0 });
+function mapaPadrao(gp) { if (gp && gp.hid) return {};
+  if (gp && gp.mapping === 'standard') return { frente: [Ex(1, -1), Bt(12)], tras: [Ex(1, 1), Bt(13)], esq: [Ex(0, -1), Ex(2, -1), Bt(14)], dir: [Ex(0, 1), Ex(2, 1), Bt(15)], tiro: [Bt(7), Bt(5)], usar: [Bt(0)], arma: [Bt(2), Bt(3)], correr: [Bt(6), Bt(4), Bt(10)], pausa: [Bt(9)] };
+  return { frente: [Ex(1, -1)], tras: [Ex(1, 1)], esq: [Ex(0, -1), Ex(2, -1)], dir: [Ex(0, 1), Ex(2, 1)], tiro: [Bt(7), Bt(5)], usar: [Bt(2), Bt(1)], arma: [Bt(3), Bt(0)], correr: [Bt(6), Bt(4)], pausa: [Bt(9)] }; }
+const chaveMapa = gp => 'castelo-mapa:' + (gp ? gp.id : '');
+function mapaDe(gp) { let m = mapaPadrao(gp); try { const s = JSON.parse(localStorage.getItem(chaveMapa(gp)) || 'null'); if (s) m = Object.assign(m, s); } catch (e) {} return m; }
+function listaPads() { if (!pad) return []; try { pad.bloqueado = false; return navigator.getGamepads ? [...navigator.getGamepads()].filter(g => g && g.connected) : []; } catch (e) { pad.bloqueado = true; return []; } }
+// receptores USB às vezes aparecem como 2 controles (um "fantasma"): usa o que você apertou por último
+function vigiarControles() { for (const g of listaPads()) { const s = pad.snap[g.index] || (pad.snap[g.index] = { b: [], a: [] }); let mexeu = false;
+    g.buttons.forEach((b, i) => { const on = b.pressed || b.value > 0.5; if (on && !s.b[i]) mexeu = true; s.b[i] = on; });
+    g.axes.forEach((v, i) => { if (s.a[i] !== undefined && Math.abs(v - s.a[i]) > 0.3 && Math.abs(v) <= 1.0001) mexeu = true; s.a[i] = v; });
+    if (mexeu && pad.ativo !== g.index) { pad.ativo = g.index; pad.ant = {}; } } }
+function padHID() { if (!hidPad || !hidPad.dev || !hidPad.bytes) return null; const b = hidPad.bytes, r = hidPad.rest, an = hidPad.analog, axes = [], buttons = [];
+  b.forEach((x, i) => { axes.push(an[i] ? Math.max(-1, Math.min(1, (x - 128) / 127)) : 0); for (let k = 0; k < 8; k++) { const on = !an[i] && ((x >> k) & 1) !== ((r[i] >> k) & 1); buttons.push({ pressed: on, value: on ? 1 : 0 }); } });
+  return { id: hidPad.nome + ' (USB direto)', mapping: 'hid', connected: true, hid: true, axes, buttons }; }
+function controleAtual() { const l = listaPads(); if (!l.length) return padHID();
+  return l.find(g => g.index === pad.ativo) || l.find(g => g.mapping === 'standard') || l.slice().sort((a, b) => b.buttons.length - a.buttons.length)[0]; }
+function valor(gp, x) { if (x.t === 'b') { const b = gp.buttons[x.i]; return b ? Math.max(b.value || 0, b.pressed ? 1 : 0) : 0; }
+  const v = gp.axes[x.i]; if (v === undefined || Math.abs(v) > 1.05) return 0; if (x.t === 'h') return Math.abs(v - x.v) < 0.12 ? 1 : 0;
+  const d = (v - (x.r || 0)) * x.s; return d < 0.2 ? 0 : Math.min(1, (d - 0.2) / 0.8); }
+const acao = (gp, m, k) => (m[k] || []).reduce((v, x) => Math.max(v, valor(gp, x)), 0);
+function vibrar(f, ms) { const gp = controleAtual(); try { if (gp && gp.vibrationActuator) gp.vibrationActuator.playEffect('dual-rumble', { duration: ms, strongMagnitude: f, weakMagnitude: f * 0.6 }).catch(() => {}); } catch (e) {} }
+// ---- modo USB direto (WebHID) ----
+async function conectarHID() { if (!navigator.hid) { msgCtl('Este navegador não tem o modo USB direto. Use o Chrome ou o Edge.'); return; }
+  try { const l = await navigator.hid.requestDevice({ filters: [{ usagePage: 1, usage: 4 }, { usagePage: 1, usage: 5 }, { usagePage: 1, usage: 8 }] });
+    if (!l.length) { msgCtl('Nenhum controle escolhido. Se a lista veio vazia, o Windows não está vendo o controle (aperte Windows+R e digite joy.cpl).'); return; } await abrirHID(l[0]); } catch (e) { msgCtl('Não deu para conectar pelo USB: ' + (e && e.message || e)); } }
+async function abrirHID(d) { if (!d.opened) await d.open(); hidPad.dev = d; hidPad.bytes = hidPad.rest = null; hidPad.nome = (d.productName || 'Controle USB').trim();
+  d.addEventListener('inputreport', e => { const v = Array.from(new Uint8Array(e.data.buffer, e.data.byteOffset, e.data.byteLength)); if (!hidPad.rest || hidPad.rest.length !== v.length) { hidPad.rest = v.slice(); hidPad.analog = v.map(x => Math.abs(x - 128) <= 24); } hidPad.bytes = v; });
+  msgCtl('🎮 Controle ligado pelo USB direto! Agora toque em CONFIGURAR MEU CONTROLE.'); }
+if (navigator.hid) { navigator.hid.getDevices().then(l => { if (l[0]) abrirHID(l[0]).catch(() => {}); }).catch(() => {}); navigator.hid.addEventListener('disconnect', e => { if (e.device === hidPad.dev) { hidPad.dev = null; hidPad.bytes = null; } }); }
+// ---- aviso no menu ----
+function statusControle() { const dentro = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+  if (!('getGamepads' in navigator) && !navigator.hid) return ['ruim', '❌ Este navegador não aceita controle. Use o Chrome, o Edge ou o programa de Windows.'];
+  const gp = controleAtual();
+  if (gp && gp.hid) return ['ok', `✅ Controle ligado pelo USB direto. ${Object.keys(mapaDe(gp)).length ? 'Pronto para jogar!' : 'Toque aqui e depois em CONFIGURAR.'}`];
+  if (gp) return ['ok', `✅ Controle encontrado: ${gp.id.replace(/\s*\(.*\)\s*/g, ' ').trim().slice(0, 36) || 'controle'}. Toque aqui para testar.`];
+  if (pad.bloqueado || dentro) return ['ruim', '❌ O jogo está aberto DENTRO de outro aplicativo, que não entrega o controle. Abra o arquivo direto no Chrome/Edge.'];
+  return ['', '🎮 Nenhum controle ainda. Ligue o controle e APERTE UM BOTÃO dele. Se não aparecer, toque aqui e use o USB DIRETO.']; }
+function mostrarStatus() { const el = $('m-ctl'); if (!el) return; const [c, t] = statusControle(); if (el.textContent !== t) el.textContent = t; el.className = 'ctl-status ' + c; }
+setInterval(mostrarStatus, 600); addEventListener('gamepadconnected', e => { mostrarStatus(); vibrar(0.5, 200); });
+// ---- painel do controle: teste + configurar ----
+const cal = { on: false, passo: 0, base: null, solta: true, novo: {} };
+function msgCtl(t) { $('c-msg').textContent = t; }
+function abrirPainel() { $('ctl').hidden = false; cal.on = false; $('c-cal').hidden = true; $('c-teste').hidden = false; msgCtl(''); const b = $('c-voltar'); b.focus(); focar(b); atualizarPainel(); }
+function fecharPainel() { $('ctl').hidden = true; cal.on = false; const b = $('b-ctl'); if (b) { b.focus(); focar(b); } }
+function atualizarPainel() { if ($('ctl').hidden) return; requestAnimationFrame(atualizarPainel); if (cal.on) return;
+  const gp = controleAtual(), todos = listaPads(), dentro = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
+  $('c-estado').textContent = gp ? `✅ Achei: ${gp.id.replace(/\s*\(.*\)\s*/g, ' ').trim() || 'controle'}${todos.length > 1 ? ` (o computador mostra ${todos.length} controles: uso o último em que você apertou)` : ''}` : (pad.bloqueado || dentro ? '❌ O jogo está aberto dentro de outro aplicativo, que bloqueia o controle. Abra o arquivo direto no Chrome ou no Edge.' : '⏳ Nenhum controle ainda: ligue o controle e aperte um botão. Não achou? Segure o botão do meio 7 segundos, ou use o USB DIRETO.');
+  const bx = $('c-bts'), nb = gp ? gp.buttons.length : 0; if (bx.childElementCount !== nb) { bx.textContent = ''; for (let i = 0; i < nb; i++) { const d = document.createElement('span'); d.textContent = i + 1; bx.appendChild(d); } }
+  for (let i = 0; i < nb; i++) bx.children[i].classList.toggle('on', gp.buttons[i].pressed || gp.buttons[i].value > 0.5);
+  const ex = $('c-eixos'); ex.textContent = gp ? gp.axes.slice(0, 6).map((v, i) => `Eixo ${i + 1}: ${Math.abs(v) > 1.05 ? '·' : v.toFixed(1)}`).join('   ') : ''; }
+function abrirCal() { const gp = controleAtual(); if (!gp) { msgCtl('Primeiro o controle precisa aparecer aqui.'); return; } cal.on = true; cal.passo = 0; cal.novo = {}; cal.base = null; cal.solta = true; $('c-teste').hidden = true; $('c-cal').hidden = false; passoCal(); }
+function passoCal() { const [, t, ic] = ACOES[cal.passo]; $('c-passo').textContent = `PASSO ${cal.passo + 1} DE ${ACOES.length}`; $('c-ic').textContent = ic; $('c-txt').textContent = 'APERTE O BOTÃO PARA ' + t; }
+function fimCal(salvar) { const gp = controleAtual(); cal.on = false; $('c-cal').hidden = true; $('c-teste').hidden = false;
+  if (salvar && gp) { try { const v = JSON.parse(localStorage.getItem(chaveMapa(gp)) || '{}'); localStorage.setItem(chaveMapa(gp), JSON.stringify(Object.assign(v, cal.novo))); } catch (e) {} msgCtl('✅ Pronto! Seu controle está configurado.'); vibrar(0.6, 250); } }
+function lerCal(gp) { if (!gp) return; const ax = [...gp.axes], bts = gp.buttons.map(b => b.pressed || b.value > 0.5);
+  if (!cal.base) { cal.base = { ax, bts }; return; }
+  let x = null; for (let i = 0; i < bts.length && !x; i++) if (bts[i] && !cal.base.bts[i]) x = Bt(i);
+  for (let i = 0; i < ax.length && !x; i++) { const r = cal.base.ax[i], d = ax[i] - r; if (Math.abs(r) > 1.05) { if (Math.abs(d) > 0.1) x = { t: 'h', i, v: ax[i] }; } else if (Math.abs(d) > 0.6) x = { t: 'a', i, s: Math.sign(d), r: Math.abs(r) < 0.3 ? 0 : r }; }
+  if (cal.solta) { if (!x) cal.solta = false; return; } if (!x) return;
+  cal.novo[ACOES[cal.passo][0]] = [x]; tocar('pega'); cal.solta = true; cal.passo++; if (cal.passo >= ACOES.length) fimCal(true); else passoCal(); }
+// ---- navegação nos menus ----
+function focaveis() { return [...document.querySelectorAll('button')].filter(b => !b.disabled && !b.hidden && b.offsetParent !== null && !b.classList.contains('toque')); }
+function focar(el) { document.querySelectorAll('.pad-foco').forEach(e => e.classList.remove('pad-foco')); el.classList.add('pad-foco'); }
+function moverFoco(dir) { const l = focaveis(); if (!l.length) return; const a = document.activeElement; if (!l.includes(a)) { l[0].focus(); focar(l[0]); return; }
+  const r0 = a.getBoundingClientRect(), cx = r0.left + r0.width / 2, cy = r0.top + r0.height / 2; let mel = null, mv = 1e9;
+  for (const el of l) { if (el === a) continue; const r = el.getBoundingClientRect(), dx = r.left + r.width / 2 - cx, dy = r.top + r.height / 2 - cy;
+    if (!(dir === 'dir' ? dx > 4 : dir === 'esq' ? dx < -4 : dir === 'baixo' ? dy > 4 : dy < -4)) continue; const hz = dir === 'dir' || dir === 'esq', d = (hz ? Math.abs(dx) : Math.abs(dy)) + (hz ? Math.abs(dy) : Math.abs(dx)) * 2.5; if (d < mv) { mv = d; mel = el; } }
+  if (mel) { mel.focus(); focar(mel); mel.scrollIntoView({ block: 'nearest' }); } }
+function direcional(gp) { const ax = gp.axes, bt = i => gp.buttons[i] && gp.buttons[i].pressed;
+  for (let i = 0; i < ax.length; i++) if (Math.abs(ax[i]) > 1.05) pad.hat = i;
+  if (pad.hat >= 0 && Math.abs(ax[pad.hat]) <= 1.02) { const v = ax[pad.hat], ds = [[-1, 'cima'], [-0.714, 'cima'], [-0.428, 'dir'], [-0.142, 'baixo'], [0.142, 'baixo'], [0.428, 'esq'], [0.714, 'esq'], [1, 'cima']]; return ds.reduce((m, d) => Math.abs(d[0] - v) < Math.abs(m[0] - v) ? d : m)[1]; }
+  const lx = ax[0] || 0, ly = ax[1] || 0; return bt(12) || ly < -0.6 ? 'cima' : bt(13) || ly > 0.6 ? 'baixo' : bt(14) || lx < -0.6 ? 'esq' : bt(15) || lx > 0.6 ? 'dir' : ''; }
+// ---- leitura a cada quadro ----
+function lerControle(dt) { if (!pad) return; vigiarControles(); const gp = controleAtual(); pad.f = pad.g = pad.lado = 0; pad.correr = pad.tiro = false; if (!gp) return;
+  if (cal.on) { lerCal(gp); pad.ant = {}; return; }
+  if (!$('ctl').hidden) { pad.ant = { _a: true, _b: true, _st: true }; return; }
+  const m = mapaDe(gp), agora = {}; for (const [k] of ACOES) agora[k] = acao(gp, m, k) > 0.5; const novo = k => agora[k] && !pad.ant[k];
+  const b = i => gp.buttons[i] && gp.buttons[i].pressed; agora._a = !gp.hid && (gp.mapping === 'standard' ? b(0) : b(2) || b(1)); agora._st = !gp.hid && b(9) || agora.pausa;
+  if (estado === 'jogando') {
+    pad.f = acao(gp, m, 'frente') - acao(gp, m, 'tras'); pad.g = acao(gp, m, 'dir') - acao(gp, m, 'esq');
+    pad.correr = agora.correr; pad.tiro = agora.tiro;
+    if (novo('usar')) usar(); if (novo('arma')) trocarArma(); if (novo('pausa')) pausar();
+  } else { const dir = gp.hid ? '' : direcional(gp);
+    if (dir && (dir !== pad.dirAnt || pad.dirT <= 0)) { moverFoco(dir); pad.dirT = dir === pad.dirAnt ? 0.16 : 0.38; } pad.dirAnt = dir; pad.dirT -= dt;
+    if (agora._a && !pad.ant._a) { const el = document.activeElement; if (el && el.tagName === 'BUTTON' && focaveis().includes(el)) el.click(); else moverFoco('baixo'); }
+    if (agora._st && !pad.ant._st) { if (estado === 'pausa') $('b-continuar').click(); else if (!$('fim').hidden) $('b-prox').click(); else if (estado === 'menu') $('b-comecar').click(); }
+  }
+  pad.ant = agora; }
+function trocarArma() { if (estado !== 'jogando') return; for (let k = 1; k <= 4; k++) { const i = (J.arma + k) % 4; if (J.armas[i]) { J.arma = i; break; } } }
+$('b-ctl').addEventListener('click', abrirPainel); $('m-ctl').addEventListener('click', abrirPainel); $('c-voltar').addEventListener('click', fecharPainel);
+$('c-config').addEventListener('click', abrirCal); $('c-usb').addEventListener('click', conectarHID);
+$('c-pular').addEventListener('click', () => { cal.passo++; cal.solta = true; if (cal.passo >= ACOES.length) fimCal(true); else passoCal(); });
+$('c-cancelar').addEventListener('click', () => fimCal(false));
+$('c-padrao').addEventListener('click', () => { const gp = controleAtual(); try { localStorage.removeItem(chaveMapa(gp)); } catch (e) {} fimCal(false); msgCtl('Botões voltaram ao padrão.'); });
+mostrarStatus();
+
 // ===================== LAÇO PRINCIPAL =====================
 let antes = performance.now();
 function quadro(agora) {
   requestAnimationFrame(quadro);
-  const dt = Math.min(0.05, (agora - antes) / 1000); antes = agora;
+  const dt = Math.min(0.05, (agora - antes) / 1000) * (window.__vel || 1); antes = agora;
+  lerControle(dt);
   if (estado === 'jogando') {
     tempoAndar += dt;
-    const correr = teclas.has('shift') || correrToque, vel = (correr ? 5.2 : 3.4) * dt, giro = 2.6 * dt;
+    const correr = teclas.has('shift') || correrToque || pad.correr, vel = (correr ? 5.2 : 3.4) * dt, giro = 2.6 * dt;
     let f = 0, lado = 0, g = 0;
     if (teclas.has('arrowup') || teclas.has('w')) f += 1; if (teclas.has('arrowdown') || teclas.has('s')) f -= 1;
     if (teclas.has('arrowleft')) g -= 1; if (teclas.has('arrowright')) g += 1;
     if (teclas.has('a')) lado -= 1; if (teclas.has('d')) lado += 1;
-    f -= joy.dy; g += joy.dx * 0.85;
+    f -= joy.dy; g += joy.dx * 0.85; f += pad.f; g += pad.g * Math.abs(pad.g) * 0.4 + pad.g * 0.6; lado += pad.lado;
     girar(g * giro + giroMouse); giroMouse = 0;
     const mx = (J.dirX * f + -J.dirY * lado) * vel, my = (J.dirY * f + J.dirX * lado) * vel;
     J.movendo = Math.abs(f) + Math.abs(lado) > 0.1;
     mover(mx, my); if (J.movendo) passoBob += dt * (correr ? 11 : 8);
     if (cdArma > 0) cdArma -= dt;
     const a = ARMAS[J.arma];
-    if (gatilho || tiroToque || teclas.has('control') || teclas.has('f')) { if (a.auto || !J.segurou) atirar(); J.segurou = true; } else J.segurou = false;
+    if (gatilho || tiroToque || pad.tiro || teclas.has('control') || teclas.has('f')) { if (a.auto || !J.segurou) atirar(); J.segurou = true; } else J.segurou = false;
     pegarItens(); atualizarPortas(dt); atualizarEmpurrando(dt); atualizarInimigos(dt); musica(dt);
     rostoT -= dt; if (rostoT <= 0) { rostoT = rnd(0.8, 2.2); rostoOlhar = Math.floor(rnd(-1, 2)); } if (rostoFeliz > 0) rostoFeliz -= dt;
   } else if (estado === 'morrendo') { mortoT += dt; if (mortoT > 1.6) morreu(); }
