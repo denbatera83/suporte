@@ -190,6 +190,7 @@
     <ol id="t-passos" class="sub" style="margin:0;padding-left:22px;line-height:1.5"></ol>
     <div id="t-botoes" style="display:flex;flex-wrap:wrap;gap:8px"></div>
     <div id="t-eixos" style="display:grid;gap:6px"></div>
+    <button id="t-hid" type="button" style="font-size:17px;padding:12px">🔌 O navegador não achou? Conectar pelo USB (modo direto)</button>
     <button class="principal" id="t-config" type="button">Configurar meu controle (aperte os botões)</button>
   </div>
 </div>
@@ -1145,7 +1146,7 @@ pedal('b-acel', 'acel'); pedal('b-freio', 'freio');
 $('p-calib').addEventListener('click', abrirCalib); $('cal-cancelar').addEventListener('click', () => fecharCalib(false));
 $('cal-pular').addEventListener('click', () => { cal.passo++; cal.solta = true; if (cal.passo >= ACOES_CTL.length) fecharCalib(true); else passoCalib(controleAtual()); });
 $('cal-padrao').addEventListener('click', () => { const gp = controleAtual(); try { localStorage.removeItem(chaveCtl(gp)); } catch (e) {} cal.novo = {}; fecharCalib(false); aviso('🎮 Botões voltaram ao padrão.', 'info'); });
-$('b-controle').addEventListener('click', abrirTeste); $('m-ctl').addEventListener('click', abrirTeste); mostrarStatusControle(); $('t-voltar').addEventListener('click', () => { $('ctl-teste').hidden = true; });
+$('b-controle').addEventListener('click', abrirTeste); $('t-hid').addEventListener('click', conectarHID); $('m-ctl').addEventListener('click', abrirTeste); mostrarStatusControle(); $('t-voltar').addEventListener('click', () => { $('ctl-teste').hidden = true; });
 $('t-config').addEventListener('click', () => { if (!controleAtual()) { aviso('Primeiro o controle precisa aparecer aqui no teste.', 'ruim', 3); return; } $('ctl-teste').hidden = true; abrirCalib(); });
 $('p-controle').insertAdjacentHTML('beforeend', '<button id="p-teste" type="button">🔎 Testar controle (ver se o jogo enxerga)</button>'); $('p-teste').addEventListener('click', abrirTeste);
 document.querySelectorAll('[data-pmodo]').forEach(b => b.addEventListener('click', () => { pad.modo = b.dataset.pmodo; try { localStorage.setItem('estrada-controle', pad.modo); } catch (e) {} mostrarMapa(); }));
@@ -1165,13 +1166,31 @@ try { pad.modo = localStorage.getItem('estrada-controle') || 'gatilhos'; } catch
 const ACOES_CTL = [['acel', 'ACELERAR', '🟢'], ['freio', 'FREAR e dar RÉ', '🔴'], ['esq', 'VIRAR para a ESQUERDA', '⬅️'], ['dir', 'VIRAR para a DIREITA', '➡️'], ['buzina', 'BUZINA', '📯'], ['farol', 'FAROL', '💡'], ['camera', 'TROCAR CÂMERA', '🎥'], ['cambio', 'CÂMBIO manual/automático', '⚙️'], ['sobe', 'SUBIR MARCHA', '⏫'], ['desce', 'DESCER MARCHA', '⏬'], ['pausa', 'PAUSA', '⏸️']];
 const B = i => ({ t: 'b', i }), EIXO = (i, s) => ({ t: 'a', i, s, r: 0 });
 function mapaPadrao(gp) {
+  if (gp && gp.hid) return {}; // modo direto: cada controle é diferente, o jogador configura
   if (gp && gp.mapping === 'standard') { const g = pad.modo === 'gatilhos';
     return { acel: [g ? B(7) : B(0)], freio: [g ? B(6) : B(2)], esq: [EIXO(0, -1), B(14)], dir: [EIXO(0, 1), B(15)], buzina: [g ? B(0) : B(10)], farol: [B(1)], camera: [g ? B(2) : B(3)], cambio: [g ? B(3) : B(8)], sobe: [B(5), B(12)], desce: [B(4), B(13)], pausa: [B(9)] }; }
   // controle genérico (receptor USB, estilo PlayStation): R2 ou o botão de baixo acelera, L2 ou o da esquerda freia
   return { acel: [B(7), B(2)], freio: [B(6), B(3)], esq: [EIXO(0, -1)], dir: [EIXO(0, 1)], buzina: [B(10)], farol: [B(1)], camera: [B(0)], cambio: [B(8)], sobe: [B(5)], desce: [B(4)], pausa: [B(9)] }; }
 function chaveCtl(gp) { return 'estrada-mapa:' + (gp ? gp.id : ''); }
 function mapaDe(gp) { let m = mapaPadrao(gp); try { const s = JSON.parse(localStorage.getItem(chaveCtl(gp)) || 'null'); if (s) m = Object.assign(m, s); } catch (e) {} return m; }
-function controleAtual() { const l = navigator.getGamepads ? [...navigator.getGamepads()].filter(g => g && g.connected) : []; return l.find(g => g.mapping === 'standard') || l[0] || null; }
+// ---- MODO DIRETO USB (WebHID): lê o controle mesmo quando o navegador não entrega ele como "controle de jogo" ----
+var hidPad = { dev: null, bytes: null, rest: null, analog: null, nome: '' };
+window.__hid = hidPad;
+async function conectarHID() {
+  if (!navigator.hid) { aviso('Este navegador não tem o modo direto USB. Use o Chrome, o Edge ou o programa de Windows.', 'ruim', 5); return; }
+  try { const l = await navigator.hid.requestDevice({ filters: [{ usagePage: 0x01, usage: 0x04 }, { usagePage: 0x01, usage: 0x05 }, { usagePage: 0x01, usage: 0x08 }] });
+    if (!l.length) { aviso('Nenhum controle escolhido. Se a lista veio vazia, o computador não está vendo o controle (veja as dicas no teste).', 'ruim', 6); return; }
+    await abrirHID(l[0]); } catch (e) { aviso('Não deu para conectar pelo USB: ' + (e && e.message || e), 'ruim', 5); } }
+async function abrirHID(d) { if (!d.opened) await d.open(); hidPad.dev = d; hidPad.bytes = hidPad.rest = hidPad.analog = null; hidPad.nome = (d.productName || 'Controle USB').trim();
+  d.addEventListener('inputreport', e => { const v = Array.from(new Uint8Array(e.data.buffer, e.data.byteOffset, e.data.byteLength));
+    if (!hidPad.rest || hidPad.rest.length !== v.length) { hidPad.rest = v.slice(); hidPad.analog = v.map(x => Math.abs(x - 128) <= 24); } hidPad.bytes = v; });
+  aviso('🎮 Controle ligado pelo USB direto! Agora toque em "Configurar meu controle" e aperte os botões que você quer usar.', 'info', 7); if (typeof mostrarStatusControle === 'function') mostrarStatusControle(); }
+if (navigator.hid) { navigator.hid.getDevices().then(l => { if (l[0]) abrirHID(l[0]).catch(() => {}); }).catch(() => {});
+  navigator.hid.addEventListener('disconnect', e => { if (e.device === hidPad.dev) { hidPad.dev = null; hidPad.bytes = null; aviso('🎮 Controle USB desconectado.', 'ruim'); } }); }
+function padHID() { if (!hidPad || !hidPad.dev || !hidPad.bytes) return null; const b = hidPad.bytes, r = hidPad.rest, an = hidPad.analog, axes = [], buttons = [];
+  b.forEach((x, i) => { axes.push(an[i] ? Math.max(-1, Math.min(1, (x - 128) / 127)) : 0); for (let k = 0; k < 8; k++) { const on = !an[i] && ((x >> k) & 1) !== ((r[i] >> k) & 1); buttons.push({ pressed: on, value: on ? 1 : 0 }); } });
+  return { id: hidPad.nome + ' (USB direto)', mapping: 'hid', connected: true, hid: true, axes, buttons }; }
+function controleAtual() { const l = navigator.getGamepads ? [...navigator.getGamepads()].filter(g => g && g.connected) : []; return l.find(g => g.mapping === 'standard') || l[0] || padHID(); }
 function valor(gp, x) { if (x.t === 'b') { const b = gp.buttons[x.i]; return b ? Math.max(b.value || 0, b.pressed ? 1 : 0) : 0; }
   const v = gp.axes[x.i]; if (v === undefined) return 0;
   if (x.t === 'h') return Math.abs(v - x.v) < 0.12 ? 1 : 0;
@@ -1180,7 +1199,7 @@ function acao(gp, m, nome) { let v = 0; for (const x of m[nome] || []) v = Math.
 function vibrar(forca, ms) { const gp = controleAtual(); try { if (gp && gp.vibrationActuator) gp.vibrationActuator.playEffect('dual-rumble', { duration: ms, strongMagnitude: forca, weakMagnitude: forca * 0.6 }).catch(() => {}); } catch (e) {} }
 const NOMES_STD = ['A / ✕', 'B / ○', 'X / □', 'Y / △', 'LB / L1', 'RB / R1', 'LT / L2', 'RT / R2', 'Select', 'Start', 'Clique analóg. esq.', 'Clique analóg. dir.', 'Direcional ↑', 'Direcional ↓', 'Direcional ←', 'Direcional →'];
 const NOMES_GEN = ['Botão de cima (△/Y)', 'Botão da direita (○/B)', 'Botão de baixo (✕/A)', 'Botão da esquerda (□/X)', 'L1', 'R1', 'L2', 'R2', 'SELECT', 'START', 'Clique analóg. esq.', 'Clique analóg. dir.'];
-function nomeEntrada(gp, x) { if (x.t === 'b') return ((gp && gp.mapping === 'standard' ? NOMES_STD : NOMES_GEN)[x.i]) || 'Botão ' + (x.i + 1);
+function nomeEntrada(gp, x) { if (gp && gp.hid) return x.t === 'b' ? 'Botão ' + (x.i + 1) : `Analógico ${x.i + 1} ${x.s < 0 ? '−' : '+'}`; if (x.t === 'b') return ((gp && gp.mapping === 'standard' ? NOMES_STD : NOMES_GEN)[x.i]) || 'Botão ' + (x.i + 1);
   if (x.t === 'h') return 'Direcional'; return x.i <= 1 ? `Analógico esquerdo ${x.s < 0 ? (x.i ? '↑' : '←') : (x.i ? '↓' : '→')}` : `Eixo ${x.i + 1} ${x.s < 0 ? '−' : '+'}`; }
 function mostrarMapa() { if (!$('p-controle')) return; const gp = controleAtual(), m = mapaDe(gp);
   $('p-ctl-estado').textContent = gp ? `🎮 Conectado: ${gp.id.replace(/\s*\(.*\)\s*/g, ' ').trim().slice(0, 40) || 'controle'}${gp.mapping === 'standard' ? '' : ' (genérico)'}` : '🎮 Nenhum controle. Ligue o controle, ponha o receptor no USB e aperte qualquer botão dele.';
@@ -1232,9 +1251,10 @@ function direcional(gp) { // botões 12-15, chapéu (eixo especial dos genérico
 function statusControle() { const dentro = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
   if (!('getGamepads' in navigator)) return ['ruim', '❌ Este navegador não aceita controle de videogame. Use o Chrome, o Edge ou o programa de Windows.'];
   if (window.isSecureContext === false) return ['ruim', '❌ O navegador bloqueou o controle nesta página. Abra o jogo pelo programa de Windows ou pelo arquivo salvo no computador.'];
-  if (dentro) return ['ruim', '❌ O jogo está aberto DENTRO de outro aplicativo, e ele não entrega o controle ao jogo. Abra o arquivo direto no Chrome/Edge ou use o programa de Windows.'];
-  const gp = controleAtual(); if (gp) return ['ok', `✅ Controle encontrado: ${gp.id.replace(/\s*\(.*\)\s*/g, ' ').trim() || 'controle'}${gp.mapping === 'standard' ? '' : ' (genérico)'}. Toque aqui para testar os botões.`];
-  return ['', '🎮 Nenhum controle ainda. Ligue o controle e APERTE UM BOTÃO dele: o navegador só entrega o controle ao jogo depois disso. Toque aqui para ajuda.']; }
+  if (dentro && !(hidPad && hidPad.dev)) return ['ruim', '❌ O jogo está aberto DENTRO de outro aplicativo, e ele não entrega o controle ao jogo. Abra o arquivo direto no Chrome/Edge ou use o programa de Windows.'];
+  const gp = controleAtual(); if (gp && gp.hid) return ['ok', `✅ Controle ligado pelo USB direto: ${hidPad.nome}. ${Object.keys(mapaDe(gp)).length ? 'Pronto para jogar!' : 'Toque aqui e depois em "Configurar meu controle".'}`];
+  if (gp) return ['ok', `✅ Controle encontrado: ${gp.id.replace(/\s*\(.*\)\s*/g, ' ').trim() || 'controle'}${gp.mapping === 'standard' ? '' : ' (genérico)'}. Toque aqui para testar os botões.`];
+  return ['', '🎮 Nenhum controle ainda. Ligue o controle e APERTE UM BOTÃO dele. Se não aparecer, toque aqui e use "Conectar pelo USB (modo direto)".']; }
 function mostrarStatusControle() { const el = $('m-ctl'); if (!el) return; const [cls, txt] = statusControle(); if (el.textContent !== txt) el.textContent = txt; el.className = 'ctl-status ' + cls; }
 setInterval(mostrarStatusControle, 700); addEventListener('gamepadconnected', mostrarStatusControle); addEventListener('gamepaddisconnected', mostrarStatusControle);
 // ---- tela de teste: mostra se o navegador enxerga o controle e quais botões acendem ----
@@ -1242,11 +1262,11 @@ function abrirTeste() { $('ctl-teste').hidden = false; const el = $('t-voltar');
 function atualizarTeste() { if ($('ctl-teste').hidden) return; requestAnimationFrame(atualizarTeste);
   const est = $('t-estado'), ps = $('t-passos'), bx = $('t-botoes'), ex = $('t-eixos'); let passos = [];
   const dentroDeApp = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
-  const todos = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : null, gp = todos && todos.find(g => g.connected);
+  const todos = navigator.getGamepads || navigator.hid ? (navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []) : null, gp = controleAtual();
   if (!todos) { est.textContent = '❌ Este navegador não aceita controle.'; passos = ['Abra o jogo no Google Chrome ou no Microsoft Edge.']; }
   else if (!gp) { est.textContent = dentroDeApp ? '❌ O jogo está aberto DENTRO de outro aplicativo, e ele bloqueia o controle.' : '⏳ Ainda não achei nenhum controle.';
     passos = (dentroDeApp ? ['Salve o arquivo EstradaLonga.html no computador.', 'Clique nele com o botão direito → Abrir com → Google Chrome (ou Microsoft Edge).'] : [])
-      .concat(['Ponha o receptor USB no computador (de preferência direto no PC, sem extensão).', 'Ligue o controle no botão do meio. A luz tem que parar de piscar.', 'Clique uma vez aqui nesta página e aperte qualquer botão do controle (o navegador só mostra o controle depois de um botão).', 'Não achou? Segure o botão do meio por uns 7 segundos (troca o modo do controle) e aperte um botão de novo.', 'Ainda não? Troque o receptor de porta USB, feche e abra o navegador.']); }
+      .concat(['Ponha o receptor USB no computador (de preferência direto no PC, sem extensão).', 'Ligue o controle no botão do meio. A luz tem que parar de piscar.', 'Clique uma vez aqui nesta página e aperte qualquer botão do controle (o navegador só mostra o controle depois de um botão).', 'Não achou? Segure o botão do meio por uns 7 segundos (troca o modo do controle) e aperte um botão de novo.', 'Ainda não? Toque no botão "Conectar pelo USB (modo direto)" aqui embaixo e escolha o controle na lista.', 'Se a lista vier vazia, o próprio Windows não está vendo o controle: aperte Windows+R, digite joy.cpl e Enter. Se o controle não aparecer lá, troque as pilhas, troque o receptor de porta USB e ligue o controle de novo.']); }
   else { est.textContent = `✅ Achei o controle: ${gp.id.replace(/\s*\(.*\)\s*/g, ' ').trim() || 'controle'}${gp.mapping === 'standard' ? '' : ' (genérico)'}`; passos = ['Aperte os botões: as bolinhas de baixo acendem. Mexa os analógicos: as barras andam.', 'Se tudo acender mas o jogo fizer coisa errada, toque em "Configurar meu controle".']; }
   if (ps.dataset.k !== passos.join('|')) { ps.dataset.k = passos.join('|'); ps.textContent = ''; for (const p of passos) { const li = document.createElement('li'); li.textContent = p; ps.appendChild(li); } }
   const nb = gp ? gp.buttons.length : 0; if (bx.childElementCount !== nb) { bx.textContent = ''; for (let i = 0; i < nb; i++) { const d = document.createElement('div'); d.textContent = i + 1; d.style.cssText = 'width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font:800 15px var(--display);border:2px solid rgba(255,255,255,.3)'; bx.appendChild(d); } }
@@ -1257,7 +1277,7 @@ function lerControle(dt) { const gp = controleAtual(); if (!gp) { pad.acel = pad
   if (cal.on) { pad.acel = pad.freio = pad.vol = 0; lerCalib(gp); pad.ant = {}; return; }
   if (!$('ctl-teste').hidden) { pad.acel = pad.freio = pad.vol = 0; pad.ant = { _a: true, _b: true, _start: true }; return; }
   const m = mapaDe(gp), agora = {}; for (const [k] of ACOES_CTL) agora[k] = acao(gp, m, k) > 0.5; const novo = k => agora[k] && !pad.ant[k];
-  const btA = i => gp.buttons[i] && gp.buttons[i].pressed; agora._a = gp.mapping === 'standard' ? btA(0) : btA(2) || btA(1); agora._b = gp.mapping === 'standard' ? btA(1) : btA(3) || btA(0); agora._start = btA(9);
+  const btA = i => gp.buttons[i] && gp.buttons[i].pressed; agora._a = gp.hid ? false : gp.mapping === 'standard' ? btA(0) : btA(2) || btA(1); agora._b = gp.hid ? false : gp.mapping === 'standard' ? btA(1) : btA(3) || btA(0); agora._start = gp.hid ? false : btA(9);
   const dirigindo = jogando && !pausado && !document.querySelector('.tela:not([hidden])');
   if (dirigindo) {
     pad.acel = acao(gp, m, 'acel'); pad.freio = acao(gp, m, 'freio'); const lx = acao(gp, m, 'dir') - acao(gp, m, 'esq'); pad.vol = -(lx * Math.abs(lx) * 0.35 + lx * 0.65);
@@ -1266,7 +1286,7 @@ function lerControle(dt) { const gp = controleAtual(); if (!gp) { pad.acel = pad
     if (novo('farol')) { caminhao.farol = !caminhao.farol; $('b-farol').classList.toggle('on', caminhao.farol); aviso(caminhao.farol ? 'Farol ligado' : 'Farol desligado', '', 1.2); }
     if (novo('camera')) trocarCamera(); if (novo('cambio')) trocarCambio(); if (novo('sobe')) trocarMarcha(1); if (novo('desce')) trocarMarcha(-1); if (novo('pausa')) abrirPausa();
   } else { pad.acel = pad.freio = pad.vol = 0;
-    const dir = direcional(gp);
+    const dir = gp.hid ? '' : direcional(gp);
     if (dir && (dir !== pad.dirAnt || pad.dirT <= 0)) { moverFoco(dir); pad.dirT = dir === pad.dirAnt ? 0.16 : 0.38; } pad.dirAnt = dir; pad.dirT -= dt;
     if (agora._a && !pad.ant._a) { const el = document.activeElement; if (el && el.tagName === 'BUTTON' && focaveis().includes(el)) el.click(); else moverFoco('baixo'); }
     if (((agora._b && !pad.ant._b) || (agora._start && !pad.ant._start) || novo('pausa')) && pausado) fecharPausa();
