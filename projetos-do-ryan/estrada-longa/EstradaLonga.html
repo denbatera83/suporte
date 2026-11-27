@@ -2116,7 +2116,7 @@ document.querySelectorAll('[data-cam]').forEach(b => b.addEventListener('click',
   canvas.addEventListener('pointermove', e => { if (e.pointerId !== id) return; const k = e.pointerType === 'mouse' ? 0.005 : 0.008; olharYaw -= (e.clientX - px) * k; olharPitch = clamp(olharPitch - (e.clientY - py) * k * 0.6, -0.5, 0.6); olharYaw = clamp(olharYaw, -Math.PI, Math.PI); px = e.clientX; py = e.clientY; olharT = 0; });
   ['pointerup', 'pointercancel'].forEach(ev => canvas.addEventListener(ev, e => { if (e.pointerId === id) id = null; })); }
 // ===================== CONTROLE DE VIDEOGAME (Xbox, PlayStation, genéricos USB/sem fio) =====================
-const pad = { acel: 0, freio: 0, vol: 0, ant: {}, dirAnt: '', dirT: 0, modo: 'gatilhos', hat: -1, avisouGen: '' };
+var pad = { acel: 0, freio: 0, vol: 0, ant: {}, dirAnt: '', dirT: 0, modo: 'gatilhos', hat: -1, avisouGen: '', ativo: -1, snap: {}, bloqueado: false };
 try { pad.modo = localStorage.getItem('estrada-controle') || 'gatilhos'; } catch (e) {}
 const ACOES_CTL = [['acel', 'ACELERAR', '🟢'], ['freio', 'FREAR e dar RÉ', '🔴'], ['esq', 'VIRAR para a ESQUERDA', '⬅️'], ['dir', 'VIRAR para a DIREITA', '➡️'], ['buzina', 'BUZINA', '📯'], ['farol', 'FAROL', '💡'], ['camera', 'TROCAR CÂMERA', '🎥'], ['cambio', 'CÂMBIO manual/automático', '⚙️'], ['sobe', 'SUBIR MARCHA', '⏫'], ['desce', 'DESCER MARCHA', '⏬'], ['pausa', 'PAUSA', '⏸️']];
 const B = i => ({ t: 'b', i }), EIXO = (i, s) => ({ t: 'a', i, s, r: 0 });
@@ -2145,7 +2145,15 @@ if (navigator.hid) { navigator.hid.getDevices().then(l => { if (l[0]) abrirHID(l
 function padHID() { if (!hidPad || !hidPad.dev || !hidPad.bytes) return null; const b = hidPad.bytes, r = hidPad.rest, an = hidPad.analog, axes = [], buttons = [];
   b.forEach((x, i) => { axes.push(an[i] ? Math.max(-1, Math.min(1, (x - 128) / 127)) : 0); for (let k = 0; k < 8; k++) { const on = !an[i] && ((x >> k) & 1) !== ((r[i] >> k) & 1); buttons.push({ pressed: on, value: on ? 1 : 0 }); } });
   return { id: hidPad.nome + ' (USB direto)', mapping: 'hid', connected: true, hid: true, axes, buttons }; }
-function controleAtual() { const l = navigator.getGamepads ? [...navigator.getGamepads()].filter(g => g && g.connected) : []; return l.find(g => g.mapping === 'standard') || l[0] || padHID(); }
+// leitura segura: se o navegador bloquear o controle (app por dentro, http), não derruba o jogo
+function listaPads() { if (!pad) return []; try { pad.bloqueado = false; return navigator.getGamepads ? [...navigator.getGamepads()].filter(g => g && g.connected) : []; } catch (e) { pad.bloqueado = true; return []; } }
+// receptores USB às vezes aparecem como 2 controles (um "fantasma"): usa o que você apertou por último
+function vigiarControles() { for (const g of listaPads()) { const s = pad.snap[g.index] || (pad.snap[g.index] = { b: [], a: [] }); let mexeu = false;
+    g.buttons.forEach((b, i) => { const on = b.pressed || b.value > 0.5; if (on && !s.b[i]) mexeu = true; s.b[i] = on; });
+    g.axes.forEach((v, i) => { if (s.a[i] !== undefined && Math.abs(v - s.a[i]) > 0.3 && Math.abs(v) <= 1.0001) mexeu = true; s.a[i] = v; });
+    if (mexeu && pad.ativo !== g.index) { pad.ativo = g.index; pad.ant = {}; } } }
+function controleAtual() { const l = listaPads(); if (!l.length) return padHID();
+  return l.find(g => g.index === pad.ativo) || l.find(g => g.mapping === 'standard') || l.slice().sort((a, b) => b.buttons.length - a.buttons.length)[0]; }
 function valor(gp, x) { if (x.t === 'b') { const b = gp.buttons[x.i]; return b ? Math.max(b.value || 0, b.pressed ? 1 : 0) : 0; }
   const v = gp.axes[x.i]; if (v === undefined) return 0;
   if (x.t === 'h') return Math.abs(v - x.v) < 0.12 ? 1 : 0;
@@ -2206,7 +2214,7 @@ function direcional(gp) { // botões 12-15, chapéu (eixo especial dos genérico
 function statusControle() { const dentro = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
   if (!('getGamepads' in navigator)) return ['ruim', '❌ Este navegador não aceita controle de videogame. Use o Chrome, o Edge ou o programa de Windows.'];
   if (window.isSecureContext === false) return ['ruim', '❌ O navegador bloqueou o controle nesta página. Abra o jogo pelo programa de Windows ou pelo arquivo salvo no computador.'];
-  if (dentro && !(hidPad && hidPad.dev)) return ['ruim', '❌ O jogo está aberto DENTRO de outro aplicativo, e ele não entrega o controle ao jogo. Abra o arquivo direto no Chrome/Edge ou use o programa de Windows.'];
+  if ((dentro || (pad && pad.bloqueado)) && !(hidPad && hidPad.dev)) return ['ruim', '❌ O jogo está aberto DENTRO de outro aplicativo, e ele não entrega o controle ao jogo. Abra o arquivo direto no Chrome/Edge ou use o programa de Windows.'];
   const gp = controleAtual(); if (gp && gp.hid) return ['ok', `✅ Controle ligado pelo USB direto: ${hidPad.nome}. ${Object.keys(mapaDe(gp)).length ? 'Pronto para jogar!' : 'Toque aqui e depois em "Configurar meu controle".'}`];
   if (gp) return ['ok', `✅ Controle encontrado: ${gp.id.replace(/\s*\(.*\)\s*/g, ' ').trim() || 'controle'}${gp.mapping === 'standard' ? '' : ' (genérico)'}. Toque aqui para testar os botões.`];
   return ['', '🎮 Nenhum controle ainda. Ligue o controle e APERTE UM BOTÃO dele. Se não aparecer, toque aqui e use "Conectar pelo USB (modo direto)".']; }
@@ -2217,18 +2225,18 @@ function abrirTeste() { $('ctl-teste').hidden = false; const el = $('t-voltar');
 function atualizarTeste() { if ($('ctl-teste').hidden) return; requestAnimationFrame(atualizarTeste);
   const est = $('t-estado'), ps = $('t-passos'), bx = $('t-botoes'), ex = $('t-eixos'); let passos = [];
   const dentroDeApp = (() => { try { return window.self !== window.top; } catch (e) { return true; } })();
-  const todos = navigator.getGamepads || navigator.hid ? (navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : []) : null, gp = controleAtual();
+  const todos = navigator.getGamepads || navigator.hid ? listaPads() : null, gp = controleAtual();
   if (!todos) { est.textContent = '❌ Este navegador não aceita controle.'; passos = ['Abra o jogo no Google Chrome ou no Microsoft Edge.']; }
-  else if (!gp) { est.textContent = dentroDeApp ? '❌ O jogo está aberto DENTRO de outro aplicativo, e ele bloqueia o controle.' : '⏳ Ainda não achei nenhum controle.';
+  else if (!gp) { est.textContent = pad.bloqueado ? '❌ O navegador bloqueou o controle para esta página.' : dentroDeApp ? '❌ O jogo está aberto DENTRO de outro aplicativo, e ele bloqueia o controle.' : '⏳ Ainda não achei nenhum controle.';
     passos = (dentroDeApp ? ['Salve o arquivo EstradaLonga.html no computador.', 'Clique nele com o botão direito → Abrir com → Google Chrome (ou Microsoft Edge).'] : [])
       .concat(['Ponha o receptor USB no computador (de preferência direto no PC, sem extensão).', 'Ligue o controle no botão do meio. A luz tem que parar de piscar.', 'Clique uma vez aqui nesta página e aperte qualquer botão do controle (o navegador só mostra o controle depois de um botão).', 'Não achou? Segure o botão do meio por uns 7 segundos (troca o modo do controle) e aperte um botão de novo.', 'Ainda não? Toque no botão "Conectar pelo USB (modo direto)" aqui embaixo e escolha o controle na lista.', 'Se a lista vier vazia, o próprio Windows não está vendo o controle: aperte Windows+R, digite joy.cpl e Enter. Se o controle não aparecer lá, troque as pilhas, troque o receptor de porta USB e ligue o controle de novo.']); }
-  else { est.textContent = `✅ Achei o controle: ${gp.id.replace(/\s*\(.*\)\s*/g, ' ').trim() || 'controle'}${gp.mapping === 'standard' ? '' : ' (genérico)'}`; passos = ['Aperte os botões: as bolinhas de baixo acendem. Mexa os analógicos: as barras andam.', 'Se tudo acender mas o jogo fizer coisa errada, toque em "Configurar meu controle".']; }
+  else { est.textContent = `✅ Achei o controle: ${gp.id.replace(/\s*\(.*\)\s*/g, ' ').trim() || 'controle'}${gp.mapping === 'standard' ? '' : ' (genérico)'}${todos.length > 1 ? ` · o computador mostra ${todos.length} controles: estou usando o último em que você apertou um botão` : ''}`; passos = ['Aperte os botões: as bolinhas de baixo acendem. Mexa os analógicos: as barras andam.', 'Se tudo acender mas o jogo fizer coisa errada, toque em "Configurar meu controle".']; }
   if (ps.dataset.k !== passos.join('|')) { ps.dataset.k = passos.join('|'); ps.textContent = ''; for (const p of passos) { const li = document.createElement('li'); li.textContent = p; ps.appendChild(li); } }
   const nb = gp ? gp.buttons.length : 0; if (bx.childElementCount !== nb) { bx.textContent = ''; for (let i = 0; i < nb; i++) { const d = document.createElement('div'); d.textContent = i + 1; d.style.cssText = 'width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font:800 15px var(--display);border:2px solid rgba(255,255,255,.3)'; bx.appendChild(d); } }
   for (let i = 0; i < nb; i++) { const on = gp.buttons[i].pressed || gp.buttons[i].value > 0.5; bx.children[i].style.background = on ? '#3fd47c' : 'transparent'; bx.children[i].style.color = on ? '#062' : '#fff'; }
   const na = gp ? gp.axes.length : 0; if (ex.childElementCount !== na) { ex.textContent = ''; for (let i = 0; i < na; i++) { const d = document.createElement('div'); d.style.cssText = 'display:grid;grid-template-columns:70px 1fr;gap:8px;align-items:center;font-size:13px'; d.innerHTML = `<span>Eixo ${i + 1}</span><span style="height:10px;background:rgba(255,255,255,.12);border-radius:5px;position:relative;overflow:hidden"><i style="position:absolute;top:0;bottom:0;width:6px;background:#ffc531;left:50%"></i></span>`; ex.appendChild(d); } }
   for (let i = 0; i < na; i++) { const v = Math.max(-1, Math.min(1, gp.axes[i])); ex.children[i].querySelector('i').style.left = `calc(${(v + 1) * 50}% - 3px)`; } }
-function lerControle(dt) { const gp = controleAtual(); if (!gp) { pad.acel = pad.freio = pad.vol = 0; if (cal.on) lerCalib(null); return; }
+function lerControle(dt) { if (!pad) return; vigiarControles(); const gp = controleAtual(); if (!gp) { pad.acel = pad.freio = pad.vol = 0; if (cal.on) lerCalib(null); return; }
   if (cal.on) { pad.acel = pad.freio = pad.vol = 0; lerCalib(gp); pad.ant = {}; return; }
   if (!$('ctl-teste').hidden) { pad.acel = pad.freio = pad.vol = 0; pad.ant = { _a: true, _b: true, _start: true }; return; }
   const m = mapaDe(gp), agora = {}; for (const [k] of ACOES_CTL) agora[k] = acao(gp, m, k) > 0.5; const novo = k => agora[k] && !pad.ant[k];
