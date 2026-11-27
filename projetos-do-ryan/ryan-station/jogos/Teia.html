@@ -1995,12 +1995,40 @@ window.__teia = { H, J, carros, get estado() { return estado; }, jogar, comecarM
 })();
 </script>
 <script>
-/* RYAN STATION: segure SELECT + START (ou o botão do meio do controle, ou a tecla Home / F1) para voltar ao console */
-(() => { let t = 0; const voltar = () => { location.href = '../index.html#inicio'; };
-  addEventListener('keydown', e => { if (e.key === 'Home' || e.key === 'F1') voltar(); });
-  const av = document.createElement('div'); av.textContent = '🎮 Segure SELECT + START para voltar ao RYAN STATION';
-  av.style.cssText = 'position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:99999;background:rgba(8,12,30,.88);color:#fff;font:700 14px system-ui,sans-serif;padding:8px 16px;border-radius:999px;border:1px solid rgba(120,160,255,.6);pointer-events:none;transition:opacity 1.2s';
-  const por = () => { document.body.appendChild(av); setTimeout(() => { av.style.opacity = 0; }, 6000); }; if (document.body) por(); else addEventListener('DOMContentLoaded', por);
-  setInterval(() => { let pads = []; try { pads = [...navigator.getGamepads()].filter(Boolean); } catch (e) {} let on = false;
-    for (const g of pads) { const b = i => g.buttons[i] && g.buttons[i].pressed; if ((b(8) && b(9)) || b(16)) on = true; } t = on ? t + 1 : 0; if (t >= 6) voltar(); }, 100); })();
+/* RYAN STATION: menu do console dentro do jogo — segure SELECT + START (ou o botão do meio, ou F1 / Home) */
+(() => {
+  const ler = k => { try { const v = localStorage.getItem(k); return v === null ? null : +v; } catch (e) { return null; } };
+  const orig = navigator.getGamepads ? navigator.getGamepads.bind(navigator) : () => [];
+  let aberto = false, sel = 0, segura = 0, ant = {}, dirAnt = '', dirT = 0, hat = -1;
+  navigator.getGamepads = () => aberto ? [null, null, null, null] : orig(); // o jogo não "ouve" o controle enquanto o menu está aberto
+  const css = document.createElement('style'); css.textContent = `#rs-menu{position:fixed;inset:0;z-index:2147483000;display:grid;place-items:center;background:rgba(2,4,14,.82);font-family:"Segoe UI",system-ui,sans-serif;color:#fff}
+    #rs-menu .cx{width:min(90vw,440px);background:#0e1426;border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:22px;display:grid;gap:10px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+    #rs-menu h2{margin:0 0 6px;font-weight:300;letter-spacing:.3em;font-size:16px;color:#cfd9ff}#rs-menu button{font:700 18px "Segoe UI",system-ui,sans-serif;text-align:left;padding:14px 18px;border-radius:12px;border:2px solid transparent;background:rgba(255,255,255,.07);color:#fff;cursor:pointer}
+    #rs-menu button.s{background:#fff;color:#0a0f24;border-color:#7aa6ff;box-shadow:0 0 20px rgba(120,170,255,.6)}#rs-menu p{margin:6px 0 0;color:#a8b3cc;font-size:13px}
+    #rs-toast{position:fixed;left:50%;top:12px;transform:translateX(-50%);z-index:2147483001;background:rgba(8,12,30,.88);color:#fff;font:700 14px system-ui,sans-serif;padding:8px 16px;border-radius:999px;border:1px solid rgba(120,160,255,.6);pointer-events:none;transition:opacity 1.2s}`;
+  const menu = document.createElement('div'); menu.id = 'rs-menu'; menu.hidden = true;
+  menu.innerHTML = '<div class="cx"><h2>RYAN STATION</h2><button data-a="voltar">▶ Voltar ao jogo</button><button data-a="inicio">🏠 Ir para a tela inicial</button><button data-a="sair">⏻ Sair do jogo</button><p>✕/A escolhe · ○/B volta ao jogo</p></div>';
+  const toast = document.createElement('div'); toast.id = 'rs-toast'; toast.textContent = '🎮 Segure SELECT + START para abrir o menu do RYAN STATION';
+  const por = () => { document.head.appendChild(css); document.body.appendChild(menu); document.body.appendChild(toast); setTimeout(() => { toast.style.opacity = 0; }, 6000); }; if (document.body) por(); else addEventListener('DOMContentLoaded', por);
+  const botoes = () => [...menu.querySelectorAll('button')];
+  const marcar = () => botoes().forEach((b, i) => b.classList.toggle('s', i === sel));
+  const tecla = k => { const e = new KeyboardEvent('keydown', { key: k, bubbles: true }); window.dispatchEvent(e); setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { key: k, bubbles: true })), 50); };
+  function abrir() { if (aberto) return; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {} tecla('Escape'); aberto = true; sel = 0; menu.hidden = false; marcar(); ant = { a: true, b: true }; }
+  function fechar() { aberto = false; menu.hidden = true; setTimeout(() => { const c = [...document.querySelectorAll('button')].find(b => /continuar/i.test(b.textContent) && b.offsetParent !== null && !b.closest('#rs-menu')); if (c) c.click(); }, 60); }
+  function fazer(a) { if (a === 'voltar') fechar(); if (a === 'inicio') location.href = '../index.html#inicio'; if (a === 'sair') { try { window.close(); } catch (e) {} setTimeout(() => { location.href = '../index.html#inicio'; }, 300); } }
+  menu.addEventListener('click', e => { const b = e.target.closest('button'); if (b) fazer(b.dataset.a); });
+  addEventListener('keydown', e => { if (!e.isTrusted) return; if (e.key === 'F1' || e.key === 'Home') { e.preventDefault(); aberto ? fechar() : abrir(); return; }
+    if (!aberto) return; e.stopImmediatePropagation(); e.preventDefault(); if (e.key === 'ArrowDown') { sel = (sel + 1) % 3; marcar(); } if (e.key === 'ArrowUp') { sel = (sel + 2) % 3; marcar(); } if (e.key === 'Enter' || e.key === ' ') fazer(botoes()[sel].dataset.a); if (e.key === 'Escape') fechar(); }, true);
+  setInterval(() => { let pads = []; try { pads = [...orig()].filter(Boolean); } catch (e) {} let ctrl = false, a = false, b = false, d = '';
+    const bA = ler('rs-bA'), bB = ler('rs-bB');
+    for (const g of pads) { const p = i => g.buttons[i] && g.buttons[i].pressed; if ((p(8) && p(9)) || p(16)) ctrl = true; const std = g.mapping === 'standard';
+      if (bA !== null ? p(bA) : (std ? p(0) : (p(2) || p(0)))) a = true; if (bB !== null ? p(bB) : p(1)) b = true;
+      const ax = g.axes; for (let i = 0; i < ax.length; i++) if (Math.abs(ax[i]) > 1.05) hat = i; let dd = '';
+      if (hat >= 0 && Math.abs(ax[hat]) <= 1.02) { const v = ax[hat]; dd = v < -0.85 || v > 0.85 ? 'cima' : (v > -0.3 && v < 0.3 ? 'baixo' : ''); }
+      if (p(12) || (ax[1] || 0) < -0.6) dd = 'cima'; if (p(13) || (ax[1] || 0) > 0.6) dd = 'baixo'; if (dd) d = dd; }
+    const ag = performance.now(); if (ctrl) { if (!segura) segura = ag; else if (segura > 0 && ag - segura > 350) { segura = -1; aberto ? fechar() : abrir(); } } else segura = 0;
+    if (!aberto) { ant = {}; return; }
+    if (d && (d !== dirAnt || dirT <= 0)) { sel = (sel + (d === 'baixo' ? 1 : 2)) % 3; marcar(); dirT = d === dirAnt ? 2 : 3; } dirAnt = d; dirT--;
+    if (a && !ant.a) fazer(botoes()[sel].dataset.a); if (b && !ant.b) fechar(); ant = { a, b }; }, 100);
+})();
 </script>

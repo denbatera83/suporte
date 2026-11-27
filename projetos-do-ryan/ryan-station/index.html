@@ -40,7 +40,8 @@
   #cfg { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: rgba(2,4,14,.85); }
   #cfg .caixa { width: min(92vw, 620px); background: #0e1426; border: 1px solid rgba(255,255,255,.15); border-radius: 18px; padding: 24px; display: grid; gap: 12px; }
   #cfg h2 { margin: 0; } #cfg p { margin: 0; color: var(--suave); line-height: 1.5; }
-  #c-bts { display: flex; flex-wrap: wrap; gap: 6px; } #c-bts span { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; border: 2px solid rgba(255,255,255,.3); font-size: 12px; font-weight: 700; } #c-bts span.on { background: #3fd47c; color: #052; border-color: #3fd47c; }
+  .obt { flex: 1; font: 700 18px 'Segoe UI', system-ui, sans-serif; padding: 14px; border-radius: 12px; border: 2px solid transparent; background: rgba(255,255,255,.08); color: #fff; cursor: pointer; } .obt.s { background: #fff; color: #0a0f24; box-shadow: 0 0 20px rgba(120,170,255,.6); }
+  #c-cal { font: 700 20px 'Segoe UI', system-ui, sans-serif; color: #ffd45e; } #c-bts { display: flex; flex-wrap: wrap; gap: 6px; } #c-bts span { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; border: 2px solid rgba(255,255,255,.3); font-size: 12px; font-weight: 700; } #c-bts span.on { background: #3fd47c; color: #052; border-color: #3fd47c; }
 </style>
 
 <div id="abertura"><canvas id="ab-c"></canvas><div id="ab-nome">RYAN STATION</div><div id="ab-aperte">APERTE ✕ / A OU ENTER</div></div>
@@ -48,10 +49,13 @@
 <div id="topo"><span class="logo">RYAN STATION</span><span class="esp"></span><span id="ctl-ic"></span><span id="usuario"><i>R</i>Ryan</span><span id="relogio"></span></div>
 <div id="trilho"></div>
 <div id="info"><h1 id="i-tit"></h1><div id="i-tags"></div><p id="i-desc"></p><button id="b-jogar" type="button">▶ JOGAR</button></div>
-<div id="ajuda"><span><b>✕</b>Entrar</span><span><b>○</b>Voltar</span><span>Dentro do jogo: segure <b style="width:auto;padding:0 6px;border-radius:8px">SELECT + START</b>para voltar</span></div>
+<div id="ajuda"><span><b>✕</b>Entrar (ou START)</span><span><b>○</b>Voltar</span><span>Dentro do jogo: segure <b style="width:auto;padding:0 6px;border-radius:8px">SELECT + START</b>para o menu</span></div>
 <div id="carregando" hidden>CARREGANDO…</div>
+<div id="off" hidden style="position:fixed;inset:0;z-index:25;display:grid;place-items:center;background:rgba(2,4,14,.88)"><div style="width:min(90vw,440px);background:#0e1426;border:1px solid rgba(255,255,255,.15);border-radius:18px;padding:24px;display:grid;gap:12px">
+  <h2 style="margin:0;font-weight:300;letter-spacing:.2em">DESLIGAR?</h2><p style="margin:0;color:#a8b3cc">O RYAN STATION vai fechar.</p>
+  <div style="display:flex;gap:10px"><button type="button" id="off-sim" class="obt">⏻ Sim, desligar</button><button type="button" id="off-nao" class="obt">Não</button></div></div></div>
 <div id="cfg" hidden><div class="caixa"><h2>⚙️ Configurações · Controle</h2><p id="c-est"></p><div id="c-bts"></div>
-  <p>Aperte os botões do controle: as bolinhas acendem. Se um jogo usar os botões errados, dentro dele vá em <b>🎮 Controle → Configurar meu controle</b>.</p>
+  <p id="c-cal"></p><div style="display:flex;gap:10px"><button type="button" id="c-ensinar" class="obt">🎯 Ensinar meus botões A e B</button></div><p>Aperte os botões do controle: as bolinhas acendem. Se um jogo usar os botões errados, dentro dele vá em <b>🎮 Controle → Configurar meu controle</b>.</p>
   <p>Sem controle? Use as <b>setas</b> do teclado, <b>ENTER</b> para entrar e <b>ESC</b> para voltar. Dentro dos jogos, a tecla <b>F1</b> volta para o console.</p><p style="color:#fff">Aperte <b>○ / B</b> para voltar.</p></div></div>
 
 <script>
@@ -63,24 +67,33 @@ const JOGOS = [
   { id: 'Teia', nome: 'TEIA', desc: 'Você é o Faísca, o herói da teia. Balance entre os arranha-céus, escale paredes, pegue ladrões na teia e resgate gatinhos.', tags: ['Herói', 'Física de teia', 'Ação'] },
   { id: 'EstradaLonga', nome: 'ESTRADA LONGA', desc: 'Pegue uma carga, engate a carreta e atravesse o país de caminhão, com câmbio manual, chuva, noite e multas da polícia.', tags: ['Caminhão', 'Simulador', 'Viagem'] },
   { id: 'CasteloDeFerro', nome: 'CASTELO DE FERRO', desc: 'Os robôs tomaram o castelo! Lute andar por andar, ache as chaves e as passagens secretas e salve a Agente Dani.', tags: ['Tiro', 'Pixel', 'Labirinto'] },
-  { id: 'cfg', nome: 'CONFIGURAÇÕES', desc: 'Veja se o controle está ligado e teste todos os botões.', tags: ['Controle'] } ];
+  { id: 'cfg', nome: 'CONFIGURAÇÕES', desc: 'Veja se o controle está ligado, teste os botões e ensine ao console qual é o seu botão A e o seu botão B.', tags: ['Controle'] },
+  { id: 'off', nome: 'DESLIGAR', desc: 'Fechar o RYAN STATION.', tags: ['Sair'] } ];
 let sel = 0, foco = 'tiles', tela = 'abertura';
 // ---------------- trilho de jogos ----------------
 const trilho = $('trilho');
-JOGOS.forEach((j, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tile' + (j.id === 'cfg' ? ' cfg' : ''); if (j.id !== 'cfg') b.style.backgroundImage = `url(jogos/capas/${j.id}.jpg)`; else b.textContent = '⚙️';
+JOGOS.forEach((j, i) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tile' + (j.id === 'cfg' || j.id === 'off' ? ' cfg' : ''); if (j.id !== 'cfg' && j.id !== 'off') b.style.backgroundImage = `url(jogos/capas/${j.id}.jpg)`; else b.textContent = j.id === 'cfg' ? '⚙️' : '⏻';
   const n = document.createElement('span'); n.className = 'nm'; n.textContent = j.nome; b.appendChild(n); b.addEventListener('click', () => { if (sel === i) abrir(); else escolher(i); }); trilho.appendChild(b); });
 function escolher(i) { sel = (i + JOGOS.length) % JOGOS.length; foco = 'tiles'; const j = JOGOS[sel]; [...trilho.children].forEach((t, k) => t.classList.toggle('sel', k === sel));
-  $('fundo').style.opacity = 0; setTimeout(() => { $('fundo').style.backgroundImage = j.id === 'cfg' ? 'radial-gradient(ellipse at 70% 40%, #1d2c5a, #02030a 70%)' : `url(jogos/capas/${j.id}.jpg)`; $('fundo').style.opacity = 1; }, 160);
+  $('fundo').style.opacity = 0; setTimeout(() => { $('fundo').style.backgroundImage = j.id === 'cfg' || j.id === 'off' ? 'radial-gradient(ellipse at 70% 40%, #1d2c5a, #02030a 70%)' : `url(jogos/capas/${j.id}.jpg)`; $('fundo').style.opacity = 1; }, 160);
   $('i-tit').textContent = j.nome; $('i-desc').textContent = j.desc; const tg = $('i-tags'); tg.textContent = ''; j.tags.forEach(t => { const s = document.createElement('span'); s.textContent = t; tg.appendChild(s); });
-  $('b-jogar').textContent = j.id === 'cfg' ? '⚙️ ABRIR' : '▶ JOGAR'; $('b-jogar').classList.toggle('foco', false); som(660, 0.05, 'sine', 0.05); try { localStorage.setItem('rs-sel', String(sel)); } catch (e) {} }
+  $('b-jogar').textContent = j.id === 'cfg' ? '⚙️ ABRIR' : j.id === 'off' ? '⏻ DESLIGAR' : '▶ JOGAR'; $('b-jogar').classList.toggle('foco', false); som(660, 0.05, 'sine', 0.05); try { localStorage.setItem('rs-sel', String(sel)); } catch (e) {} }
 function abrir() { const j = JOGOS[sel]; som(880, 0.12, 'triangle', 0.08); som(1320, 0.18, 'sine', 0.05, 0.08);
-  if (j.id === 'cfg') { $('cfg').hidden = false; tela = 'cfg'; return; }
+  if (j.id === 'cfg') { $('cfg').hidden = false; tela = 'cfg'; cal = 0; mostrarCal(); return; }
+  if (j.id === 'off') { $('off').hidden = false; tela = 'off'; offSel = 1; marcarOff(); return; }
   $('carregando').hidden = false; $('carregando').textContent = j.nome + '  ·  CARREGANDO…'; setTimeout(() => { location.href = `jogos/${j.id}.html`; }, 600); }
 $('b-jogar').addEventListener('click', abrir);
-function voltar() { if (tela === 'cfg') { $('cfg').hidden = true; tela = 'inicio'; som(440, 0.08, 'sine', 0.05); } else if (foco === 'botao') { foco = 'tiles'; $('b-jogar').classList.remove('foco'); som(440, 0.06, 'sine', 0.04); } }
+function voltar() { if (tela === 'off') { $('off').hidden = true; tela = 'inicio'; return; } if (tela === 'cfg' && cal) { cal = 0; mostrarCal(); return; } if (tela === 'cfg') { $('cfg').hidden = true; tela = 'inicio'; som(440, 0.08, 'sine', 0.05); } else if (foco === 'botao') { foco = 'tiles'; $('b-jogar').classList.remove('foco'); som(440, 0.06, 'sine', 0.04); } }
 setInterval(() => { const d = new Date(); $('relogio').textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }, 1000);
 // ---------------- som ----------------
 let AC = null; function audio() { if (!AC) try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} if (AC && AC.state !== 'running') AC.resume(); }
+// ---------------- desligar e ensinar botões ----------------
+let offSel = 1, cal = 0; const lerN = k => { try { const v = localStorage.getItem(k); return v === null ? null : +v; } catch (e) { return null; } };
+function marcarOff() { $('off-sim').classList.toggle('s', offSel === 0); $('off-nao').classList.toggle('s', offSel === 1); }
+function desligar() { som(330, 0.3, 'sine', 0.06); document.body.style.transition = 'opacity .6s'; document.body.style.opacity = 0; setTimeout(() => { try { window.close(); } catch (e) {} setTimeout(() => { document.body.style.opacity = 1; $('off').hidden = true; tela = 'inicio'; }, 800); }, 650); }
+$('off-sim').addEventListener('click', desligar); $('off-nao').addEventListener('click', () => { $('off').hidden = true; tela = 'inicio'; });
+function mostrarCal() { const a = lerN('rs-bA'), b = lerN('rs-bB'); $('c-cal').textContent = cal === 1 ? '👉 Aperte o botão que você quer usar como A (entrar)' : cal === 2 ? '👉 Agora aperte o botão que você quer usar como B (voltar)' : (a !== null ? `Seu A é o botão ${a + 1} e seu B é o botão ${b + 1}.` : 'Se o A não funcionar, toque em "Ensinar meus botões A e B".'); }
+$('c-ensinar').addEventListener('click', () => { cal = 1; pad.calAnt = null; mostrarCal(); });
 function som(f, dur, tipo = 'sine', vol = 0.06, at = 0) { if (!AC) return; const t = AC.currentTime + at, o = AC.createOscillator(), g = AC.createGain(); o.type = tipo; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur); o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + 0.05); }
 function somAbertura() { if (!AC) return; const t = AC.currentTime; [[110, 0, 7], [164.8, 0.6, 6.4], [220, 1.2, 5.8], [329.6, 2.6, 4.4], [440, 3.4, 3.6], [659, 3.8, 3.2]].forEach(([f, a, d]) => { const o = AC.createOscillator(), o2 = AC.createOscillator(), g = AC.createGain(), fl = AC.createBiquadFilter();
     o.type = 'sawtooth'; o2.type = 'sine'; o.frequency.value = f; o2.frequency.value = f * 1.003; fl.type = 'lowpass'; fl.frequency.setValueAtTime(300, t + a); fl.frequency.linearRampToValueAtTime(1800, t + a + d * 0.6);
@@ -112,13 +125,15 @@ function controle() { const l = listaPads(); for (const p of l) { const s = pad.
 function direcao(p) { const ax = p.axes, bt = i => p.buttons[i] && p.buttons[i].pressed; for (let i = 0; i < ax.length; i++) if (Math.abs(ax[i]) > 1.05) pad.hat = i;
   if (pad.hat >= 0 && Math.abs(ax[pad.hat]) <= 1.02) { const v = ax[pad.hat], ds = [[-1, 'cima'], [-0.714, 'cima'], [-0.428, 'dir'], [-0.142, 'baixo'], [0.142, 'baixo'], [0.428, 'esq'], [0.714, 'esq'], [1, 'cima']]; return ds.reduce((m, d) => Math.abs(d[0] - v) < Math.abs(m[0] - v) ? d : m)[1]; }
   const lx = ax[0] || 0, ly = ax[1] || 0; return bt(12) || ly < -0.6 ? 'cima' : bt(13) || ly > 0.6 ? 'baixo' : bt(14) || lx < -0.6 ? 'esq' : bt(15) || lx > 0.6 ? 'dir' : ''; }
-function mover(d) { if (tela !== 'inicio') return; audio();
+function mover(d) { if (tela === 'off') { if (d === 'esq' || d === 'dir') { offSel = 1 - offSel; marcarOff(); som(520, 0.05, 'sine', 0.05); } return; } if (tela !== 'inicio') return; audio();
   if (d === 'dir') { if (foco === 'tiles') escolher(sel + 1); } else if (d === 'esq') { if (foco === 'tiles') escolher(sel - 1); }
   else if (d === 'baixo') { if (foco === 'tiles') { foco = 'botao'; $('b-jogar').classList.add('foco'); som(520, 0.05, 'sine', 0.05); } }
   else if (d === 'cima') { if (foco === 'botao') { foco = 'tiles'; $('b-jogar').classList.remove('foco'); som(520, 0.05, 'sine', 0.05); } } }
-function confirmar() { audio(); if (tela === 'abertura') { if (abT > 1) sairAbertura(); return; } if (tela === 'inicio') abrir(); }
+function confirmar() { audio(); if (tela === 'abertura') { if (abT > 1) sairAbertura(); return; } if (tela === 'off') { if (offSel === 0) desligar(); else voltar(); return; } if (tela === 'inicio') abrir(); }
 function lerControle(dt) { const p = controle(); $('ctl-ic').textContent = p ? '🎮 controle ligado' : '🎮 sem controle'; if (!p) return; const b = i => p.buttons[i] && p.buttons[i].pressed;
-  const std = p.mapping === 'standard', A = std ? b(0) : b(2), B = std ? b(1) : b(1), ST = b(9);
+  const std = p.mapping === 'standard', sA = lerN('rs-bA'), sB = lerN('rs-bB'); let A = sA !== null ? b(sA) : (std ? b(0) : (b(2) || b(0))), B = sB !== null ? b(sB) : b(1), ST = b(9);
+  if (tela === 'cfg' && cal) { const ap = p.buttons.map(x => x.pressed); if (!pad.calAnt) pad.calAnt = ap; const i = ap.findIndex((x, k) => x && !pad.calAnt[k]); pad.calAnt = ap;
+    if (i >= 0) { try { localStorage.setItem(cal === 1 ? 'rs-bA' : 'rs-bB', String(i)); } catch (e) {} som(880, 0.1, 'triangle', 0.08); cal = cal === 1 ? 2 : 0; mostrarCal(); pad.ant = { A: true, B: true, ST }; return; } A = B = false; }
   if (A && !pad.ant.A) confirmar(); if (B && !pad.ant.B) voltar(); if (ST && !pad.ant.ST) { if (tela === 'abertura') sairAbertura(); else if (tela === 'inicio') abrir(); }
   const d = direcao(p); if (d && (d !== pad.dirAnt || pad.dirT <= 0)) { mover(d); pad.dirT = d === pad.dirAnt ? 0.18 : 0.4; } pad.dirAnt = d; pad.dirT -= dt;
   pad.ant = { A, B, ST };
