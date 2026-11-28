@@ -1,0 +1,6 @@
+Como o ISO do RYAN STATION foi montado (Ubuntu 24.04 mínimo que abre direto no console)
+1. debootstrap --variant=minbase --include=systemd-sysv,udev,kmod,apt-utils,ca-certificates noble rootfs http://archive.ubuntu.com/ubuntu/
+2. Copiar o Electron Linux (v33.2.1) para rootfs/opt/ryanstation (electron -> RyanStation) e o console em resources/app
+3. chroot rootfs /bin/bash dentro.sh   (com /proc, /sys e /dev montados)
+4. vmlinuz e initrd -> cd/casper ; mksquashfs rootfs cd/casper/filesystem.squashfs -comp xz -e boot
+5. grub.cfg -> cd/boot/grub ; grub-mkrescue -o RyanStation.iso cd -- -volid RYANSTATION
